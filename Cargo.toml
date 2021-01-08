@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "fruits",
+    "mania",
+    "osu",
+    "parse",
+    "taiko",
+]

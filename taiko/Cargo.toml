@@ -1,0 +1,13 @@
+[package]
+name = "taiko"
+version = "0.1.0"
+authors = ["MaxOhn <ohn.m@hotmail.de>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.parse]
+path = "../parse"
+
+[dependencies.lazy_static]
+version = "1.4"
