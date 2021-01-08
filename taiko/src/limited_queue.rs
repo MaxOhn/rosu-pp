@@ -58,18 +58,15 @@ impl<T: PartialOrd> LimitedQueue<T> {
     pub(crate) fn min(&self) -> Option<&T> {
         let mut iter = self.queue.iter();
 
-        if let Some(first) = iter.next() {
-            let min = iter.fold(first, |min, next| match min.partial_cmp(next) {
-                Some(Ordering::Less) => min,
-                Some(Ordering::Equal) => min,
-                Some(Ordering::Greater) => next,
-                None => min,
-            });
+        let first = iter.next()?;
+        let min = iter.fold(first, |min, next| match min.partial_cmp(next) {
+            Some(Ordering::Less) => min,
+            Some(Ordering::Equal) => min,
+            Some(Ordering::Greater) => next,
+            None => min,
+        });
 
-            Some(min)
-        } else {
-            None
-        }
+        Some(min)
     }
 }
 

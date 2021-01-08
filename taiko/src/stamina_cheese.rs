@@ -12,6 +12,7 @@ pub(crate) trait StaminaCheeseDetector {
 }
 
 impl StaminaCheeseDetector for Beatmap {
+    // TODO: Optimize
     fn find_cheese(&self) -> Vec<bool> {
         let mut cheese = vec![false; self.hit_objects.len()];
 

@@ -90,11 +90,7 @@ pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
         let angle = angle_from_points(array[i], array[i + 1]);
         let cart = cart_from_pol(distance - current_distance, angle);
 
-        if array[i].x > array[i + 1].x {
-            array[i] - cart
-        } else {
-            array[i] + cart
-        }
+        array[i] + cart * ((array[i].x <= array[i + 1].x) as i8 * 2 - 1) as f32
     }
 }
 

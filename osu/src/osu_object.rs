@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use super::curve::Curve;
 
 use parse::{Beatmap, BeatmapAttributes, HitObject, HitObjectKind, PathType, Pos2};
@@ -315,10 +317,9 @@ impl SliderTick {
     }
 }
 
-use std::fmt;
-
-impl fmt::Debug for SliderTick {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+// TODO: Remove
+impl std::fmt::Debug for SliderTick {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{{pos={:?} | time={}}}", self.pos, self.time)
     }
 }

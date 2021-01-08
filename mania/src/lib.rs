@@ -129,21 +129,4 @@ mod tests {
             );
         }
     }
-
-    #[test]
-    fn wack_map() {
-        let file = match File::open("E:/Games/osu!/beatmaps/1443309.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        let stars = stars(&map, 0);
-
-        println!("Stars: {}", stars);
-    }
 }

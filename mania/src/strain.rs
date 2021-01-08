@@ -43,6 +43,7 @@ impl Strain {
 
     #[inline]
     pub(crate) fn save_current_peak(&mut self) {
+        // TODO: Remove branching
         if self.prev_time.is_some() {
             self.strain_peaks.push(self.current_section_peak);
         }

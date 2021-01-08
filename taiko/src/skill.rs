@@ -69,6 +69,7 @@ impl Skill {
 
     #[inline]
     fn skill_multiplier(&self) -> f32 {
+        // TODO: Use constants
         match self.kind {
             SkillKind::Color { .. } => 1.0,
             SkillKind::Rhythm { .. } => 10.0,
@@ -78,6 +79,7 @@ impl Skill {
 
     #[inline]
     fn strain_decay_base(&self) -> f32 {
+        // TODO: Use constants
         match self.kind {
             SkillKind::Color { .. } => 0.4,
             SkillKind::Rhythm { .. } => 0.0,

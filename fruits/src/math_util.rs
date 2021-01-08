@@ -71,6 +71,7 @@ pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
     let mut current_distance = 0.0;
     let mut new_distance = 0.0;
 
+    // TODO: Optimize
     while i < array.len() - 2 {
         new_distance = (array[i] - array[i + 1]).length();
         current_distance += new_distance;
@@ -90,11 +91,7 @@ pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
         let angle = angle_from_points(array[i], array[i + 1]);
         let cart = cart_from_pol(distance - current_distance, angle);
 
-        if array[i].x > array[i + 1].x {
-            array[i] - cart
-        } else {
-            array[i] + cart
-        }
+        array[i] + cart * ((array[i].x <= array[i + 1].x) as i8 * 2 - 1) as f32
     }
 }
 
