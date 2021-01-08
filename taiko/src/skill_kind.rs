@@ -1,4 +1,4 @@
-use super::{DifficultyObject, LimitedQueue, Rim};
+use super::{DifficultyObject, HitObjectRhythm, LimitedQueue, Rim};
 
 const RHYTHM_STRAIN_DECAY: f32 = 0.96;
 const MOST_RECENT_PATTERNS_TO_COMPARE: usize = 2;
@@ -7,14 +7,14 @@ const MONO_HISTORY_MAX_LEN: usize = 5;
 const RHYTHM_HISTORY_MAX_LEN: usize = 8;
 const STAMINA_HISTORY_MAX_LEN: usize = 2;
 
-pub(crate) enum SkillKind<'o> {
+pub(crate) enum SkillKind {
     Color {
         mono_history: LimitedQueue<usize>,
         prev_is_rim: Option<bool>,
         current_mono_len: usize,
     },
     Rhythm {
-        rhythm_history: LimitedQueue<DifficultyObject<'o>>,
+        rhythm_history: LimitedQueue<(usize, HitObjectRhythm)>, // (idx, rhythm)
         notes_since_rhythm_change: usize,
         current_strain: f32,
     },
@@ -25,7 +25,7 @@ pub(crate) enum SkillKind<'o> {
     },
 }
 
-impl<'o> SkillKind<'o> {
+impl SkillKind {
     #[inline]
     pub(crate) fn color() -> Self {
         Self::Color {
@@ -53,11 +53,7 @@ impl<'o> SkillKind<'o> {
         }
     }
 
-    pub(crate) fn strain_value_of(
-        &mut self,
-        current: &DifficultyObject<'o>,
-        cheese: &[bool],
-    ) -> f32 {
+    pub(crate) fn strain_value_of(&mut self, current: &DifficultyObject, cheese: &[bool]) -> f32 {
         match self {
             Self::Color {
                 mono_history,
@@ -160,7 +156,7 @@ impl<'o> SkillKind<'o> {
 
                 let mut strain = current.rhythm.difficulty;
 
-                rhythm_history.push(current.to_owned());
+                rhythm_history.push((current.idx, *current.rhythm));
 
                 let mut reps_penalty = 1.0;
 
@@ -172,17 +168,17 @@ impl<'o> SkillKind<'o> {
 
                     for start in iter {
                         let different_pattern = (0..most_recent_patterns_to_compare).any(|i| {
-                            rhythm_history[start + i].rhythm
+                            rhythm_history[start + i].1
                                 != rhythm_history
                                     [rhythm_history.len() + i - most_recent_patterns_to_compare]
-                                    .rhythm
+                                    .1
                         });
 
                         if different_pattern {
                             continue;
                         }
 
-                        reps_penalty *= repetition_penalty(current.idx - rhythm_history[start].idx);
+                        reps_penalty *= repetition_penalty(current.idx - rhythm_history[start].0);
 
                         break;
                     }
@@ -225,11 +221,8 @@ impl<'o> SkillKind<'o> {
                     }
 
                     let mut strain = 1.0;
-
                     note_pair_duration_history.push(current.delta + *off_hand_object_duration);
-
                     let shortest_recent_note = *note_pair_duration_history.min().unwrap();
-
                     strain += speed_bonus(shortest_recent_note);
 
                     if cheese[current.idx] {

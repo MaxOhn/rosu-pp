@@ -69,11 +69,9 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
             current_section_end += section_len;
         }
 
-        for skill in skills.iter_mut().take(3) {
-            skill.process(h.clone(), &cheese);
+        for skill in skills.iter_mut() {
+            skill.process(&h, &cheese);
         }
-
-        skills[3].process(h, &cheese);
     }
 
     for skill in skills.iter_mut() {

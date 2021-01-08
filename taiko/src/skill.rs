@@ -4,19 +4,19 @@ use std::cmp::Ordering;
 
 const DECAY_WEIGHT: f32 = 0.9;
 
-pub(crate) struct Skill<'o> {
+pub(crate) struct Skill {
     pub current_strain: f32,
     current_section_peak: f32,
 
-    kind: SkillKind<'o>,
+    kind: SkillKind,
     pub(crate) strain_peaks: Vec<f32>,
 
     prev_time: Option<f32>,
 }
 
-impl<'o> Skill<'o> {
+impl Skill {
     #[inline]
-    pub(crate) fn new(kind: SkillKind<'o>) -> Self {
+    pub(crate) fn new(kind: SkillKind) -> Self {
         Self {
             current_strain: 1.0,
             current_section_peak: 1.0,
@@ -43,7 +43,7 @@ impl<'o> Skill<'o> {
     }
 
     #[inline]
-    pub(crate) fn process(&mut self, current: DifficultyObject<'o>, cheese: &[bool]) {
+    pub(crate) fn process(&mut self, current: &DifficultyObject, cheese: &[bool]) {
         self.current_strain *= self.strain_decay(current.delta);
         self.current_strain +=
             self.kind.strain_value_of(&current, cheese) * self.skill_multiplier();
