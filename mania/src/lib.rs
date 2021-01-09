@@ -74,6 +74,7 @@ pub trait PpProvider {
 }
 
 impl PpProvider for Beatmap {
+    #[inline]
     fn pp(&self) -> PpCalculator {
         PpCalculator::new(self)
     }
@@ -88,6 +89,7 @@ pub struct PpCalculator<'m> {
 }
 
 impl<'m> PpCalculator<'m> {
+    #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
         Self {
             map,
@@ -97,18 +99,21 @@ impl<'m> PpCalculator<'m> {
         }
     }
 
+    #[inline]
     pub fn stars(mut self, stars: f32) -> Self {
         self.stars.replace(stars);
 
         self
     }
 
+    #[inline]
     pub fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
     }
 
+    #[inline]
     pub fn score(mut self, score: u32) -> Self {
         self.score = score as f32;
 
@@ -178,6 +183,7 @@ impl<'m> PpCalculator<'m> {
         strain_value
     }
 
+    #[inline]
     fn compute_accuracy_value(&self, score: f32, strain: f32, hit_window: f32) -> f32 {
         (0.2 - (hit_window - 34.0) * 0.006667).max(0.0)
             * strain

@@ -311,6 +311,7 @@ pub trait PpProvider {
 }
 
 impl PpProvider for Beatmap {
+    #[inline]
     fn pp(&self) -> PpCalculator {
         PpCalculator::new(self)
     }
@@ -331,6 +332,7 @@ pub struct PpCalculator<'m> {
 }
 
 impl<'m> PpCalculator<'m> {
+    #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
         Self {
             map,
@@ -346,48 +348,56 @@ impl<'m> PpCalculator<'m> {
         }
     }
 
+    #[inline]
     pub fn attributes(mut self, attributes: DifficultyAttributes) -> Self {
         self.attributes.replace(attributes);
 
         self
     }
 
+    #[inline]
     pub fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
     }
 
+    #[inline]
     pub fn combo(mut self, combo: usize) -> Self {
         self.combo.replace(combo);
 
         self
     }
 
+    #[inline]
     pub fn fruits(mut self, n_fruits: usize) -> Self {
         self.n_fruits.replace(n_fruits);
 
         self
     }
 
+    #[inline]
     pub fn droplets(mut self, n_droplets: usize) -> Self {
         self.n_droplets.replace(n_droplets);
 
         self
     }
 
+    #[inline]
     pub fn tiny_droplets(mut self, n_tiny_droplets: usize) -> Self {
         self.n_tiny_droplets.replace(n_tiny_droplets);
 
         self
     }
 
+    #[inline]
     pub fn tiny_droplet_misses(mut self, n_tiny_droplet_misses: usize) -> Self {
         self.n_tiny_droplet_misses.replace(n_tiny_droplet_misses);
 
         self
     }
 
+    #[inline]
     pub fn misses(mut self, n_misses: usize) -> Self {
         self.n_misses = n_misses;
 
