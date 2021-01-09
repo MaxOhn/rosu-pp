@@ -12,4 +12,4 @@ A standalone crate to calculate star ratings and performance points for all [osu
 - [ ] osu pp
 - [ ] taiko pp
 - [ ] ctb pp
-- [ ] mania pp
+- [x] mania pp (need testing!)
