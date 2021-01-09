@@ -27,14 +27,17 @@ macro_rules! binary_search {
 
 /// Star calculation for osu!ctb maps
 // Slider parsing based on https://github.com/osufx/catch-the-pp
-pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
+pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     if map.hit_objects.len() < 2 {
-        return 0.0;
+        return DifficultyAttributes::default();
     }
 
     let attributes = map.attributes().mods(mods);
     let with_hr = mods.hr();
     let mut ticks = Vec::new(); // using the same buffer for all sliders
+
+    let mut fruits = 0;
+    let mut droplets = 0;
 
     // BUG: Incorrect object order on 2B maps that have fruits within sliders
     let mut hit_objects = map
@@ -47,6 +50,8 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
                 if with_hr {
                     h = h.with_hr(last_pos, last_time);
                 }
+
+                fruits += 1;
 
                 Some(Some(FruitOrJuice::Fruit(Some(h))))
             }
@@ -167,6 +172,9 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
                 let pos = curve.point_at_distance(dist_end);
                 slider_objects.push((pos, h.start_time + duration));
 
+                fruits += 1 + *repeats;
+                droplets += slider_objects.len() - 1 - *repeats;
+
                 let iter = slider_objects.into_iter().map(CatchObject::new);
 
                 Some(Some(FruitOrJuice::Juice(iter)))
@@ -242,7 +250,14 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
     movement.process(&h);
     movement.save_current_peak();
 
-    movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR
+    let stars = movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR;
+
+    DifficultyAttributes {
+        stars,
+        n_fruits: fruits,
+        n_droplets: droplets,
+        max_combo: fruits + droplets,
+    }
 }
 
 #[inline]
@@ -278,6 +293,243 @@ impl<I: Iterator<Item = CatchObject>> Iterator for FruitOrJuice<I> {
     }
 }
 
+#[derive(Default)]
+pub struct DifficultyAttributes {
+    pub stars: f32,
+    pub max_combo: usize,
+    pub n_fruits: usize,
+    pub n_droplets: usize,
+}
+
+pub struct PpResult {
+    pub pp: f32,
+    pub stars: f32,
+}
+
+pub trait PpProvider {
+    fn pp(&self) -> PpCalculator;
+}
+
+impl PpProvider for Beatmap {
+    fn pp(&self) -> PpCalculator {
+        PpCalculator::new(self)
+    }
+}
+
+// TODO: Allow partial plays
+pub struct PpCalculator<'m> {
+    map: &'m Beatmap,
+    attributes: Option<DifficultyAttributes>,
+    mods: u32,
+    combo: Option<usize>,
+
+    n_fruits: Option<usize>,
+    n_droplets: Option<usize>,
+    n_tiny_droplets: Option<usize>,
+    n_tiny_droplet_misses: Option<usize>,
+    n_misses: usize,
+}
+
+impl<'m> PpCalculator<'m> {
+    pub fn new(map: &'m Beatmap) -> Self {
+        Self {
+            map,
+            attributes: None,
+            mods: 0,
+            combo: None,
+
+            n_fruits: None,
+            n_droplets: None,
+            n_tiny_droplets: None,
+            n_tiny_droplet_misses: None,
+            n_misses: 0,
+        }
+    }
+
+    pub fn attributes(mut self, attributes: DifficultyAttributes) -> Self {
+        self.attributes.replace(attributes);
+
+        self
+    }
+
+    pub fn mods(mut self, mods: u32) -> Self {
+        self.mods = mods;
+
+        self
+    }
+
+    pub fn combo(mut self, combo: usize) -> Self {
+        self.combo.replace(combo);
+
+        self
+    }
+
+    pub fn fruits(mut self, n_fruits: usize) -> Self {
+        self.n_fruits.replace(n_fruits);
+
+        self
+    }
+
+    pub fn droplets(mut self, n_droplets: usize) -> Self {
+        self.n_droplets.replace(n_droplets);
+
+        self
+    }
+
+    pub fn tiny_droplets(mut self, n_tiny_droplets: usize) -> Self {
+        self.n_tiny_droplets.replace(n_tiny_droplets);
+
+        self
+    }
+
+    pub fn tiny_droplet_misses(mut self, n_tiny_droplet_misses: usize) -> Self {
+        self.n_tiny_droplet_misses.replace(n_tiny_droplet_misses);
+
+        self
+    }
+
+    pub fn misses(mut self, n_misses: usize) -> Self {
+        self.n_misses = n_misses;
+
+        self
+    }
+
+    /// Generate the hit results with respect to the given accuracy between `0` and `100`.
+    ///
+    /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
+    pub fn accuracy(mut self, acc: f32) -> Self {
+        if self.attributes.is_none() {
+            self.attributes.replace(stars(self.map, self.mods));
+        }
+
+        let attributes = self.attributes.as_ref().unwrap();
+
+        let n_droplets = self
+            .n_droplets
+            .unwrap_or_else(|| attributes.n_droplets.saturating_sub(self.n_misses));
+
+        let n_fruits = self.n_fruits.unwrap_or_else(|| {
+            attributes
+                .max_combo
+                .saturating_sub(self.n_misses.saturating_sub(n_droplets))
+        });
+
+        let max_tiny_droplets = 0; // TODO
+
+        let n_tiny_droplets = self.n_tiny_droplets.unwrap_or_else(|| {
+            ((acc * (attributes.max_combo + max_tiny_droplets) as f32).round() as usize)
+                .saturating_sub(n_fruits)
+                .saturating_sub(n_droplets)
+        });
+
+        let n_tiny_droplet_misses = max_tiny_droplets - n_tiny_droplets;
+
+        self.n_fruits.replace(n_fruits);
+        self.n_droplets.replace(n_droplets);
+        self.n_tiny_droplets.replace(n_tiny_droplets);
+        self.n_tiny_droplet_misses.replace(n_tiny_droplet_misses);
+
+        self
+    }
+
+    pub fn calculate(mut self) -> PpResult {
+        let attributes = self
+            .attributes
+            .take()
+            .unwrap_or_else(|| stars(self.map, self.mods));
+
+        let stars = attributes.stars;
+
+        // Relying heavily on aim
+        let mut pp = (5.0 * ((stars / 0.0049).max(1.0)) - 4.0).powi(2) / 100_000.0;
+
+        let mut combo_hits = self.combo_hits();
+        if combo_hits == 0 {
+            combo_hits = attributes.max_combo;
+        }
+
+        // Longer maps are worth more
+        let len_bonus = 0.95
+            + 0.3 * (combo_hits as f32 / 2500.0).min(1.0)
+            + (combo_hits > 2500) as u8 as f32 * (combo_hits as f32 / 2500.0).log10() * 0.475;
+        pp *= len_bonus;
+
+        // Penalize misses exponentially
+        pp *= 0.97_f32.powi(self.n_misses as i32);
+
+        // Combo scaling
+        if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
+            pp *= (combo as f32 / attributes.max_combo as f32)
+                .powf(0.8)
+                .min(1.0);
+        }
+
+        // AR scaling
+        let ar = self.map.ar;
+        let mut ar_factor = 1.0;
+        if ar > 9.0 {
+            ar_factor += 0.1 * (ar - 9.0) + (ar > 10.0) as u8 as f32 * 0.1 * (ar - 10.0);
+        } else if ar < 8.0 {
+            ar_factor += 0.025 * (8.0 - ar);
+        }
+        pp *= ar_factor;
+
+        // HD bonus
+        if self.mods.hd() {
+            if ar <= 10.0 {
+                pp *= 1.05 + 0.075 * (10.0 - ar);
+            } else if ar > 10.0 {
+                pp *= 1.01 + 0.04 * (11.0 - ar.min(11.0));
+            }
+        }
+
+        // FL bonus
+        if self.mods.fl() {
+            pp *= 1.35 * len_bonus;
+        }
+
+        // Accuracy scaling
+        pp *= self.acc().powf(5.5);
+
+        // NF penalty
+        if self.mods.nf() {
+            pp *= 0.9;
+        }
+
+        PpResult { pp, stars }
+    }
+
+    #[inline]
+    fn combo_hits(&self) -> usize {
+        self.n_fruits.unwrap_or(0) + self.n_droplets.unwrap_or(0) + self.n_misses
+    }
+
+    #[inline]
+    fn successful_hits(&self) -> usize {
+        self.n_fruits.unwrap_or(0)
+            + self.n_droplets.unwrap_or(0)
+            + self.n_tiny_droplets.unwrap_or(0)
+    }
+
+    #[inline]
+    fn total_hits(&self) -> usize {
+        self.successful_hits() + self.n_tiny_droplet_misses.unwrap_or(0) + self.n_misses
+    }
+
+    #[inline]
+    fn acc(&self) -> f32 {
+        let total_hits = self.total_hits();
+
+        if total_hits == 0 {
+            0.0
+        } else {
+            (self.successful_hits() as f32 / total_hits as f32)
+                .max(0.0)
+                .min(1.0)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -301,7 +553,7 @@ mod tests {
         };
 
         let mods = 0;
-        let stars = stars(&map, mods);
+        let stars = stars(&map, mods).stars;
 
         println!("Stars: {} [map={} | mods={}]", stars, map_id, mods);
     }
@@ -323,26 +575,26 @@ mod tests {
             (1974968, 1 << 6, 3.650649037957456), // DT
             (1974968, 1 << 4, 3.566302788963401), // HR
             (1974968, 1 << 1, 2.2029392066882654),// EZ
-            
+
             (2420076, 1 << 8, 4.791039358886245), // HT
             (2420076, 0, 6.223136555625056),      // NM
             (2420076, 1 << 6, 8.908315960310958), // DT
             (2420076, 1 << 4, 6.54788067620051),  // HR
             (2420076, 1 << 1, 6.067971540209479), // EZ
-            
+
             (2206596, 1 << 8, 4.767182611189798), // HT
             (2206596, 0, 6.157660207091584),      // NM
             (2206596, 1 << 6, 8.93391286552717),  // DT
             (2206596, 1 << 4, 6.8639096665110735),// HR
             (2206596, 1 << 1, 5.60279198088948),  // EZ
-            
+
             // Super long juice stream towards end
             // (1972149, 1 << 8, 4.671425766413811), // HT
             // (1972149, 0, 6.043742871084152),      // NM
             // (1972149, 1 << 6, 8.469259368304225), // DT
             // (1972149, 1 << 4, 6.81222485322862),  // HR
             // (1972149, 1 << 1, 5.289343020686747), // EZ
-            
+
             // Convert slider fiesta
             // (1657535, 1 << 8, 3.862453635711741), // HT
             // (1657535, 0, 4.792543335869686),      // NM
@@ -362,7 +614,7 @@ mod tests {
                 Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
             };
 
-            let stars = stars(&map, mods);
+            let stars = stars(&map, mods).stars;
 
             assert!(
                 (stars - expected_stars).abs() < margin,
