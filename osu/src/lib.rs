@@ -2,11 +2,13 @@ mod curve;
 mod difficulty_object;
 mod math_util;
 mod osu_object;
+mod pp;
 mod skill;
 mod skill_kind;
 
 use difficulty_object::DifficultyObject;
 use osu_object::OsuObject;
+pub use pp::*;
 use skill::Skill;
 use skill_kind::SkillKind;
 
@@ -16,9 +18,9 @@ const SECTION_LEN: f32 = 400.0;
 const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
 
 /// Star calculation for osu!standard maps
-pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
+pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     if map.hit_objects.len() < 2 {
-        return 0.0;
+        return todo!();
     }
 
     let attributes = map.attributes().mods(mods);
@@ -77,7 +79,9 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
     let aim_rating = skills[0].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
     let speed_rating = skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
-    aim_rating + speed_rating + (aim_rating - speed_rating).abs() / 2.0
+    let stars = aim_rating + speed_rating + (aim_rating - speed_rating).abs() / 2.0;
+
+    todo!()
 }
 
 #[cfg(test)]
@@ -101,7 +105,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let stars = stars(&map, 0);
+        let stars = stars(&map, 0).stars;
 
         println!("Stars: {}", stars);
     }
@@ -131,7 +135,7 @@ mod tests {
             (1241370, 1 << 6, 11.144720506574934),// DT
             (1241370, 1 << 4, 7.641688110458715), // HR
             (1241370, 1 << 1, 6.316288616688052), // EZ
-            
+
             // Slider fiesta
             // (1657535, 1 << 8, 4.1727975286379895),// HT
             // (1657535, 0, 5.16048239944917),       // NM
@@ -151,7 +155,7 @@ mod tests {
                 Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
             };
 
-            let stars = stars(&map, mods);
+            let stars = stars(&map, mods).stars;
 
             assert!(
                 (stars - expected_stars).abs() < margin,
