@@ -17,20 +17,19 @@ const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
 const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
 
-/// Star calculation for osu!standard maps
+/// Star calculation for osu!standard maps.
+///
+/// Sliders are considered as regular hitcircles and stack leniency is ignored.
+/// Still very good results but the least precise version in general.
+/// However, this is the most efficient one.
 pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     let attributes = map.attributes().mods(mods);
 
     if map.hit_objects.len() < 2 {
         return DifficultyAttributes {
-            stars: 0.0,
             ar: attributes.ar,
             od: attributes.od,
-            speed_strain: 0.0,
-            aim_strain: 0.0,
-            max_combo: 0,
-            n_circles: 0,
-            n_spinners: 0,
+            ..Default::default()
         };
     }
 
@@ -322,6 +321,7 @@ mod tests {
             // .combo(100)
             // .n100(0)
             .mods(0);
+
         let result = calculator.calculate();
 
         println!("Stars: {}", result.attributes.stars);

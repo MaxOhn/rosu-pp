@@ -1,13 +1,22 @@
-mod versions;
-pub use versions::*;
-
 mod curve;
-mod difficulty_attributes;
 mod math_util;
 mod pp;
+mod versions;
 
-pub use difficulty_attributes::DifficultyAttributes;
 pub use pp::*;
+pub use versions::*;
+
+#[derive(Default)]
+pub struct DifficultyAttributes {
+    pub stars: f32,
+    pub ar: f32,
+    pub od: f32,
+    pub speed_strain: f32,
+    pub aim_strain: f32,
+    pub max_combo: usize,
+    pub n_circles: usize,
+    pub n_spinners: usize,
+}
 
 const HITWINDOW_OD_MIN: f32 = 80.0;
 const HITWINDOW_OD_AVG: f32 = 50.0;
