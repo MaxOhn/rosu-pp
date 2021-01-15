@@ -36,7 +36,7 @@ impl<'p> Iterator for ControlPointIter<'p> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match (self.next_timing, self.next_difficulty) {
-            (Some(time), Some((d, _))) if time < d => {
+            (Some(time), Some((d, _))) if time <= d => {
                 self.next_timing = self.timing_points.next().map(|t| t.time);
 
                 Some(ControlPoint::Timing { time })

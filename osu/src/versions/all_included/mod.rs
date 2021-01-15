@@ -21,14 +21,9 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
 
     if map.hit_objects.len() < 2 {
         return DifficultyAttributes {
-            stars: 0.0,
             ar: attributes.ar,
             od: attributes.od,
-            speed_strain: 0.0,
-            aim_strain: 0.0,
-            max_combo: 0,
-            n_circles: 0,
-            n_spinners: 0,
+            ..Default::default()
         };
     }
 

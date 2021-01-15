@@ -7,7 +7,7 @@ A standalone crate to calculate star ratings and performance points for all [osu
 ### Roadmap
 - osu sr versions
   - [x] no_sliders_no_leniency (i.e. oppai)
-  - [ ] no_sliders
+  - [x] no_leniency
   - [ ] all included
 - [x] taiko sr
 - [x] ctb sr

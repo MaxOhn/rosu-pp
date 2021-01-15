@@ -172,8 +172,8 @@ mod tests {
     use std::fs::File;
 
     #[test]
-    fn no_sliders_no_leniency_single_stars() {
-        let file = match File::open("E:/Games/osu!/beatmaps/1241370.osu") {
+    fn no_sliders_single_stars() {
+        let file = match File::open("E:/Games/osu!/beatmaps/70090.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
@@ -187,14 +187,14 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let stars = stars(&map, 0).stars;
+        let stars = stars(&map, 1024 + 8 + 64 + 16).stars;
 
         println!("Stars: {}", stars);
     }
 
     #[test]
     #[ignore]
-    fn no_sliders_no_leniency_stars() {
+    fn no_sliders_stars() {
         let margin = 0.5;
 
         #[rustfmt::skip]
@@ -252,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn no_sliders_no_leniency_single_pp() {
+    fn no_sliders_single_pp() {
         let file = match File::open("E:/Games/osu!/beatmaps/1241370.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
@@ -268,11 +268,11 @@ mod tests {
         };
 
         let calculator = PpCalculator::new(&map)
-            // .misses(2)
-            // .accuracy(96.78)
-            // .combo(100)
+            .misses(2)
+            .accuracy(96.78)
+            .combo(1876)
             // .n100(0)
-            .mods(0);
+            .mods(8 + 16);
 
         let result = calculator.calculate(stars);
 

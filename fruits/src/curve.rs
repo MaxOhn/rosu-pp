@@ -25,6 +25,7 @@ pub(crate) enum Curve {
 }
 
 impl Curve {
+    #[inline]
     pub(crate) fn linear(a: Pos2, b: Pos2) -> Self {
         Self::Linear { a, b }
     }

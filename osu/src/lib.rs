@@ -6,7 +6,7 @@ mod versions;
 pub use pp::*;
 pub use versions::*;
 
-#[derive(Default)]
+#[derive(Clone, Default, Debug)]
 pub struct DifficultyAttributes {
     pub stars: f32,
     pub ar: f32,
