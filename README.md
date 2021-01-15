@@ -5,11 +5,18 @@ A standalone crate to calculate star ratings and performance points for all [osu
 **Most of it is still a WIP.**
 
 ### Roadmap
-- [ ] osu sr
+- osu sr versions
+  - [x] no_sliders_no_leniency (i.e. oppai)
+  - [ ] no_sliders
+  - [ ] all included
 - [x] taiko sr
 - [x] ctb sr
 - [x] mania sr
-- [x] osu pp (need sr & testing!)
+---
+- [x] osu pp
 - [x] taiko pp (need testing!)
 - [x] ctb pp (need testing!)
 - [x] mania pp (need testing!)
+---
+- [ ] refactoring
+- [ ] benchmarking
