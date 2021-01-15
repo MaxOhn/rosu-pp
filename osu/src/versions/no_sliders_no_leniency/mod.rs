@@ -315,14 +315,13 @@ mod tests {
         };
 
         let calculator = PpCalculator::new(&map)
-            .stars_function(stars)
             // .misses(2)
             // .accuracy(96.78)
             // .combo(100)
             // .n100(0)
             .mods(0);
 
-        let result = calculator.calculate();
+        let result = calculator.calculate(stars);
 
         println!("Stars: {}", result.attributes.stars);
         println!("PP: {}", result.pp);

@@ -226,8 +226,8 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let calculator = PpCalculator::new(&map).mods(0).stars_function(stars);
-        let result = calculator.calculate();
+        let calculator = PpCalculator::new(&map).mods(0);
+        let result = calculator.calculate(stars);
 
         println!("PP: {}", result.pp);
     }

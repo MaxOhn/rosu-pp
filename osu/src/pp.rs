@@ -30,8 +30,6 @@ pub struct PpCalculator<'m> {
     n100: Option<usize>,
     n50: Option<usize>,
     n_misses: usize,
-
-    stars_func: Option<Box<dyn Fn(&Beatmap, u32) -> Attributes>>,
 }
 
 impl<'m> PpCalculator<'m> {
@@ -48,8 +46,6 @@ impl<'m> PpCalculator<'m> {
             n100: None,
             n50: None,
             n_misses: 0,
-
-            stars_func: None,
         }
     }
 
@@ -102,13 +98,6 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
-    #[inline]
-    pub fn stars_function(mut self, func: impl Fn(&Beatmap, u32) -> Attributes + 'static) -> Self {
-        self.stars_func.replace(Box::new(func));
-
-        self
-    }
-
     /// Generate the hit results with respect to the given accuracy between `0` and `100`.
     ///
     /// Be sure to set `misses` beforehand!
@@ -154,18 +143,13 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
-    pub fn calculate(mut self) -> PpResult {
+    /// Consume the calculator and calculate the pp.
+    ///
+    /// `stars_func` will be used to calculate stars and other necessary attributes if not already given.
+    pub fn calculate(mut self, stars_func: impl FnOnce(&Beatmap, u32) -> Attributes) -> PpResult {
         if self.attributes.is_none() {
-            let stars_func = self
-                .stars_func
-                .take()
-                .unwrap_or_else(|| Box::new(super::no_sliders_no_leniency::stars));
-
-            let attribtes = stars_func(self.map, self.mods);
-
-            // println!("> stars={}", attribtes.stars);
-
-            self.attributes.replace(attribtes);
+            let attributes = stars_func(self.map, self.mods);
+            self.attributes.replace(attributes);
         }
 
         if self.acc.is_none() {
