@@ -18,6 +18,7 @@ impl OsuObject {
         h: &HitObject,
         map: &Beatmap,
         radius: f32,
+        ticks: &mut Vec<f32>,
         attributes: &mut DifficultyAttributes,
         slider_state: &mut SliderState,
     ) -> Self {
@@ -106,7 +107,7 @@ impl OsuObject {
                 let time_add = duration * (tick_distance / (pixel_len * *repeats as f32));
 
                 let target = pixel_len - tick_distance / 8.0;
-                let mut ticks = Vec::with_capacity((target / tick_distance) as usize);
+                ticks.reserve((target / tick_distance) as usize);
 
                 // Tick of the first span
                 if current_distance < target {
@@ -145,6 +146,8 @@ impl OsuObject {
                 let final_span_end_time = (h.start_time + duration / 2.0)
                     .max(final_span_start_time + span_duration - LEGACY_LAST_TICK_OFFSET);
                 compute_vertex(final_span_end_time);
+
+                ticks.clear();
 
                 Self {
                     time: h.start_time,

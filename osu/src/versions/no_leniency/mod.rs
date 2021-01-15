@@ -28,11 +28,11 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// This version is considerably more efficient than `all_included` since
 /// processing stack leniency is relatively expensive.
 pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
-    let attributes = map.attributes().mods(mods);
+    let map_attributes = map.attributes().mods(mods);
 
     let mut diff_attributes = DifficultyAttributes {
-        ar: attributes.ar,
-        od: attributes.od,
+        ar: map_attributes.ar,
+        od: map_attributes.od,
         ..Default::default()
     };
 
@@ -40,8 +40,8 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         return diff_attributes;
     }
 
-    let section_len = SECTION_LEN * attributes.clock_rate;
-    let radius = OBJECT_RADIUS * (1.0 - 0.7 * (attributes.cs - 5.0) / 5.0) / 2.0;
+    let section_len = SECTION_LEN * map_attributes.clock_rate;
+    let radius = OBJECT_RADIUS * (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
 
     if radius < 30.0 {
@@ -50,11 +50,18 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     }
 
     let mut slider_state = SliderState::new(&map);
+    let mut ticks_buf = Vec::new();
 
-    let mut hit_objects = map
-        .hit_objects
-        .iter()
-        .map(|h| OsuObject::new(h, map, radius, &mut diff_attributes, &mut slider_state));
+    let mut hit_objects = map.hit_objects.iter().map(|h| {
+        OsuObject::new(
+            h,
+            map,
+            radius,
+            &mut ticks_buf,
+            &mut diff_attributes,
+            &mut slider_state,
+        )
+    });
 
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);
@@ -74,7 +81,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         &prev,
         prev_vals,
         prev_prev,
-        attributes.clock_rate,
+        map_attributes.clock_rate,
         scaling_factor,
     );
 
@@ -92,7 +99,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
             &prev,
             prev_vals,
             prev_prev,
-            attributes.clock_rate,
+            map_attributes.clock_rate,
             scaling_factor,
         );
 
