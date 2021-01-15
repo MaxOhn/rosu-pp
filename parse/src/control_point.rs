@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-#[derive(PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TimingPoint {
     pub beat_len: f32,
     pub bpm: f32,
@@ -13,7 +13,7 @@ impl PartialOrd for TimingPoint {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DifficultyPoint {
     pub time: f32,
     pub speed_multiplier: f32,

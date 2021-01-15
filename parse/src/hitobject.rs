@@ -1,4 +1,4 @@
-use super::{HitObjectKind, Pos2};
+use super::{PathType, Pos2};
 
 use std::cmp::Ordering;
 
@@ -41,4 +41,21 @@ impl PartialOrd for HitObject {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.start_time.partial_cmp(&other.start_time)
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum HitObjectKind {
+    Circle,
+    Slider {
+        pixel_len: f32,
+        repeats: usize,
+        curve_points: Vec<Pos2>,
+        path_type: PathType,
+    },
+    Spinner {
+        end_time: f32,
+    },
+    Hold {
+        end_time: f32,
+    },
 }

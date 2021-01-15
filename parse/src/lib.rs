@@ -1,3 +1,4 @@
+mod attributes;
 mod control_point;
 mod error;
 mod hitobject;
@@ -6,9 +7,10 @@ mod mods;
 mod pos2;
 mod sort;
 
+pub use attributes::BeatmapAttributes;
 pub use control_point::{DifficultyPoint, TimingPoint};
 pub use error::{ParseError, ParseResult};
-pub use hitobject::HitObject;
+pub use hitobject::{HitObject, HitObjectKind};
 pub use hitsound::HitSound;
 pub use mods::Mods;
 pub use pos2::Pos2;
@@ -17,56 +19,6 @@ use sort::sort;
 use std::cmp::Ordering;
 use std::io::{BufRead, BufReader, Read};
 use std::str::FromStr;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs::File;
-
-    #[test]
-    fn parsing_works() {
-        let file = match File::open("E:/Games/osu!/beatmaps/2223745.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not read file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        println!("Mode: {}", map.mode as u8);
-        println!("n_circles: {}", map.n_circles);
-        println!("n_sliders: {}", map.n_sliders);
-        println!("n_spinners: {}", map.n_spinners);
-        println!("ar: {}", map.ar);
-        println!("od: {}", map.od);
-        println!("cs: {}", map.cs);
-        println!("hp: {}", map.hp);
-        println!("sv: {}", map.sv);
-        println!("tick_rate: {}", map.tick_rate);
-        println!("stack_leniency: {}", map.stack_leniency);
-        println!("hit_objects: {}", map.hit_objects.len());
-        println!("timing_points: {}", map.timing_points.len());
-        println!("difficulty_points: {}", map.difficulty_points.len());
-
-        assert_eq!(2 + 2, 4);
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum GameMode {
-    STD = 0,
-    TKO = 1,
-    CTB = 2,
-    MNA = 3,
-}
-
-impl Default for GameMode {
-    fn default() -> Self {
-        Self::STD
-    }
-}
 
 macro_rules! sort {
     ($slice:expr) => {
@@ -90,7 +42,21 @@ macro_rules! validate_float {
     }};
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum GameMode {
+    STD = 0,
+    TKO = 1,
+    CTB = 2,
+    MNA = 3,
+}
+
+impl Default for GameMode {
+    fn default() -> Self {
+        Self::STD
+    }
+}
+
+#[derive(Clone, Default, Debug)]
 pub struct Beatmap {
     pub mode: GameMode,
     pub version: u8,
@@ -413,23 +379,6 @@ impl FromStr for PathType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum HitObjectKind {
-    Circle,
-    Slider {
-        pixel_len: f32,
-        repeats: usize,
-        curve_points: Vec<Pos2>,
-        path_type: PathType,
-    },
-    Spinner {
-        end_time: f32,
-    },
-    Hold {
-        end_time: f32,
-    },
-}
-
 #[derive(Copy, Clone)]
 enum Section {
     None,
@@ -452,86 +401,38 @@ impl Section {
     }
 }
 
-#[derive(Clone)]
-pub struct BeatmapAttributes {
-    pub ar: f32,
-    pub od: f32,
-    pub cs: f32,
-    pub hp: f32,
-    pub clock_rate: f32,
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
 
-impl BeatmapAttributes {
-    const AR0_MS: f32 = 1800.0;
-    const AR5_MS: f32 = 1200.0;
-    const AR10_MS: f32 = 450.0;
-    const AR_MS_STEP_1: f32 = (Self::AR0_MS - Self::AR5_MS) / 5.0;
-    const AR_MS_STEP_2: f32 = (Self::AR5_MS - Self::AR10_MS) / 5.0;
-
-    const OD0_MS: f32 = 80.0;
-    const OD10_MS: f32 = 20.0;
-    const OD_MS_STEP: f32 = (Self::OD0_MS - Self::OD10_MS) / 10.0;
-
-    fn new(ar: f32, od: f32, cs: f32, hp: f32) -> Self {
-        Self {
-            ar,
-            od,
-            cs,
-            hp,
-            clock_rate: 1.0,
-        }
-    }
-
-    pub fn mods(self, mods: impl Mods) -> Self {
-        if !mods.change_map() {
-            return self;
-        }
-
-        let clock_rate = mods.speed();
-        let multiplier = mods.od_ar_hp_multiplier();
-
-        // AR
-        let mut ar = self.ar * multiplier;
-        let mut ar_ms = if ar <= 5.0 {
-            Self::AR0_MS - Self::AR_MS_STEP_1 * ar
-        } else {
-            Self::AR5_MS - Self::AR_MS_STEP_2 * (ar - 5.0)
+    #[test]
+    fn parsing_works() {
+        let file = match File::open("E:/Games/osu!/beatmaps/2223745.osu") {
+            Ok(file) => file,
+            Err(why) => panic!("Could not read file: {}", why),
         };
 
-        ar_ms = ar_ms.max(Self::AR10_MS).min(Self::AR0_MS);
-        ar_ms /= clock_rate;
-
-        ar = if ar_ms > Self::AR5_MS {
-            (Self::AR0_MS - ar_ms) / Self::AR_MS_STEP_1
-        } else {
-            5.0 + (Self::AR5_MS - ar_ms) / Self::AR_MS_STEP_2
+        let map = match Beatmap::parse(file) {
+            Ok(map) => map,
+            Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        // OD
-        let mut od = self.od * multiplier;
-        let mut od_ms = Self::OD0_MS - (Self::OD_MS_STEP * od).ceil();
-        od_ms = od_ms.max(Self::OD10_MS).min(Self::OD0_MS);
-        od_ms /= clock_rate;
-        od = (Self::OD0_MS - od_ms) / Self::OD_MS_STEP;
+        println!("Mode: {}", map.mode as u8);
+        println!("n_circles: {}", map.n_circles);
+        println!("n_sliders: {}", map.n_sliders);
+        println!("n_spinners: {}", map.n_spinners);
+        println!("ar: {}", map.ar);
+        println!("od: {}", map.od);
+        println!("cs: {}", map.cs);
+        println!("hp: {}", map.hp);
+        println!("sv: {}", map.sv);
+        println!("tick_rate: {}", map.tick_rate);
+        println!("stack_leniency: {}", map.stack_leniency);
+        println!("hit_objects: {}", map.hit_objects.len());
+        println!("timing_points: {}", map.timing_points.len());
+        println!("difficulty_points: {}", map.difficulty_points.len());
 
-        // CS
-        let mut cs = self.cs;
-        if mods.hr() {
-            cs *= 1.3;
-        } else if mods.ez() {
-            cs *= 0.5;
-        }
-        cs = cs.min(10.0);
-
-        // HP
-        let hp = (self.hp * multiplier).min(10.0);
-
-        Self {
-            ar,
-            od,
-            cs,
-            hp,
-            clock_rate,
-        }
+        assert_eq!(2 + 2, 4);
     }
 }
