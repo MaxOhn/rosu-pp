@@ -96,8 +96,14 @@ impl ops::AddAssign for Pos2 {
     }
 }
 
+impl fmt::Display for Pos2 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 impl fmt::Debug for Pos2 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({},{})", self.x, self.y)
+        write!(f, "({}, {})", self.x, self.y)
     }
 }

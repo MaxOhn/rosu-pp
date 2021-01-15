@@ -11,7 +11,7 @@ const AIM_STRAIN_DECAY_BASE: f32 = 0.15;
 const DECAY_WEIGHT: f32 = 0.9;
 
 pub(crate) struct Skill {
-    pub current_strain: f32,
+    current_strain: f32,
     current_section_peak: f32,
 
     kind: SkillKind,
@@ -36,16 +36,12 @@ impl Skill {
 
     #[inline]
     pub(crate) fn save_current_peak(&mut self) {
-        if self.prev_time.is_some() {
-            self.strain_peaks.push(self.current_section_peak);
-        }
+        self.strain_peaks.push(self.current_section_peak);
     }
 
     #[inline]
     pub(crate) fn start_new_section_from(&mut self, time: f32) {
-        if let Some(prev) = self.prev_time {
-            self.current_section_peak = self.peak_strain(time - prev);
-        }
+        self.current_section_peak = self.peak_strain(time - self.prev_time.unwrap());
     }
 
     #[inline]
@@ -53,7 +49,7 @@ impl Skill {
         self.current_strain *= self.strain_decay(current.delta);
         self.current_strain += self.kind.strain_value_of(&current) * self.skill_multiplier();
         self.current_section_peak = self.current_section_peak.max(self.current_strain);
-        self.prev_time.replace(current.base.time());
+        self.prev_time.replace(current.base.start_time);
     }
 
     pub(crate) fn difficulty_value(&mut self) -> f32 {

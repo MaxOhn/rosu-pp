@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use super::curve::Curve;
+use crate::curve::Curve;
 
 use parse::{Beatmap, BeatmapAttributes, HitObject, HitObjectKind, PathType, Pos2};
 use std::cmp::Ordering;
@@ -170,12 +170,45 @@ impl OsuObject {
                 }
 
                 // Slider tail
-                let dist_end = (repeats % 2) as f32 * pixel_len;
-                // let dist_end = velocity * (duration - LEGACY_LAST_TICK_OFFSET);
-                let pos = curve.point_at_distance(dist_end);
-                slider_objects.push(SliderTick::new(pos, h.start_time + duration));
+                let span_duration = duration / *repeats as f32;
+                let final_span_idx = repeats.saturating_sub(1);
+                let final_span_start_time = h.start_time + final_span_idx as f32 * span_duration;
+                let final_span_end_time = (h.start_time + duration / 2.0)
+                    .max(final_span_start_time + span_duration - LEGACY_LAST_TICK_OFFSET);
+                let mut final_progress =
+                    (final_span_end_time - final_span_start_time) / span_duration;
 
-                println!("> Slider: {:?}", slider_objects);
+                if *repeats & 1 == 0 {
+                    final_progress = 1.0 - final_progress;
+                }
+
+                // println!(
+                //     "final_span_index={} | final_span_start_time={} | \
+                //     final_span_end_time={} | final_progress={}",
+                //     final_span_idx, final_span_start_time, final_span_end_time, final_progress
+                // );
+
+                // println!("len={}", final_progress * *pixel_len as f32);
+
+                let dist_end = (repeats % 2) as f32 * pixel_len;
+
+                let pos = curve.point_at_distance(dist_end);
+                slider_objects.push(SliderTick::new(pos, final_span_end_time));
+
+                // println!(
+                //     "start_time={} | span_duration={} | vel={} | \
+                //     tick_dist={} | dist={} | span_count={} | \
+                //     legacy_last_tick_offset={}",
+                //     h.start_time,
+                //     duration / *repeats as f32,
+                //     *pixel_len as f32 / duration,
+                //     tick_distance,
+                //     *pixel_len,
+                //     *repeats,
+                //     36
+                // );
+
+                // println!("> Slider: {:?}", slider_objects);
 
                 let radius = OBJECT_RADIUS * scale;
 
@@ -187,25 +220,73 @@ impl OsuObject {
 
                 // println!("radius={} | stack_offset={:?}", radius, stack_offset);
 
-                let stacked_pos = pos + stack_offset;
+                let pos = h.pos;
+                let stacked_pos = pos + stack_offset; // TODO: Simplify for below
+
+                // println!(
+                //     "stacked_pos = {:?} + {:?} = {:?}",
+                //     pos, stack_offset, stacked_pos
+                // );
 
                 let mut cursor_end_pos = stacked_pos;
                 let mut cursor_travel_dist = 0.0;
                 let approx_follow_circle_radius = radius * 3.0;
 
+                // println!(
+                //     "stacked_pos={:?} | approx_follow_circle_radius={}",
+                //     stacked_pos, approx_follow_circle_radius
+                // );
+
+                // let mut curr_offset = tick_distance;
+
                 for (i, tick) in slider_objects.iter().skip(1).enumerate() {
-                    let diff = stacked_pos + tick.pos - cursor_end_pos;
+                    let mut progress = (tick.time - h.start_time) / span_duration;
+
+                    if progress % 2.0 >= 1.0 {
+                        progress = 1.0 - progress % 1.0;
+                    } else {
+                        progress %= 1.0;
+                    }
+
+                    let curr_dist = pixel_len * progress;
+                    let curr_pos = curve.point_at_distance(curr_dist);
+
+                    let diff = stacked_pos + curr_pos - pos - cursor_end_pos;
                     let mut dist = diff.length();
 
-                    println!("[{}] diff={:?} | dist={}", i, diff, dist);
+                    // println!(
+                    //     "position at: progress=? | d={} => {:?}",
+                    //     curr_offset, tick.pos
+                    // );
+                    // curr_offset += tick_distance;
+
+                    println!(
+                        "[{}] diff = {:?} + {:?} - {:?} = {:?} | dist={}",
+                        i,
+                        stacked_pos,
+                        tick.pos - pos,
+                        cursor_end_pos,
+                        diff,
+                        dist
+                    );
+
+                    // println!("{} > {}", dist, approx_follow_circle_radius);
 
                     if dist > approx_follow_circle_radius {
                         let normalized = diff.normalize();
+                        // println!("diff before: {:?}", diff);
+                        // println!("diff after: {:?}", normalized);
                         dist -= approx_follow_circle_radius;
                         cursor_end_pos += normalized * dist;
+
+                        // println!("+= {} * {} => {:?}", normalized, dist, cursor_end_pos);
+
                         cursor_travel_dist += dist;
+                        // println!("+= {} => {}", dist, cursor_travel_dist);
                     }
                 }
+
+                println!("cursor_travel_dist={}", cursor_travel_dist);
 
                 println!("---");
 
@@ -288,8 +369,9 @@ impl OsuObject {
         }
     }
 
+    // TODO: Remove pub
     #[inline]
-    fn pos(&self) -> Pos2 {
+    pub fn pos(&self) -> Pos2 {
         match self {
             Self::Circle { pos, .. } => *pos,
             Self::Slider { objects, .. } => objects[0].pos,

@@ -1,7 +1,7 @@
 use super::DifficultyObject;
 
 const SINGLE_SPACING_TRESHOLD: f32 = 125.0;
-const SPEED_ANGLE_BONUS_BEGIN: f32 = std::f32::consts::FRAC_PI_6;
+const SPEED_ANGLE_BONUS_BEGIN: f32 = 5.0 * std::f32::consts::FRAC_PI_6;
 const PI_OVER_4: f32 = std::f32::consts::FRAC_PI_4;
 const PI_OVER_2: f32 = std::f32::consts::FRAC_PI_2;
 
@@ -43,20 +43,16 @@ impl SkillKind {
                 }
 
                 let jump_dist_exp = apply_diminishing_exp(current.jump_dist);
-                let travel_dist_exp = apply_diminishing_exp(current.travel_dist);
 
-                let dist_exp =
-                    jump_dist_exp + travel_dist_exp + (travel_dist_exp * jump_dist_exp).sqrt();
-
-                (result + dist_exp / (current.strain_time).max(TIMING_THRESHOLD))
-                    .max(dist_exp / current.strain_time)
+                (result + jump_dist_exp / (current.strain_time).max(TIMING_THRESHOLD))
+                    .max(jump_dist_exp / current.strain_time)
             }
             Self::Speed => {
                 if current.base.is_spinner() {
                     return 0.0;
                 }
 
-                let dist = SINGLE_SPACING_TRESHOLD.min(current.travel_dist + current.jump_dist);
+                let dist = SINGLE_SPACING_TRESHOLD.min(current.jump_dist);
                 let delta_time = MAX_SPEED_BONUS.max(current.delta);
 
                 let mut speed_bonus = 1.0;
@@ -75,7 +71,6 @@ impl SkillKind {
                     if angle < PI_OVER_2 {
                         angle_bonus = 1.28;
 
-                        // TODO: Improve ifs
                         if dist < 90.0 && angle < PI_OVER_4 {
                             angle_bonus += (1.0 - angle_bonus) * ((90.0 - dist) / 10.0).min(1.0);
                         } else if dist < 90.0 {

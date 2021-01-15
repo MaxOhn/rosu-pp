@@ -33,8 +33,10 @@ impl DifficultyObject {
             scaling_factor *= 1.0 + small_circle_bonus;
         }
 
-        let travel_dist = base.travel_dist();
+        let travel_dist = prev.travel_dist();
         let prev_cursor_pos = prev.cursor_end_position();
+
+        // println!("travel_dist={} | prev_cursor_pos={:?}", travel_dist, prev_cursor_pos);
 
         let jump_dist = match base {
             OsuObject::Spinner { .. } => 0.0,
