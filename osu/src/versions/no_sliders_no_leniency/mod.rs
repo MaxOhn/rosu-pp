@@ -4,11 +4,12 @@ mod control_point_iter;
 mod difficulty_object;
 mod skill;
 mod skill_kind;
+mod slider_state;
 
-use control_point_iter::{ControlPoint, ControlPointIter};
 use difficulty_object::DifficultyObject;
 use skill::Skill;
 use skill_kind::SkillKind;
+use slider_state::SliderState;
 
 use parse::{Beatmap, HitObject, HitObjectKind, Mods};
 use std::borrow::Cow;
@@ -16,6 +17,7 @@ use std::borrow::Cow;
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
 const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
+const NORMALIZED_RADIUS: f32 = 52.0;
 
 /// Star calculation for osu!standard maps.
 ///
@@ -35,6 +37,12 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
 
     let section_len = SECTION_LEN * attributes.clock_rate;
     let radius = OBJECT_RADIUS * (1.0 - 0.7 * (attributes.cs - 5.0) / 5.0) / 2.0;
+    let mut scaling_factor = NORMALIZED_RADIUS / radius;
+
+    if radius < 30.0 {
+        let small_circle_bonus = (30.0 - radius).min(5.0) / 50.0;
+        scaling_factor *= 1.0 + small_circle_bonus;
+    }
 
     let mut max_combo = 0;
     let mut n_circles = 0;
@@ -51,16 +59,14 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         HitObjectKind::Slider {
             pixel_len, repeats, ..
         } => {
-            max_combo += count_ticks(h.start_time, *pixel_len, *repeats, &map, &mut state);
+            max_combo += state.count_ticks(h.start_time, *pixel_len, *repeats, &map);
 
-            let h = HitObject {
+            Cow::Owned(HitObject {
                 pos: h.pos,
                 start_time: h.start_time,
                 kind: HitObjectKind::Circle,
                 sound: h.sound,
-            };
-
-            Cow::Owned(h)
+            })
         }
         HitObjectKind::Spinner { .. } => {
             max_combo += 1;
@@ -74,6 +80,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);
 
+    // First object has no predecessor and thus no strain, handle distinctly
     let mut current_section_end =
         (map.hit_objects[0].start_time / section_len).ceil() * section_len;
 
@@ -81,7 +88,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     let mut prev = hit_objects.next().unwrap();
     let mut prev_vals = None;
 
-    // Handle first object separately to remove if-branching
+    // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
     let h = DifficultyObject::new(
         curr.as_ref(),
@@ -89,7 +96,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         prev_vals,
         prev_prev,
         attributes.clock_rate,
-        radius,
+        scaling_factor,
     );
 
     aim.process(&h);
@@ -107,7 +114,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
             prev_vals,
             prev_prev,
             attributes.clock_rate,
-            radius,
+            scaling_factor,
         );
 
         while h.base.start_time > current_section_end {
@@ -155,60 +162,6 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         n_circles,
         n_spinners,
     }
-}
-
-struct SliderState<'p> {
-    control_points: ControlPointIter<'p>,
-    next_time: f32,
-    px_per_beat: f32,
-    prev_sv: f32,
-}
-
-impl<'p> SliderState<'p> {
-    #[inline]
-    fn new(map: &'p Beatmap) -> Self {
-        Self {
-            control_points: ControlPointIter::new(map),
-            next_time: std::f32::NEG_INFINITY,
-            px_per_beat: 1.0,
-            prev_sv: 1.0,
-        }
-    }
-}
-
-fn count_ticks(
-    time: f32,
-    pixel_len: f32,
-    repeats: usize,
-    map: &Beatmap,
-    state: &mut SliderState,
-) -> usize {
-    while time >= state.next_time {
-        state.px_per_beat = map.sv * 100.0 * state.prev_sv;
-
-        match state.control_points.next() {
-            Some(ControlPoint::Timing { time }) => {
-                state.next_time = time;
-                state.prev_sv = 1.0;
-            }
-            Some(ControlPoint::Difficulty {
-                time,
-                speed_multiplier,
-            }) => {
-                state.next_time = time;
-                state.prev_sv = speed_multiplier;
-            }
-            None => break,
-        }
-    }
-
-    let spans = repeats as f32;
-    let beats = pixel_len * spans / state.px_per_beat;
-    let ticks = ((beats - 0.1) / spans * map.tick_rate).ceil() as usize;
-
-    ticks
-        .checked_sub(1)
-        .map_or(0, |ticks| ticks * repeats + repeats + 1)
 }
 
 #[cfg(test)]

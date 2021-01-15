@@ -26,7 +26,6 @@ impl<'p> ControlPointIter<'p> {
     }
 }
 
-#[derive(Debug)]
 pub(crate) enum ControlPoint {
     Timing { time: f32 },
     Difficulty { time: f32, speed_multiplier: f32 },
