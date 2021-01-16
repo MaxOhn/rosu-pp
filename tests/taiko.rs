@@ -33,8 +33,9 @@ fn taiko() {
             Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
         };
 
-        let calculator = rosu_pp::taiko::PpCalculator::new(&map).mods(*mods);
-        let result = calculator.calculate();
+        let result = rosu_pp::taiko::PpCalculator::new(&map)
+            .mods(*mods)
+            .calculate();
 
         assert!(
             (result.stars - stars).abs() < star_margin,

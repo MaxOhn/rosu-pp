@@ -82,7 +82,8 @@ mod tests {
     use std::fs::File;
 
     #[test]
-    fn test_single() {
+    #[ignore]
+    fn mania_single() {
         let file = match File::open("E:/Games/osu!/beatmaps/1355822.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
@@ -93,52 +94,9 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let stars = stars(&map, 256);
+        let result = PpCalculator::new(&map).mods(256).calculate();
 
-        println!("Stars: {}", stars);
-    }
-
-    #[test]
-    fn test_mania() {
-        let margin = 0.005;
-
-        #[rustfmt::skip]
-        let data = vec![
-            (1355822, 1 << 8, 2.2710870990702627), // HT
-            (1355822, 0, 2.7966565927524574),      // NM
-            (1355822, 1 << 6, 3.748525363730352),  // DT
-
-            (1974394, 1 << 8, 3.8736942117487256), // HT
-            (1974394, 0, 4.801793001581714),       // NM
-            (1974394, 1 << 6, 6.517894438878535),  // DT
-
-            (992512, 1 << 8, 5.29507262961579),    // HT
-            (992512, 0, 6.536292432114728),        // NM
-            (992512, 1 << 6, 8.944195050951032),   // DT
-        ];
-
-        for (map_id, mods, expected_stars) in data {
-            let file = match File::open(format!("./test/{}.osu", map_id)) {
-                Ok(file) => file,
-                Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
-            };
-
-            let map = match Beatmap::parse(file) {
-                Ok(map) => map,
-                Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
-            };
-
-            let stars = stars(&map, mods);
-
-            assert!(
-                (stars - expected_stars).abs() < margin,
-                "Stars: {} | Expected: {} => {} margin [map {} | mods {}]",
-                stars,
-                expected_stars,
-                (stars - expected_stars).abs(),
-                map_id,
-                mods
-            );
-        }
+        println!("Stars: {}", result.stars);
+        println!("PP: {}", result.pp);
     }
 }

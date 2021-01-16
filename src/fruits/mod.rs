@@ -333,7 +333,8 @@ mod tests {
     use std::fs::File;
 
     #[test]
-    fn test_single() {
+    #[ignore]
+    fn fruits_single() {
         let map_id = 1972149;
         let file = match File::open(format!("E:/Games/osu!/beatmaps/{}.osu", map_id)) {
             Ok(file) => file,
@@ -349,79 +350,9 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let mods = 0;
-        let stars = stars(&map, mods).stars;
+        let result = PpCalculator::new(&map).mods(256).calculate();
 
-        println!("Stars: {} [map={} | mods={}]", stars, map_id, mods);
-    }
-
-    #[test]
-    fn test_fruits() {
-        let margin = 0.005;
-
-        #[rustfmt::skip]
-        let data = vec![
-            (1977380, 1 << 8, 2.0564713386286573),// HT
-            (1977380, 0, 2.5695489769068742),     // NM
-            (1977380, 1 << 6, 3.589887228221038), // DT
-            (1977380, 1 << 4, 3.1515873669521928),// HR
-            (1977380, 1 << 1, 3.0035260129778396),// EZ
-
-            (1974968, 1 << 8, 1.9544305373156605),// HT
-            (1974968, 0, 2.521701539665241),      // NM
-            (1974968, 1 << 6, 3.650649037957456), // DT
-            (1974968, 1 << 4, 3.566302788963401), // HR
-            (1974968, 1 << 1, 2.2029392066882654),// EZ
-
-            (2420076, 1 << 8, 4.791039358886245), // HT
-            (2420076, 0, 6.223136555625056),      // NM
-            (2420076, 1 << 6, 8.908315960310958), // DT
-            (2420076, 1 << 4, 6.54788067620051),  // HR
-            (2420076, 1 << 1, 6.067971540209479), // EZ
-
-            (2206596, 1 << 8, 4.767182611189798), // HT
-            (2206596, 0, 6.157660207091584),      // NM
-            (2206596, 1 << 6, 8.93391286552717),  // DT
-            (2206596, 1 << 4, 6.8639096665110735),// HR
-            (2206596, 1 << 1, 5.60279198088948),  // EZ
-
-            // Super long juice stream towards end
-            // (1972149, 1 << 8, 4.671425766413811), // HT
-            // (1972149, 0, 6.043742871084152),      // NM
-            // (1972149, 1 << 6, 8.469259368304225), // DT
-            // (1972149, 1 << 4, 6.81222485322862),  // HR
-            // (1972149, 1 << 1, 5.289343020686747), // EZ
-
-            // Convert slider fiesta
-            // (1657535, 1 << 8, 3.862453635711741), // HT
-            // (1657535, 0, 4.792543335869686),      // NM
-            // (1657535, 1 << 6, 6.655478646330863), // DT
-            // (1657535, 1 << 4, 5.259728567781568), // HR
-            // (1657535, 1 << 1, 4.127535166776765), // EZ
-        ];
-
-        for (map_id, mods, expected_stars) in data {
-            let file = match File::open(format!("./test/{}.osu", map_id)) {
-                Ok(file) => file,
-                Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
-            };
-
-            let map = match Beatmap::parse(file) {
-                Ok(map) => map,
-                Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
-            };
-
-            let stars = stars(&map, mods).stars;
-
-            assert!(
-                (stars - expected_stars).abs() < margin,
-                "Stars: {} | Expected: {} => {} margin [map {} | mods {}]",
-                stars,
-                expected_stars,
-                (stars - expected_stars).abs(),
-                map_id,
-                mods
-            );
-        }
+        println!("Stars: {}", result.stars);
+        println!("PP: {}", result.pp);
     }
 }
