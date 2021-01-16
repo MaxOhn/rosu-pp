@@ -205,6 +205,32 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         &mut last_excess,
     );
 
+    // Handle second object separately to remove later if-branching
+    let next = hit_objects.next().unwrap();
+    curr.init_hyper_dash(
+        half_catcher_width,
+        &next,
+        &mut last_direction,
+        &mut last_excess,
+    );
+
+    let h = DifficultyObject::new(
+        &curr,
+        &prev,
+        movement.half_catcher_width,
+        attributes.clock_rate,
+    );
+
+    while h.base.time > current_section_end {
+        current_section_end += section_len;
+    }
+
+    movement.process(&h);
+
+    prev = curr;
+    curr = next;
+
+    // Handle all other objects
     for next in hit_objects {
         curr.init_hyper_dash(
             half_catcher_width,

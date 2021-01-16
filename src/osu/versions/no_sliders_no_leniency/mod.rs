@@ -100,6 +100,10 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         scaling_factor,
     );
 
+    while h.base.start_time > current_section_end {
+        current_section_end += section_len;
+    }
+
     aim.process(&h);
     speed.process(&h);
 

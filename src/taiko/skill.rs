@@ -30,16 +30,12 @@ impl Skill {
 
     #[inline]
     pub(crate) fn save_current_peak(&mut self) {
-        if self.prev_time.is_some() {
-            self.strain_peaks.push(self.current_section_peak);
-        }
+        self.strain_peaks.push(self.current_section_peak);
     }
 
     #[inline]
     pub(crate) fn start_new_section_from(&mut self, time: f32) {
-        if let Some(prev) = self.prev_time {
-            self.current_section_peak = self.peak_strain(time - prev);
-        }
+        self.current_section_peak = self.peak_strain(time - self.prev_time.unwrap());
     }
 
     #[inline]

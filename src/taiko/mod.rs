@@ -50,7 +50,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
     let mut current_section_end =
         (map.hit_objects[0].start_time / section_len).ceil() * section_len;
 
-    let hit_objects = map
+    let mut hit_objects = map
         .hit_objects
         .iter()
         .enumerate()
@@ -61,6 +61,18 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
             DifficultyObject::new(idx, base, prev, prev_prev, clock_rate)
         });
 
+    // Handle second object separately to remove later if-branching
+    let h = hit_objects.next().unwrap();
+
+    while h.base.start_time > current_section_end {
+        current_section_end += section_len;
+    }
+
+    for skill in skills.iter_mut() {
+        skill.process(&h, &cheese);
+    }
+
+    // Handle all other objects
     for h in hit_objects {
         while h.base.start_time > current_section_end {
             for skill in skills.iter_mut() {
