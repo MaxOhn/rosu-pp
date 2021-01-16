@@ -42,7 +42,7 @@ macro_rules! validate_float {
     }};
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum GameMode {
     STD = 0,
     TKO = 1,
@@ -379,7 +379,7 @@ impl FromStr for PathType {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum Section {
     None,
     General,

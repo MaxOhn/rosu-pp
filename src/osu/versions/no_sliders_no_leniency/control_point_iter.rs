@@ -2,6 +2,12 @@ use crate::{Beatmap, DifficultyPoint, TimingPoint};
 
 use std::slice::Iter;
 
+macro_rules! next_tuple {
+    ($iter:expr, ($first:ident, $second:ident)) => {
+        $iter.next().map(|e| (e.$first, e.$second))
+    };
+}
+
 pub(crate) struct ControlPointIter<'p> {
     timing_points: Iter<'p, TimingPoint>,
     difficulty_points: Iter<'p, DifficultyPoint>,
@@ -11,15 +17,14 @@ pub(crate) struct ControlPointIter<'p> {
 }
 
 impl<'p> ControlPointIter<'p> {
+    #[inline]
     pub(crate) fn new(map: &'p Beatmap) -> Self {
         let mut timing_points = map.timing_points.iter();
         let mut difficulty_points = map.difficulty_points.iter();
 
         Self {
             next_timing: timing_points.next().map(|t| t.time),
-            next_difficulty: difficulty_points
-                .next()
-                .map(|d| (d.time, d.speed_multiplier)),
+            next_difficulty: next_tuple!(difficulty_points, (time, speed_multiplier)),
 
             timing_points,
             difficulty_points,
@@ -42,11 +47,9 @@ impl<'p> Iterator for ControlPointIter<'p> {
 
                 Some(ControlPoint::Timing { time })
             }
-            (Some(_), Some((time, speed_multiplier))) => {
-                self.next_difficulty = self
-                    .difficulty_points
-                    .next()
-                    .map(|d| (d.time, d.speed_multiplier));
+            (_, Some((time, speed_multiplier))) => {
+                self.next_difficulty =
+                    next_tuple!(self.difficulty_points, (time, speed_multiplier));
 
                 Some(ControlPoint::Difficulty {
                     time,
@@ -57,17 +60,6 @@ impl<'p> Iterator for ControlPointIter<'p> {
                 self.next_timing = self.timing_points.next().map(|t| t.time);
 
                 Some(ControlPoint::Timing { time })
-            }
-            (_, Some((time, speed_multiplier))) => {
-                self.next_difficulty = self
-                    .difficulty_points
-                    .next()
-                    .map(|d| (d.time, d.speed_multiplier));
-
-                Some(ControlPoint::Difficulty {
-                    time,
-                    speed_multiplier,
-                })
             }
             (None, None) => None,
         }
