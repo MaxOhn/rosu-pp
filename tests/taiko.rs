@@ -13,7 +13,7 @@ struct MapResult {
 #[test]
 fn taiko() {
     let star_margin = 0.001;
-    let pp_margin = 0.001;
+    let pp_margin = 0.0075;
 
     for result in RESULTS {
         let MapResult {
@@ -75,8 +75,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 110219,
         mods: 64,
-        stars: 5.137432251440863,
-        pp: 253.6918375585501,
+        stars: 6.785308286298745,
+        pp: 420.66337091577,
     },
     // -----
     MapResult {

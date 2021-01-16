@@ -38,7 +38,7 @@ impl<'m> PpCalculator<'m> {
             mods: 0,
             max_combo,
             combo: None,
-            acc: 100.0,
+            acc: 1.0,
             n_misses: 0,
         }
     }
@@ -94,11 +94,8 @@ impl<'m> PpCalculator<'m> {
             multiplier *= 1.1;
         }
 
-        // TODO: Consider HR & co?
-        let hit_window = difficulty_range_od(self.map.od) as i32 as f32 / self.mods.speed();
-
         let strain_value = self.compute_strain_value(stars);
-        let acc_value = self.compute_accuracy_value(hit_window);
+        let acc_value = self.compute_accuracy_value();
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
@@ -131,7 +128,17 @@ impl<'m> PpCalculator<'m> {
     }
 
     #[inline]
-    fn compute_accuracy_value(&self, hit_window: f32) -> f32 {
+    fn compute_accuracy_value(&self) -> f32 {
+        let mut od = self.map.od;
+
+        if self.mods.hr() {
+            od *= 1.4;
+        } else if self.mods.ez() {
+            od *= 0.5;
+        }
+
+        let hit_window = difficulty_range_od(od) / self.mods.speed();
+
         (150.0 / hit_window).powf(1.1)
             * self.acc.powi(15)
             * 22.0

@@ -173,7 +173,7 @@ mod tests {
     #[test]
     #[ignore]
     fn taiko_single() {
-        let file = match File::open("E:/Games/osu!/beatmaps/1097541.osu") {
+        let file = match File::open("E:/Games/osu!/beatmaps/168450.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
@@ -183,7 +183,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(256).calculate();
+        let result = PpCalculator::new(&map).mods(64).calculate();
 
         println!("Stars: {}", result.stars);
         println!("PP: {}", result.pp);
