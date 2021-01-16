@@ -33,7 +33,6 @@ fn mania() {
             Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
         };
 
-        // TODO: Adjust score w.r.t. mods(?)
         let result = rosu_pp::mania::PpCalculator::new(&map)
             .mods(*mods)
             .calculate();

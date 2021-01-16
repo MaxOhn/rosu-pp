@@ -13,10 +13,10 @@ A standalone crate to calculate star ratings and performance points for all [osu
 - [x] ctb sr
 - [x] mania sr
 ---
-- [x] osu pp
+- [x] osu pp (need testing!)
 - [x] taiko pp (need testing!)
-- [x] ctb pp (need testing!)
-- [x] mania pp (need testing!)
+- [x] ctb pp
+- [x] mania pp
 ---
 - [ ] refactoring
 - [ ] benchmarking

@@ -22,7 +22,7 @@ pub struct PpCalculator<'m> {
     map: &'m Beatmap,
     stars: Option<f32>,
     mods: u32,
-    score: f32,
+    score: Option<f32>,
 }
 
 impl<'m> PpCalculator<'m> {
@@ -32,7 +32,7 @@ impl<'m> PpCalculator<'m> {
             map,
             stars: None,
             mods: 0,
-            score: 1_000_000.0,
+            score: None,
         }
     }
 
@@ -52,7 +52,7 @@ impl<'m> PpCalculator<'m> {
 
     #[inline]
     pub fn score(mut self, score: u32) -> Self {
-        self.score = score as f32;
+        self.score.replace(score as f32);
 
         self
     }
@@ -64,8 +64,9 @@ impl<'m> PpCalculator<'m> {
         let nf = self.mods.nf();
         let ht = self.mods.ht();
 
-        let score_multiplier = 0.5_f32.powi(ez as i32 + nf as i32 + ht as i32);
-        let scaled_score = self.score / score_multiplier;
+        let scaled_score = self.score.map_or(1_000_000.0, |score| {
+            score / 0.5_f32.powi(ez as i32 + nf as i32 + ht as i32)
+        });
 
         let mut multiplier = 0.8;
 
@@ -78,16 +79,17 @@ impl<'m> PpCalculator<'m> {
         }
 
         let hit_window = {
-            let od = (10.0 - self.map.od).max(0.0).min(10.0);
-            let mut val = 34.0 + 3.0 * od;
+            let mut od = 34.0 + 3.0 * (10.0 - self.map.od).max(0.0).min(10.0);
 
             if ez {
-                val *= 1.4;
+                od *= 1.4;
             } else if self.mods.hr() {
-                val /= 1.4;
+                od /= 1.4;
             }
 
-            val * self.mods.speed()
+            let clock_rate = self.mods.speed();
+
+            ((od * clock_rate).floor() / clock_rate).ceil()
         };
 
         let strain_value = self.compute_strain(scaled_score, stars);
