@@ -45,7 +45,9 @@ impl OsuObject {
                 let mut end_pos = h.pos;
                 let mut travel_dist = 0.0;
 
-                slider_state.update(h.start_time); // Responsible for timing point values
+                // Responsible for timing point values
+                slider_state.update(h.start_time);
+
                 let approx_follow_circle_radius = radius * 3.0;
                 let mut tick_distance = 100.0 * map.sv / map.tick_rate;
 

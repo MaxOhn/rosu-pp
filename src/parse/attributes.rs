@@ -1,4 +1,4 @@
-use super::Mods;
+use crate::Mods;
 
 #[derive(Clone, Debug)]
 pub struct BeatmapAttributes {

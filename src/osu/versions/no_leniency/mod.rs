@@ -49,7 +49,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         scaling_factor *= 1.0 + small_circle_bonus;
     }
 
-    let mut slider_state = SliderState::new(&map);
+    let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
 
     let mut hit_objects = map.hit_objects.iter().map(|h| {
@@ -147,6 +147,7 @@ mod tests {
     use std::fs::File;
 
     #[test]
+    #[ignore]
     fn no_leniency_single_stars() {
         let file = match File::open("./test/70090.osu") {
             Ok(file) => file,

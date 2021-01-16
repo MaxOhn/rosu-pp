@@ -1,16 +1,18 @@
 mod catch_object;
+mod control_point_iter;
 mod difficulty_object;
 mod movement;
 mod pp;
+mod slider_state;
 
 use catch_object::CatchObject;
 use difficulty_object::DifficultyObject;
 use movement::Movement;
 pub use pp::*;
+use slider_state::SliderState;
 
-use crate::{curve::Curve, Beatmap, HitObjectKind, Mods, PathType};
+use crate::{curve::Curve, Beatmap, HitObjectKind, Mods, PathType, Pos2};
 
-use std::cmp::Ordering;
 use std::convert::identity;
 
 const SECTION_LENGTH: f32 = 750.0;
@@ -19,11 +21,7 @@ const STAR_SCALING_FACTOR: f32 = 0.153;
 const ALLOWED_CATCH_RANGE: f32 = 0.8;
 const CATCHER_SIZE: f32 = 106.75;
 
-macro_rules! binary_search {
-    ($slice:expr, $target:expr) => {
-        $slice.binary_search_by(|p| p.time.partial_cmp(&$target).unwrap_or(Ordering::Equal))
-    };
-}
+const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 
 /// Star calculation for osu!ctb maps
 // Slider parsing based on https://github.com/osufx/catch-the-pp
@@ -35,9 +33,11 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     let attributes = map.attributes().mods(mods);
     let with_hr = mods.hr();
     let mut ticks = Vec::new(); // using the same buffer for all sliders
+    let mut slider_state = SliderState::new(map);
 
     let mut fruits = 0;
     let mut droplets = 0;
+    let mut tiny_droplets = 0;
 
     // BUG: Incorrect object order on 2B maps that have fruits within sliders
     let mut hit_objects = map
@@ -66,48 +66,21 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
                     .replace(h.pos.x + curve_points[curve_points.len() - 1].x - curve_points[0].x);
                 *last_time = h.start_time;
 
-                let (beat_len, timing_time) = {
-                    match binary_search!(map.timing_points, h.start_time) {
-                        Ok(idx) => {
-                            let point = &map.timing_points[idx];
-                            (point.beat_len, point.time)
-                        }
-                        Err(0) => (1000.0, 0.0),
-                        Err(idx) => {
-                            let point = &map.timing_points[idx - 1];
-                            (point.beat_len, point.time)
-                        }
-                    }
-                };
-
-                let (speed_multiplier, diff_time) = {
-                    match binary_search!(map.difficulty_points, h.start_time) {
-                        Ok(idx) => {
-                            let point = &map.difficulty_points[idx];
-                            (point.speed_multiplier, point.time)
-                        }
-                        Err(0) => (1.0, 0.0),
-                        Err(idx) => {
-                            let point = &map.difficulty_points[idx - 1];
-                            (point.speed_multiplier, point.time)
-                        }
-                    }
-                };
+                // Responsible for timing point values
+                slider_state.update(h.start_time);
 
                 let mut tick_distance = 100.0 * map.sv / map.tick_rate;
 
                 if map.version >= 8 {
-                    tick_distance /= (100.0 / speed_multiplier).max(10.0).min(1000.0) / 100.0;
+                    tick_distance /=
+                        (100.0 / slider_state.speed_mult).max(10.0).min(1000.0) / 100.0;
                 }
 
-                let spm = if timing_time > diff_time {
-                    1.0
-                } else {
-                    speed_multiplier
-                };
+                let duration = *repeats as f32 * slider_state.beat_len * pixel_len
+                    / (map.sv * slider_state.speed_mult)
+                    / 100.0;
 
-                let duration = *repeats as f32 * beat_len * *pixel_len / (map.sv * spm) / 100.0;
-
+                // Ensure path type validity
                 let path_type = if *path_type == PathType::PerfectCurve && curve_points.len() > 3 {
                     PathType::Bezier
                 } else if curve_points.len() == 2 {
@@ -116,6 +89,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
                     *path_type
                 };
 
+                // Build the curve w.r.t. the curve points
                 let curve = match path_type {
                     PathType::Linear => Curve::linear(curve_points[0], curve_points[1]),
                     PathType::Bezier => Curve::bezier(curve_points),
@@ -129,42 +103,49 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
                 let target = *pixel_len - tick_distance / 8.0;
                 ticks.reserve((target / tick_distance) as usize);
 
-                while current_distance < target {
-                    let pos = curve.point_at_distance(current_distance);
+                // Tick of the first span
+                if current_distance < target {
+                    for tick_idx in 1.. {
+                        let pos = curve.point_at_distance(current_distance);
+                        let time = h.start_time + time_add * tick_idx as f32;
+                        ticks.push((pos, time));
+                        current_distance += tick_distance;
 
-                    ticks.push((pos, h.start_time + time_add * (ticks.len() + 1) as f32));
-                    current_distance += tick_distance;
+                        if current_distance >= target {
+                            break;
+                        }
+                    }
                 }
+
+                tiny_droplets +=
+                    tiny_droplet_count(h.start_time, time_add, duration, *repeats, &ticks);
 
                 let mut slider_objects = Vec::with_capacity(repeats * (ticks.len() + 1));
                 slider_objects.push((h.pos, h.start_time));
 
+                // Other spans
                 if *repeats <= 1 {
                     slider_objects.append(&mut ticks); // automatically empties buffer for next slider
                 } else {
                     slider_objects.append(&mut ticks.clone());
 
-                    for repeat_id in 1..*repeats - 1 {
+                    for repeat_id in 1..*repeats {
                         let dist = (repeat_id % 2) as f32 * *pixel_len;
                         let time_offset = (duration / *repeats as f32) * repeat_id as f32;
                         let pos = curve.point_at_distance(dist);
 
-                        // Reverse tick / last legacy tick
+                        // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
 
-                        ticks.reverse();
-                        slider_objects.extend_from_slice(&ticks); // tick time doesn't need to be adjusted for some reason
+                        // Actual ticks
+                        if repeat_id & 1 == 1 {
+                            slider_objects.extend(ticks.iter().copied().rev());
+                        } else {
+                            slider_objects.extend(ticks.iter().copied());
+                        }
                     }
 
-                    // Handling last span separatly so that `ticks` vector isn't cloned again
-                    let dist = ((*repeats - 1) % 2) as f32 * *pixel_len;
-                    let time_offset = (duration / *repeats as f32) * (*repeats - 1) as f32;
-                    let pos = curve.point_at_distance(dist);
-
-                    slider_objects.push((pos, h.start_time + time_offset));
-
-                    ticks.reverse();
-                    slider_objects.append(&mut ticks); // automatically empties buffer for next slider
+                    ticks.clear();
                 }
 
                 // Slider tail
@@ -280,10 +261,83 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
 
     DifficultyAttributes {
         stars,
+        ar: attributes.ar,
         n_fruits: fruits,
         n_droplets: droplets,
+        n_tiny_droplets: tiny_droplets,
         max_combo: fruits + droplets,
     }
+}
+
+fn tiny_droplet_count(
+    start_time: f32,
+    time_between_ticks: f32,
+    duration: f32,
+    spans: usize,
+    ticks: &[(Pos2, f32)],
+) -> usize {
+    // tiny droplets preceeding a _tick_
+    let per_tick = if !ticks.is_empty() && time_between_ticks > 80.0 {
+        let time_between_tiny = shrink_down(time_between_ticks);
+
+        // add a little for floating point inaccuracies
+        let start = time_between_tiny + 0.001;
+
+        count_iterations(start, time_between_tiny, time_between_ticks)
+    } else {
+        0
+    };
+
+    // tiny droplets preceeding a _reverse_
+    let last = ticks.last().map_or(start_time, |(_, last)| *last);
+    let repeat_time = start_time + duration / spans as f32;
+    let since_last_tick = repeat_time - last;
+
+    let span_last_section = if since_last_tick > 80.0 {
+        let time_between_tiny = shrink_down(since_last_tick);
+
+        count_iterations(time_between_tiny, time_between_tiny, since_last_tick)
+    } else {
+        0
+    };
+
+    // tiny droplets preceeding the slider tail
+    // necessary to handle distinctly because of the legacy last tick
+    let last = ticks.last().map_or(start_time, |(_, last)| *last);
+    let end_time = start_time + duration / spans as f32 - LEGACY_LAST_TICK_OFFSET;
+    let since_last_tick = end_time - last;
+
+    let last_section = if since_last_tick > 80.0 {
+        let time_between_tiny = shrink_down(since_last_tick);
+
+        count_iterations(time_between_tiny, time_between_tiny, since_last_tick)
+    } else {
+        0
+    };
+
+    // Combine tiny droplets counts
+    per_tick * ticks.len() * spans + span_last_section * (spans.saturating_sub(1)) + last_section
+}
+
+#[inline]
+fn shrink_down(mut val: f32) -> f32 {
+    while val > 100.0 {
+        val /= 2.0;
+    }
+
+    val
+}
+
+#[inline]
+fn count_iterations(mut start: f32, step: f32, end: f32) -> usize {
+    let mut count = 0;
+
+    while start < end {
+        count += 1;
+        start += step;
+    }
+
+    count
 }
 
 #[inline]
@@ -323,8 +377,10 @@ impl<I: Iterator<Item = CatchObject>> Iterator for FruitOrJuice<I> {
 pub struct DifficultyAttributes {
     pub stars: f32,
     pub max_combo: usize,
+    pub ar: f32,
     pub n_fruits: usize,
     pub n_droplets: usize,
+    pub n_tiny_droplets: usize,
 }
 
 #[cfg(test)]
@@ -335,22 +391,17 @@ mod tests {
     #[test]
     #[ignore]
     fn fruits_single() {
-        let map_id = 1972149;
-        let file = match File::open(format!("E:/Games/osu!/beatmaps/{}.osu", map_id)) {
+        let file = match File::open("E:/Games/osu!/beatmaps/2206596.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
-        // let file = match File::open(format!("E:/Games/osu!/beatmaps/{}.osu", map_id)) {
-        //     Ok(file) => file,
-        //     Err(why) => panic!("Could not open file: {}", why),
-        // };
 
         let map = match Beatmap::parse(file) {
             Ok(map) => map,
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(256).calculate();
+        let result = PpCalculator::new(&map).mods(64).calculate();
 
         println!("Stars: {}", result.stars);
         println!("PP: {}", result.pp);

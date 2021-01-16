@@ -124,7 +124,7 @@ impl<'m> PpCalculator<'m> {
                 .saturating_sub(self.n_misses.saturating_sub(n_droplets))
         });
 
-        let max_tiny_droplets = 0; // TODO
+        let max_tiny_droplets = attributes.n_tiny_droplets;
 
         let n_tiny_droplets = self.n_tiny_droplets.unwrap_or_else(|| {
             ((acc * (attributes.max_combo + max_tiny_droplets) as f32).round() as usize)
@@ -151,7 +151,7 @@ impl<'m> PpCalculator<'m> {
         let stars = attributes.stars;
 
         // Relying heavily on aim
-        let mut pp = (5.0 * ((stars / 0.0049).max(1.0)) - 4.0).powi(2) / 100_000.0;
+        let mut pp = (5.0 * (stars / 0.0049).max(1.0) - 4.0).powi(2) / 100_000.0;
 
         let mut combo_hits = self.combo_hits();
         if combo_hits == 0 {
@@ -175,7 +175,7 @@ impl<'m> PpCalculator<'m> {
         }
 
         // AR scaling
-        let ar = self.map.ar;
+        let ar = attributes.ar;
         let mut ar_factor = 1.0;
         if ar > 9.0 {
             ar_factor += 0.1 * (ar - 9.0) + (ar > 10.0) as u8 as f32 * 0.1 * (ar - 10.0);
@@ -231,7 +231,7 @@ impl<'m> PpCalculator<'m> {
         let total_hits = self.total_hits();
 
         if total_hits == 0 {
-            0.0
+            1.0
         } else {
             (self.successful_hits() as f32 / total_hits as f32)
                 .max(0.0)

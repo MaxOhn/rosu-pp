@@ -6,7 +6,9 @@ pub mod taiko;
 
 mod curve;
 mod math_util;
+mod mods;
 
+pub use mods::Mods;
 pub use parse::*;
 
 #[inline]

@@ -3,7 +3,6 @@ mod control_point;
 mod error;
 mod hitobject;
 mod hitsound;
-mod mods;
 mod pos2;
 mod sort;
 
@@ -12,7 +11,6 @@ pub use control_point::{DifficultyPoint, TimingPoint};
 pub use error::{ParseError, ParseResult};
 pub use hitobject::{HitObject, HitObjectKind};
 pub use hitsound::HitSound;
-pub use mods::Mods;
 pub use pos2::Pos2;
 use sort::sort;
 
@@ -407,7 +405,7 @@ mod tests {
     use std::fs::File;
 
     #[test]
-    fn parsing_works() {
+    fn parsing() {
         let file = match File::open("E:/Games/osu!/beatmaps/2223745.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not read file: {}", why),
