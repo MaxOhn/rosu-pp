@@ -1,6 +1,7 @@
 use std::fmt;
 use std::ops;
 
+/// Simple (x, y) coordinate
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct Pos2 {
     pub x: f32,

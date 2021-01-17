@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 
+/// New rhythm speed change.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TimingPoint {
     pub beat_len: f32,
@@ -13,6 +14,7 @@ impl PartialOrd for TimingPoint {
     }
 }
 
+/// [`TimingPoint`](crate::parse::TimingPoint) that depends on a previous one.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DifficultyPoint {
     pub time: f32,

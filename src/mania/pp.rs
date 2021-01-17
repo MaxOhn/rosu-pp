@@ -1,23 +1,15 @@
 use super::stars;
 use crate::{Beatmap, Mods};
 
+/// Basic struct containing the result of a PP calculation.
+/// In osu!mania's case, this will be just the pp value and the star value.
 pub struct PpResult {
     pub pp: f32,
     pub stars: f32,
 }
 
-pub trait PpProvider {
-    fn pp(&self) -> PpCalculator;
-}
-
-impl PpProvider for Beatmap {
-    #[inline]
-    fn pp(&self) -> PpCalculator {
-        PpCalculator::new(self)
-    }
-}
-
-pub struct PpCalculator<'m> {
+/// Calculator for pp on osu!mania maps.
+pub struct ManiaPP<'m> {
     map: &'m Beatmap,
     stars: Option<f32>,
     mods: u32,
@@ -25,7 +17,7 @@ pub struct PpCalculator<'m> {
     passed_objects: Option<usize>,
 }
 
-impl<'m> PpCalculator<'m> {
+impl<'m> ManiaPP<'m> {
     #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
         Self {
@@ -37,6 +29,9 @@ impl<'m> PpCalculator<'m> {
         }
     }
 
+    /// If you already know the stars of the map with the current mods,
+    /// you should specify them so that they don't have to be calculated
+    /// again while calculating PP.
     #[inline]
     pub fn stars(mut self, stars: f32) -> Self {
         self.stars.replace(stars);
@@ -44,6 +39,9 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
     pub fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
@@ -52,7 +50,7 @@ impl<'m> PpCalculator<'m> {
     }
 
     /// Score of a play.
-    /// On NM its between 0 and 1,000,000, on EZ between 0 and 500,000, etc
+    /// On `NoMod` its between 0 and 1,000,000, on `Easy` between 0 and 500,000, etc
     #[inline]
     pub fn score(mut self, score: u32) -> Self {
         self.score.replace(score as f32);
@@ -68,6 +66,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Returns an object which contains the pp and stars.
     pub fn calculate(self) -> PpResult {
         let stars = self
             .stars

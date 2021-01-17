@@ -1,23 +1,16 @@
 use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods};
 
+/// Basic struct containing the result of a PP calculation.
+/// In osu!ctb's case, this will be the pp value and the
+/// difficulty attributes created by star calculation.
 pub struct PpResult {
     pub pp: f32,
-    pub stars: f32,
+    pub attributes: DifficultyAttributes,
 }
 
-pub trait PpProvider {
-    fn pp(&self) -> PpCalculator;
-}
-
-impl PpProvider for Beatmap {
-    #[inline]
-    fn pp(&self) -> PpCalculator {
-        PpCalculator::new(self)
-    }
-}
-
-pub struct PpCalculator<'m> {
+/// Calculator for pp on osu!ctb maps.
+pub struct FruitsPP<'m> {
     map: &'m Beatmap,
     attributes: Option<DifficultyAttributes>,
     mods: u32,
@@ -31,7 +24,7 @@ pub struct PpCalculator<'m> {
     passed_objects: Option<usize>,
 }
 
-impl<'m> PpCalculator<'m> {
+impl<'m> FruitsPP<'m> {
     #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
         Self {
@@ -49,6 +42,13 @@ impl<'m> PpCalculator<'m> {
         }
     }
 
+    /// [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
+    /// stay the same for each map-mod combination.
+    /// If you already calculated them, be sure to put them in here so
+    /// that they don't have to be recalculated.
+    ///
+    /// The final object after calling `calculation` will contain the
+    /// attributes again for later reuse.
     #[inline]
     pub fn attributes(mut self, attributes: DifficultyAttributes) -> Self {
         self.attributes.replace(attributes);
@@ -56,6 +56,9 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
     pub fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
@@ -63,6 +66,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the max combo of the play.
     #[inline]
     pub fn combo(mut self, combo: usize) -> Self {
         self.combo.replace(combo);
@@ -70,6 +74,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of fruits of a play i.e. n300.
     #[inline]
     pub fn fruits(mut self, n_fruits: usize) -> Self {
         self.n_fruits.replace(n_fruits);
@@ -77,6 +82,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of droplets of a play i.e. n100.
     #[inline]
     pub fn droplets(mut self, n_droplets: usize) -> Self {
         self.n_droplets.replace(n_droplets);
@@ -84,6 +90,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of tiny droplets of a play.
     #[inline]
     pub fn tiny_droplets(mut self, n_tiny_droplets: usize) -> Self {
         self.n_tiny_droplets.replace(n_tiny_droplets);
@@ -91,6 +98,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of tiny droplet misses of a play.
     #[inline]
     pub fn tiny_droplet_misses(mut self, n_tiny_droplet_misses: usize) -> Self {
         self.n_tiny_droplet_misses.replace(n_tiny_droplet_misses);
@@ -98,6 +106,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of fruit / droplet misses of the play.
     #[inline]
     pub fn misses(mut self, n_misses: usize) -> Self {
         self.n_misses = n_misses;
@@ -152,6 +161,8 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
+    /// containing stars and other attributes.
     pub fn calculate(mut self) -> PpResult {
         let attributes = self
             .attributes
@@ -216,7 +227,7 @@ impl<'m> PpCalculator<'m> {
             pp *= 0.9;
         }
 
-        PpResult { pp, stars }
+        PpResult { pp, attributes }
     }
 
     #[inline]

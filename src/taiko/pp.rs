@@ -1,22 +1,14 @@
 use crate::{Beatmap, Mods};
 
+/// Basic struct containing the result of a PP calculation.
+/// In osu!taiko's case, this will be just the pp value and the star value.
 pub struct PpResult {
     pub pp: f32,
     pub stars: f32,
 }
 
-pub trait PpProvider {
-    fn pp(&self) -> PpCalculator;
-}
-
-impl PpProvider for Beatmap {
-    #[inline]
-    fn pp(&self) -> PpCalculator {
-        PpCalculator::new(self)
-    }
-}
-
-pub struct PpCalculator<'m> {
+/// Calculator for pp on osu!taiko maps.
+pub struct TaikoPP<'m> {
     map: &'m Beatmap,
     stars: Option<f32>,
     mods: u32,
@@ -27,7 +19,7 @@ pub struct PpCalculator<'m> {
     passed_objects: Option<usize>,
 }
 
-impl<'m> PpCalculator<'m> {
+impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
         let max_combo = map.hit_objects.iter().filter(|h| h.is_circle()).count();
@@ -44,6 +36,9 @@ impl<'m> PpCalculator<'m> {
         }
     }
 
+    /// If you already know the stars of the map with the current mods,
+    /// you should specify them so that they don't have to be calculated
+    /// again while calculating PP.
     #[inline]
     pub fn stars(mut self, stars: f32) -> Self {
         self.stars.replace(stars);
@@ -51,6 +46,9 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
     pub fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
@@ -58,6 +56,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the max combo of the play.
     #[inline]
     pub fn combo(mut self, combo: usize) -> Self {
         self.combo.replace(combo);
@@ -65,6 +64,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of misses of the play.
     #[inline]
     pub fn misses(mut self, n_misses: usize) -> Self {
         self.n_misses = n_misses;
@@ -72,7 +72,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
-    /// Set the accuracy between 0.0 and 100.0;
+    /// Set the accuracy between 0.0 and 100.0.
     #[inline]
     pub fn accuracy(mut self, acc: f32) -> Self {
         self.acc = acc / 100.0;
@@ -88,6 +88,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Returns an object which contains the pp and stars.
     pub fn calculate(self) -> PpResult {
         let stars = self
             .stars
@@ -160,6 +161,6 @@ const HITWINDOW_AVG: f32 = 35.0;
 const HITWINDOW_MAX: f32 = 20.0;
 
 #[inline]
-pub(crate) fn difficulty_range_od(ar: f32) -> f32 {
+fn difficulty_range_od(ar: f32) -> f32 {
     crate::difficulty_range(ar, HITWINDOW_MAX, HITWINDOW_AVG, HITWINDOW_MIN)
 }

@@ -1,5 +1,6 @@
 use crate::Mods;
 
+/// Summary struct for a [`Beatmap`](crate::Beatmap)'s attributes.
 #[derive(Clone, Debug)]
 pub struct BeatmapAttributes {
     pub ar: f32,
@@ -27,6 +28,9 @@ impl BeatmapAttributes {
         }
     }
 
+    /// Adjusts attributes w.r.t. mods.
+    /// AR is further adjusted by the its hitwindow.
+    /// OD is __not__ adjusted by its hitwindow.
     pub fn mods(self, mods: impl Mods) -> Self {
         if !mods.change_map() {
             return self;

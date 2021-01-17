@@ -33,9 +33,7 @@ fn mania() {
             Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
         };
 
-        let result = rosu_pp::mania::PpCalculator::new(&map)
-            .mods(*mods)
-            .calculate();
+        let result = rosu_pp::ManiaPP::new(&map).mods(*mods).calculate();
 
         assert!(
             (result.stars - stars).abs() < star_margin * stars,

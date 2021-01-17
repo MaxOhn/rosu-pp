@@ -33,19 +33,17 @@ fn fruits() {
             Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
         };
 
-        let result = rosu_pp::fruits::PpCalculator::new(&map)
-            .mods(*mods)
-            .calculate();
+        let result = rosu_pp::FruitsPP::new(&map).mods(*mods).calculate();
 
         assert!(
-            (result.stars - stars).abs() < star_margin * stars,
+            (result.attributes.stars - stars).abs() < star_margin * stars,
             "\nStars:\n\
                 Calculated: {calculated} | Expected: {expected}\n \
                 => {margin} margin ({allowed} allowed)\n\
                 [map {map} | mods {mods}]\n",
-            calculated = result.stars,
+            calculated = result.attributes.stars,
             expected = stars,
-            margin = (result.stars - stars).abs(),
+            margin = (result.attributes.stars - stars).abs(),
             allowed = star_margin * stars,
             map = map_id,
             mods = mods

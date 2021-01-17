@@ -188,7 +188,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(64).calculate();
+        let result = TaikoPP::new(&map).mods(64).calculate();
 
         println!("Stars: {}", result.stars);
         println!("PP: {}", result.pp);

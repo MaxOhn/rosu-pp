@@ -33,7 +33,7 @@ fn osu_no_sliders() {
             Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
         };
 
-        let result = rosu_pp::osu::PpCalculator::new(&map)
+        let result = rosu_pp::OsuPP::new(&map)
             .mods(*mods)
             .calculate(osu::no_sliders_no_leniency::stars);
 
@@ -90,7 +90,7 @@ fn osu_no_leniency() {
             Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
         };
 
-        let result = rosu_pp::osu::PpCalculator::new(&map)
+        let result = rosu_pp::osu::OsuPP::new(&map)
             .mods(*mods)
             .calculate(osu::no_leniency::stars);
 

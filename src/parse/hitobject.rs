@@ -2,6 +2,8 @@ use super::{PathType, Pos2};
 
 use std::cmp::Ordering;
 
+/// "Intermediate" hitobject created through parsing.
+/// Each mode will handle them differently.
 #[derive(Clone, Debug, PartialEq)]
 pub struct HitObject {
     pub pos: Pos2,
@@ -43,6 +45,7 @@ impl PartialOrd for HitObject {
     }
 }
 
+/// Further data related to specific object types.
 #[derive(Clone, Debug, PartialEq)]
 pub enum HitObjectKind {
     Circle,

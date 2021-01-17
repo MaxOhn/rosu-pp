@@ -1,3 +1,7 @@
+//! The positional offset of notes created by stack leniency is not considered.
+//! This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies.
+//! Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
+
 use super::super::DifficultyAttributes;
 
 mod control_point_iter;
@@ -151,7 +155,7 @@ pub fn stars(
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::PpCalculator;
+    use super::super::super::OsuPP;
     use super::stars;
     use crate::Beatmap;
     use std::fs::File;
@@ -169,7 +173,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(256).calculate(stars);
+        let result = OsuPP::new(&map).mods(256).calculate(stars);
 
         println!("Stars: {}", result.attributes.stars);
         println!("PP: {}", result.pp);

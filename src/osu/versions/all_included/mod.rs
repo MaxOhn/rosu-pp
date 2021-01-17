@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod difficulty_object;
 mod osu_object;
 mod skill;
@@ -130,7 +132,7 @@ pub fn stars(
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::PpCalculator;
+    use super::super::super::OsuPP;
     use super::stars;
     use crate::Beatmap;
     use std::fs::File;
@@ -148,7 +150,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(64).calculate(stars);
+        let result = OsuPP::new(&map).mods(64).calculate(stars);
 
         println!("Stars: {}", result.attributes.stars);
         println!("PP: {}", result.pp);

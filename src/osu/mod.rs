@@ -4,7 +4,9 @@ mod versions;
 pub use pp::*;
 pub use versions::*;
 
-#[derive(Clone, Default, Debug)]
+/// Various data created through the star calculation.
+/// This data is necessary to calculate PP.
+#[derive(Clone, Debug, Default)]
 pub struct DifficultyAttributes {
     pub stars: f32,
     pub ar: f32,

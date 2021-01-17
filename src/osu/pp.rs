@@ -1,23 +1,16 @@
 use super::DifficultyAttributes as Attributes;
 use crate::{Beatmap, Mods};
 
+/// Basic struct containing the result of a PP calculation.
+/// In osu!standard's case, this will be the pp value and the
+/// difficulty attributes created by star calculation.
 pub struct PpResult {
     pub pp: f32,
     pub attributes: Attributes,
 }
 
-pub trait PpProvider {
-    fn pp(&self) -> PpCalculator;
-}
-
-impl PpProvider for Beatmap {
-    #[inline]
-    fn pp(&self) -> PpCalculator {
-        PpCalculator::new(self)
-    }
-}
-
-pub struct PpCalculator<'m> {
+/// Calculator for pp on osu!standard maps.
+pub struct OsuPP<'m> {
     map: &'m Beatmap,
     attributes: Option<Attributes>,
     mods: u32,
@@ -31,7 +24,7 @@ pub struct PpCalculator<'m> {
     passed_objects: Option<usize>,
 }
 
-impl<'m> PpCalculator<'m> {
+impl<'m> OsuPP<'m> {
     #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
         Self {
@@ -49,6 +42,13 @@ impl<'m> PpCalculator<'m> {
         }
     }
 
+    /// [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
+    /// stay the same for each map-mod combination.
+    /// If you already calculated them, be sure to put them in here so
+    /// that they don't have to be recalculated.
+    ///
+    /// The final object after calling `calculation` will contain the
+    /// attributes again for later reuse.
     #[inline]
     pub fn attributes(mut self, attributes: Attributes) -> Self {
         self.attributes.replace(attributes);
@@ -56,6 +56,9 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
     pub fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
@@ -63,6 +66,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the max combo of the play.
     #[inline]
     pub fn combo(mut self, combo: usize) -> Self {
         self.combo.replace(combo);
@@ -70,6 +74,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of 300s of a play.
     #[inline]
     pub fn n300(mut self, n300: usize) -> Self {
         self.n300.replace(n300);
@@ -77,6 +82,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of 100s of a play.
     #[inline]
     pub fn n100(mut self, n100: usize) -> Self {
         self.n100.replace(n100);
@@ -84,6 +90,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of 50s of a play.
     #[inline]
     pub fn n50(mut self, n50: usize) -> Self {
         self.n50.replace(n50);
@@ -91,6 +98,7 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Specify the amount of misses of a play.
     #[inline]
     pub fn misses(mut self, n_misses: usize) -> Self {
         self.n_misses = n_misses;
@@ -142,10 +150,12 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
-    /// Consume the calculator and calculate the pp.
+    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
+    /// containing stars and other attributes.
     ///
-    /// `stars_func` will be used to calculate stars and other necessary attributes if not already given.
+    /// `stars_func` will be used to calculate the difficulty attributes if not already given.
     /// Only called if `attributes` was not set.
+    /// The default is suggested to be [`stars`](crate::osu::no_leniency::stars).
     pub fn calculate(
         mut self,
         stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> Attributes,

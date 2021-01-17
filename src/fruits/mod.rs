@@ -382,7 +382,9 @@ impl<I: Iterator<Item = CatchObject>> Iterator for FruitOrJuice<I> {
     }
 }
 
-#[derive(Default)]
+/// Various data created through the star calculation.
+/// This data is necessary to calculate PP.
+#[derive(Clone, Debug, Default)]
 pub struct DifficultyAttributes {
     pub stars: f32,
     pub max_combo: usize,
@@ -400,7 +402,7 @@ mod tests {
     #[test]
     #[ignore]
     fn fruits_single() {
-        let file = match File::open("E:/Games/osu!/beatmaps/1974968.osu") {
+        let file = match File::open("./maps/1974968.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
@@ -410,9 +412,9 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(0).calculate();
+        let result = FruitsPP::new(&map).mods(0).calculate();
 
-        println!("Stars: {}", result.stars);
+        println!("Stars: {}", result.attributes.stars);
         println!("PP: {}", result.pp);
     }
 }
