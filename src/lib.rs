@@ -116,14 +116,21 @@ pub use parse::{
 };
 
 pub trait BeatmapExt {
+    /// Calculate the stars of a beatmap.
+    ///
+    /// For osu!standard maps, the `no_leniency` version will be used.
     fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> f32;
+
+    /// Calculate the max pp of a beatmap if that is all you want.
+    ///
+    /// For osu!standard maps, the `no_leniency` version will be used.
+    ///
+    /// If you seek more fine-tuning and options you need to match on the map's
+    /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP) for taiko.
     fn max_pp(&self, mods: u32) -> f32;
 }
 
 impl BeatmapExt for Beatmap {
-    /// Calculate the stars of a beatmap.
-    ///
-    /// For osu!standard maps, the `no_leniency` version will be used.
     fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> f32 {
         match self.mode {
             GameMode::STD => osu::no_leniency::stars(self, mods, passed_objects).stars,
@@ -132,13 +139,6 @@ impl BeatmapExt for Beatmap {
             GameMode::CTB => fruits::stars(self, mods, passed_objects).stars,
         }
     }
-
-    /// Calculate the max pp of a beatmap if that is all you want.
-    ///
-    /// For osu!standard maps, the `no_leniency` version will be used.
-    ///
-    /// If you seek more fine-tuning and options you need to match on the map's
-    /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP).
     fn max_pp(&self, mods: u32) -> f32 {
         match self.mode {
             GameMode::STD => {

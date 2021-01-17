@@ -18,16 +18,6 @@ pub trait Mods: Copy {
     const FL: u32 = 1 << 10;
     const SO: u32 = 1 << 12;
 
-    const K1: u32 = 1 << 26;
-    const K2: u32 = 1 << 27;
-    const K3: u32 = 1 << 28;
-    const K4: u32 = 1 << 15;
-    const K5: u32 = 1 << 16;
-    const K6: u32 = 1 << 17;
-    const K7: u32 = 1 << 18;
-    const K8: u32 = 1 << 19;
-    const K9: u32 = 1 << 24;
-
     fn change_speed(self) -> bool;
     fn change_map(self) -> bool;
     fn speed(self) -> f32;
@@ -41,16 +31,6 @@ pub trait Mods: Copy {
     fn ht(self) -> bool;
     fn fl(self) -> bool;
     fn so(self) -> bool;
-
-    fn key1(self) -> bool;
-    fn key2(self) -> bool;
-    fn key3(self) -> bool;
-    fn key4(self) -> bool;
-    fn key5(self) -> bool;
-    fn key6(self) -> bool;
-    fn key7(self) -> bool;
-    fn key8(self) -> bool;
-    fn key9(self) -> bool;
 }
 
 impl Mods for u32 {
@@ -95,14 +75,4 @@ impl Mods for u32 {
     impl_mods!(ht, HT);
     impl_mods!(fl, FL);
     impl_mods!(so, SO);
-
-    impl_mods!(key1, K1);
-    impl_mods!(key2, K2);
-    impl_mods!(key3, K3);
-    impl_mods!(key4, K4);
-    impl_mods!(key5, K5);
-    impl_mods!(key6, K6);
-    impl_mods!(key7, K7);
-    impl_mods!(key8, K8);
-    impl_mods!(key9, K9);
 }

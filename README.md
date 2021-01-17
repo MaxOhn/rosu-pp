@@ -4,7 +4,7 @@ A standalone crate to calculate star ratings and performance points for all [osu
 
 Conversions are generally not supported.
 
-#### Usage
+### Usage
 ```rust
 use std::fs::File;
 use rosu_pp::{Beatmap, BeatmapExt, GameMode, OsuPP, TaikoPP};
@@ -62,7 +62,7 @@ fn main() {
 
             println!("Stars: {} | PP: {}", result.stars, result.pp);
         }
-        GameMode::MNA | GameMode::CTB => unimplemented!(),
+        GameMode::MNA | GameMode::CTB => panic!("do your thing"),
     }
 
     // If all you want is the map's stars or max pp,
@@ -74,12 +74,12 @@ fn main() {
 }
 ```
 
-#### osu!standard versions
+### osu!standard versions
 - `all_included`: WIP
 - `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
 - `no_slider_no_leniency` (i.e. oppai): In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
 
-#### Roadmap
+### Roadmap
 - osu sr versions
   - [ ] all included
   - [x] no_leniency
