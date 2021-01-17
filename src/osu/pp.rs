@@ -117,14 +117,6 @@ impl<'m> PpCalculator<'m> {
             self.n300.replace(delta / 5);
             self.n100.replace(delta % 5);
 
-            // println!(
-            //     "{} - {} - {} - {}",
-            //     n_objects,
-            //     self.n300.unwrap(),
-            //     self.n100.unwrap(),
-            //     self.n_misses
-            // );
-
             self.n50
                 .replace(n_objects - self.n300.unwrap() - self.n100.unwrap() - self.n_misses);
         }
@@ -133,11 +125,6 @@ impl<'m> PpCalculator<'m> {
             / (6 * n_objects) as f32;
 
         self.acc.replace(acc);
-
-        // println!(
-        //     "n300: {:?} | n100: {:?} | n50: {:?} | nMiss: {:?} => {}",
-        //     self.n300, self.n100, self.n50, self.n_misses, acc
-        // );
 
         self
     }
@@ -175,11 +162,6 @@ impl<'m> PpCalculator<'m> {
                 }
             }
 
-            // println!(
-            //     "n300: {:?} | n100: {:?} | n50: {:?} | nMiss: {:?}",
-            //     self.n300, self.n100, self.n50, self.n_misses
-            // );
-
             let numerator = self.n50.unwrap() + self.n100.unwrap() * 2 + self.n300.unwrap() * 6;
             self.acc.replace(numerator as f32 / n_objects as f32 / 6.0);
         }
@@ -200,11 +182,6 @@ impl<'m> PpCalculator<'m> {
         let speed_value = self.compute_speed_value(total_hits as f32);
         let acc_value = self.compute_accuracy_value(total_hits);
 
-        // println!(
-        //     "aim={} | speed={} | acc={}",
-        //     aim_value, speed_value, acc_value
-        // );
-
         let pp = (aim_value.powf(1.1) + speed_value.powf(1.1) + acc_value.powf(1.1))
             .powf(1.0 / 1.1)
             * multiplier;
@@ -218,8 +195,6 @@ impl<'m> PpCalculator<'m> {
     fn compute_aim_value(&self, total_hits: f32) -> f32 {
         let attributes = self.attributes.as_ref().unwrap();
 
-        // println!("aim_strain={}", attributes.aim_strain);
-
         // TD penalty
         let raw_aim = if self.mods.td() {
             attributes.aim_strain.powf(0.8)
@@ -227,19 +202,13 @@ impl<'m> PpCalculator<'m> {
             attributes.aim_strain
         };
 
-        // println!("raw={}", raw_aim);
-
         let mut aim_value = (5.0 * (raw_aim / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
-
-        // println!("init: {}", aim_value);
 
         // Longer maps are worth more
         let len_bonus = 0.95
             + 0.4 * (total_hits / 2000.0).min(1.0)
             + (total_hits > 2000.0) as u8 as f32 * 0.5 * (total_hits / 2000.0).log10();
         aim_value *= len_bonus;
-
-        // println!("len bonus: {} => {}", len_bonus, aim_value);
 
         // Penalize misses
         if self.n_misses > 0 {
@@ -248,37 +217,24 @@ impl<'m> PpCalculator<'m> {
                     .powi(self.n_misses as i32);
         }
 
-        // println!("miss penalty: {}", aim_value);
-
-        // println!(
-        //     "combo={:?} | max_combo={}",
-        //     self.combo, attributes.max_combo
-        // );
-
         // Combo scaling
         if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
             aim_value *= ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
         }
-
-        // println!("combo scaling: {}", aim_value);
 
         // AR bonus
         let mut ar_factor = 0.0;
         if attributes.ar > 10.33 {
             ar_factor += 0.4 * (attributes.ar - 10.33);
         } else if attributes.ar < 8.0 {
-            ar_factor += 0.1 * (8.0 - attributes.ar);
+            ar_factor += 0.01 * (8.0 - attributes.ar);
         }
         aim_value *= 1.0 + ar_factor.min(ar_factor * total_hits / 1000.0);
-
-        // println!("ar bonus: {} => {}", ar_factor, aim_value);
 
         // HD bonus
         if self.mods.hd() {
             aim_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
         }
-
-        // println!("hd bonus: {}", aim_value);
 
         // FL bonus
         if self.mods.fl() {
@@ -288,15 +244,9 @@ impl<'m> PpCalculator<'m> {
                 + (total_hits > 500.0) as u8 as f32 * (total_hits - 500.0) / 1200.0;
         }
 
-        // println!("fl bonus: {}", aim_value);
-
         // Scale with accuracy
         aim_value *= 0.5 + self.acc.unwrap() / 2.0;
         aim_value *= 0.98 + attributes.od * attributes.od / 2500.0;
-
-        // println!("> acc: {:?}", self.acc);
-
-        // println!("final: {}", aim_value);
 
         aim_value
     }
@@ -304,26 +254,14 @@ impl<'m> PpCalculator<'m> {
     fn compute_speed_value(&self, total_hits: f32) -> f32 {
         let attributes = self.attributes.as_ref().unwrap();
 
-        // println!("speed_strain={}", attributes.speed_strain);
-
         let mut speed_value =
             (5.0 * (attributes.speed_strain / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
-
-        // println!(
-        //     "curr={} | modified={}",
-        //     speed_value,
-        //     (5.0 * (2.0994549379474163_f32 / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0
-        // );
-
-        // println!("init: {}", speed_value);
 
         // Longer maps are worth more
         let len_bonus = 0.95
             + 0.4 * (total_hits / 2000.0).min(1.0)
             + (total_hits > 2000.0) as u8 as f32 * 0.5 * (total_hits / 2000.0).log10();
         speed_value *= len_bonus;
-
-        // println!("len bonus: {} => {}", len_bonus, speed_value);
 
         // Penalize misses
         if self.n_misses > 0 {
@@ -332,14 +270,10 @@ impl<'m> PpCalculator<'m> {
                     .powf((self.n_misses as f32).powf(0.875));
         }
 
-        // println!("miss penalty: {}", speed_value);
-
         // Combo scaling
         if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
             speed_value *= ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
         }
-
-        // println!("combo scaling: {}", speed_value);
 
         // AR bonus
         if attributes.ar > 10.33 {
@@ -347,14 +281,10 @@ impl<'m> PpCalculator<'m> {
             speed_value *= 1.0 + ar_factor.min(ar_factor * total_hits / 1000.0);
         }
 
-        // println!("ar bonus: {}", speed_value);
-
         // HD bonus
         if self.mods.hd() {
             speed_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
         }
-
-        // println!("hidden bonus: {}", speed_value);
 
         // Scaling the speed value with accuracy and OD
         let od_factor = 0.95 + attributes.od * attributes.od / 750.0;
@@ -364,15 +294,11 @@ impl<'m> PpCalculator<'m> {
             .powf((14.5 - attributes.od.max(8.0)) / 2.0);
         speed_value *= od_factor * acc_factor;
 
-        // println!("acc & od scaling: {}", speed_value);
-
         // Penalize n50s
         speed_value *= 0.98_f32.powf(
             (self.n50.unwrap_or(0) as f32 >= total_hits / 500.0) as u8 as f32
                 * (self.n50.unwrap_or(0) as f32 - total_hits / 500.0),
         );
-
-        // println!("final: {}", speed_value);
 
         speed_value
     }
@@ -381,8 +307,6 @@ impl<'m> PpCalculator<'m> {
         let attributes = self.attributes.as_ref().unwrap();
         let n_circles = attributes.n_circles;
 
-        // println!("n_circles={}", n_circles);
-
         let better_acc_percentage = (n_circles > 0) as u8 as f32
             * (((self.n300.unwrap() - (total_hits - n_circles)) * 6
                 + self.n100.unwrap_or(0) * 2
@@ -390,18 +314,9 @@ impl<'m> PpCalculator<'m> {
                 / (n_circles * 6) as f32)
                 .max(0.0);
 
-        // println!("better_acc_percentage={}", better_acc_percentage);
-
         let attributes = self.attributes.as_ref().unwrap();
 
         let mut acc_value = 1.52163_f32.powf(attributes.od) * better_acc_percentage.powi(24) * 2.83;
-
-        // println!(
-        //     "1.52163^{} * {}^24 * 2.83 = {}",
-        //     attributes.od, better_acc_percentage, acc_value
-        // );
-
-        // println!("init: {}", acc_value);
 
         // Bonus for many hitcircles
         acc_value *= ((n_circles as f32 / 1000.0).powf(0.3)).min(1.15);

@@ -16,10 +16,6 @@ impl BeatmapAttributes {
     const AR_MS_STEP_1: f32 = (Self::AR0_MS - Self::AR5_MS) / 5.0;
     const AR_MS_STEP_2: f32 = (Self::AR5_MS - Self::AR10_MS) / 5.0;
 
-    const OD0_MS: f32 = 80.0;
-    const OD10_MS: f32 = 20.0;
-    const OD_MS_STEP: f32 = (Self::OD0_MS - Self::OD10_MS) / 10.0;
-
     #[inline]
     pub(crate) fn new(ar: f32, od: f32, cs: f32, hp: f32) -> Self {
         Self {
@@ -57,11 +53,7 @@ impl BeatmapAttributes {
         };
 
         // OD
-        let mut od = self.od * multiplier;
-        let mut od_ms = Self::OD0_MS - (Self::OD_MS_STEP * od).ceil();
-        od_ms = od_ms.max(Self::OD10_MS).min(Self::OD0_MS);
-        od_ms /= clock_rate;
-        od = (Self::OD0_MS - od_ms) / Self::OD_MS_STEP;
+        let od = (self.od * multiplier).min(10.0);
 
         // CS
         let mut cs = self.cs;

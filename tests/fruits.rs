@@ -12,8 +12,8 @@ struct MapResult {
 
 #[test]
 fn fruits() {
-    let star_margin = 0.005;
-    let pp_margin = 0.015;
+    let star_margin = 0.0001;
+    let pp_margin = 0.0001;
 
     for result in RESULTS {
         let MapResult {
@@ -38,23 +38,31 @@ fn fruits() {
             .calculate();
 
         assert!(
-            (result.stars - stars).abs() < star_margin,
-            "Stars: {} | Expected: {} => {} margin [map {} | mods {}]",
-            result.stars,
-            stars,
-            (result.stars - stars).abs(),
-            map_id,
-            mods
+            (result.stars - stars).abs() < star_margin * stars,
+            "\nStars:\n\
+                Calculated: {calculated} | Expected: {expected}\n \
+                => {margin} margin ({allowed} allowed)\n\
+                [map {map} | mods {mods}]\n",
+            calculated = result.stars,
+            expected = stars,
+            margin = (result.stars - stars).abs(),
+            allowed = star_margin * stars,
+            map = map_id,
+            mods = mods
         );
 
         assert!(
-            (result.pp - pp).abs() < pp_margin,
-            "PP: {} | Expected: {} => {} margin [map {} | mods {}]",
-            result.pp,
-            pp,
-            (result.pp - pp).abs(),
-            map_id,
-            mods
+            (result.pp - pp).abs() < pp_margin * pp,
+            "\nPP:\n\
+                Calculated: {calculated} | Expected: {expected}\n \
+                => {margin} margin ({allowed} allowed)\n\
+                [map {map} | mods {mods}]\n",
+            calculated = result.pp,
+            expected = pp,
+            margin = (result.pp - pp).abs(),
+            allowed = pp_margin * pp,
+            map = map_id,
+            mods = mods
         );
     }
 }

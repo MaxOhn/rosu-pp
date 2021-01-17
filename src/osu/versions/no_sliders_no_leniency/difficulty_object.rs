@@ -28,7 +28,7 @@ impl<'h> DifficultyObject<'h> {
         let jump_dist = if base.is_spinner() {
             0.0
         } else {
-            (base.pos * scaling_factor - prev.pos * scaling_factor).length()
+            ((base.pos - prev.pos) * scaling_factor).length()
         };
 
         let angle = prev_prev.map(|prev_prev| {
