@@ -391,7 +391,7 @@ mod tests {
     #[test]
     #[ignore]
     fn fruits_single() {
-        let file = match File::open("E:/Games/osu!/beatmaps/2206596.osu") {
+        let file = match File::open("E:/Games/osu!/beatmaps/1974968.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
@@ -401,7 +401,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(64).calculate();
+        let result = PpCalculator::new(&map).mods(0).calculate();
 
         println!("Stars: {}", result.stars);
         println!("PP: {}", result.pp);

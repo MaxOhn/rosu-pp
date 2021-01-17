@@ -94,7 +94,11 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = PpCalculator::new(&map).mods(0).calculate();
+        // println!("timings:\n{:#?}", map.timing_points);
+        // println!("---");
+        // println!("difficulties:\n{:#?}", map.difficulty_points);
+
+        let result = PpCalculator::new(&map).mods(256).calculate();
 
         println!("Stars: {}", result.stars);
         println!("PP: {}", result.pp);

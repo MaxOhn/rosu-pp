@@ -177,6 +177,7 @@ mod tests {
     use std::fs::File;
 
     #[test]
+    #[ignore]
     fn no_sliders_single_stars() {
         let file = match File::open("E:/Games/osu!/beatmaps/70090.osu") {
             Ok(file) => file,
@@ -257,6 +258,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn no_sliders_single_pp() {
         let file = match File::open("E:/Games/osu!/beatmaps/1241370.osu") {
             Ok(file) => file,

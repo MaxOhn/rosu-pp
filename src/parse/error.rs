@@ -14,17 +14,12 @@ pub enum ParseError {
     BadLine,
     InvalidCurvePoints,
     InvalidInteger,
-    InvalidEffectFlag,
     InvalidFloatingPoint,
     InvalidMode,
     InvalidPathType,
     InvalidTimingSignature,
-    MissingField(usize),
-    UnsupportedMode,
+    MissingField,
     UnknownHitObjectKind,
-    NoHitobjects,
-    UnsortedHitobjects,
-    UnsortedTimingPoints,
 }
 
 impl fmt::Display for ParseError {
@@ -37,17 +32,12 @@ impl fmt::Display for ParseError {
             Self::BadLine => f.write_str("line not in `Key:Value` pattern"),
             Self::InvalidCurvePoints => f.write_str("invalid curve point"),
             Self::InvalidInteger => f.write_str("invalid integer"),
-            Self::InvalidEffectFlag => f.write_str("invalid effect flag"),
-            Self::InvalidFloatingPoint => f.write_str("invalid floating-point number"),
+            Self::InvalidFloatingPoint => f.write_str("invalid float number"),
             Self::InvalidMode => f.write_str("invalid mode"),
             Self::InvalidPathType => f.write_str("invalid path type"),
             Self::InvalidTimingSignature => f.write_str("invalid timing signature"),
-            Self::MissingField(line) => write!(f, "missing field on line {}", line),
-            Self::UnsupportedMode => f.write_str("unsupported osu! mode"),
+            Self::MissingField => f.write_str("missing field"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
-            Self::NoHitobjects => f.write_str("beatmap has no hitobjects"),
-            Self::UnsortedHitobjects => f.write_str("hitobjects are not sorted by time"),
-            Self::UnsortedTimingPoints => f.write_str("timing points are not sorted by time"),
         }
     }
 }
@@ -60,17 +50,12 @@ impl StdError for ParseError {
             Self::BadLine => None,
             Self::InvalidCurvePoints => None,
             Self::InvalidInteger => None,
-            Self::InvalidEffectFlag => None,
             Self::InvalidFloatingPoint => None,
             Self::InvalidMode => None,
             Self::InvalidPathType => None,
             Self::InvalidTimingSignature => None,
-            Self::MissingField(_) => None,
-            Self::UnsupportedMode => None,
+            Self::MissingField => None,
             Self::UnknownHitObjectKind => None,
-            Self::NoHitobjects => None,
-            Self::UnsortedHitobjects => None,
-            Self::UnsortedTimingPoints => None,
         }
     }
 }

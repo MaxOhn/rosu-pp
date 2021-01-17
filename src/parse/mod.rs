@@ -25,8 +25,8 @@ macro_rules! sort {
 }
 
 macro_rules! next_field {
-    ($opt:expr, $nmbr:ident) => {
-        $opt.ok_or(ParseError::MissingField($nmbr))?
+    ($opt:expr) => {
+        $opt.ok_or(ParseError::MissingField)?
     };
 }
 
@@ -38,6 +38,35 @@ macro_rules! validate_float {
             return Err(ParseError::InvalidFloatingPoint);
         }
     }};
+}
+
+macro_rules! line_prepare {
+    ($buf:ident) => {{
+        let mut line = $buf.trim_end();
+
+        if line.is_empty()
+            || line.starts_with("//")
+            || line.starts_with(' ')
+            || line.starts_with('_')
+        {
+            $buf.clear();
+            continue;
+        }
+
+        if let Some(idx) = line.find("//") {
+            line = &line[..idx];
+        }
+
+        line
+    }};
+}
+
+macro_rules! section {
+    ($map:ident, $func:ident, $reader:ident, $buf:ident, $section:ident) => {
+        if $map.$func(&mut $reader, &mut $buf, &mut $section)? {
+            break;
+        }
+    };
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
@@ -101,244 +130,325 @@ impl Beatmap {
             None => return Err(ParseError::IncorrectFileHeader),
         };
 
-        // version 4 and lower had an incorrect offset (stable has this set as 24ms off)
-        let offset = if map.version < 5 { 24.0 } else { 0.0 };
-
         buf.clear();
         map.hit_objects.reserve(256);
 
+        let mut section = Section::None;
+
+        loop {
+            match section {
+                Section::General => section!(map, parse_general, reader, buf, section),
+                Section::Difficulty => section!(map, parse_difficulty, reader, buf, section),
+                Section::TimingPoints => section!(map, parse_timingpoints, reader, buf, section),
+                Section::HitObjects => section!(map, parse_hitobjects, reader, buf, section),
+                Section::None => {
+                    if reader.read_line(&mut buf)? == 0 {
+                        break;
+                    }
+
+                    let line = line_prepare!(buf);
+
+                    if line.starts_with('[') && line.ends_with(']') {
+                        section = Section::from_str(&line[1..line.len() - 1]);
+                    }
+
+                    buf.clear();
+                }
+            }
+        }
+
+        Ok(map)
+    }
+
+    fn parse_general<R: Read>(
+        &mut self,
+        reader: &mut BufReader<R>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
         let mut mode = None;
+        let mut stack_leniency = None;
+        let mut empty = true;
+
+        while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
+
+            if key == "Mode" {
+                mode = match value {
+                    "0" => Some(GameMode::STD),
+                    "1" => Some(GameMode::TKO),
+                    "2" => Some(GameMode::CTB),
+                    "3" => Some(GameMode::MNA),
+                    _ => return Err(ParseError::InvalidMode),
+                };
+            } else if key == "StackLeniency" {
+                stack_leniency = Some(value.parse()?);
+            }
+
+            buf.clear();
+        }
+
+        self.mode = next_field!(mode);
+        self.stack_leniency = next_field!(stack_leniency);
+
+        Ok(empty)
+    }
+
+    fn parse_difficulty<R: Read>(
+        &mut self,
+        reader: &mut BufReader<R>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
         let mut ar = None;
         let mut od = None;
         let mut cs = None;
         let mut hp = None;
         let mut sv = None;
         let mut tick_rate = None;
-        let mut stack_leniency = None;
 
-        let mut section = Section::None;
-        let mut prev_time = 0.0;
-        let mut prev_diff = 0.0;
-        let mut unsorted_timings = false;
-        let mut unsorted_difficulties = false;
-        let mut unsorted_hits = false;
+        let mut empty = true;
 
-        let mut nmbr = 1;
-
-        while reader.read_line(&mut buf)? != 0 {
-            let mut line = buf.trim_end();
-            nmbr += 1;
-
-            if line.is_empty()
-                || line.starts_with("//")
-                || line.starts_with(' ')
-                || line.starts_with('_')
-            {
-                buf.clear();
-                continue;
-            }
+        while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
 
             if line.starts_with('[') && line.ends_with(']') {
-                section = Section::from_str(&line[1..line.len() - 1]);
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
                 buf.clear();
-                continue;
+                break;
             }
 
-            if let Some(idx) = line.find("//") {
-                line = &line[..idx];
-            }
+            let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
 
-            match section {
-                Section::General => {
-                    let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
-
-                    if key == "Mode" {
-                        mode = match value {
-                            "0" => Some(GameMode::STD),
-                            "1" => Some(GameMode::TKO),
-                            "2" => Some(GameMode::CTB),
-                            "3" => Some(GameMode::MNA),
-                            _ => return Err(ParseError::InvalidMode),
-                        };
-                    } else if key == "StackLeniency" {
-                        stack_leniency = Some(value.parse()?);
-                    }
-                }
-                Section::Difficulty => {
-                    let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
-
-                    match key {
-                        "ApproachRate" => ar = Some(value.parse()?),
-                        "OverallDifficulty" => od = Some(value.parse()?),
-                        "CircleSize" => cs = Some(value.parse()?),
-                        "HPDrainRate" => hp = Some(value.parse()?),
-                        "SliderTickRate" => tick_rate = Some(value.parse()?),
-                        "SliderMultiplier" => sv = Some(value.parse()?),
-                        _ => {}
-                    }
-                }
-                Section::TimingPoints => {
-                    let mut split = line.split(',');
-
-                    let time = offset + next_field!(split.next(), nmbr).trim().parse::<f32>()?;
-                    validate_float!(time);
-
-                    let beat_len = next_field!(split.next(), nmbr).trim().parse::<f32>()?;
-
-                    if beat_len.is_sign_negative() {
-                        let point = DifficultyPoint {
-                            time,
-                            speed_multiplier: -100.0 / beat_len,
-                        };
-
-                        map.difficulty_points.push(point);
-
-                        if time < prev_diff {
-                            unsorted_difficulties = true;
-                        } else {
-                            prev_diff = time;
-                        }
-                    } else {
-                        let point = TimingPoint {
-                            time,
-                            bpm: 60_000.0 / beat_len,
-                            beat_len,
-                        };
-
-                        map.timing_points.push(point);
-
-                        if time < prev_time {
-                            unsorted_timings = true;
-                        } else {
-                            prev_time = time;
-                        }
-                    }
-                }
-
-                Section::HitObjects => {
-                    let mut split = line.split(',');
-
-                    let pos = Pos2 {
-                        x: next_field!(split.next(), nmbr).parse()?,
-                        y: next_field!(split.next(), nmbr).parse()?,
-                    };
-
-                    let time = offset + next_field!(split.next(), nmbr).trim().parse::<f32>()?;
-                    validate_float!(time);
-
-                    if !map.hit_objects.is_empty() && time < prev_time {
-                        unsorted_hits = true;
-                    }
-
-                    let kind: u8 = next_field!(split.next(), nmbr).parse()?;
-                    let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
-
-                    let kind = if kind & Self::CIRCLE_FLAG > 0 {
-                        map.n_circles += 1;
-
-                        HitObjectKind::Circle
-                    } else if kind & Self::SLIDER_FLAG > 0 {
-                        map.n_sliders += 1;
-                        let mut curve_points = Vec::with_capacity(16);
-                        curve_points.push(pos);
-
-                        let mut curve_point_iter = next_field!(split.next(), nmbr).split('|');
-
-                        let mut path_type: PathType =
-                            next_field!(curve_point_iter.next(), nmbr).parse()?;
-
-                        for pos in curve_point_iter {
-                            let mut v = pos.split(':').map(str::parse);
-
-                            match (v.next(), v.next()) {
-                                (Some(Ok(x)), Some(Ok(y))) => curve_points.push(Pos2 { x, y }),
-                                _ => return Err(ParseError::InvalidCurvePoints),
-                            }
-                        }
-
-                        if map.version <= 6 && curve_points.len() >= 2 {
-                            if path_type == PathType::Linear {
-                                path_type = PathType::Bezier;
-                            }
-
-                            if curve_points.len() == 2
-                                && (pos == curve_points[0] || pos == curve_points[1])
-                            {
-                                path_type = PathType::Linear;
-                            }
-                        }
-
-                        if curve_points.is_empty() {
-                            HitObjectKind::Circle
-                        } else {
-                            let repeats = next_field!(split.next(), nmbr).parse::<usize>()?;
-                            let len: f32 = next_field!(split.next(), nmbr).parse()?;
-
-                            HitObjectKind::Slider {
-                                repeats,
-                                pixel_len: len,
-                                curve_points,
-                                path_type,
-                            }
-                        }
-                    } else if kind & Self::SPINNER_FLAG > 0 {
-                        map.n_spinners += 1;
-                        let end_time = next_field!(split.next(), nmbr).parse()?;
-
-                        HitObjectKind::Spinner { end_time }
-                    } else if kind & Self::HOLD_FLAG > 0 {
-                        map.n_sliders += 1;
-                        let mut end = time;
-
-                        if let Some(next) = split.next() {
-                            end = end.max(next_field!(next.split(':').next(), nmbr).parse()?);
-                        }
-
-                        HitObjectKind::Hold { end_time: end }
-                    } else {
-                        return Err(ParseError::UnknownHitObjectKind);
-                    };
-
-                    map.hit_objects.push(HitObject {
-                        pos,
-                        start_time: time,
-                        kind,
-                        sound,
-                    });
-
-                    prev_time = time;
-                }
-
-                Section::None => {}
+            match key {
+                "ApproachRate" => ar = Some(value.parse()?),
+                "OverallDifficulty" => od = Some(value.parse()?),
+                "CircleSize" => cs = Some(value.parse()?),
+                "HPDrainRate" => hp = Some(value.parse()?),
+                "SliderTickRate" => tick_rate = Some(value.parse()?),
+                "SliderMultiplier" => sv = Some(value.parse()?),
+                _ => {}
             }
 
             buf.clear();
         }
 
-        map.mode = next_field!(mode, nmbr);
-        map.ar = next_field!(ar, nmbr);
-        map.od = next_field!(od, nmbr);
-        map.cs = next_field!(cs, nmbr);
-        map.hp = next_field!(hp, nmbr);
-        map.sv = next_field!(sv, nmbr);
-        map.tick_rate = next_field!(tick_rate, nmbr);
-        map.stack_leniency = next_field!(stack_leniency, nmbr);
+        self.ar = next_field!(ar);
+        self.od = next_field!(od);
+        self.cs = next_field!(cs);
+        self.hp = next_field!(hp);
+        self.sv = next_field!(sv);
+        self.tick_rate = next_field!(tick_rate);
+
+        Ok(empty)
+    }
+
+    fn parse_timingpoints<R: Read>(
+        &mut self,
+        reader: &mut BufReader<R>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut unsorted_timings = false;
+        let mut unsorted_difficulties = false;
+
+        let mut prev_diff = 0.0;
+        let mut prev_time = 0.0;
+
+        let mut empty = true;
+
+        while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let mut split = line.split(',');
+
+            let time = next_field!(split.next()).trim().parse::<f32>()?;
+            validate_float!(time);
+
+            let beat_len = next_field!(split.next()).trim().parse::<f32>()?;
+
+            if beat_len < 0.0 {
+                let point = DifficultyPoint {
+                    time,
+                    speed_multiplier: -100.0 / beat_len,
+                };
+
+                self.difficulty_points.push(point);
+
+                if time < prev_diff {
+                    unsorted_difficulties = true;
+                } else {
+                    prev_diff = time;
+                }
+            } else {
+                let point = TimingPoint {
+                    time,
+                    bpm: 60_000.0 / beat_len,
+                    beat_len,
+                };
+
+                self.timing_points.push(point);
+
+                if time < prev_time {
+                    unsorted_timings = true;
+                } else {
+                    prev_time = time;
+                }
+            }
+
+            buf.clear();
+        }
 
         if unsorted_timings {
-            sort!(map.timing_points);
+            sort!(self.timing_points);
         }
 
         if unsorted_difficulties {
-            sort!(map.difficulty_points);
+            sort!(self.difficulty_points);
         }
 
-        if map.mode == GameMode::MNA {
-            sort(&mut map.hit_objects);
-        } else if unsorted_hits {
-            sort!(map.hit_objects);
+        Ok(empty)
+    }
+
+    fn parse_hitobjects<R: Read>(
+        &mut self,
+        reader: &mut BufReader<R>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut unsorted = false;
+        let mut prev_time = 0.0;
+
+        let mut empty = true;
+
+        while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let mut split = line.split(',');
+
+            let pos = Pos2 {
+                x: next_field!(split.next()).parse()?,
+                y: next_field!(split.next()).parse()?,
+            };
+
+            let time = next_field!(split.next()).trim().parse::<f32>()?;
+            validate_float!(time);
+
+            if !self.hit_objects.is_empty() && time < prev_time {
+                unsorted = true;
+            }
+
+            let kind: u8 = next_field!(split.next()).parse()?;
+            let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
+
+            let kind = if kind & Self::CIRCLE_FLAG > 0 {
+                self.n_circles += 1;
+
+                HitObjectKind::Circle
+            } else if kind & Self::SLIDER_FLAG > 0 {
+                self.n_sliders += 1;
+                let mut curve_points = Vec::with_capacity(16);
+                curve_points.push(pos);
+
+                let mut curve_point_iter = next_field!(split.next()).split('|');
+
+                let mut path_type: PathType = next_field!(curve_point_iter.next()).parse()?;
+
+                for pos in curve_point_iter {
+                    let mut v = pos.split(':').map(str::parse);
+
+                    match (v.next(), v.next()) {
+                        (Some(Ok(x)), Some(Ok(y))) => curve_points.push(Pos2 { x, y }),
+                        _ => return Err(ParseError::InvalidCurvePoints),
+                    }
+                }
+
+                if self.version <= 6 && curve_points.len() >= 2 {
+                    if path_type == PathType::Linear {
+                        path_type = PathType::Bezier;
+                    }
+
+                    if curve_points.len() == 2 && (pos == curve_points[0] || pos == curve_points[1])
+                    {
+                        path_type = PathType::Linear;
+                    }
+                }
+
+                if curve_points.is_empty() {
+                    HitObjectKind::Circle
+                } else {
+                    let repeats = next_field!(split.next()).parse::<usize>()?;
+                    let len: f32 = next_field!(split.next()).parse()?;
+
+                    HitObjectKind::Slider {
+                        repeats,
+                        pixel_len: len,
+                        curve_points,
+                        path_type,
+                    }
+                }
+            } else if kind & Self::SPINNER_FLAG > 0 {
+                self.n_spinners += 1;
+                let end_time = next_field!(split.next()).parse()?;
+
+                HitObjectKind::Spinner { end_time }
+            } else if kind & Self::HOLD_FLAG > 0 {
+                self.n_sliders += 1;
+                let mut end = time;
+
+                if let Some(next) = split.next() {
+                    end = end.max(next_field!(next.split(':').next()).parse()?);
+                }
+
+                HitObjectKind::Hold { end_time: end }
+            } else {
+                return Err(ParseError::UnknownHitObjectKind);
+            };
+
+            self.hit_objects.push(HitObject {
+                pos,
+                start_time: time,
+                kind,
+                sound,
+            });
+
+            prev_time = time;
+            buf.clear();
         }
 
-        Ok(map)
+        // BUG: If [General] section comes after [HitObjects] then the mode
+        // won't be set yet so mania objects won't be sorted properly
+        if self.mode == GameMode::MNA {
+            sort(&mut self.hit_objects);
+        } else if unsorted {
+            sort!(self.hit_objects);
+        }
+
+        Ok(empty)
     }
 
     #[inline]
@@ -406,7 +516,7 @@ mod tests {
 
     #[test]
     fn parsing() {
-        let file = match File::open("E:/Games/osu!/beatmaps/2223745.osu") {
+        let file = match File::open("./maps/1241370.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not read file: {}", why),
         };
@@ -430,7 +540,5 @@ mod tests {
         println!("hit_objects: {}", map.hit_objects.len());
         println!("timing_points: {}", map.timing_points.len());
         println!("difficulty_points: {}", map.difficulty_points.len());
-
-        assert_eq!(2 + 2, 4);
     }
 }
