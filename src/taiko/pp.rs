@@ -16,7 +16,6 @@ impl PpProvider for Beatmap {
     }
 }
 
-// TODO: Allow partial plays
 pub struct PpCalculator<'m> {
     map: &'m Beatmap,
     stars: Option<f32>,
@@ -25,6 +24,7 @@ pub struct PpCalculator<'m> {
     combo: Option<usize>,
     acc: f32,
     n_misses: usize,
+    passed_objects: Option<usize>,
 }
 
 impl<'m> PpCalculator<'m> {
@@ -40,6 +40,7 @@ impl<'m> PpCalculator<'m> {
             combo: None,
             acc: 1.0,
             n_misses: 0,
+            passed_objects: None,
         }
     }
 
@@ -79,10 +80,18 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects.replace(passed_objects);
+
+        self
+    }
+
     pub fn calculate(self) -> PpResult {
         let stars = self
             .stars
-            .unwrap_or_else(|| super::stars(self.map, self.mods));
+            .unwrap_or_else(|| super::stars(self.map, self.mods, self.passed_objects));
 
         let mut multiplier = 1.1;
 

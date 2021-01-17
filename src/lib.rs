@@ -11,6 +11,9 @@ mod mods;
 pub use mods::Mods;
 pub use parse::*;
 
+// TODO
+pub trait BeatmapExt {}
+
 #[inline]
 fn difficulty_range(val: f32, max: f32, avg: f32, min: f32) -> f32 {
     if val > 5.0 {

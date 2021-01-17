@@ -17,12 +17,12 @@ impl PpProvider for Beatmap {
     }
 }
 
-// TODO: Allow partial plays
 pub struct PpCalculator<'m> {
     map: &'m Beatmap,
     stars: Option<f32>,
     mods: u32,
     score: Option<f32>,
+    passed_objects: Option<usize>,
 }
 
 impl<'m> PpCalculator<'m> {
@@ -33,6 +33,7 @@ impl<'m> PpCalculator<'m> {
             stars: None,
             mods: 0,
             score: None,
+            passed_objects: None,
         }
     }
 
@@ -50,6 +51,8 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Score of a play.
+    /// On NM its between 0 and 1,000,000, on EZ between 0 and 500,000, etc
     #[inline]
     pub fn score(mut self, score: u32) -> Self {
         self.score.replace(score as f32);
@@ -57,8 +60,18 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects.replace(passed_objects);
+
+        self
+    }
+
     pub fn calculate(self) -> PpResult {
-        let stars = self.stars.unwrap_or_else(|| stars(self.map, self.mods));
+        let stars = self
+            .stars
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
 
         let ez = self.mods.ez();
         let nf = self.mods.nf();

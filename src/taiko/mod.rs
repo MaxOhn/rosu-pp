@@ -27,9 +27,13 @@ const COLOR_SKILL_MULTIPLIER: f32 = 0.01;
 const RHYTHM_SKILL_MULTIPLIER: f32 = 0.014;
 const STAMINA_SKILL_MULTIPLIER: f32 = 0.02;
 
-/// Star calculation for osu!taiko maps
-pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
-    if map.hit_objects.len() < 2 {
+/// Star calculation for osu!taiko maps.
+///
+/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
+pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> f32 {
+    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+
+    if take < 2 {
         return 0.0;
     }
 
@@ -53,6 +57,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
     let mut hit_objects = map
         .hit_objects
         .iter()
+        .take(take)
         .enumerate()
         .skip(2)
         .zip(map.hit_objects.iter().skip(1))

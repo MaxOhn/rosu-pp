@@ -17,7 +17,6 @@ impl PpProvider for Beatmap {
     }
 }
 
-// TODO: Allow partial plays
 pub struct PpCalculator<'m> {
     map: &'m Beatmap,
     attributes: Option<DifficultyAttributes>,
@@ -29,6 +28,7 @@ pub struct PpCalculator<'m> {
     n_tiny_droplets: Option<usize>,
     n_tiny_droplet_misses: Option<usize>,
     n_misses: usize,
+    passed_objects: Option<usize>,
 }
 
 impl<'m> PpCalculator<'m> {
@@ -45,6 +45,7 @@ impl<'m> PpCalculator<'m> {
             n_tiny_droplets: None,
             n_tiny_droplet_misses: None,
             n_misses: 0,
+            passed_objects: None,
         }
     }
 
@@ -104,12 +105,21 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects.replace(passed_objects);
+
+        self
+    }
+
     /// Generate the hit results with respect to the given accuracy between `0` and `100`.
     ///
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
     pub fn accuracy(mut self, acc: f32) -> Self {
         if self.attributes.is_none() {
-            self.attributes.replace(stars(self.map, self.mods));
+            self.attributes
+                .replace(stars(self.map, self.mods, self.passed_objects));
         }
 
         let attributes = self.attributes.as_ref().unwrap();
@@ -146,7 +156,7 @@ impl<'m> PpCalculator<'m> {
         let attributes = self
             .attributes
             .take()
-            .unwrap_or_else(|| stars(self.map, self.mods));
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
 
         let stars = attributes.stars;
 

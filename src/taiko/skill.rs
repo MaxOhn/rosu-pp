@@ -4,6 +4,15 @@ use std::cmp::Ordering;
 
 const DECAY_WEIGHT: f32 = 0.9;
 
+const COLOR_SKILL_MULTIPLIER: f32 = 1.0;
+const COLOR_STRAIN_DECAY_BASE: f32 = 0.4;
+
+const RHYTHM_SKILL_MULTIPLIER: f32 = 10.0;
+const RHYTHM_STRAIN_DECAY_BASE: f32 = 0.0;
+
+const STAMINA_SKILL_MULTIPLIER: f32 = 1.0;
+const STAMINA_STRAIN_DECAY_BASE: f32 = 0.4;
+
 pub(crate) struct Skill {
     pub current_strain: f32,
     current_section_peak: f32,
@@ -65,21 +74,19 @@ impl Skill {
 
     #[inline]
     fn skill_multiplier(&self) -> f32 {
-        // TODO: Use constants
         match self.kind {
-            SkillKind::Color { .. } => 1.0,
-            SkillKind::Rhythm { .. } => 10.0,
-            SkillKind::Stamina { .. } => 1.0,
+            SkillKind::Color { .. } => COLOR_SKILL_MULTIPLIER,
+            SkillKind::Rhythm { .. } => RHYTHM_SKILL_MULTIPLIER,
+            SkillKind::Stamina { .. } => STAMINA_SKILL_MULTIPLIER,
         }
     }
 
     #[inline]
     fn strain_decay_base(&self) -> f32 {
-        // TODO: Use constants
         match self.kind {
-            SkillKind::Color { .. } => 0.4,
-            SkillKind::Rhythm { .. } => 0.0,
-            SkillKind::Stamina { .. } => 0.4,
+            SkillKind::Color { .. } => COLOR_STRAIN_DECAY_BASE,
+            SkillKind::Rhythm { .. } => RHYTHM_STRAIN_DECAY_BASE,
+            SkillKind::Stamina { .. } => STAMINA_STRAIN_DECAY_BASE,
         }
     }
 

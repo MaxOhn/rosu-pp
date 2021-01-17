@@ -27,7 +27,15 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// it has generally little effect on stars, the results are close to perfect.
 /// This version is considerably more efficient than `all_included` since
 /// processing stack leniency is relatively expensive.
-pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
+///
+/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
+pub fn stars(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> DifficultyAttributes {
+    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+
     let map_attributes = map.attributes().mods(mods);
     let hitwindow = super::difficulty_range(map_attributes.od).floor() / map_attributes.clock_rate;
     let od = (80.0 - hitwindow) / 6.0;
@@ -38,7 +46,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
         ..Default::default()
     };
 
-    if map.hit_objects.len() < 2 {
+    if take < 2 {
         return diff_attributes;
     }
 
@@ -54,7 +62,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
 
-    let mut hit_objects = map.hit_objects.iter().map(|h| {
+    let mut hit_objects = map.hit_objects.iter().take(take).map(|h| {
         OsuObject::new(
             h,
             map,

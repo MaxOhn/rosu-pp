@@ -17,7 +17,6 @@ impl PpProvider for Beatmap {
     }
 }
 
-// TODO: Allow partial plays
 pub struct PpCalculator<'m> {
     map: &'m Beatmap,
     attributes: Option<Attributes>,
@@ -29,6 +28,7 @@ pub struct PpCalculator<'m> {
     n100: Option<usize>,
     n50: Option<usize>,
     n_misses: usize,
+    passed_objects: Option<usize>,
 }
 
 impl<'m> PpCalculator<'m> {
@@ -45,6 +45,7 @@ impl<'m> PpCalculator<'m> {
             n100: None,
             n50: None,
             n_misses: 0,
+            passed_objects: None,
         }
     }
 
@@ -97,11 +98,23 @@ impl<'m> PpCalculator<'m> {
         self
     }
 
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects.replace(passed_objects);
+
+        self
+    }
+
     /// Generate the hit results with respect to the given accuracy between `0` and `100`.
     ///
     /// Be sure to set `misses` beforehand!
+    /// In case of a partial play, be also sure to set `passed_objects` beforehand!
     pub fn accuracy(mut self, acc: f32) -> Self {
-        let n_objects = self.map.hit_objects.len();
+        let n_objects = self
+            .passed_objects
+            .unwrap_or_else(|| self.map.hit_objects.len());
+
         let acc = acc / 100.0;
 
         if self.n100.or(self.n50).is_some() {
@@ -132,14 +145,20 @@ impl<'m> PpCalculator<'m> {
     /// Consume the calculator and calculate the pp.
     ///
     /// `stars_func` will be used to calculate stars and other necessary attributes if not already given.
-    pub fn calculate(mut self, stars_func: impl FnOnce(&Beatmap, u32) -> Attributes) -> PpResult {
+    /// Only called if `attributes` was not set.
+    pub fn calculate(
+        mut self,
+        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> Attributes,
+    ) -> PpResult {
         if self.attributes.is_none() {
-            let attributes = stars_func(self.map, self.mods);
+            let attributes = stars_func(self.map, self.mods, self.passed_objects);
             self.attributes.replace(attributes);
         }
 
         if self.acc.is_none() {
-            let n_objects = self.map.hit_objects.len();
+            let n_objects = self
+                .passed_objects
+                .unwrap_or_else(|| self.map.hit_objects.len());
 
             let remaining = n_objects
                 .saturating_sub(self.n300.unwrap_or(0))

@@ -25,12 +25,20 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// Sliders are considered as regular hitcircles and stack leniency is ignored.
 /// Still very good results but the least precise version in general.
 /// However, this is the most efficient one.
-pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
+///
+/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
+pub fn stars(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> DifficultyAttributes {
+    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+
     let attributes = map.attributes().mods(mods);
     let hitwindow = super::difficulty_range(attributes.od).floor() / attributes.clock_rate;
     let od = (80.0 - hitwindow) / 6.0;
 
-    if map.hit_objects.len() < 2 {
+    if take < 2 {
         return DifficultyAttributes {
             ar: attributes.ar,
             od,
@@ -52,7 +60,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     let mut n_spinners = 0;
     let mut state = SliderState::new(&map);
 
-    let mut hit_objects = map.hit_objects.iter().map(|h| match &h.kind {
+    let mut hit_objects = map.hit_objects.iter().take(take).map(|h| match &h.kind {
         HitObjectKind::Circle => {
             max_combo += 1;
             n_circles += 1;

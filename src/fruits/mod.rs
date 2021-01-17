@@ -24,9 +24,17 @@ const CATCHER_SIZE: f32 = 106.75;
 const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 
 /// Star calculation for osu!ctb maps
+///
+/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 // Slider parsing based on https://github.com/osufx/catch-the-pp
-pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
-    if map.hit_objects.len() < 2 {
+pub fn stars(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> DifficultyAttributes {
+    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+
+    if take < 2 {
         return DifficultyAttributes::default();
     }
 
@@ -43,6 +51,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> DifficultyAttributes {
     let mut hit_objects = map
         .hit_objects
         .iter()
+        .take(take)
         .scan((None, 0.0), |(last_pos, last_time), h| match &h.kind {
             HitObjectKind::Circle => {
                 let mut h = CatchObject::new((h.pos, h.start_time));

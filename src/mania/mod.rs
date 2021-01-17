@@ -10,8 +10,12 @@ const SECTION_LEN: f32 = 400.0;
 const STAR_SCALING_FACTOR: f32 = 0.018;
 
 /// Star calculation for osu!mania maps
-pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
-    if map.hit_objects.len() < 2 {
+///
+/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
+pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> f32 {
+    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+
+    if take < 2 {
         return 0.0;
     }
 
@@ -22,6 +26,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods) -> f32 {
     let mut hit_objects = map
         .hit_objects
         .iter()
+        .take(take)
         .skip(1)
         .zip(map.hit_objects.iter())
         .map(|(base, prev)| DifficultyHitObject::new(base, prev, map.cs, clock_rate));
@@ -84,7 +89,7 @@ mod tests {
     #[test]
     #[ignore]
     fn mania_single() {
-        let file = match File::open("E:/Games/osu!/beatmaps/1355822.osu") {
+        let file = match File::open("./maps/1355822.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
@@ -93,10 +98,6 @@ mod tests {
             Ok(map) => map,
             Err(why) => panic!("Error while parsing map: {}", why),
         };
-
-        // println!("timings:\n{:#?}", map.timing_points);
-        // println!("---");
-        // println!("difficulties:\n{:#?}", map.difficulty_points);
 
         let result = PpCalculator::new(&map).mods(256).calculate();
 
