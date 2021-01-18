@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops;
 
-/// Simple (x, y) coordinate
+/// Simple (x, y) coordinate / vector
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct Pos2 {
     pub x: f32,

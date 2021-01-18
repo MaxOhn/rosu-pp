@@ -17,7 +17,8 @@ impl HitObject {
     pub fn end_time(&self) -> f32 {
         match &self.kind {
             HitObjectKind::Circle { .. } => self.start_time,
-            HitObjectKind::Slider { .. } => self.start_time, // wrong but should be unreachable
+            // incorrect, only called in mania which has no sliders though
+            HitObjectKind::Slider { .. } => self.start_time,
             HitObjectKind::Spinner { end_time } => *end_time,
             HitObjectKind::Hold { end_time, .. } => *end_time,
         }

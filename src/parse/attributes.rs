@@ -29,7 +29,7 @@ impl BeatmapAttributes {
     }
 
     /// Adjusts attributes w.r.t. mods.
-    /// AR is further adjusted by the its hitwindow.
+    /// AR is further adjusted by its hitwindow.
     /// OD is __not__ adjusted by its hitwindow.
     pub fn mods(self, mods: impl Mods) -> Self {
         if !mods.change_map() {

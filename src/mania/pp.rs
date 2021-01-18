@@ -76,9 +76,16 @@ impl<'m> ManiaPP<'m> {
         let nf = self.mods.nf();
         let ht = self.mods.ht();
 
-        let scaled_score = self.score.map_or(1_000_000.0, |score| {
+        let mut scaled_score = self.score.map_or(1_000_000.0, |score| {
             score / 0.5_f32.powi(ez as i32 + nf as i32 + ht as i32)
         });
+
+        if let Some(passed_objects) = self.passed_objects {
+            let percent_passed =
+                passed_objects as f32 / (self.map.n_circles + self.map.n_sliders) as f32;
+
+            scaled_score /= percent_passed;
+        }
 
         let mut multiplier = 0.8;
 
