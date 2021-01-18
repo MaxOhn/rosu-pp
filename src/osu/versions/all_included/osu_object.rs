@@ -42,14 +42,18 @@ pub(crate) enum OsuObject {
 }
 
 impl OsuObject {
-    pub(crate) fn new(h: &HitObject, map: &Beatmap, attributes: &BeatmapAttributes) -> Self {
+    pub(crate) fn new(
+        h: &HitObject,
+        map: &Beatmap,
+        attributes: &BeatmapAttributes,
+    ) -> Option<Self> {
         let pos = h.pos;
         let time = h.start_time;
 
         let scale = (1.0 - 0.7 * (attributes.cs - 5.0) / 5.0) / 2.0;
         let mut stack_height = 0.0;
 
-        match &h.kind {
+        let obj = match &h.kind {
             HitObjectKind::Circle => Self::Circle {
                 pos,
                 time,
@@ -303,8 +307,10 @@ impl OsuObject {
                 }
             }
             HitObjectKind::Spinner { .. } => Self::Spinner { pos, time },
-            HitObjectKind::Hold { .. } => panic!("found Hold object in osu!standard file"),
-        }
+            HitObjectKind::Hold { .. } => return None,
+        };
+
+        Some(obj)
     }
 
     #[inline]

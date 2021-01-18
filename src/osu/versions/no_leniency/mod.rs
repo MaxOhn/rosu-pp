@@ -66,7 +66,7 @@ pub fn stars(
     let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
 
-    let mut hit_objects = map.hit_objects.iter().take(take).map(|h| {
+    let mut hit_objects = map.hit_objects.iter().take(take).filter_map(|h| {
         OsuObject::new(
             h,
             map,

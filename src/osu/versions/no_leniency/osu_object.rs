@@ -21,10 +21,10 @@ impl OsuObject {
         ticks: &mut Vec<f32>,
         attributes: &mut DifficultyAttributes,
         slider_state: &mut SliderState,
-    ) -> Self {
+    ) -> Option<Self> {
         attributes.max_combo += 1; // hitcircle, slider head, or spinner
 
-        match &h.kind {
+        let obj = match &h.kind {
             HitObjectKind::Circle => {
                 attributes.n_circles += 1;
 
@@ -168,8 +168,10 @@ impl OsuObject {
                     travel_dist: None,
                 }
             }
-            HitObjectKind::Hold { .. } => panic!("found Hold object in osu!standard file"),
-        }
+            HitObjectKind::Hold { .. } => return None,
+        };
+
+        Some(obj)
     }
 
     #[inline]

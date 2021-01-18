@@ -44,7 +44,7 @@ pub fn stars(
         .hit_objects
         .iter()
         .take(take)
-        .map(|h| OsuObject::new(h, map, &attributes));
+        .filter_map(|h| OsuObject::new(h, map, &attributes));
 
     let mut skills = vec![Skill::new(SkillKind::Aim), Skill::new(SkillKind::Speed)];
 

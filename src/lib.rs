@@ -7,69 +7,67 @@
 //! use std::fs::File;
 //! use rosu_pp::{Beatmap, BeatmapExt, GameMode, OsuPP, TaikoPP};
 //!
-//! fn main() {
-//!     let file = match File::open("/path/to/file.osu") {
-//!         Ok(file) => file,
-//!         Err(why) => panic!("Could not open file: {}", why),
-//!     };
+//! let file = match File::open("/path/to/file.osu") {
+//!     Ok(file) => file,
+//!     Err(why) => panic!("Could not open file: {}", why),
+//! };
 //!
-//!     // Parse the map yourself
-//!     let map = match Beatmap::parse(file) {
-//!         Ok(map) => map,
-//!         Err(why) => panic!("Error while parsing map: {}", why),
-//!     };
+//! // Parse the map yourself
+//! let map = match Beatmap::parse(file) {
+//!     Ok(map) => map,
+//!     Err(why) => panic!("Error while parsing map: {}", why),
+//! };
 //!
-//!     // The different modes make things annoying because their
-//!     // pp calculations require different parameters.
-//!     // For now, you will have to match on the mode yourself
-//!     // to be able to set all options for pp calculation.
-//!     match map.mode {
-//!         GameMode::STD => {
-//!             let result = OsuPP::new(&map)
-//!                 .mods(24) // HDHR
-//!                 .combo(1234)
-//!                 .misses(2)
-//!                 .accuracy(99.2)
-//!                 // `no_leniency` is the suggested default
-//!                 .calculate(rosu_pp::osu::no_leniency::stars);
+//! // The different modes make things annoying because their
+//! // pp calculations require different parameters.
+//! // For now, you will have to match on the mode yourself
+//! // to be able to set all options for pp calculation.
+//! match map.mode {
+//!     GameMode::STD => {
+//!         let result = OsuPP::new(&map)
+//!             .mods(24) // HDHR
+//!             .combo(1234)
+//!             .misses(2)
+//!             .accuracy(99.2)
+//!             // `no_leniency` is the suggested default
+//!             .calculate(rosu_pp::osu::no_leniency::stars);
 //!
-//!             println!("PP: {}", result.pp());
+//!         println!("PP: {}", result.pp());
 //!
-//!             // If you intend to reuse the current map-mod combination,
-//!             // make use of the previous result!
-//!             // If attributes are given, then stars & co don't have to be recalculated.
-//!             let next_result = OsuPP::new(&map)
-//!                 .mods(24) // HDHR
-//!                 .attributes(result)
-//!                 .combo(543)
-//!                 .misses(5)
-//!                 .n50(3)
-//!                 .accuracy(97.5)
-//!                 .calculate(rosu_pp::osu::no_leniency::stars);
+//!         // If you intend to reuse the current map-mod combination,
+//!         // make use of the previous result!
+//!         // If attributes are given, then stars & co don't have to be recalculated.
+//!         let next_result = OsuPP::new(&map)
+//!             .mods(24) // HDHR
+//!             .attributes(result)
+//!             .combo(543)
+//!             .misses(5)
+//!             .n50(3)
+//!             .accuracy(97.5)
+//!             .calculate(rosu_pp::osu::no_leniency::stars);
 //!
-//!             println!("Next PP: {}", next_result.pp());
-//!         },
-//!         GameMode::TKO => {
-//!             let result = TaikoPP::new(&map)
-//!                 .mods(64) // DT
-//!                 .combo(555)
-//!                 .misses(10)
-//!                 .passed_objects(600)
-//!                 .accuracy(95.12345)
-//!                 .calculate();
+//!         println!("Next PP: {}", next_result.pp());
+//!     },
+//!     GameMode::TKO => {
+//!         let result = TaikoPP::new(&map)
+//!             .mods(64) // DT
+//!             .combo(555)
+//!             .misses(10)
+//!             .passed_objects(600)
+//!             .accuracy(95.12345)
+//!             .calculate();
 //!
-//!             println!("Stars: {} | PP: {}", result.stars(), result.pp());
-//!         }
-//!         GameMode::MNA | GameMode::CTB => panic!("do your thing"),
+//!         println!("Stars: {} | PP: {}", result.stars(), result.pp());
 //!     }
-//!
-//!     // If all you want is the map's stars or max pp,
-//!     // you can make use of the BeatmapExt trait.
-//!     let stars = map.stars(16, None); // HR
-//!     let max_pp = map.max_pp(16);
-//!
-//!     println!("Stars: {} | Max PP: {}", stars, max_pp);
+//!     GameMode::MNA | GameMode::CTB => panic!("do your thing"),
 //! }
+//!
+//! // If all you want is the map's stars or max pp,
+//! // you can make use of the BeatmapExt trait.
+//! let stars = map.stars(16, None); // HR
+//! let max_pp = map.max_pp(16);
+//!
+//! println!("Stars: {} | Max PP: {}", stars, max_pp);
 //! ```
 //!
 //! ### osu!standard versions

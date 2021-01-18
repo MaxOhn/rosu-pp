@@ -64,33 +64,37 @@ pub fn stars(
     let mut n_spinners = 0;
     let mut state = SliderState::new(&map);
 
-    let mut hit_objects = map.hit_objects.iter().take(take).map(|h| match &h.kind {
-        HitObjectKind::Circle => {
-            max_combo += 1;
-            n_circles += 1;
+    let mut hit_objects = map
+        .hit_objects
+        .iter()
+        .take(take)
+        .filter_map(|h| match &h.kind {
+            HitObjectKind::Circle => {
+                max_combo += 1;
+                n_circles += 1;
 
-            Cow::Borrowed(h)
-        }
-        HitObjectKind::Slider {
-            pixel_len, repeats, ..
-        } => {
-            max_combo += state.count_ticks(h.start_time, *pixel_len, *repeats, &map);
+                Some(Cow::Borrowed(h))
+            }
+            HitObjectKind::Slider {
+                pixel_len, repeats, ..
+            } => {
+                max_combo += state.count_ticks(h.start_time, *pixel_len, *repeats, &map);
 
-            Cow::Owned(HitObject {
-                pos: h.pos,
-                start_time: h.start_time,
-                kind: HitObjectKind::Circle,
-                sound: h.sound,
-            })
-        }
-        HitObjectKind::Spinner { .. } => {
-            max_combo += 1;
-            n_spinners += 1;
+                Some(Cow::Owned(HitObject {
+                    pos: h.pos,
+                    start_time: h.start_time,
+                    kind: HitObjectKind::Circle,
+                    sound: h.sound,
+                }))
+            }
+            HitObjectKind::Spinner { .. } => {
+                max_combo += 1;
+                n_spinners += 1;
 
-            Cow::Borrowed(h)
-        }
-        HitObjectKind::Hold { .. } => panic!("found Hold object in osu!standard map"),
-    });
+                Some(Cow::Borrowed(h))
+            }
+            HitObjectKind::Hold { .. } => None,
+        });
 
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);

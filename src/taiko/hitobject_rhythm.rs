@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 static COMMON_RHYTHMS: [HitObjectRhythm; 9] = [
     HitObjectRhythm {
-        ratio: 1.0 / 1.0,
+        ratio: 1.0,
         difficulty: 0.0,
     },
     HitObjectRhythm {
