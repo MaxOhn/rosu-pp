@@ -243,10 +243,10 @@ impl Beatmap {
             buf.clear();
         }
 
-        self.ar = next_field!(ar);
         self.od = next_field!(od);
         self.cs = next_field!(cs);
         self.hp = next_field!(hp);
+        self.ar = ar.unwrap_or(self.od);
         self.sv = next_field!(sv);
         self.tick_rate = next_field!(tick_rate);
 
@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn parsing() {
-        let file = match File::open("./maps/1241370.osu") {
+        let file = match File::open("./maps/61843.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not read file: {}", why),
         };
