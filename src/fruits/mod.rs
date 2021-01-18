@@ -11,7 +11,7 @@ use movement::Movement;
 pub use pp::*;
 use slider_state::SliderState;
 
-use crate::{curve::Curve, Beatmap, HitObjectKind, Mods, PathType, Pos2};
+use crate::{curve::Curve, Beatmap, HitObjectKind, Mods, PathType, Pos2, StarResult};
 
 use std::convert::identity;
 
@@ -27,15 +27,13 @@ const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 // Slider parsing based on https://github.com/osufx/catch-the-pp
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return DifficultyAttributes::default();
+        return StarResult::Fruits {
+            attributes: DifficultyAttributes::default(),
+        };
     }
 
     let attributes = map.attributes().mods(mods);
@@ -268,14 +266,16 @@ pub fn stars(
 
     let stars = movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR;
 
-    DifficultyAttributes {
+    let attributes = DifficultyAttributes {
         stars,
         ar: attributes.ar,
         n_fruits: fruits,
         n_droplets: droplets,
         n_tiny_droplets: tiny_droplets,
         max_combo: fruits + droplets,
-    }
+    };
+
+    StarResult::Fruits { attributes }
 }
 
 fn tiny_droplet_count(

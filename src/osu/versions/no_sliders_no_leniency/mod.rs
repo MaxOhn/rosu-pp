@@ -15,7 +15,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, HitObject, HitObjectKind, Mods};
+use crate::{Beatmap, HitObject, HitObjectKind, Mods, StarResult};
 
 use std::borrow::Cow;
 
@@ -31,11 +31,7 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// However, this is the most efficient one.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let attributes = map.attributes().mods(mods);
@@ -43,10 +39,12 @@ pub fn stars(
     let od = (80.0 - hitwindow) / 6.0;
 
     if take < 2 {
-        return DifficultyAttributes {
-            ar: attributes.ar,
-            od,
-            ..Default::default()
+        return StarResult::Osu {
+            attributes: DifficultyAttributes {
+                ar: attributes.ar,
+                od,
+                ..Default::default()
+            },
         };
     }
 
@@ -165,15 +163,17 @@ pub fn stars(
 
     let stars = aim_strain + speed_strain + (aim_strain - speed_strain).abs() / 2.0;
 
-    DifficultyAttributes {
-        stars,
-        ar: attributes.ar,
-        od,
-        speed_strain,
-        aim_strain,
-        max_combo,
-        n_circles,
-        n_spinners,
+    StarResult::Osu {
+        attributes: DifficultyAttributes {
+            stars,
+            ar: attributes.ar,
+            od,
+            speed_strain,
+            aim_strain,
+            max_combo,
+            n_circles,
+            n_spinners,
+        },
     }
 }
 

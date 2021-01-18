@@ -17,7 +17,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, Mods};
+use crate::{Beatmap, Mods, StarResult};
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -33,11 +33,7 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// processing stack leniency is relatively expensive.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
@@ -51,7 +47,9 @@ pub fn stars(
     };
 
     if take < 2 {
-        return diff_attributes;
+        return StarResult::Osu {
+            attributes: diff_attributes,
+        };
     }
 
     let section_len = SECTION_LEN * map_attributes.clock_rate;
@@ -150,7 +148,9 @@ pub fn stars(
     diff_attributes.speed_strain = speed_strain;
     diff_attributes.aim_strain = aim_strain;
 
-    diff_attributes
+    StarResult::Osu {
+        attributes: diff_attributes,
+    }
 }
 
 #[cfg(test)]

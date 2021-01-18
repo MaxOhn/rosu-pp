@@ -1,5 +1,5 @@
 use super::DifficultyAttributes;
-use crate::{Beatmap, Mods, PpResult};
+use crate::{Beatmap, Mods, PpResult, StarResult};
 
 pub trait OsuAttributeProvider {
     fn attributes(self) -> Option<DifficultyAttributes>;
@@ -11,13 +11,19 @@ impl OsuAttributeProvider for DifficultyAttributes {
     }
 }
 
-impl OsuAttributeProvider for PpResult {
+impl OsuAttributeProvider for StarResult {
     fn attributes(self) -> Option<DifficultyAttributes> {
-        if let PpResult::Osu { attributes, .. } = self {
+        if let Self::Osu { attributes } = self {
             Some(attributes)
         } else {
             None
         }
+    }
+}
+
+impl OsuAttributeProvider for PpResult {
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        self.attributes.attributes()
     }
 }
 
@@ -170,10 +176,12 @@ impl<'m> OsuPP<'m> {
     /// The default is suggested to be [`stars`](crate::osu::no_leniency::stars).
     pub fn calculate(
         mut self,
-        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> DifficultyAttributes,
+        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> StarResult,
     ) -> PpResult {
         if self.attributes.is_none() {
-            let attributes = stars_func(self.map, self.mods, self.passed_objects);
+            let attributes = stars_func(self.map, self.mods, self.passed_objects)
+                .attributes()
+                .unwrap();
             self.attributes.replace(attributes);
         }
 
@@ -227,10 +235,11 @@ impl<'m> OsuPP<'m> {
             .powf(1.0 / 1.1)
             * multiplier;
 
-        PpResult::Osu {
-            pp,
+        let attributes = StarResult::Osu {
             attributes: self.attributes.unwrap(),
-        }
+        };
+
+        PpResult { pp, attributes }
     }
 
     fn compute_aim_value(&self, total_hits: f32) -> f32 {

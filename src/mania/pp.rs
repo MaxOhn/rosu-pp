@@ -1,5 +1,5 @@
 use super::stars;
-use crate::{Beatmap, Mods, PpResult};
+use crate::{Beatmap, Mods, PpResult, StarResult};
 
 pub trait ManiaStarProvider {
     fn attributes(self) -> Option<f32>;
@@ -11,13 +11,19 @@ impl ManiaStarProvider for f32 {
     }
 }
 
-impl ManiaStarProvider for PpResult {
+impl ManiaStarProvider for StarResult {
     fn attributes(self) -> Option<f32> {
-        if let PpResult::Mania { stars, .. } = self {
+        if let Self::Mania { stars } = self {
             Some(stars)
         } else {
             None
         }
+    }
+}
+
+impl ManiaStarProvider for PpResult {
+    fn attributes(self) -> Option<f32> {
+        self.attributes.attributes()
     }
 }
 
@@ -42,7 +48,7 @@ impl<'m> ManiaPP<'m> {
         }
     }
 
-    /// [`ManiaStarsProvider`] is implemented by `f32`
+    /// [`ManiaStarsProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
     /// and by [`PpResult`](crate::PpResult) meaning you can give the
     /// result of a star calculation or a pp calculation.
     /// If you already calculated the attributes for the current map-mod combination,
@@ -87,7 +93,7 @@ impl<'m> ManiaPP<'m> {
     pub fn calculate(self) -> PpResult {
         let stars = self
             .stars
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars());
 
         let ez = self.mods.ez();
         let nf = self.mods.nf();
@@ -133,7 +139,10 @@ impl<'m> ManiaPP<'m> {
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
-        PpResult::Mania { pp, stars }
+        PpResult {
+            pp,
+            attributes: StarResult::Mania { stars },
+        }
     }
 
     fn compute_strain(&self, score: f32, stars: f32) -> f32 {

@@ -11,7 +11,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 
 use super::super::DifficultyAttributes;
-use crate::{Beatmap, Mods};
+use crate::{Beatmap, Mods, StarResult};
 
 const SECTION_LEN: f32 = 400.0;
 const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
@@ -19,11 +19,7 @@ const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
 /// Star calculation for osu!standard maps
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let attributes = map.attributes().mods(mods);
@@ -31,10 +27,12 @@ pub fn stars(
     let od = (80.0 - hitwindow) / 6.0;
 
     if take < 2 {
-        return DifficultyAttributes {
-            ar: attributes.ar,
-            od,
-            ..Default::default()
+        return StarResult::Osu {
+            attributes: DifficultyAttributes {
+                ar: attributes.ar,
+                od,
+                ..Default::default()
+            },
         };
     }
 
@@ -118,7 +116,7 @@ pub fn stars(
 
     let stars = aim_rating + speed_rating + (aim_rating - speed_rating).abs() / 2.0;
 
-    DifficultyAttributes {
+    let attributes = DifficultyAttributes {
         stars,
         ar: attributes.ar,
         od,
@@ -127,7 +125,9 @@ pub fn stars(
         max_combo: 0,  // TODO
         n_circles: 0,  // TODO
         n_spinners: 0, // TODO
-    }
+    };
+
+    StarResult::Osu { attributes }
 }
 
 #[cfg(test)]

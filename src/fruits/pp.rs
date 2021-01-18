@@ -1,5 +1,5 @@
 use super::{stars, DifficultyAttributes};
-use crate::{Beatmap, Mods, PpResult};
+use crate::{Beatmap, Mods, PpResult, StarResult};
 
 pub trait FruitsAttributeProvider {
     fn attributes(self) -> Option<DifficultyAttributes>;
@@ -11,13 +11,19 @@ impl FruitsAttributeProvider for DifficultyAttributes {
     }
 }
 
-impl FruitsAttributeProvider for PpResult {
+impl FruitsAttributeProvider for StarResult {
     fn attributes(self) -> Option<DifficultyAttributes> {
-        if let PpResult::Fruits { attributes, .. } = self {
+        if let Self::Fruits { attributes } = self {
             Some(attributes)
         } else {
             None
         }
+    }
+}
+
+impl FruitsAttributeProvider for PpResult {
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        self.attributes.attributes()
     }
 }
 
@@ -54,8 +60,8 @@ impl<'m> FruitsPP<'m> {
         }
     }
 
-    /// [`FruitsAttributeProvider`] is implemented by [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
-    /// and by [`PpResult`](crate::PpResult) meaning you can give the
+    /// [`FruitsAttributeProvider`] is implemented by [`DifficultyAttributes`](crate::fruits::DifficultyAttributes),
+    /// [`StarResult`](crate::StarResult), and by [`PpResult`](crate::PpResult) meaning you can give the
     /// result of a star calculation or a pp calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
@@ -139,8 +145,11 @@ impl<'m> FruitsPP<'m> {
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
     pub fn accuracy(mut self, acc: f32) -> Self {
         if self.attributes.is_none() {
-            self.attributes
-                .replace(stars(self.map, self.mods, self.passed_objects));
+            self.attributes.replace(
+                stars(self.map, self.mods, self.passed_objects)
+                    .attributes()
+                    .unwrap(),
+            );
         }
 
         let attributes = self.attributes.as_ref().unwrap();
@@ -163,7 +172,7 @@ impl<'m> FruitsPP<'m> {
                 .saturating_sub(n_droplets)
         });
 
-        let n_tiny_droplet_misses = max_tiny_droplets - n_tiny_droplets;
+        let n_tiny_droplet_misses = max_tiny_droplets.saturating_sub(n_tiny_droplets);
 
         self.n_fruits.replace(n_fruits);
         self.n_droplets.replace(n_droplets);
@@ -176,10 +185,11 @@ impl<'m> FruitsPP<'m> {
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
     /// containing stars and other attributes.
     pub fn calculate(mut self) -> PpResult {
-        let attributes = self
-            .attributes
-            .take()
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
+        let attributes = self.attributes.take().unwrap_or_else(|| {
+            stars(self.map, self.mods, self.passed_objects)
+                .attributes()
+                .unwrap()
+        });
 
         let stars = attributes.stars;
 
@@ -239,7 +249,10 @@ impl<'m> FruitsPP<'m> {
             pp *= 0.9;
         }
 
-        PpResult::Fruits { pp, attributes }
+        PpResult {
+            pp,
+            attributes: StarResult::Fruits { attributes },
+        }
     }
 
     #[inline]

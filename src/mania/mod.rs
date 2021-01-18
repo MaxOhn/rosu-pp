@@ -4,7 +4,7 @@ mod strain;
 pub use pp::*;
 use strain::Strain;
 
-use crate::{Beatmap, HitObject, Mods};
+use crate::{Beatmap, HitObject, Mods, StarResult};
 
 const SECTION_LEN: f32 = 400.0;
 const STAR_SCALING_FACTOR: f32 = 0.018;
@@ -12,11 +12,11 @@ const STAR_SCALING_FACTOR: f32 = 0.018;
 /// Star calculation for osu!mania maps
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> f32 {
+pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return 0.0;
+        return StarResult::Mania { stars: 0.0 };
     }
 
     let clock_rate = mods.speed();
@@ -58,7 +58,9 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> f
 
     strain.save_current_peak();
 
-    strain.difficulty_value() * STAR_SCALING_FACTOR
+    let stars = strain.difficulty_value() * STAR_SCALING_FACTOR;
+
+    StarResult::Mania { stars }
 }
 
 #[derive(Debug)]

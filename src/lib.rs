@@ -64,8 +64,8 @@
 //!
 //! // If all you want is the map's stars or max pp,
 //! // you can make use of the BeatmapExt trait.
-//! let stars = map.stars(16, None); // HR
-//! let max_pp = map.max_pp(16);
+//! let stars = map.stars(16, None).stars(); // HR
+//! let max_pp = map.max_pp(16).pp();
 //!
 //! println!("Stars: {} | Max PP: {}", stars, max_pp);
 //! ```
@@ -117,7 +117,7 @@ pub trait BeatmapExt {
     /// Calculate the stars of a beatmap.
     ///
     /// For osu!standard maps, the `no_leniency` version will be used.
-    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> f32;
+    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> StarResult;
 
     /// Calculate the max pp of a beatmap if that is all you want.
     ///
@@ -125,70 +125,76 @@ pub trait BeatmapExt {
     ///
     /// If you seek more fine-tuning and options you need to match on the map's
     /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP) for taiko.
-    fn max_pp(&self, mods: u32) -> f32;
+    fn max_pp(&self, mods: u32) -> PpResult;
 }
 
 impl BeatmapExt for Beatmap {
-    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> f32 {
+    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
         match self.mode {
-            GameMode::STD => osu::no_leniency::stars(self, mods, passed_objects).stars,
+            GameMode::STD => osu::no_leniency::stars(self, mods, passed_objects),
             GameMode::MNA => mania::stars(self, mods, passed_objects),
             GameMode::TKO => taiko::stars(self, mods, passed_objects),
-            GameMode::CTB => fruits::stars(self, mods, passed_objects).stars,
+            GameMode::CTB => fruits::stars(self, mods, passed_objects),
         }
     }
-    fn max_pp(&self, mods: u32) -> f32 {
+    fn max_pp(&self, mods: u32) -> PpResult {
         match self.mode {
             GameMode::STD => OsuPP::new(self)
                 .mods(mods)
-                .calculate(osu::no_leniency::stars)
-                .pp(),
-            GameMode::MNA => ManiaPP::new(self).mods(mods).calculate().pp(),
-            GameMode::TKO => TaikoPP::new(self).mods(mods).calculate().pp(),
-            GameMode::CTB => FruitsPP::new(self).mods(mods).calculate().pp(),
+                .calculate(osu::no_leniency::stars),
+            GameMode::MNA => ManiaPP::new(self).mods(mods).calculate(),
+            GameMode::TKO => TaikoPP::new(self).mods(mods).calculate(),
+            GameMode::CTB => FruitsPP::new(self).mods(mods).calculate(),
         }
     }
 }
 
-/// Basic enum containing the result of a PP calculation depending on the mode.
-pub enum PpResult {
+/// Basic enum containing the result of a star calculation based on the mode.
+pub enum StarResult {
     Fruits {
-        pp: f32,
         attributes: fruits::DifficultyAttributes,
     },
     Mania {
-        pp: f32,
         stars: f32,
     },
     Osu {
-        pp: f32,
         attributes: osu::DifficultyAttributes,
     },
     Taiko {
-        pp: f32,
         stars: f32,
     },
+}
+
+impl StarResult {
+    /// The final star value.
+    #[inline]
+    pub fn stars(&self) -> f32 {
+        match self {
+            Self::Fruits { attributes, .. } => attributes.stars,
+            Self::Mania { stars } => *stars,
+            Self::Osu { attributes, .. } => attributes.stars,
+            Self::Taiko { stars } => *stars,
+        }
+    }
+}
+
+/// Basic struct containing the result of a PP calculation.
+pub struct PpResult {
+    pub pp: f32,
+    pub attributes: StarResult,
 }
 
 impl PpResult {
     /// The final pp value.
+    #[inline]
     pub fn pp(&self) -> f32 {
-        match self {
-            Self::Fruits { pp, .. } => *pp,
-            Self::Mania { pp, .. } => *pp,
-            Self::Osu { pp, .. } => *pp,
-            Self::Taiko { pp, .. } => *pp,
-        }
+        self.pp
     }
 
     /// The final star value.
+    #[inline]
     pub fn stars(&self) -> f32 {
-        match self {
-            Self::Fruits { attributes, .. } => attributes.stars,
-            Self::Mania { stars, .. } => *stars,
-            Self::Osu { attributes, .. } => attributes.stars,
-            Self::Taiko { stars, .. } => *stars,
-        }
+        self.attributes.stars()
     }
 }
 

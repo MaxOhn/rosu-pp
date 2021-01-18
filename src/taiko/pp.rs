@@ -1,4 +1,4 @@
-use crate::{Beatmap, Mods, PpResult};
+use crate::{Beatmap, Mods, PpResult, StarResult};
 
 pub trait TaikoStarProvider {
     fn attributes(self) -> Option<f32>;
@@ -10,13 +10,19 @@ impl TaikoStarProvider for f32 {
     }
 }
 
-impl TaikoStarProvider for PpResult {
+impl TaikoStarProvider for StarResult {
     fn attributes(self) -> Option<f32> {
-        if let PpResult::Taiko { stars, .. } = self {
+        if let StarResult::Taiko { stars } = self {
             Some(stars)
         } else {
             None
         }
+    }
+}
+
+impl TaikoStarProvider for PpResult {
+    fn attributes(self) -> Option<f32> {
+        self.attributes.attributes()
     }
 }
 
@@ -50,7 +56,7 @@ impl<'m> TaikoPP<'m> {
         }
     }
 
-    /// [`TaikoStarProvider`] is implemented by `f32`
+    /// [`TaikoStarProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
     /// and by [`PpResult`](crate::PpResult) meaning you can give the
     /// result of a star calculation or a pp calculation.
     /// If you already calculated the stars for the current map-mod combination,
@@ -110,7 +116,7 @@ impl<'m> TaikoPP<'m> {
     pub fn calculate(self) -> PpResult {
         let stars = self
             .stars
-            .unwrap_or_else(|| super::stars(self.map, self.mods, self.passed_objects));
+            .unwrap_or_else(|| super::stars(self.map, self.mods, self.passed_objects).stars());
 
         let mut multiplier = 1.1;
 
@@ -127,7 +133,10 @@ impl<'m> TaikoPP<'m> {
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
-        PpResult::Taiko { stars, pp }
+        PpResult {
+            pp,
+            attributes: StarResult::Taiko { stars },
+        }
     }
 
     fn compute_strain_value(&self, stars: f32) -> f32 {
