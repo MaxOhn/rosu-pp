@@ -60,8 +60,10 @@ impl<'m> FruitsPP<'m> {
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn attributes(mut self, attributes: DifficultyAttributes) -> Self {
-        self.attributes.replace(attributes);
+    pub fn attributes(mut self, attributes: impl FruitsAttributeProvider) -> Self {
+        if let Some(attributes) = attributes.attributes() {
+            self.attributes.replace(attributes);
+        }
 
         self
     }

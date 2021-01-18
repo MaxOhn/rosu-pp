@@ -32,6 +32,7 @@ pub struct TaikoPP<'m> {
     passed_objects: Option<usize>,
 }
 
+// TODO: n300 & n100
 impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
