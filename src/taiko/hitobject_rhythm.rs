@@ -2,21 +2,44 @@ use crate::HitObject;
 
 use std::cmp::Ordering;
 
-lazy_static::lazy_static! {
-    /// lazy_static required for `f32` division's
-    /// lack of const-ness as of now.
-    static ref COMMON_RHYTHMS: Vec<HitObjectRhythm> = vec![
-        HitObjectRhythm::new(1.0, 1.0, 0.0),
-        HitObjectRhythm::new(2.0, 1.0, 0.3),
-        HitObjectRhythm::new(1.0, 2.0, 0.5),
-        HitObjectRhythm::new(3.0, 1.0, 0.3),
-        HitObjectRhythm::new(1.0, 3.0, 0.35),
-        HitObjectRhythm::new(3.0, 2.0, 0.6),
-        HitObjectRhythm::new(2.0, 3.0, 0.4),
-        HitObjectRhythm::new(5.0, 4.0, 0.5),
-        HitObjectRhythm::new(4.0, 5.0, 0.7),
-    ];
-}
+static COMMON_RHYTHMS: [HitObjectRhythm; 9] = [
+    HitObjectRhythm {
+        ratio: 1.0 / 1.0,
+        difficulty: 0.0,
+    },
+    HitObjectRhythm {
+        ratio: 2.0 / 1.0,
+        difficulty: 0.3,
+    },
+    HitObjectRhythm {
+        ratio: 1.0 / 2.0,
+        difficulty: 0.5,
+    },
+    HitObjectRhythm {
+        ratio: 3.0 / 1.0,
+        difficulty: 0.3,
+    },
+    HitObjectRhythm {
+        ratio: 1.0 / 3.0,
+        difficulty: 0.35,
+    },
+    HitObjectRhythm {
+        ratio: 3.0 / 2.0,
+        difficulty: 0.6,
+    },
+    HitObjectRhythm {
+        ratio: 2.0 / 3.0,
+        difficulty: 0.4,
+    },
+    HitObjectRhythm {
+        ratio: 5.0 / 4.0,
+        difficulty: 0.5,
+    },
+    HitObjectRhythm {
+        ratio: 4.0 / 5.0,
+        difficulty: 0.7,
+    },
+];
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct HitObjectRhythm {
@@ -33,16 +56,6 @@ impl PartialEq for HitObjectRhythm {
 }
 
 impl Eq for HitObjectRhythm {}
-
-impl HitObjectRhythm {
-    #[inline]
-    fn new(numerator: f32, denominator: f32, difficulty: f32) -> Self {
-        Self {
-            ratio: numerator / denominator,
-            difficulty,
-        }
-    }
-}
 
 #[inline]
 pub(crate) fn closest_rhythm(
