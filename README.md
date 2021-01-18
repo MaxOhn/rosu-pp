@@ -4,7 +4,7 @@ A standalone crate to calculate star ratings and performance points for all [osu
 
 Conversions are generally not supported.
 
-### Usage
+#### Usage
 ```rust
 use std::fs::File;
 use rosu_pp::{Beatmap, BeatmapExt, GameMode, OsuPP, TaikoPP};
@@ -35,32 +35,32 @@ fn main() {
                 // `no_leniency` is the suggested default
                 .calculate(rosu_pp::osu::no_leniency::stars);
 
-            println!("PP: {}", result.pp);
+            println!("PP: {}", result.pp());
 
             // If you intend to reuse the current map-mod combination,
-            // make use of the attributes in the result.
+            // make use of the previous result!
             // If attributes are given, then stars & co don't have to be recalculated.
             let next_result = OsuPP::new(&map)
                 .mods(24) // HDHR
-                .attributes(result.attributes)
+                .attributes(result)
                 .combo(543)
                 .misses(5)
                 .n50(3)
-                .passed_objects(612)
                 .accuracy(97.5)
                 .calculate(rosu_pp::osu::no_leniency::stars);
 
-            println!("Next PP: {}", next_result.pp);
+            println!("Next PP: {}", next_result.pp());
         },
         GameMode::TKO => {
             let result = TaikoPP::new(&map)
                 .mods(64) // DT
                 .combo(555)
                 .misses(10)
+                .passed_objects(600)
                 .accuracy(95.12345)
                 .calculate();
 
-            println!("Stars: {} | PP: {}", result.stars, result.pp);
+            println!("Stars: {} | PP: {}", result.stars(), result.pp());
         }
         GameMode::MNA | GameMode::CTB => panic!("do your thing"),
     }
@@ -74,12 +74,12 @@ fn main() {
 }
 ```
 
-### osu!standard versions
+#### osu!standard versions
 - `all_included`: WIP
 - `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
 - `no_slider_no_leniency` (i.e. oppai): In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
 
-### Roadmap
+#### Roadmap
 - osu sr versions
   - [ ] all included
   - [x] no_leniency

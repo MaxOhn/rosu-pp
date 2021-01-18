@@ -36,28 +36,28 @@ fn mania() {
         let result = rosu_pp::ManiaPP::new(&map).mods(*mods).calculate();
 
         assert!(
-            (result.stars - stars).abs() < star_margin * stars,
+            (result.stars() - stars).abs() < star_margin * stars,
             "\nStars:\n\
                 Calculated: {calculated} | Expected: {expected}\n \
                 => {margin} margin ({allowed} allowed)\n\
                 [map {map} | mods {mods}]\n",
-            calculated = result.stars,
+            calculated = result.stars(),
             expected = stars,
-            margin = (result.stars - stars).abs(),
+            margin = (result.stars() - stars).abs(),
             allowed = star_margin * stars,
             map = map_id,
             mods = mods
         );
 
         assert!(
-            (result.pp - pp).abs() < pp_margin * pp,
+            (result.pp() - pp).abs() < pp_margin * pp,
             "\nPP:\n\
                 Calculated: {calculated} | Expected: {expected}\n \
                 => {margin} margin ({allowed} allowed)\n\
                 [map {map} | mods {mods}]\n",
-            calculated = result.pp,
+            calculated = result.pp(),
             expected = pp,
-            margin = (result.pp - pp).abs(),
+            margin = (result.pp() - pp).abs(),
             allowed = pp_margin * pp,
             map = map_id,
             mods = mods

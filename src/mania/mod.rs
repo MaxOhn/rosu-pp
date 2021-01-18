@@ -101,7 +101,7 @@ mod tests {
 
         let result = ManiaPP::new(&map).mods(256).calculate();
 
-        println!("Stars: {}", result.stars);
-        println!("PP: {}", result.pp);
+        println!("Stars: {}", result.stars());
+        println!("PP: {}", result.pp());
     }
 }

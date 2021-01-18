@@ -1,18 +1,30 @@
-use super::DifficultyAttributes as Attributes;
-use crate::{Beatmap, Mods};
+use super::DifficultyAttributes;
+use crate::{Beatmap, Mods, PpResult};
 
-/// Basic struct containing the result of a PP calculation.
-/// In osu!standard's case, this will be the pp value and the
-/// difficulty attributes created by star calculation.
-pub struct PpResult {
-    pub pp: f32,
-    pub attributes: Attributes,
+pub trait OsuAttributeProvider {
+    fn attributes(self) -> Option<DifficultyAttributes>;
+}
+
+impl OsuAttributeProvider for DifficultyAttributes {
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        Some(self)
+    }
+}
+
+impl OsuAttributeProvider for PpResult {
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        if let PpResult::Osu { attributes, .. } = self {
+            Some(attributes)
+        } else {
+            None
+        }
+    }
 }
 
 /// Calculator for pp on osu!standard maps.
 pub struct OsuPP<'m> {
     map: &'m Beatmap,
-    attributes: Option<Attributes>,
+    attributes: Option<DifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
     acc: Option<f32>,
@@ -42,16 +54,16 @@ impl<'m> OsuPP<'m> {
         }
     }
 
-    /// [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
-    /// stay the same for each map-mod combination.
-    /// If you already calculated them, be sure to put them in here so
-    /// that they don't have to be recalculated.
-    ///
-    /// The final object after calling `calculation` will contain the
-    /// attributes again for later reuse.
+    /// [`OsuAttributeProvider`] is implemented by [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
+    /// and by [`PpResult`](crate::PpResult) meaning you can give the
+    /// result of a star calculation or a pp calculation.
+    /// If you already calculated the attributes for the current map-mod combination,
+    /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn attributes(mut self, attributes: Attributes) -> Self {
-        self.attributes.replace(attributes);
+    pub fn attributes(mut self, attributes: impl OsuAttributeProvider) -> Self {
+        if let Some(attributes) = attributes.attributes() {
+            self.attributes.replace(attributes);
+        }
 
         self
     }
@@ -158,7 +170,7 @@ impl<'m> OsuPP<'m> {
     /// The default is suggested to be [`stars`](crate::osu::no_leniency::stars).
     pub fn calculate(
         mut self,
-        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> Attributes,
+        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> DifficultyAttributes,
     ) -> PpResult {
         if self.attributes.is_none() {
             let attributes = stars_func(self.map, self.mods, self.passed_objects);
@@ -215,7 +227,7 @@ impl<'m> OsuPP<'m> {
             .powf(1.0 / 1.1)
             * multiplier;
 
-        PpResult {
+        PpResult::Osu {
             pp,
             attributes: self.attributes.unwrap(),
         }

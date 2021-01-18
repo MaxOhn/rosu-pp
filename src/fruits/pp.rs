@@ -1,12 +1,24 @@
 use super::{stars, DifficultyAttributes};
-use crate::{Beatmap, Mods};
+use crate::{Beatmap, Mods, PpResult};
 
-/// Basic struct containing the result of a PP calculation.
-/// In osu!ctb's case, this will be the pp value and the
-/// difficulty attributes created by star calculation.
-pub struct PpResult {
-    pub pp: f32,
-    pub attributes: DifficultyAttributes,
+pub trait FruitsAttributeProvider {
+    fn attributes(self) -> Option<DifficultyAttributes>;
+}
+
+impl FruitsAttributeProvider for DifficultyAttributes {
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        Some(self)
+    }
+}
+
+impl FruitsAttributeProvider for PpResult {
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        if let PpResult::Fruits { attributes, .. } = self {
+            Some(attributes)
+        } else {
+            None
+        }
+    }
 }
 
 /// Calculator for pp on osu!ctb maps.
@@ -42,13 +54,11 @@ impl<'m> FruitsPP<'m> {
         }
     }
 
-    /// [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
-    /// stay the same for each map-mod combination.
-    /// If you already calculated them, be sure to put them in here so
-    /// that they don't have to be recalculated.
-    ///
-    /// The final object after calling `calculation` will contain the
-    /// attributes again for later reuse.
+    /// [`FruitsAttributeProvider`] is implemented by [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
+    /// and by [`PpResult`](crate::PpResult) meaning you can give the
+    /// result of a star calculation or a pp calculation.
+    /// If you already calculated the attributes for the current map-mod combination,
+    /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
     pub fn attributes(mut self, attributes: DifficultyAttributes) -> Self {
         self.attributes.replace(attributes);
@@ -227,7 +237,7 @@ impl<'m> FruitsPP<'m> {
             pp *= 0.9;
         }
 
-        PpResult { pp, attributes }
+        PpResult::Fruits { pp, attributes }
     }
 
     #[inline]

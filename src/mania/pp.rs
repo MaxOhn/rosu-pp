@@ -1,11 +1,24 @@
 use super::stars;
-use crate::{Beatmap, Mods};
+use crate::{Beatmap, Mods, PpResult};
 
-/// Basic struct containing the result of a PP calculation.
-/// In osu!mania's case, this will be just the pp value and the star value.
-pub struct PpResult {
-    pub pp: f32,
-    pub stars: f32,
+pub trait ManiaStarProvider {
+    fn attributes(self) -> Option<f32>;
+}
+
+impl ManiaStarProvider for f32 {
+    fn attributes(self) -> Option<f32> {
+        Some(self)
+    }
+}
+
+impl ManiaStarProvider for PpResult {
+    fn attributes(self) -> Option<f32> {
+        if let PpResult::Mania { stars, .. } = self {
+            Some(stars)
+        } else {
+            None
+        }
+    }
 }
 
 /// Calculator for pp on osu!mania maps.
@@ -29,12 +42,16 @@ impl<'m> ManiaPP<'m> {
         }
     }
 
-    /// If you already know the stars of the map with the current mods,
-    /// you should specify them so that they don't have to be calculated
-    /// again while calculating PP.
+    /// [`ManiaStarsProvider`] is implemented by `f32`
+    /// and by [`PpResult`](crate::PpResult) meaning you can give the
+    /// result of a star calculation or a pp calculation.
+    /// If you already calculated the attributes for the current map-mod combination,
+    /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn stars(mut self, stars: f32) -> Self {
-        self.stars.replace(stars);
+    pub fn stars(mut self, stars: impl ManiaStarProvider) -> Self {
+        if let Some(stars) = stars.attributes() {
+            self.stars.replace(stars);
+        }
 
         self
     }
@@ -116,7 +133,7 @@ impl<'m> ManiaPP<'m> {
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
-        PpResult { pp, stars }
+        PpResult::Mania { pp, stars }
     }
 
     fn compute_strain(&self, score: f32, stars: f32) -> f32 {

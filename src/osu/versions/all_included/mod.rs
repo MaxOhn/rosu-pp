@@ -152,7 +152,7 @@ mod tests {
 
         let result = OsuPP::new(&map).mods(64).calculate(stars);
 
-        println!("Stars: {}", result.attributes.stars);
-        println!("PP: {}", result.pp);
+        println!("Stars: {}", result.stars());
+        println!("PP: {}", result.pp());
     }
 }

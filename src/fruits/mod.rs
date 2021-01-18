@@ -414,7 +414,7 @@ mod tests {
 
         let result = FruitsPP::new(&map).mods(0).calculate();
 
-        println!("Stars: {}", result.attributes.stars);
-        println!("PP: {}", result.pp);
+        println!("Stars: {}", result.stars());
+        println!("PP: {}", result.pp());
     }
 }

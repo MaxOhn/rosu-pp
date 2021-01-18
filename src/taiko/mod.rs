@@ -190,7 +190,7 @@ mod tests {
 
         let result = TaikoPP::new(&map).mods(64).calculate();
 
-        println!("Stars: {}", result.stars);
-        println!("PP: {}", result.pp);
+        println!("Stars: {}", result.stars());
+        println!("PP: {}", result.pp());
     }
 }

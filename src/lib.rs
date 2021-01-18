@@ -33,34 +33,34 @@
 //!                 // `no_leniency` is the suggested default
 //!                 .calculate(rosu_pp::osu::no_leniency::stars);
 //!
-//!             println!("PP: {}", result.pp);
+//!             println!("PP: {}", result.pp());
 //!
 //!             // If you intend to reuse the current map-mod combination,
-//!             // make use of the attributes in the result.
+//!             // make use of the previous result!
 //!             // If attributes are given, then stars & co don't have to be recalculated.
 //!             let next_result = OsuPP::new(&map)
 //!                 .mods(24) // HDHR
-//!                 .attributes(result.attributes)
+//!                 .attributes(result)
 //!                 .combo(543)
 //!                 .misses(5)
 //!                 .n50(3)
-//!                 .passed_objects(612)
 //!                 .accuracy(97.5)
 //!                 .calculate(rosu_pp::osu::no_leniency::stars);
 //!
-//!             println!("Next PP: {}", next_result.pp);
+//!             println!("Next PP: {}", next_result.pp());
 //!         },
 //!         GameMode::TKO => {
 //!             let result = TaikoPP::new(&map)
 //!                 .mods(64) // DT
 //!                 .combo(555)
 //!                 .misses(10)
+//!                 .passed_objects(600)
 //!                 .accuracy(95.12345)
 //!                 .calculate();
 //!
-//!             println!("Stars: {} | PP: {}", result.stars, result.pp);
+//!             println!("Stars: {} | PP: {}", result.stars(), result.pp());
 //!         }
-//!         GameMode::MNA | GameMode::CTB => unimplemented!(),
+//!         GameMode::MNA | GameMode::CTB => panic!("do your thing"),
 //!     }
 //!
 //!     // If all you want is the map's stars or max pp,
@@ -141,15 +141,55 @@ impl BeatmapExt for Beatmap {
     }
     fn max_pp(&self, mods: u32) -> f32 {
         match self.mode {
-            GameMode::STD => {
-                OsuPP::new(self)
-                    .mods(mods)
-                    .calculate(osu::no_leniency::stars)
-                    .pp
-            }
-            GameMode::MNA => ManiaPP::new(self).mods(mods).calculate().pp,
-            GameMode::TKO => TaikoPP::new(self).mods(mods).calculate().pp,
-            GameMode::CTB => FruitsPP::new(self).mods(mods).calculate().pp,
+            GameMode::STD => OsuPP::new(self)
+                .mods(mods)
+                .calculate(osu::no_leniency::stars)
+                .pp(),
+            GameMode::MNA => ManiaPP::new(self).mods(mods).calculate().pp(),
+            GameMode::TKO => TaikoPP::new(self).mods(mods).calculate().pp(),
+            GameMode::CTB => FruitsPP::new(self).mods(mods).calculate().pp(),
+        }
+    }
+}
+
+/// Basic enum containing the result of a PP calculation depending on the mode.
+pub enum PpResult {
+    Fruits {
+        pp: f32,
+        attributes: fruits::DifficultyAttributes,
+    },
+    Mania {
+        pp: f32,
+        stars: f32,
+    },
+    Osu {
+        pp: f32,
+        attributes: osu::DifficultyAttributes,
+    },
+    Taiko {
+        pp: f32,
+        stars: f32,
+    },
+}
+
+impl PpResult {
+    /// The final pp value.
+    pub fn pp(&self) -> f32 {
+        match self {
+            Self::Fruits { pp, .. } => *pp,
+            Self::Mania { pp, .. } => *pp,
+            Self::Osu { pp, .. } => *pp,
+            Self::Taiko { pp, .. } => *pp,
+        }
+    }
+
+    /// The final star value.
+    pub fn stars(&self) -> f32 {
+        match self {
+            Self::Fruits { attributes, .. } => attributes.stars,
+            Self::Mania { stars, .. } => *stars,
+            Self::Osu { attributes, .. } => attributes.stars,
+            Self::Taiko { stars, .. } => *stars,
         }
     }
 }
