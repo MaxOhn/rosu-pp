@@ -11,7 +11,7 @@ use movement::Movement;
 pub use pp::*;
 use slider_state::SliderState;
 
-use crate::{curve::Curve, Beatmap, HitObjectKind, Mods, PathType, Pos2, StarResult};
+use crate::{curve::Curve, Beatmap, HitObjectKind, Mods, PathType, Pos2, StarResult, Strains};
 
 use std::convert::identity;
 
@@ -276,6 +276,236 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     };
 
     StarResult::Fruits { attributes }
+}
+
+/// Essentially the same as the `stars` function but instead of
+/// evaluating the final strains, it just returns them as is.
+///
+/// Suitable to plot the difficulty of a map over time.
+pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
+    if map.hit_objects.len() < 2 {
+        return Strains::default();
+    }
+
+    let attributes = map.attributes().mods(mods);
+    let with_hr = mods.hr();
+    let mut ticks = Vec::new(); // using the same buffer for all sliders
+    let mut slider_state = SliderState::new(map);
+
+    // BUG: Incorrect object order on 2B maps that have fruits within sliders
+    let mut hit_objects = map
+        .hit_objects
+        .iter()
+        .scan((None, 0.0), |(last_pos, last_time), h| match &h.kind {
+            HitObjectKind::Circle => {
+                let mut h = CatchObject::new((h.pos, h.start_time));
+
+                if with_hr {
+                    h = h.with_hr(last_pos, last_time);
+                }
+
+                Some(Some(FruitOrJuice::Fruit(Some(h))))
+            }
+            HitObjectKind::Slider {
+                pixel_len,
+                repeats,
+                curve_points,
+                path_type,
+            } => {
+                // HR business
+                last_pos
+                    .replace(h.pos.x + curve_points[curve_points.len() - 1].x - curve_points[0].x);
+                *last_time = h.start_time;
+
+                // Responsible for timing point values
+                slider_state.update(h.start_time);
+
+                let mut tick_distance = 100.0 * map.sv / map.tick_rate;
+
+                if map.version >= 8 {
+                    tick_distance /=
+                        (100.0 / slider_state.speed_mult).max(10.0).min(1000.0) / 100.0;
+                }
+
+                let duration = *repeats as f32 * slider_state.beat_len * pixel_len
+                    / (map.sv * slider_state.speed_mult)
+                    / 100.0;
+
+                // Ensure path type validity
+                let path_type = if *path_type == PathType::PerfectCurve && curve_points.len() > 3 {
+                    PathType::Bezier
+                } else if curve_points.len() == 2 {
+                    PathType::Linear
+                } else {
+                    *path_type
+                };
+
+                // Build the curve w.r.t. the curve points
+                let curve = match path_type {
+                    PathType::Linear => Curve::linear(curve_points[0], curve_points[1]),
+                    PathType::Bezier => Curve::bezier(curve_points),
+                    PathType::Catmull => Curve::catmull(curve_points),
+                    PathType::PerfectCurve => Curve::perfect(curve_points),
+                };
+
+                let mut current_distance = tick_distance;
+                let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
+
+                let target = *pixel_len - tick_distance / 8.0;
+                ticks.reserve((target / tick_distance) as usize);
+
+                // Tick of the first span
+                if current_distance < target {
+                    for tick_idx in 1.. {
+                        let pos = curve.point_at_distance(current_distance);
+                        let time = h.start_time + time_add * tick_idx as f32;
+                        ticks.push((pos, time));
+                        current_distance += tick_distance;
+
+                        if current_distance >= target {
+                            break;
+                        }
+                    }
+                }
+
+                let mut slider_objects = Vec::with_capacity(repeats * (ticks.len() + 1));
+                slider_objects.push((h.pos, h.start_time));
+
+                // Other spans
+                if *repeats <= 1 {
+                    slider_objects.append(&mut ticks); // automatically empties buffer for next slider
+                } else {
+                    slider_objects.append(&mut ticks.clone());
+
+                    for repeat_id in 1..*repeats {
+                        let dist = (repeat_id % 2) as f32 * *pixel_len;
+                        let time_offset = (duration / *repeats as f32) * repeat_id as f32;
+                        let pos = curve.point_at_distance(dist);
+
+                        // Reverse tick
+                        slider_objects.push((pos, h.start_time + time_offset));
+
+                        // Actual ticks
+                        if repeat_id & 1 == 1 {
+                            slider_objects.extend(ticks.iter().copied().rev());
+                        } else {
+                            slider_objects.extend(ticks.iter().copied());
+                        }
+                    }
+
+                    ticks.clear();
+                }
+
+                // Slider tail
+                let dist_end = (*repeats % 2) as f32 * *pixel_len;
+                let pos = curve.point_at_distance(dist_end);
+                slider_objects.push((pos, h.start_time + duration));
+
+                let iter = slider_objects.into_iter().map(CatchObject::new);
+
+                Some(Some(FruitOrJuice::Juice(iter)))
+            }
+            HitObjectKind::Spinner { .. } | HitObjectKind::Hold { .. } => Some(None),
+        })
+        .filter_map(identity)
+        .flatten();
+
+    // Hyper dash business
+    let half_catcher_width = calculate_catch_width(attributes.cs) / 2.0 / ALLOWED_CATCH_RANGE;
+    let mut last_direction = 0;
+    let mut last_excess = half_catcher_width;
+
+    // Strain business
+    let mut movement = Movement::new(attributes.cs);
+    let section_len = SECTION_LENGTH * attributes.clock_rate;
+    let mut current_section_end =
+        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
+
+    let mut prev = hit_objects.next().unwrap();
+    let mut curr = hit_objects.next().unwrap();
+
+    prev.init_hyper_dash(
+        half_catcher_width,
+        &curr,
+        &mut last_direction,
+        &mut last_excess,
+    );
+
+    // Handle second object separately to remove later if-branching
+    let next = hit_objects.next().unwrap();
+    curr.init_hyper_dash(
+        half_catcher_width,
+        &next,
+        &mut last_direction,
+        &mut last_excess,
+    );
+
+    let h = DifficultyObject::new(
+        &curr,
+        &prev,
+        movement.half_catcher_width,
+        attributes.clock_rate,
+    );
+
+    while h.base.time > current_section_end {
+        current_section_end += section_len;
+    }
+
+    movement.process(&h);
+
+    prev = curr;
+    curr = next;
+
+    // Handle all other objects
+    for next in hit_objects {
+        curr.init_hyper_dash(
+            half_catcher_width,
+            &next,
+            &mut last_direction,
+            &mut last_excess,
+        );
+
+        let h = DifficultyObject::new(
+            &curr,
+            &prev,
+            movement.half_catcher_width,
+            attributes.clock_rate,
+        );
+
+        while h.base.time > current_section_end {
+            movement.save_current_peak();
+            movement.start_new_section_from(current_section_end);
+            current_section_end += section_len;
+        }
+
+        movement.process(&h);
+
+        prev = curr;
+        curr = next;
+    }
+
+    // Same as in loop but without init_hyper_dash because `curr` is the last element
+    let h = DifficultyObject::new(
+        &curr,
+        &prev,
+        movement.half_catcher_width,
+        attributes.clock_rate,
+    );
+
+    while h.base.time > current_section_end {
+        movement.save_current_peak();
+        movement.start_new_section_from(current_section_end);
+
+        current_section_end += section_len;
+    }
+
+    movement.process(&h);
+    movement.save_current_peak();
+
+    Strains {
+        section_length: section_len,
+        strains: movement.strain_peaks,
+    }
 }
 
 fn tiny_droplet_count(

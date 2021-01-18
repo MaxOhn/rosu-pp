@@ -20,7 +20,7 @@ pub(crate) struct Movement {
     current_strain: f32,
     current_section_peak: f32,
 
-    strain_peaks: Vec<f32>,
+    pub(crate) strain_peaks: Vec<f32>,
     prev_time: Option<f32>,
 }
 

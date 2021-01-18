@@ -4,7 +4,7 @@ mod strain;
 pub use pp::*;
 use strain::Strain;
 
-use crate::{Beatmap, HitObject, Mods, StarResult};
+use crate::{Beatmap, HitObject, Mods, StarResult, Strains};
 
 const SECTION_LEN: f32 = 400.0;
 const STAR_SCALING_FACTOR: f32 = 0.018;
@@ -61,6 +61,59 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let stars = strain.difficulty_value() * STAR_SCALING_FACTOR;
 
     StarResult::Mania { stars }
+}
+
+/// Essentially the same as the `stars` function but instead of
+/// evaluating the final strains, it just returns them as is.
+///
+/// Suitable to plot the difficulty of a map over time.
+pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
+    if map.hit_objects.len() < 2 {
+        return Strains::default();
+    }
+
+    let clock_rate = mods.speed();
+    let section_len = SECTION_LEN * clock_rate;
+    let mut strain = Strain::new(map.cs as u8);
+
+    let mut hit_objects = map
+        .hit_objects
+        .iter()
+        .skip(1)
+        .zip(map.hit_objects.iter())
+        .map(|(base, prev)| DifficultyHitObject::new(base, prev, map.cs, clock_rate));
+
+    // No strain for first object
+    let mut current_section_end =
+        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
+
+    // Handle second object separately to remove later if-branching
+    let h = hit_objects.next().unwrap();
+
+    while h.base.start_time > current_section_end {
+        current_section_end += section_len;
+    }
+
+    strain.process(&h);
+
+    // Handle all other objects
+    for h in hit_objects {
+        while h.base.start_time > current_section_end {
+            strain.save_current_peak();
+            strain.start_new_section_from(current_section_end);
+
+            current_section_end += section_len;
+        }
+
+        strain.process(&h);
+    }
+
+    strain.save_current_peak();
+
+    Strains {
+        section_length: section_len,
+        strains: strain.strain_peaks,
+    }
 }
 
 #[derive(Debug)]

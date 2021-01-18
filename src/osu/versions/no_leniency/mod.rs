@@ -17,7 +17,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, Mods, StarResult};
+use crate::{Beatmap, Mods, StarResult, Strains};
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -150,6 +150,125 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     StarResult::Osu {
         attributes: diff_attributes,
+    }
+}
+
+/// Essentially the same as the `stars` function but instead of
+/// evaluating the final strains, it just returns them as is.
+///
+/// Suitable to plot the difficulty of a map over time.
+pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
+    let map_attributes = map.attributes().mods(mods);
+    let hitwindow = super::difficulty_range(map_attributes.od).floor() / map_attributes.clock_rate;
+    let od = (80.0 - hitwindow) / 6.0;
+
+    let mut diff_attributes = DifficultyAttributes {
+        ar: map_attributes.ar,
+        od,
+        ..Default::default()
+    };
+
+    if map.hit_objects.len() < 2 {
+        return Strains::default();
+    }
+
+    let section_len = SECTION_LEN * map_attributes.clock_rate;
+    let radius = OBJECT_RADIUS * (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
+    let mut scaling_factor = NORMALIZED_RADIUS / radius;
+
+    if radius < 30.0 {
+        let small_circle_bonus = (30.0 - radius).min(5.0) / 50.0;
+        scaling_factor *= 1.0 + small_circle_bonus;
+    }
+
+    let mut slider_state = SliderState::new(map);
+    let mut ticks_buf = Vec::new();
+
+    let mut hit_objects = map.hit_objects.iter().filter_map(|h| {
+        OsuObject::new(
+            h,
+            map,
+            radius,
+            &mut ticks_buf,
+            &mut diff_attributes,
+            &mut slider_state,
+        )
+    });
+
+    let mut aim = Skill::new(SkillKind::Aim);
+    let mut speed = Skill::new(SkillKind::Speed);
+
+    // First object has no predecessor and thus no strain, handle distinctly
+    let mut current_section_end =
+        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
+
+    let mut prev_prev = None;
+    let mut prev = hit_objects.next().unwrap();
+    let mut prev_vals = None;
+
+    // Handle second object separately to remove later if-branching
+    let curr = hit_objects.next().unwrap();
+    let h = DifficultyObject::new(
+        &curr,
+        &prev,
+        prev_vals,
+        prev_prev,
+        map_attributes.clock_rate,
+        scaling_factor,
+    );
+
+    while h.base.time > current_section_end {
+        current_section_end += section_len;
+    }
+
+    aim.process(&h);
+    speed.process(&h);
+
+    prev_prev = Some(prev);
+    prev_vals = Some((h.jump_dist, h.strain_time));
+    prev = curr;
+
+    // Handle all other objects
+    for curr in hit_objects {
+        let h = DifficultyObject::new(
+            &curr,
+            &prev,
+            prev_vals,
+            prev_prev,
+            map_attributes.clock_rate,
+            scaling_factor,
+        );
+
+        while h.base.time > current_section_end {
+            aim.save_current_peak();
+            aim.start_new_section_from(current_section_end);
+            speed.save_current_peak();
+            speed.start_new_section_from(current_section_end);
+
+            current_section_end += section_len;
+        }
+
+        aim.process(&h);
+        speed.process(&h);
+
+        prev_prev = Some(prev);
+        prev_vals = Some((h.jump_dist, h.strain_time));
+        prev = curr;
+    }
+
+    aim.save_current_peak();
+    speed.save_current_peak();
+
+    let strains = aim
+        .strain_peaks
+        .into_iter()
+        .zip(speed.strain_peaks.into_iter())
+        .map(|(aim, speed)| aim + speed)
+        .collect();
+
+    Strains {
+        section_length: section_len,
+        strains,
     }
 }
 

@@ -130,6 +130,8 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     StarResult::Osu { attributes }
 }
 
+// TODO: strains function
+
 #[cfg(test)]
 mod tests {
     use super::super::super::OsuPP;

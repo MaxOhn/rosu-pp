@@ -16,7 +16,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use stamina_cheese::StaminaCheeseDetector;
 
-use crate::{Beatmap, Mods, StarResult};
+use crate::{Beatmap, Mods, StarResult, Strains};
 
 use std::cmp::Ordering;
 use std::f32::consts::PI;
@@ -115,6 +115,91 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
 
     StarResult::Taiko { stars }
+}
+
+/// Essentially the same as the `stars` function but instead of
+/// evaluating the final strains, it just returns them as is.
+///
+/// Suitable to plot the difficulty of a map over time.
+pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
+    if map.hit_objects.len() < 2 {
+        return Strains::default();
+    }
+
+    // True if the object at that index is stamina cheese
+    let cheese = map.find_cheese();
+
+    let mut skills = vec![
+        Skill::new(SkillKind::color()),
+        Skill::new(SkillKind::rhythm()),
+        Skill::new(SkillKind::stamina(true)),
+        Skill::new(SkillKind::stamina(false)),
+    ];
+
+    let clock_rate = mods.speed();
+    let section_len = SECTION_LEN * clock_rate;
+
+    // No strain for first object
+    let mut current_section_end =
+        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
+
+    let mut hit_objects = map
+        .hit_objects
+        .iter()
+        .enumerate()
+        .skip(2)
+        .zip(map.hit_objects.iter().skip(1))
+        .zip(map.hit_objects.iter())
+        .map(|(((idx, base), prev), prev_prev)| {
+            DifficultyObject::new(idx, base, prev, prev_prev, clock_rate)
+        });
+
+    // Handle second object separately to remove later if-branching
+    let h = hit_objects.next().unwrap();
+
+    while h.base.start_time > current_section_end {
+        current_section_end += section_len;
+    }
+
+    for skill in skills.iter_mut() {
+        skill.process(&h, &cheese);
+    }
+
+    // Handle all other objects
+    for h in hit_objects {
+        while h.base.start_time > current_section_end {
+            for skill in skills.iter_mut() {
+                skill.save_current_peak();
+                skill.start_new_section_from(current_section_end);
+            }
+
+            current_section_end += section_len;
+        }
+
+        for skill in skills.iter_mut() {
+            skill.process(&h, &cheese);
+        }
+    }
+
+    for skill in skills.iter_mut() {
+        skill.save_current_peak();
+    }
+
+    let strains = skills[0]
+        .strain_peaks
+        .iter()
+        .zip(skills[1].strain_peaks.iter())
+        .zip(skills[2].strain_peaks.iter())
+        .zip(skills[3].strain_peaks.iter())
+        .map(|(((color, rhythm), stamina_right), stamina_left)| {
+            color + rhythm + stamina_right + stamina_left
+        })
+        .collect();
+
+    Strains {
+        section_length: section_len,
+        strains,
+    }
 }
 
 #[inline]

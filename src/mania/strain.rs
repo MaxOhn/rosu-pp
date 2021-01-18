@@ -11,7 +11,7 @@ pub(crate) struct Strain {
 
     hold_end_times: Vec<f32>,
     individual_strains: Vec<f32>,
-    pub strain_peaks: Vec<f32>,
+    pub(crate) strain_peaks: Vec<f32>,
 
     prev_time: Option<f32>,
 }

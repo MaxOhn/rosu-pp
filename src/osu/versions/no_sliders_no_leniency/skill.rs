@@ -15,7 +15,7 @@ pub(crate) struct Skill {
     current_section_peak: f32,
 
     kind: SkillKind,
-    strain_peaks: Vec<f32>,
+    pub(crate) strain_peaks: Vec<f32>,
 
     prev_time: Option<f32>,
 }

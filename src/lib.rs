@@ -114,7 +114,7 @@ pub use parse::{
 };
 
 pub trait BeatmapExt {
-    /// Calculate the stars of a beatmap.
+    /// Calculate the stars and other attributes of a beatmap which are required for pp calculation.
     ///
     /// For osu!standard maps, the `no_leniency` version will be used.
     fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> StarResult;
@@ -126,6 +126,15 @@ pub trait BeatmapExt {
     /// If you seek more fine-tuning and options you need to match on the map's
     /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP) for taiko.
     fn max_pp(&self, mods: u32) -> PpResult;
+
+    /// Calculate the strains of a map.
+    /// This essentially performs the same calculation as a `stars` function but
+    /// instead of evaluating the final strains, they are just returned as is.
+    ///
+    /// Suitable to plot the difficulty of a map over time.
+    ///
+    /// For osu!standard maps, the `no_leniency` version will be used.
+    fn strains(&self, mods: impl Mods) -> Strains;
 }
 
 impl BeatmapExt for Beatmap {
@@ -147,9 +156,30 @@ impl BeatmapExt for Beatmap {
             GameMode::CTB => FruitsPP::new(self).mods(mods).calculate(),
         }
     }
+    fn strains(&self, mods: impl Mods) -> Strains {
+        match self.mode {
+            GameMode::STD => osu::no_leniency::strains(self, mods),
+            GameMode::MNA => mania::strains(self, mods),
+            GameMode::TKO => taiko::strains(self, mods),
+            GameMode::CTB => fruits::strains(self, mods),
+        }
+    }
+}
+
+/// The result of calculating the strains on a map.
+/// Suitable to plot the difficulty of a map over time.
+///
+/// `strains` will be the summed strains for each skill of the map's mode.
+///
+/// `section_length` is the time in ms inbetween two strains.
+#[derive(Clone, Debug, Default)]
+pub struct Strains {
+    pub section_length: f32,
+    pub strains: Vec<f32>,
 }
 
 /// Basic enum containing the result of a star calculation based on the mode.
+#[derive(Clone, Debug)]
 pub enum StarResult {
     Fruits {
         attributes: fruits::DifficultyAttributes,
@@ -179,6 +209,7 @@ impl StarResult {
 }
 
 /// Basic struct containing the result of a PP calculation.
+#[derive(Clone, Debug)]
 pub struct PpResult {
     pub pp: f32,
     pub attributes: StarResult,
