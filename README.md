@@ -22,7 +22,7 @@ let map = match Beatmap::parse(file) {
 
 // The different modes make things annoying because their
 // pp calculations require different parameters.
-// For now, you will have to match on the mode yourself
+// You will have to match on the mode yourself
 // to be able to set all options for pp calculation.
 match map.mode {
     GameMode::STD => {
@@ -31,7 +31,7 @@ match map.mode {
             .combo(1234)
             .misses(2)
             .accuracy(99.2)
-            // `no_leniency` is the suggested default
+            // `no_leniency::stars` is the suggested default
             .calculate(rosu_pp::osu::no_leniency::stars);
 
         println!("PP: {}", result.pp());

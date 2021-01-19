@@ -168,12 +168,12 @@ impl<'m> OsuPP<'m> {
         self
     }
 
-    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
+    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
     ///
     /// `stars_func` will be used to calculate the difficulty attributes if not already given.
     /// Only called if `attributes` was not set.
-    /// The default is suggested to be [`stars`](crate::osu::no_leniency::stars).
+    /// The default is suggested to be [`no_leniency::stars`](crate::osu::no_leniency::stars).
     pub fn calculate(
         mut self,
         stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> StarResult,
