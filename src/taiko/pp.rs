@@ -1,3 +1,4 @@
+use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 pub trait TaikoStarProvider {
@@ -10,10 +11,16 @@ impl TaikoStarProvider for f32 {
     }
 }
 
+impl TaikoStarProvider for DifficultyAttributes {
+    fn attributes(self) -> Option<f32> {
+        Some(self.stars)
+    }
+}
+
 impl TaikoStarProvider for StarResult {
     fn attributes(self) -> Option<f32> {
-        if let StarResult::Taiko { stars } = self {
-            Some(stars)
+        if let StarResult::Taiko(attributes) = self {
+            Some(attributes.stars)
         } else {
             None
         }
@@ -38,7 +45,6 @@ pub struct TaikoPP<'m> {
     passed_objects: Option<usize>,
 }
 
-// TODO: n300 & n100
 impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
@@ -57,13 +63,13 @@ impl<'m> TaikoPP<'m> {
     }
 
     /// [`TaikoStarProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
-    /// and by [`PpResult`](crate::PpResult) meaning you can give the
-    /// result of a star calculation or a pp calculation.
+    /// and by [`PpResult`](crate::PpResult) meaning you can give the star rating,
+    /// the result of a star calculation, or the result of a pp calculation.
     /// If you already calculated the stars for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn stars(mut self, stars: impl TaikoStarProvider) -> Self {
-        if let Some(stars) = stars.attributes() {
+    pub fn attributes(mut self, attributes: impl TaikoStarProvider) -> Self {
+        if let Some(stars) = attributes.attributes() {
             self.stars.replace(stars);
         }
 
@@ -84,6 +90,20 @@ impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn combo(mut self, combo: usize) -> Self {
         self.combo.replace(combo);
+
+        self
+    }
+
+    /// osu!taiko pp calculation does not require specific hit results, but only accuracy.
+    /// If the accuracy is already available, provide it through the `accuracy` method,
+    /// otherwise use this method to calculate and set the accuracy through the hit results.
+    #[inline]
+    pub fn hit_results(mut self, n300: usize, n100: usize, misses: usize) -> Self {
+        let hits = 2 * n300 + n100;
+        let acc = hits as f32 / (hits + misses) as f32;
+
+        self.acc = acc;
+        self.n_misses = misses;
 
         self
     }
@@ -116,7 +136,7 @@ impl<'m> TaikoPP<'m> {
     pub fn calculate(self) -> PpResult {
         let stars = self
             .stars
-            .unwrap_or_else(|| super::stars(self.map, self.mods, self.passed_objects).stars());
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars());
 
         let mut multiplier = 1.1;
 
@@ -135,7 +155,7 @@ impl<'m> TaikoPP<'m> {
 
         PpResult {
             pp,
-            attributes: StarResult::Taiko { stars },
+            attributes: StarResult::Taiko(DifficultyAttributes { stars }),
         }
     }
 

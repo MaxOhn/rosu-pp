@@ -181,18 +181,10 @@ pub struct Strains {
 /// Basic enum containing the result of a star calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum StarResult {
-    Fruits {
-        attributes: fruits::DifficultyAttributes,
-    },
-    Mania {
-        stars: f32,
-    },
-    Osu {
-        attributes: osu::DifficultyAttributes,
-    },
-    Taiko {
-        stars: f32,
-    },
+    Fruits(fruits::DifficultyAttributes),
+    Mania(mania::DifficultyAttributes),
+    Osu(osu::DifficultyAttributes),
+    Taiko(taiko::DifficultyAttributes),
 }
 
 impl StarResult {
@@ -200,10 +192,10 @@ impl StarResult {
     #[inline]
     pub fn stars(&self) -> f32 {
         match self {
-            Self::Fruits { attributes, .. } => attributes.stars,
-            Self::Mania { stars } => *stars,
-            Self::Osu { attributes, .. } => attributes.stars,
-            Self::Taiko { stars } => *stars,
+            Self::Fruits(attributes) => attributes.stars,
+            Self::Mania(attributes) => attributes.stars,
+            Self::Osu(attributes) => attributes.stars,
+            Self::Taiko(attributes) => attributes.stars,
         }
     }
 }

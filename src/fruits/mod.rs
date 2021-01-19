@@ -31,9 +31,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return StarResult::Fruits {
-            attributes: DifficultyAttributes::default(),
-        };
+        return StarResult::Fruits(DifficultyAttributes::default());
     }
 
     let attributes = map.attributes().mods(mods);
@@ -275,7 +273,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         max_combo: fruits + droplets,
     };
 
-    StarResult::Fruits { attributes }
+    StarResult::Fruits(attributes)
 }
 
 /// Essentially the same as the `stars` function but instead of

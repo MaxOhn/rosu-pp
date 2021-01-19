@@ -1,4 +1,4 @@
-use super::stars;
+use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 pub trait ManiaStarProvider {
@@ -11,10 +11,16 @@ impl ManiaStarProvider for f32 {
     }
 }
 
+impl ManiaStarProvider for DifficultyAttributes {
+    fn attributes(self) -> Option<f32> {
+        Some(self.stars)
+    }
+}
+
 impl ManiaStarProvider for StarResult {
     fn attributes(self) -> Option<f32> {
-        if let Self::Mania { stars } = self {
-            Some(stars)
+        if let Self::Mania(attributes) = self {
+            Some(attributes.stars)
         } else {
             None
         }
@@ -49,13 +55,13 @@ impl<'m> ManiaPP<'m> {
     }
 
     /// [`ManiaStarsProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
-    /// and by [`PpResult`](crate::PpResult) meaning you can give the
-    /// result of a star calculation or a pp calculation.
+    /// and by [`PpResult`](crate::PpResult) meaning you can give the star rating,
+    /// the result of a star calculation, or the result of a pp calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn stars(mut self, stars: impl ManiaStarProvider) -> Self {
-        if let Some(stars) = stars.attributes() {
+    pub fn attributes(mut self, attributes: impl ManiaStarProvider) -> Self {
+        if let Some(stars) = attributes.attributes() {
             self.stars.replace(stars);
         }
 
@@ -141,7 +147,7 @@ impl<'m> ManiaPP<'m> {
 
         PpResult {
             pp,
-            attributes: StarResult::Mania { stars },
+            attributes: StarResult::Mania(DifficultyAttributes { stars }),
         }
     }
 

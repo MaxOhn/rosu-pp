@@ -47,9 +47,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     };
 
     if take < 2 {
-        return StarResult::Osu {
-            attributes: diff_attributes,
-        };
+        return StarResult::Osu(diff_attributes);
     }
 
     let section_len = SECTION_LEN * map_attributes.clock_rate;
@@ -148,9 +146,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     diff_attributes.speed_strain = speed_strain;
     diff_attributes.aim_strain = aim_strain;
 
-    StarResult::Osu {
-        attributes: diff_attributes,
-    }
+    StarResult::Osu(diff_attributes)
 }
 
 /// Essentially the same as the `stars` function but instead of

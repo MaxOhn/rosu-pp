@@ -13,7 +13,7 @@ impl OsuAttributeProvider for DifficultyAttributes {
 
 impl OsuAttributeProvider for StarResult {
     fn attributes(self) -> Option<DifficultyAttributes> {
-        if let Self::Osu { attributes } = self {
+        if let Self::Osu(attributes) = self {
             Some(attributes)
         } else {
             None
@@ -235,9 +235,7 @@ impl<'m> OsuPP<'m> {
             .powf(1.0 / 1.1)
             * multiplier;
 
-        let attributes = StarResult::Osu {
-            attributes: self.attributes.unwrap(),
-        };
+        let attributes = StarResult::Osu(self.attributes.unwrap());
 
         PpResult { pp, attributes }
     }

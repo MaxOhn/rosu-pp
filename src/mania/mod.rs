@@ -16,7 +16,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return StarResult::Mania { stars: 0.0 };
+        return StarResult::Mania(DifficultyAttributes { stars: 0.0 });
     }
 
     let clock_rate = mods.speed();
@@ -60,7 +60,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     let stars = strain.difficulty_value() * STAR_SCALING_FACTOR;
 
-    StarResult::Mania { stars }
+    return StarResult::Mania(DifficultyAttributes { stars });
 }
 
 /// Essentially the same as the `stars` function but instead of
@@ -134,6 +134,13 @@ impl<'o> DifficultyHitObject<'o> {
             delta: (base.start_time - prev.start_time) / clock_rate,
         }
     }
+}
+
+/// Various data created through the star calculation.
+/// This data is necessary to calculate PP.
+#[derive(Clone, Debug, Default)]
+pub struct DifficultyAttributes {
+    pub stars: f32,
 }
 
 #[cfg(test)]

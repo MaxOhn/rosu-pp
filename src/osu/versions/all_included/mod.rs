@@ -27,13 +27,11 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let od = (80.0 - hitwindow) / 6.0;
 
     if take < 2 {
-        return StarResult::Osu {
-            attributes: DifficultyAttributes {
-                ar: attributes.ar,
-                od,
-                ..Default::default()
-            },
-        };
+        return StarResult::Osu(DifficultyAttributes {
+            ar: attributes.ar,
+            od,
+            ..Default::default()
+        });
     }
 
     let section_len = SECTION_LEN * attributes.clock_rate;
@@ -127,7 +125,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         n_spinners: 0, // TODO
     };
 
-    StarResult::Osu { attributes }
+    StarResult::Osu(attributes)
 }
 
 // TODO: strains function

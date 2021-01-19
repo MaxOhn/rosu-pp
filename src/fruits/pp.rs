@@ -13,7 +13,7 @@ impl FruitsAttributeProvider for DifficultyAttributes {
 
 impl FruitsAttributeProvider for StarResult {
     fn attributes(self) -> Option<DifficultyAttributes> {
-        if let Self::Fruits { attributes } = self {
+        if let Self::Fruits(attributes) = self {
             Some(attributes)
         } else {
             None
@@ -286,7 +286,7 @@ impl<'m> FruitsPP<'m> {
 
         PpResult {
             pp,
-            attributes: StarResult::Fruits { attributes },
+            attributes: StarResult::Fruits(attributes),
         }
     }
 

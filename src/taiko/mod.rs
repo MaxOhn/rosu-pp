@@ -34,7 +34,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return StarResult::Taiko { stars: 0.0 };
+        return StarResult::Taiko(DifficultyAttributes { stars: 0.0 });
     }
 
     // True if the object at that index is stamina cheese
@@ -114,7 +114,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
 
-    StarResult::Taiko { stars }
+    StarResult::Taiko(DifficultyAttributes { stars })
 }
 
 /// Essentially the same as the `stars` function but instead of
@@ -255,6 +255,13 @@ fn locally_combined_difficulty(skills: &[Skill], stamina_penalty: f32) -> f32 {
 #[inline]
 fn norm(p: f32, a: f32, b: f32, c: f32) -> f32 {
     (a.powf(p) + b.powf(p) + c.powf(p)).powf(p.recip())
+}
+
+/// Various data created through the star calculation.
+/// This data is necessary to calculate PP.
+#[derive(Clone, Debug, Default)]
+pub struct DifficultyAttributes {
+    pub stars: f32,
 }
 
 #[cfg(test)]
