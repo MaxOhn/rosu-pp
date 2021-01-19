@@ -191,12 +191,47 @@ impl<'m> FruitsPP<'m> {
                 .unwrap()
         });
 
+        // Make sure all objects are set
+        if self
+            .n_fruits
+            .and(self.n_droplets)
+            .and(self.n_tiny_droplets)
+            .and(self.n_tiny_droplet_misses)
+            .is_none()
+        {
+            let mut n_fruits = self.n_fruits.unwrap_or(0);
+            let mut n_droplets = self.n_droplets.unwrap_or(0);
+            let mut n_tiny_droplets = self.n_tiny_droplets.unwrap_or(0);
+            let n_tiny_droplet_misses = self.n_tiny_droplet_misses.unwrap_or(0);
+
+            let missing = attributes
+                .max_combo
+                .saturating_sub(n_fruits)
+                .saturating_sub(n_droplets);
+
+            let missing_fruits =
+                missing.saturating_sub(attributes.n_droplets.saturating_sub(n_droplets));
+
+            n_fruits += missing_fruits;
+            n_droplets += missing.saturating_sub(missing_fruits);
+            n_tiny_droplets += attributes
+                .n_tiny_droplets
+                .saturating_sub(n_tiny_droplets)
+                .saturating_sub(n_tiny_droplet_misses);
+
+            self.n_fruits.replace(n_fruits);
+            self.n_droplets.replace(n_droplets);
+            self.n_tiny_droplets.replace(n_tiny_droplets);
+            self.n_tiny_droplet_misses.replace(n_tiny_droplet_misses);
+        }
+
         let stars = attributes.stars;
 
         // Relying heavily on aim
         let mut pp = (5.0 * (stars / 0.0049).max(1.0) - 4.0).powi(2) / 100_000.0;
 
         let mut combo_hits = self.combo_hits();
+
         if combo_hits == 0 {
             combo_hits = attributes.max_combo;
         }
