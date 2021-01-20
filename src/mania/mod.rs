@@ -151,7 +151,7 @@ mod tests {
     #[test]
     #[ignore]
     fn mania_single() {
-        let file = match File::open("./maps/1355822.osu") {
+        let file = match File::open("./maps/1529790.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
@@ -161,7 +161,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = ManiaPP::new(&map).mods(256).calculate();
+        let result = ManiaPP::new(&map).mods(0).calculate();
 
         println!("Stars: {}", result.stars());
         println!("PP: {}", result.pp());

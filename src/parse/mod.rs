@@ -12,7 +12,7 @@ pub use error::{ParseError, ParseResult};
 pub use hitobject::{HitObject, HitObjectKind};
 pub use hitsound::HitSound;
 pub use pos2::Pos2;
-use sort::sort;
+use sort::legacy_sort;
 
 use std::cmp::Ordering;
 use std::io::{BufRead, BufReader, Read};
@@ -443,7 +443,11 @@ impl Beatmap {
         // BUG: If [General] section comes after [HitObjects] then the mode
         // won't be set yet so mania objects won't be sorted properly
         if self.mode == GameMode::MNA {
-            sort(&mut self.hit_objects);
+            // First a stable sort by time, then the legacy sort for correct position order
+            self.hit_objects
+                .sort_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal));
+
+            legacy_sort(&mut self.hit_objects);
         } else if unsorted {
             sort!(self.hit_objects);
         }
