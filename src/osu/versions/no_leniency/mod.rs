@@ -278,7 +278,7 @@ mod tests {
     #[test]
     #[ignore]
     fn no_leniency_single() {
-        let file = match File::open("./maps/1851299.osu") {
+        let file = match File::open("./maps/295.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
@@ -288,7 +288,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = OsuPP::new(&map).mods(256).calculate(stars);
+        let result = OsuPP::new(&map).mods(0).calculate(stars);
 
         println!("Stars: {}", result.stars());
         println!("PP: {}", result.pp());

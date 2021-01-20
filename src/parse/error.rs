@@ -18,7 +18,7 @@ pub enum ParseError {
     InvalidMode,
     InvalidPathType,
     InvalidTimingSignature,
-    MissingField,
+    MissingField(&'static str),
     UnknownHitObjectKind,
 }
 
@@ -36,7 +36,7 @@ impl fmt::Display for ParseError {
             Self::InvalidMode => f.write_str("invalid mode"),
             Self::InvalidPathType => f.write_str("invalid path type"),
             Self::InvalidTimingSignature => f.write_str("invalid timing signature"),
-            Self::MissingField => f.write_str("missing field"),
+            Self::MissingField(field) => write!(f, "missing field `{}`", field),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
         }
     }
@@ -54,7 +54,7 @@ impl StdError for ParseError {
             Self::InvalidMode => None,
             Self::InvalidPathType => None,
             Self::InvalidTimingSignature => None,
-            Self::MissingField => None,
+            Self::MissingField(_) => None,
             Self::UnknownHitObjectKind => None,
         }
     }

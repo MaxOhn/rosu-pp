@@ -25,8 +25,8 @@ macro_rules! sort {
 }
 
 macro_rules! next_field {
-    ($opt:expr) => {
-        $opt.ok_or(ParseError::MissingField)?
+    ($opt:expr, $($val:tt)*) => {
+        $opt.ok_or_else(|| ParseError::MissingField(stringify!($($val)*)))?
     };
 }
 
@@ -197,8 +197,8 @@ impl Beatmap {
             buf.clear();
         }
 
-        self.mode = next_field!(mode);
-        self.stack_leniency = next_field!(stack_leniency);
+        self.mode = mode.unwrap_or(GameMode::STD);
+        self.stack_leniency = stack_leniency.unwrap_or(0.7);
 
         Ok(empty)
     }
@@ -243,12 +243,12 @@ impl Beatmap {
             buf.clear();
         }
 
-        self.od = next_field!(od);
-        self.cs = next_field!(cs);
-        self.hp = next_field!(hp);
+        self.od = next_field!(od, od);
+        self.cs = next_field!(cs, cs);
+        self.hp = next_field!(hp, hp);
         self.ar = ar.unwrap_or(self.od);
-        self.sv = next_field!(sv);
-        self.tick_rate = next_field!(tick_rate);
+        self.sv = next_field!(sv, sv);
+        self.tick_rate = next_field!(tick_rate, sv);
 
         Ok(empty)
     }
@@ -279,10 +279,12 @@ impl Beatmap {
 
             let mut split = line.split(',');
 
-            let time = next_field!(split.next()).trim().parse::<f32>()?;
+            let time = next_field!(split.next(), timing point time)
+                .trim()
+                .parse::<f32>()?;
             validate_float!(time);
 
-            let beat_len = next_field!(split.next()).trim().parse::<f32>()?;
+            let beat_len = next_field!(split.next(), beat len).trim().parse::<f32>()?;
 
             if beat_len < 0.0 {
                 let point = DifficultyPoint {
@@ -351,18 +353,20 @@ impl Beatmap {
             let mut split = line.split(',');
 
             let pos = Pos2 {
-                x: next_field!(split.next()).parse()?,
-                y: next_field!(split.next()).parse()?,
+                x: next_field!(split.next(), x position).parse()?,
+                y: next_field!(split.next(), y position).parse()?,
             };
 
-            let time = next_field!(split.next()).trim().parse::<f32>()?;
+            let time = next_field!(split.next(), hitobject time)
+                .trim()
+                .parse::<f32>()?;
             validate_float!(time);
 
             if !self.hit_objects.is_empty() && time < prev_time {
                 unsorted = true;
             }
 
-            let kind: u8 = next_field!(split.next()).parse()?;
+            let kind: u8 = next_field!(split.next(), hitobject kind).parse()?;
             let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
 
             let kind = if kind & Self::CIRCLE_FLAG > 0 {
@@ -374,9 +378,10 @@ impl Beatmap {
                 let mut curve_points = Vec::with_capacity(16);
                 curve_points.push(pos);
 
-                let mut curve_point_iter = next_field!(split.next()).split('|');
+                let mut curve_point_iter = next_field!(split.next(), curve points).split('|');
 
-                let mut path_type: PathType = next_field!(curve_point_iter.next()).parse()?;
+                let mut path_type: PathType =
+                    next_field!(curve_point_iter.next(), path kind).parse()?;
 
                 for pos in curve_point_iter {
                     let mut v = pos.split(':').map(str::parse);
@@ -401,8 +406,8 @@ impl Beatmap {
                 if curve_points.is_empty() {
                     HitObjectKind::Circle
                 } else {
-                    let repeats = next_field!(split.next()).parse::<usize>()?;
-                    let len: f32 = next_field!(split.next()).parse()?;
+                    let repeats = next_field!(split.next(), repeats).parse::<usize>()?;
+                    let len: f32 = next_field!(split.next(), pixel len).parse()?;
 
                     HitObjectKind::Slider {
                         repeats,
@@ -413,7 +418,7 @@ impl Beatmap {
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {
                 self.n_spinners += 1;
-                let end_time = next_field!(split.next()).parse()?;
+                let end_time = next_field!(split.next(), spinner endtime).parse()?;
 
                 HitObjectKind::Spinner { end_time }
             } else if kind & Self::HOLD_FLAG > 0 {
@@ -421,7 +426,7 @@ impl Beatmap {
                 let mut end = time;
 
                 if let Some(next) = split.next() {
-                    end = end.max(next_field!(next.split(':').next()).parse()?);
+                    end = end.max(next_field!(next.split(':').next(), hold endtime).parse()?);
                 }
 
                 HitObjectKind::Hold { end_time: end }
