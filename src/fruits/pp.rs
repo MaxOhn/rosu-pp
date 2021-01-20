@@ -207,7 +207,8 @@ impl<'m> FruitsPP<'m> {
             let missing = attributes
                 .max_combo
                 .saturating_sub(n_fruits)
-                .saturating_sub(n_droplets);
+                .saturating_sub(n_droplets)
+                .saturating_sub(self.n_misses);
 
             let missing_fruits =
                 missing.saturating_sub(attributes.n_droplets.saturating_sub(n_droplets));
