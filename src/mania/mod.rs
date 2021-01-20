@@ -60,7 +60,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     let stars = strain.difficulty_value() * STAR_SCALING_FACTOR;
 
-    return StarResult::Mania(DifficultyAttributes { stars });
+    StarResult::Mania(DifficultyAttributes { stars })
 }
 
 /// Essentially the same as the `stars` function but instead of

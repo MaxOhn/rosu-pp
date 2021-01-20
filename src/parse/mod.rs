@@ -123,15 +123,18 @@ impl Beatmap {
 
         reader.read_line(&mut buf)?;
 
-        let mut map = Self::default();
-
-        map.version = match buf.find(OSU_FILE_HEADER) {
+        let version = match buf.find(OSU_FILE_HEADER) {
             Some(idx) => buf[idx + OSU_FILE_HEADER.len()..].trim_end().parse()?,
             None => return Err(ParseError::IncorrectFileHeader),
         };
 
         buf.clear();
-        map.hit_objects.reserve(256);
+
+        let mut map = Beatmap {
+            version,
+            hit_objects: Vec::with_capacity(256),
+            ..Default::default()
+        };
 
         let mut section = Section::None;
 
