@@ -121,7 +121,15 @@ impl Beatmap {
         let mut reader = BufReader::new(input);
         let mut buf = String::new();
 
-        reader.read_line(&mut buf)?;
+        loop {
+            reader.read_line(&mut buf)?;
+
+            if !buf.trim().is_empty() {
+                break;
+            }
+
+            buf.clear();
+        }
 
         let version = match buf.find(OSU_FILE_HEADER) {
             Some(idx) => buf[idx + OSU_FILE_HEADER.len()..].trim_end().parse()?,
