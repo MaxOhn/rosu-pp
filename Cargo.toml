@@ -3,3 +3,15 @@ name = "rosu-pp"
 version = "0.1.0"
 authors = ["MaxOhn <ohn.m@hotmail.de>"]
 edition = "2018"
+
+[features]
+default = ["osu", "taiko", "fruits", "mania", "no_leniency"]
+
+osu = []
+taiko = []
+fruits = []
+mania = []
+
+all_included = []
+no_leniency = []
+no_sliders_no_leniency = []

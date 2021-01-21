@@ -1,5 +1,13 @@
 use super::OSU_FILE_HEADER;
 
+#[cfg(not(all(
+    feature = "osu",
+    feature = "taiko",
+    feature = "fruits",
+    feature = "mania"
+)))]
+use super::GameMode;
+
 use std::error::Error as StdError;
 use std::fmt;
 use std::io::Error as IOError;
@@ -20,6 +28,14 @@ pub enum ParseError {
     InvalidTimingSignature,
     MissingField(&'static str),
     UnknownHitObjectKind,
+
+    #[cfg(not(all(
+        feature = "osu",
+        feature = "taiko",
+        feature = "fruits",
+        feature = "mania"
+    )))]
+    UnincludedMode(GameMode),
 }
 
 impl fmt::Display for ParseError {
@@ -38,6 +54,18 @@ impl fmt::Display for ParseError {
             Self::InvalidTimingSignature => f.write_str("invalid timing signature"),
             Self::MissingField(field) => write!(f, "missing field `{}`", field),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
+
+            #[cfg(not(all(
+                feature = "osu",
+                feature = "taiko",
+                feature = "fruits",
+                feature = "mania"
+            )))]
+            Self::UnincludedMode(mode) => write!(
+                f,
+                "cannot process {:?} map its mode's feature has not been included",
+                mode
+            ),
         }
     }
 }
@@ -56,6 +84,14 @@ impl StdError for ParseError {
             Self::InvalidTimingSignature => None,
             Self::MissingField(_) => None,
             Self::UnknownHitObjectKind => None,
+
+            #[cfg(not(all(
+                feature = "osu",
+                feature = "taiko",
+                feature = "fruits",
+                feature = "mania"
+            )))]
+            Self::UnincludedMode(_) => None,
         }
     }
 }

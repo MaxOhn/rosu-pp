@@ -2,6 +2,8 @@
 //! This means the travel distance of notes is completely omitted which may cause further inaccuracies.
 //! Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
 
+#![cfg(feature = "no_sliders_no_leniency")]
+
 use super::super::DifficultyAttributes;
 
 mod control_point_iter;
@@ -285,7 +287,6 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 #[cfg(test)]
 mod tests {
     use super::super::super::OsuPP;
-    use super::stars;
     use crate::Beatmap;
     use std::fs::File;
 
@@ -302,7 +303,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = OsuPP::new(&map).mods(2).calculate(stars);
+        let result = OsuPP::new(&map).mods(2).calculate();
 
         println!("Stars: {}", result.stars());
         println!("PP: {}", result.pp());

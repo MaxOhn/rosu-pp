@@ -2,6 +2,8 @@
 //! This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies.
 //! Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
 
+#![cfg(feature = "no_leniency")]
+
 use super::super::DifficultyAttributes;
 
 mod control_point_iter;
@@ -271,7 +273,6 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 #[cfg(test)]
 mod tests {
     use super::super::super::OsuPP;
-    use super::stars;
     use crate::Beatmap;
     use std::fs::File;
 
@@ -288,7 +289,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = OsuPP::new(&map).mods(0).calculate(stars);
+        let result = OsuPP::new(&map).mods(0).calculate();
 
         println!("Stars: {}", result.stars());
         println!("PP: {}", result.pp());

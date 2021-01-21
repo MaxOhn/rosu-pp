@@ -13,6 +13,7 @@ impl OsuAttributeProvider for DifficultyAttributes {
 
 impl OsuAttributeProvider for StarResult {
     fn attributes(self) -> Option<DifficultyAttributes> {
+        #[allow(irrefutable_let_patterns)]
         if let Self::Osu(attributes) = self {
             Some(attributes)
         } else {
@@ -144,6 +145,7 @@ impl<'m> OsuPP<'m> {
         let acc = acc / 100.0;
 
         if self.n100.or(self.n50).is_some() {
+            // TODO: Improve this branch
             self.n300.replace(
                 n_objects - self.n100.unwrap_or(0) - self.n50.unwrap_or(0) - self.n_misses,
             );
@@ -170,11 +172,30 @@ impl<'m> OsuPP<'m> {
 
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
+    #[cfg(feature = "no_leniency")]
+    pub fn calculate(self) -> PpResult {
+        self.calculate_with_func(super::no_leniency::stars)
+    }
+
+    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
+    /// containing stars and other attributes.
+    #[cfg(feature = "no_sliders_no_leniency")]
+    pub fn calculate(self) -> PpResult {
+        self.calculate_with_func(super::no_sliders_no_leniency::stars)
+    }
+
+    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
+    /// containing stars and other attributes.
+    #[cfg(feature = "all_included")]
+    pub fn calculate(self) -> PpResult {
+        self.calculate_with_func(super::all_included::stars)
+    }
+
+    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
+    /// containing stars and other attributes.
     ///
-    /// `stars_func` will be used to calculate the difficulty attributes if not already given.
-    /// Only called if `attributes` was not set.
-    /// The default is suggested to be [`no_leniency::stars`](crate::osu::no_leniency::stars).
-    pub fn calculate(
+    /// `stars_func` will be used to calculate the difficulty attributes if they are not yet given.
+    fn calculate_with_func(
         mut self,
         stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> StarResult,
     ) -> PpResult {

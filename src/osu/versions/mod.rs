@@ -1,5 +1,10 @@
-mod all_included;
+#[cfg(feature = "all_included")]
+pub mod all_included;
+
+#[cfg(feature = "no_leniency")]
 pub mod no_leniency;
+
+#[cfg(feature = "no_sliders_no_leniency")]
 pub mod no_sliders_no_leniency;
 
 const OSU_OD_MAX: f32 = 20.0;

@@ -19,6 +19,7 @@ impl ManiaStarProvider for DifficultyAttributes {
 
 impl ManiaStarProvider for StarResult {
     fn attributes(self) -> Option<f32> {
+        #[allow(irrefutable_let_patterns)]
         if let Self::Mania(attributes) = self {
             Some(attributes.stars)
         } else {

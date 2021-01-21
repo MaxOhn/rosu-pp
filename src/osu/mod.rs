@@ -1,3 +1,5 @@
+#![cfg(feature = "osu")]
+
 mod pp;
 mod versions;
 

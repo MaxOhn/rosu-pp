@@ -19,6 +19,7 @@ impl TaikoStarProvider for DifficultyAttributes {
 
 impl TaikoStarProvider for StarResult {
     fn attributes(self) -> Option<f32> {
+        #[allow(irrefutable_let_patterns)]
         if let StarResult::Taiko(attributes) = self {
             Some(attributes.stars)
         } else {
@@ -48,13 +49,11 @@ pub struct TaikoPP<'m> {
 impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn new(map: &'m Beatmap) -> Self {
-        let max_combo = map.hit_objects.iter().filter(|h| h.is_circle()).count();
-
         Self {
             map,
             stars: None,
             mods: 0,
-            max_combo,
+            max_combo: map.n_circles as usize,
             combo: None,
             acc: 1.0,
             n_misses: 0,

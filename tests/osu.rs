@@ -1,6 +1,8 @@
+#![cfg(feature = "osu")]
+
 extern crate rosu_pp;
 
-use rosu_pp::{osu, Beatmap};
+use rosu_pp::Beatmap;
 use std::fs::File;
 
 struct MapResult {
@@ -11,9 +13,17 @@ struct MapResult {
 }
 
 #[test]
-fn osu_no_sliders() {
-    let star_margin = 0.0075;
-    let pp_margin = 0.0075;
+fn osu() {
+    let margin = if cfg!(feature = "no_leniency") {
+        0.0025
+    } else if cfg!(feature = "no_sliders_no_leniency") {
+        0.0075
+    } else {
+        0.001
+    };
+
+    let star_margin = margin;
+    let pp_margin = margin;
 
     for result in RESULTS {
         let MapResult {
@@ -33,66 +43,7 @@ fn osu_no_sliders() {
             Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
         };
 
-        let result = rosu_pp::OsuPP::new(&map)
-            .mods(*mods)
-            .calculate(osu::no_sliders_no_leniency::stars);
-
-        assert!(
-            (result.stars() - stars).abs() < star_margin * stars,
-            "\nStars:\n\
-                    Calculated: {calculated} | Expected: {expected}\n \
-                    => {margin} margin ({allowed} allowed)\n\
-                    [map {map} | mods {mods}]\n",
-            calculated = result.stars(),
-            expected = stars,
-            margin = (result.stars() - stars).abs(),
-            allowed = star_margin * stars,
-            map = map_id,
-            mods = mods
-        );
-
-        assert!(
-            (result.pp() - pp).abs() < pp_margin * pp,
-            "\nPP:\n\
-                    Calculated: {calculated} | Expected: {expected}\n \
-                    => {margin} margin ({allowed} allowed)\n\
-                    [map {map} | mods {mods}]\n",
-            calculated = result.pp(),
-            expected = pp,
-            margin = (result.pp() - pp).abs(),
-            allowed = pp_margin * pp,
-            map = map_id,
-            mods = mods
-        );
-    }
-}
-
-#[test]
-fn osu_no_leniency() {
-    let star_margin = 0.0025;
-    let pp_margin = 0.0025;
-
-    for result in RESULTS {
-        let MapResult {
-            map_id,
-            mods,
-            stars,
-            pp,
-        } = result;
-
-        let file = match File::open(format!("./maps/{}.osu", map_id)) {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
-        };
-
-        let result = rosu_pp::osu::OsuPP::new(&map)
-            .mods(*mods)
-            .calculate(osu::no_leniency::stars);
+        let result = rosu_pp::OsuPP::new(&map).mods(*mods).calculate();
 
         assert!(
             (result.stars() - stars).abs() < star_margin * stars,

@@ -1,4 +1,10 @@
-use super::{PathType, Pos2};
+use super::Pos2;
+
+#[cfg(any(
+    feature = "fruits",
+    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+))]
+use super::PathType;
 
 use std::cmp::Ordering;
 
@@ -50,11 +56,23 @@ impl PartialOrd for HitObject {
 #[derive(Clone, Debug, PartialEq)]
 pub enum HitObjectKind {
     Circle,
+    #[cfg(any(
+        feature = "fruits",
+        all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+    ))]
     Slider {
         pixel_len: f32,
         repeats: usize,
         curve_points: Vec<Pos2>,
         path_type: PathType,
+    },
+    #[cfg(not(any(
+        feature = "fruits",
+        all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+    )))]
+    Slider {
+        pixel_len: f32,
+        repeats: usize,
     },
     Spinner {
         end_time: f32,

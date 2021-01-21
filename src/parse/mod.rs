@@ -98,11 +98,16 @@ pub struct Beatmap {
     pub hp: f32,
     pub sv: f32,
     pub tick_rate: f32,
-    pub stack_leniency: f32,
-
     pub hit_objects: Vec<HitObject>,
+
+    #[cfg(any(feature = "osu", feature = "fruits"))]
     pub timing_points: Vec<TimingPoint>,
+
+    #[cfg(any(feature = "osu", feature = "fruits"))]
     pub difficulty_points: Vec<DifficultyPoint>,
+
+    #[cfg(all(feature = "osu", feature = "all_included"))]
+    pub stack_leniency: f32,
 }
 
 pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
@@ -110,11 +115,9 @@ pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
 impl Beatmap {
     const CIRCLE_FLAG: u8 = 1 << 0;
     const SLIDER_FLAG: u8 = 1 << 1;
-    #[allow(unused)]
-    const NEW_COMBO_FLAG: u8 = 1 << 2;
+    // const NEW_COMBO_FLAG: u8 = 1 << 2;
     const SPINNER_FLAG: u8 = 1 << 3;
-    #[allow(unused)]
-    const COMBO_OFFSET_FLAG: u8 = (1 << 4) | (1 << 5) | (1 << 6);
+    // const COMBO_OFFSET_FLAG: u8 = (1 << 4) | (1 << 5) | (1 << 6);
     const HOLD_FLAG: u8 = 1 << 7;
 
     pub fn parse<R: Read>(input: R) -> ParseResult<Self> {
@@ -178,8 +181,10 @@ impl Beatmap {
         section: &mut Section,
     ) -> ParseResult<bool> {
         let mut mode = None;
-        let mut stack_leniency = None;
         let mut empty = true;
+
+        #[cfg(all(feature = "osu", feature = "all_included"))]
+        let mut stack_leniency = None;
 
         while reader.read_line(buf)? != 0 {
             let line = line_prepare!(buf);
@@ -201,7 +206,10 @@ impl Beatmap {
                     "3" => Some(GameMode::MNA),
                     _ => return Err(ParseError::InvalidMode),
                 };
-            } else if key == "StackLeniency" {
+            }
+
+            #[cfg(all(feature = "osu", feature = "all_included"))]
+            if key == "StackLeniency" {
                 stack_leniency = Some(value.parse()?);
             }
 
@@ -209,7 +217,31 @@ impl Beatmap {
         }
 
         self.mode = mode.unwrap_or(GameMode::STD);
-        self.stack_leniency = stack_leniency.unwrap_or(0.7);
+
+        #[cfg(not(feature = "osu"))]
+        if self.mode == GameMode::STD {
+            return Err(ParseError::UnincludedMode(GameMode::STD));
+        }
+
+        #[cfg(not(feature = "taiko"))]
+        if self.mode == GameMode::TKO {
+            return Err(ParseError::UnincludedMode(GameMode::TKO));
+        }
+
+        #[cfg(not(feature = "fruits"))]
+        if self.mode == GameMode::CTB {
+            return Err(ParseError::UnincludedMode(GameMode::CTB));
+        }
+
+        #[cfg(not(feature = "mania"))]
+        if self.mode == GameMode::MNA {
+            return Err(ParseError::UnincludedMode(GameMode::MNA));
+        }
+
+        #[cfg(all(feature = "osu", feature = "all_included"))]
+        {
+            self.stack_leniency = stack_leniency.unwrap_or(0.7);
+        }
 
         Ok(empty)
     }
@@ -264,6 +296,32 @@ impl Beatmap {
         Ok(empty)
     }
 
+    #[cfg(not(any(feature = "osu", feature = "fruits")))]
+    fn parse_timingpoints<R: Read>(
+        &mut self,
+        reader: &mut BufReader<R>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut empty = true;
+
+        while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            buf.clear();
+        }
+
+        Ok(empty)
+    }
+
+    #[cfg(any(feature = "osu", feature = "fruits"))]
     fn parse_timingpoints<R: Read>(
         &mut self,
         reader: &mut BufReader<R>,
@@ -386,45 +444,67 @@ impl Beatmap {
                 HitObjectKind::Circle
             } else if kind & Self::SLIDER_FLAG > 0 {
                 self.n_sliders += 1;
-                let mut curve_points = Vec::with_capacity(16);
-                curve_points.push(pos);
 
-                let mut curve_point_iter = next_field!(split.next(), curve points).split('|');
+                #[cfg(any(
+                    feature = "fruits",
+                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+                ))]
+                {
+                    let mut curve_points = Vec::with_capacity(16);
+                    curve_points.push(pos);
 
-                let mut path_type: PathType =
-                    next_field!(curve_point_iter.next(), path kind).parse()?;
+                    let mut curve_point_iter = next_field!(split.next(), curve points).split('|');
 
-                for pos in curve_point_iter {
-                    let mut v = pos.split(':').map(str::parse);
+                    let mut path_type: PathType =
+                        next_field!(curve_point_iter.next(), path kind).parse()?;
 
-                    match (v.next(), v.next()) {
-                        (Some(Ok(x)), Some(Ok(y))) => curve_points.push(Pos2 { x, y }),
-                        _ => return Err(ParseError::InvalidCurvePoints),
+                    for pos in curve_point_iter {
+                        let mut v = pos.split(':').map(str::parse);
+
+                        match (v.next(), v.next()) {
+                            (Some(Ok(x)), Some(Ok(y))) => curve_points.push(Pos2 { x, y }),
+                            _ => return Err(ParseError::InvalidCurvePoints),
+                        }
+                    }
+
+                    if self.version <= 6 && curve_points.len() >= 2 {
+                        if path_type == PathType::Linear {
+                            path_type = PathType::Bezier;
+                        }
+
+                        if curve_points.len() == 2
+                            && (pos == curve_points[0] || pos == curve_points[1])
+                        {
+                            path_type = PathType::Linear;
+                        }
+                    }
+
+                    if curve_points.is_empty() {
+                        HitObjectKind::Circle
+                    } else {
+                        let repeats = next_field!(split.next(), repeats).parse::<usize>()?;
+                        let len: f32 = next_field!(split.next(), pixel len).parse()?;
+
+                        HitObjectKind::Slider {
+                            repeats,
+                            pixel_len: len,
+                            curve_points,
+                            path_type,
+                        }
                     }
                 }
 
-                if self.version <= 6 && curve_points.len() >= 2 {
-                    if path_type == PathType::Linear {
-                        path_type = PathType::Bezier;
-                    }
-
-                    if curve_points.len() == 2 && (pos == curve_points[0] || pos == curve_points[1])
-                    {
-                        path_type = PathType::Linear;
-                    }
-                }
-
-                if curve_points.is_empty() {
-                    HitObjectKind::Circle
-                } else {
-                    let repeats = next_field!(split.next(), repeats).parse::<usize>()?;
+                #[cfg(not(any(
+                    feature = "fruits",
+                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+                )))]
+                {
+                    let repeats = next_field!(split.nth(1), repeats).parse::<usize>()?;
                     let len: f32 = next_field!(split.next(), pixel len).parse()?;
 
                     HitObjectKind::Slider {
                         repeats,
                         pixel_len: len,
-                        curve_points,
-                        path_type,
                     }
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {
@@ -536,7 +616,17 @@ mod tests {
 
     #[test]
     fn parsing() {
-        let file = match File::open("./maps/61843.osu") {
+        let map_id = if cfg!(feature = "osu") {
+            61843
+        } else if cfg!(feature = "mania") {
+            1355822
+        } else if cfg!(feature = "fruits") {
+            1977380
+        } else {
+            110219
+        };
+
+        let file = match File::open(format!("./maps/{}.osu", map_id)) {
             Ok(file) => file,
             Err(why) => panic!("Could not read file: {}", why),
         };
@@ -556,9 +646,15 @@ mod tests {
         println!("hp: {}", map.hp);
         println!("sv: {}", map.sv);
         println!("tick_rate: {}", map.tick_rate);
-        println!("stack_leniency: {}", map.stack_leniency);
         println!("hit_objects: {}", map.hit_objects.len());
-        println!("timing_points: {}", map.timing_points.len());
-        println!("difficulty_points: {}", map.difficulty_points.len());
+
+        #[cfg(any(feature = "osu", feature = "fruits"))]
+        {
+            #[cfg(feature = "all_included")]
+            println!("stack_leniency: {}", map.stack_leniency);
+
+            println!("timing_points: {}", map.timing_points.len());
+            println!("difficulty_points: {}", map.difficulty_points.len());
+        }
     }
 }

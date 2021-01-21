@@ -1,3 +1,5 @@
+#![cfg(feature = "taiko")]
+
 mod difficulty_object;
 mod hitobject_rhythm;
 mod limited_queue;

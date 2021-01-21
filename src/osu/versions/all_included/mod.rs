@@ -1,3 +1,4 @@
+#![cfg(feature = "all_included")]
 #![allow(unused)]
 
 mod difficulty_object;
@@ -11,7 +12,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 
 use super::super::DifficultyAttributes;
-use crate::{Beatmap, Mods, StarResult};
+use crate::{Beatmap, Mods, StarResult, Strains};
 
 const SECTION_LEN: f32 = 400.0;
 const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
@@ -128,7 +129,13 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     StarResult::Osu(attributes)
 }
 
-// TODO: strains function
+/// Essentially the same as the `stars` function but instead of
+/// evaluating the final strains, it just returns them as is.
+///
+/// Suitable to plot the difficulty of a map over time.
+pub fn strains(_map: &Beatmap, _mods: impl Mods) -> Strains {
+    todo!()
+}
 
 #[cfg(test)]
 mod tests {
@@ -150,7 +157,7 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
-        let result = OsuPP::new(&map).mods(64).calculate(stars);
+        let result = OsuPP::new(&map).mods(64).calculate();
 
         println!("Stars: {}", result.stars());
         println!("PP: {}", result.pp());

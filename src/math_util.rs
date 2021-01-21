@@ -1,3 +1,8 @@
+#![cfg(any(
+    feature = "fruits",
+    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+))]
+
 use crate::Pos2;
 
 #[inline]

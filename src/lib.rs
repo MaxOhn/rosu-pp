@@ -29,8 +29,7 @@
 //!             .combo(1234)
 //!             .misses(2)
 //!             .accuracy(99.2)
-//!             // `no_leniency::stars` is the suggested default
-//!             .calculate(rosu_pp::osu::no_leniency::stars);
+//!             .calculate();
 //!
 //!         println!("PP: {}", result.pp());
 //!
@@ -44,7 +43,7 @@
 //!             .misses(5)
 //!             .n50(3)
 //!             .accuracy(97.5)
-//!             .calculate(rosu_pp::osu::no_leniency::stars);
+//!             .calculate();
 //!
 //!         println!("Next PP: {}", next_result.pp());
 //!     },
@@ -73,13 +72,26 @@
 //! ### osu!standard versions
 //! - `all_included`: WIP
 //! - `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
-//! - `no_slider_no_leniency` (i.e. oppai): In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
+//! - `no_slider_no_leniency` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
+//!
+//! ### Features
+//!
+//! | Flag | Description |
+//! |-----|-----|
+//! | `default` | Enable all modes and choose the `no_leniency` version for osu!standard. |
+//! | `taiko` | Enable osu!taiko. |
+//! | `fruits` | Enable osu!ctb. |
+//! | `mania` | Enable osu!mania. |
+//! | `osu` | Enable osu!standard. Requires to also enable exactly one of the features `no_leniency`, `no_sliders_no_leniency`, or `all_included`. |
+//! | `no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency but consider sliders. Solid middleground between performance and precision, suggested default version. |
+//! | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
+//! | `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
 //!
 //! ### Roadmap
 //! - osu sr versions
 //!   - [ ] all included
 //!   - [x] no_leniency
-//!   - [x] no_sliders_no_leniency (i.e. oppai)
+//!   - [x] no_sliders_no_leniency (i.e. [oppai](https://github.com/Francesco149/oppai-ng))
 //! - [x] taiko sr
 //! - [x] ctb sr
 //! - [x] mania sr
@@ -102,9 +114,16 @@ mod curve;
 mod math_util;
 mod mods;
 
+#[cfg(feature = "fruits")]
 pub use fruits::FruitsPP;
+
+#[cfg(feature = "mania")]
 pub use mania::ManiaPP;
+
+#[cfg(feature = "osu")]
 pub use osu::OsuPP;
+
+#[cfg(feature = "taiko")]
 pub use taiko::TaikoPP;
 
 pub use mods::Mods;
@@ -140,28 +159,150 @@ pub trait BeatmapExt {
 impl BeatmapExt for Beatmap {
     fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
         match self.mode {
-            GameMode::STD => osu::no_leniency::stars(self, mods, passed_objects),
-            GameMode::MNA => mania::stars(self, mods, passed_objects),
-            GameMode::TKO => taiko::stars(self, mods, passed_objects),
-            GameMode::CTB => fruits::stars(self, mods, passed_objects),
+            GameMode::STD => {
+                #[cfg(not(feature = "osu"))]
+                panic!("`osu` feature is not enabled");
+
+                #[cfg(feature = "osu")]
+                {
+                    #[cfg(feature = "no_leniency")]
+                    {
+                        osu::no_leniency::stars(self, mods, passed_objects)
+                    }
+
+                    #[cfg(all(not(feature = "no_leniency"), feature = "no_sliders_no_leniency"))]
+                    {
+                        osu::no_sliders_no_leniency::stars(self, mods, passed_objects)
+                    }
+
+                    #[cfg(all(
+                        not(feature = "no_leniency"),
+                        not(feature = "no_sliders_no_leniency"),
+                        feature = "all_included"
+                    ))]
+                    {
+                        osu::all_included::stars(self, mods, passed_objects)
+                    }
+
+                    #[cfg(not(any(
+                        feature = "no_leniency",
+                        feature = "no_sliders_no_leniency",
+                        feature = "all_included"
+                    )))]
+                    panic!("either of the features `no_leniency`, `no_sliders_no_leniency`, or `all_included` must be enabled");
+                }
+            }
+            GameMode::MNA => {
+                #[cfg(not(feature = "mania"))]
+                panic!("`mania` feature is not enabled");
+
+                #[cfg(feature = "mania")]
+                mania::stars(self, mods, passed_objects)
+            }
+            GameMode::TKO => {
+                #[cfg(not(feature = "taiko"))]
+                panic!("`osu` feature is not enabled");
+
+                #[cfg(feature = "taiko")]
+                taiko::stars(self, mods, passed_objects)
+            }
+            GameMode::CTB => {
+                #[cfg(not(feature = "fruits"))]
+                panic!("`fruits` feature is not enabled");
+
+                #[cfg(feature = "fruits")]
+                fruits::stars(self, mods, passed_objects)
+            }
         }
     }
     fn max_pp(&self, mods: u32) -> PpResult {
         match self.mode {
-            GameMode::STD => OsuPP::new(self)
-                .mods(mods)
-                .calculate(osu::no_leniency::stars),
-            GameMode::MNA => ManiaPP::new(self).mods(mods).calculate(),
-            GameMode::TKO => TaikoPP::new(self).mods(mods).calculate(),
-            GameMode::CTB => FruitsPP::new(self).mods(mods).calculate(),
+            GameMode::STD => {
+                #[cfg(not(feature = "osu"))]
+                panic!("`osu` feature is not enabled");
+
+                #[cfg(feature = "osu")]
+                OsuPP::new(self).mods(mods).calculate()
+            }
+            GameMode::MNA => {
+                #[cfg(not(feature = "mania"))]
+                panic!("`mania` feature is not enabled");
+
+                #[cfg(feature = "mania")]
+                ManiaPP::new(self).mods(mods).calculate()
+            }
+            GameMode::TKO => {
+                #[cfg(not(feature = "taiko"))]
+                panic!("`osu` feature is not enabled");
+
+                #[cfg(feature = "taiko")]
+                TaikoPP::new(self).mods(mods).calculate()
+            }
+            GameMode::CTB => {
+                #[cfg(not(feature = "fruits"))]
+                panic!("`fruits` feature is not enabled");
+
+                #[cfg(feature = "fruits")]
+                FruitsPP::new(self).mods(mods).calculate()
+            }
         }
     }
     fn strains(&self, mods: impl Mods) -> Strains {
         match self.mode {
-            GameMode::STD => osu::no_leniency::strains(self, mods),
-            GameMode::MNA => mania::strains(self, mods),
-            GameMode::TKO => taiko::strains(self, mods),
-            GameMode::CTB => fruits::strains(self, mods),
+            GameMode::STD => {
+                #[cfg(not(feature = "osu"))]
+                panic!("`osu` feature is not enabled");
+
+                #[cfg(feature = "osu")]
+                {
+                    #[cfg(feature = "no_leniency")]
+                    {
+                        osu::no_leniency::strains(self, mods)
+                    }
+
+                    #[cfg(all(not(feature = "no_leniency"), feature = "no_sliders_no_leniency"))]
+                    {
+                        osu::no_sliders_no_leniency::strains(self, mods)
+                    }
+
+                    #[cfg(all(
+                        not(feature = "no_leniency"),
+                        not(feature = "no_sliders_no_leniency"),
+                        feature = "all_included"
+                    ))]
+                    {
+                        osu::all_included::strains(self, mods)
+                    }
+
+                    #[cfg(not(any(
+                        feature = "no_leniency",
+                        feature = "no_sliders_no_leniency",
+                        feature = "all_included"
+                    )))]
+                    panic!("either of the features `no_leniency`, `no_sliders_no_leniency`, or `all_included` must be enabled");
+                }
+            }
+            GameMode::MNA => {
+                #[cfg(not(feature = "mania"))]
+                panic!("`mania` feature is not enabled");
+
+                #[cfg(feature = "mania")]
+                mania::strains(self, mods)
+            }
+            GameMode::TKO => {
+                #[cfg(not(feature = "taiko"))]
+                panic!("`osu` feature is not enabled");
+
+                #[cfg(feature = "taiko")]
+                taiko::strains(self, mods)
+            }
+            GameMode::CTB => {
+                #[cfg(not(feature = "fruits"))]
+                panic!("`fruits` feature is not enabled");
+
+                #[cfg(feature = "fruits")]
+                fruits::strains(self, mods)
+            }
         }
     }
 }
@@ -181,9 +322,13 @@ pub struct Strains {
 /// Basic enum containing the result of a star calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum StarResult {
+    #[cfg(feature = "fruits")]
     Fruits(fruits::DifficultyAttributes),
+    #[cfg(feature = "mania")]
     Mania(mania::DifficultyAttributes),
+    #[cfg(feature = "osu")]
     Osu(osu::DifficultyAttributes),
+    #[cfg(feature = "taiko")]
     Taiko(taiko::DifficultyAttributes),
 }
 
@@ -192,9 +337,13 @@ impl StarResult {
     #[inline]
     pub fn stars(&self) -> f32 {
         match self {
+            #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => attributes.stars,
+            #[cfg(feature = "mania")]
             Self::Mania(attributes) => attributes.stars,
+            #[cfg(feature = "osu")]
             Self::Osu(attributes) => attributes.stars,
+            #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => attributes.stars,
         }
     }
@@ -221,6 +370,7 @@ impl PpResult {
     }
 }
 
+#[cfg(any(feature = "osu", feature = "taiko"))]
 #[inline]
 fn difficulty_range(val: f32, max: f32, avg: f32, min: f32) -> f32 {
     if val > 5.0 {
@@ -231,3 +381,41 @@ fn difficulty_range(val: f32, max: f32, avg: f32, min: f32) -> f32 {
         avg
     }
 }
+
+#[cfg(not(any(
+    feature = "osu",
+    feature = "taiko",
+    feature = "fruits",
+    feature = "mania"
+)))]
+compile_error!("At least one of the features `osu`, `taiko`, `fruits`, `mania` must be enabled");
+
+#[cfg(all(
+    feature = "osu",
+    not(any(
+        feature = "all_included",
+        feature = "no_leniency",
+        feature = "no_sliders_no_leniency"
+    ))
+))]
+compile_error!("Since the `osu` feature is enabled, either `no_leniency`, `no_sliders_no_leniency`, or `all_included` must be enabled aswell");
+
+#[cfg(any(
+    all(feature = "no_leniency", feature = "no_sliders_no_leniency"),
+    all(feature = "no_leniency", feature = "all_included"),
+    all(feature = "all_included", feature = "no_sliders_no_leniency"),
+))]
+compile_error!("Only one of the features `no_leniency`, `no_sliders_no_leniency`, `all_included` can be enabled");
+
+#[cfg(all(
+    not(feature = "osu"),
+    any(
+        feature = "no_leniency",
+        feature = "no_sliders_no_leniency",
+        feature = "all_included"
+    )
+))]
+compile_error!("The features `no_leniency`, `no_sliders_no_leniency`, and `all_included` should only be enabled in combination with the `osu` feature");
+
+#[cfg(feature = "all_included")]
+compile_error!("The `all_included` version is still WIP and unavailable, use either the `no_leniency` or `no_sliders_no_leniency` feature");

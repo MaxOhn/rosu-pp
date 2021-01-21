@@ -13,6 +13,7 @@ impl FruitsAttributeProvider for DifficultyAttributes {
 
 impl FruitsAttributeProvider for StarResult {
     fn attributes(self) -> Option<DifficultyAttributes> {
+        #[allow(irrefutable_let_patterns)]
         if let Self::Fruits(attributes) = self {
             Some(attributes)
         } else {

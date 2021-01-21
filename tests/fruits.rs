@@ -1,3 +1,5 @@
+#![cfg(feature = "fruits")]
+
 extern crate rosu_pp;
 
 use rosu_pp::Beatmap;
