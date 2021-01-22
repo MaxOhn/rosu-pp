@@ -6,12 +6,14 @@ pub trait OsuAttributeProvider {
 }
 
 impl OsuAttributeProvider for DifficultyAttributes {
+    #[inline]
     fn attributes(self) -> Option<DifficultyAttributes> {
         Some(self)
     }
 }
 
 impl OsuAttributeProvider for StarResult {
+    #[inline]
     fn attributes(self) -> Option<DifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Osu(attributes) = self {
@@ -23,12 +25,14 @@ impl OsuAttributeProvider for StarResult {
 }
 
 impl OsuAttributeProvider for PpResult {
+    #[inline]
     fn attributes(self) -> Option<DifficultyAttributes> {
         self.attributes.attributes()
     }
 }
 
 /// Calculator for pp on osu!standard maps.
+#[derive(Clone, Debug)]
 pub struct OsuPP<'m> {
     map: &'m Beatmap,
     attributes: Option<DifficultyAttributes>,
@@ -196,6 +200,38 @@ impl<'m> OsuPP<'m> {
         self
     }
 
+    fn assert_hitresults(&mut self) {
+        if self.acc.is_none() {
+            let n_objects = self
+                .passed_objects
+                .unwrap_or_else(|| self.map.hit_objects.len());
+
+            let remaining = n_objects
+                .saturating_sub(self.n300.unwrap_or(0))
+                .saturating_sub(self.n100.unwrap_or(0))
+                .saturating_sub(self.n50.unwrap_or(0))
+                .saturating_sub(self.n_misses);
+
+            if remaining > 0 {
+                if self.n300.is_none() {
+                    self.n300.replace(remaining);
+                    self.n100.get_or_insert(0);
+                    self.n50.get_or_insert(0);
+                } else if self.n100.is_none() {
+                    self.n100.replace(remaining);
+                    self.n50.get_or_insert(0);
+                } else if self.n50.is_none() {
+                    self.n50.replace(remaining);
+                } else {
+                    *self.n300.as_mut().unwrap() += remaining;
+                }
+            }
+
+            let numerator = self.n50.unwrap() + self.n100.unwrap() * 2 + self.n300.unwrap() * 6;
+            self.acc.replace(numerator as f32 / n_objects as f32 / 6.0);
+        }
+    }
+
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
     #[cfg(feature = "no_leniency")]
@@ -232,35 +268,7 @@ impl<'m> OsuPP<'m> {
             self.attributes.replace(attributes);
         }
 
-        if self.acc.is_none() {
-            let n_objects = self
-                .passed_objects
-                .unwrap_or_else(|| self.map.hit_objects.len());
-
-            let remaining = n_objects
-                .saturating_sub(self.n300.unwrap_or(0))
-                .saturating_sub(self.n100.unwrap_or(0))
-                .saturating_sub(self.n50.unwrap_or(0))
-                .saturating_sub(self.n_misses);
-
-            if remaining > 0 {
-                if self.n300.is_none() {
-                    self.n300.replace(remaining);
-                    self.n100.get_or_insert(0);
-                    self.n50.get_or_insert(0);
-                } else if self.n100.is_none() {
-                    self.n100.replace(remaining);
-                    self.n50.get_or_insert(0);
-                } else if self.n50.is_none() {
-                    self.n50.replace(remaining);
-                } else {
-                    *self.n300.as_mut().unwrap() += remaining;
-                }
-            }
-
-            let numerator = self.n50.unwrap() + self.n100.unwrap() * 2 + self.n300.unwrap() * 6;
-            self.acc.replace(numerator as f32 / n_objects as f32 / 6.0);
-        }
+        self.assert_hitresults();
 
         let total_hits = self.total_hits();
         let mut multiplier = 1.12;
@@ -430,5 +438,99 @@ impl<'m> OsuPP<'m> {
     #[inline]
     fn total_hits(&self) -> usize {
         self.n300.unwrap_or(0) + self.n100.unwrap_or(0) + self.n50.unwrap_or(0) + self.n_misses
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::Beatmap;
+
+    #[test]
+    fn osu_only_accuracy() {
+        let map = Beatmap::default();
+
+        let total_objects = 1234;
+        let target_acc = 97.5;
+
+        let calculator = OsuPP::new(&map)
+            .passed_objects(total_objects)
+            .accuracy(target_acc);
+
+        let numerator = 6 * calculator.n300.unwrap_or(0)
+            + 2 * calculator.n100.unwrap_or(0)
+            + calculator.n50.unwrap_or(0);
+        let denominator = 6 * total_objects;
+        let acc = 100.0 * numerator as f32 / denominator as f32;
+
+        assert!(
+            (target_acc - acc).abs() < 1.0,
+            "Expected: {} | Actual: {}",
+            target_acc,
+            acc
+        );
+    }
+
+    #[test]
+    fn osu_accuracy_and_n50() {
+        let map = Beatmap::default();
+
+        let total_objects = 1234;
+        let target_acc = 97.5;
+        let n50 = 30;
+
+        let calculator = OsuPP::new(&map)
+            .passed_objects(total_objects)
+            .n50(n50)
+            .accuracy(target_acc);
+
+        assert!(
+            (calculator.n50.unwrap() as i32 - n50 as i32).abs() <= 4,
+            "Expected: {} | Actual: {}",
+            n50,
+            calculator.n50.unwrap()
+        );
+
+        let numerator = 6 * calculator.n300.unwrap_or(0)
+            + 2 * calculator.n100.unwrap_or(0)
+            + calculator.n50.unwrap_or(0);
+        let denominator = 6 * total_objects;
+        let acc = 100.0 * numerator as f32 / denominator as f32;
+
+        assert!(
+            (target_acc - acc).abs() < 1.0,
+            "Expected: {} | Actual: {}",
+            target_acc,
+            acc
+        );
+    }
+
+    #[test]
+    fn osu_missing_objects() {
+        let map = Beatmap::default();
+
+        let total_objects = 1234;
+        let n300 = 1000;
+        let n100 = 200;
+        let n50 = 30;
+
+        let mut calculator = OsuPP::new(&map)
+            .passed_objects(total_objects)
+            .n300(n300)
+            .n100(n100)
+            .n50(n50);
+
+        calculator.assert_hitresults();
+
+        let n_objects = calculator.n300.unwrap()
+            + calculator.n100.unwrap()
+            + calculator.n50.unwrap()
+            + calculator.n_misses;
+
+        assert_eq!(
+            total_objects, n_objects,
+            "Expected: {} | Actual: {}",
+            total_objects, n_objects
+        );
     }
 }

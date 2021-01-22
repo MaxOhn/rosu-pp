@@ -1,23 +1,26 @@
 use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
-pub trait ManiaStarProvider {
+pub trait ManiaAttributeProvider {
     fn attributes(self) -> Option<f32>;
 }
 
-impl ManiaStarProvider for f32 {
+impl ManiaAttributeProvider for f32 {
+    #[inline]
     fn attributes(self) -> Option<f32> {
         Some(self)
     }
 }
 
-impl ManiaStarProvider for DifficultyAttributes {
+impl ManiaAttributeProvider for DifficultyAttributes {
+    #[inline]
     fn attributes(self) -> Option<f32> {
         Some(self.stars)
     }
 }
 
-impl ManiaStarProvider for StarResult {
+impl ManiaAttributeProvider for StarResult {
+    #[inline]
     fn attributes(self) -> Option<f32> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Mania(attributes) = self {
@@ -28,13 +31,14 @@ impl ManiaStarProvider for StarResult {
     }
 }
 
-impl ManiaStarProvider for PpResult {
+impl ManiaAttributeProvider for PpResult {
     fn attributes(self) -> Option<f32> {
         self.attributes.attributes()
     }
 }
 
 /// Calculator for pp on osu!mania maps.
+#[derive(Clone, Debug)]
 pub struct ManiaPP<'m> {
     map: &'m Beatmap,
     stars: Option<f32>,
@@ -55,13 +59,13 @@ impl<'m> ManiaPP<'m> {
         }
     }
 
-    /// [`ManiaStarsProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
+    /// [`ManiaAttributeProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
     /// and by [`PpResult`](crate::PpResult) meaning you can give the star rating,
     /// the result of a star calculation, or the result of a pp calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn attributes(mut self, attributes: impl ManiaStarProvider) -> Self {
+    pub fn attributes(mut self, attributes: impl ManiaAttributeProvider) -> Self {
         if let Some(stars) = attributes.attributes() {
             self.stars.replace(stars);
         }
