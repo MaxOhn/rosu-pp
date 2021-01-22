@@ -126,6 +126,7 @@ pub(crate) struct DifficultyHitObject<'o> {
 }
 
 impl<'o> DifficultyHitObject<'o> {
+    #[inline]
     fn new(base: &'o HitObject, prev: &'o HitObject, cs: f32, clock_rate: f32) -> Self {
         let x_divisor = 512.0 / cs;
         let column = (base.pos.x / x_divisor).floor() as usize;

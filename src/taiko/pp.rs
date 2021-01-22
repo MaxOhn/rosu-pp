@@ -210,6 +210,7 @@ impl TaikoAttributeProvider for StarResult {
 }
 
 impl TaikoAttributeProvider for PpResult {
+    #[inline]
     fn attributes(self) -> Option<f32> {
         self.attributes.attributes()
     }

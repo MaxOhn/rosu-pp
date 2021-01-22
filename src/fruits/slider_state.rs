@@ -41,3 +41,54 @@ impl<'p> SliderState<'p> {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{Beatmap, DifficultyPoint, TimingPoint};
+
+    use super::SliderState;
+
+    #[test]
+    fn fruits_slider_state() {
+        let map = Beatmap {
+            timing_points: vec![
+                TimingPoint {
+                    time: 1.0,
+                    beat_len: 10.0,
+                },
+                TimingPoint {
+                    time: 3.0,
+                    beat_len: 20.0,
+                },
+                TimingPoint {
+                    time: 4.0,
+                    beat_len: 30.0,
+                },
+            ],
+            difficulty_points: vec![
+                DifficultyPoint {
+                    time: 2.0,
+                    speed_multiplier: 15.0,
+                },
+                DifficultyPoint {
+                    time: 5.0,
+                    speed_multiplier: 45.0,
+                },
+            ],
+            ..Default::default()
+        };
+
+        let mut state = SliderState::new(&map);
+
+        state.update(2.0);
+        assert_eq!(state.beat_len, 10.0);
+
+        state.update(3.0);
+        assert_eq!(state.beat_len, 20.0);
+        assert_eq!(state.speed_mult, 1.0);
+
+        state.update(5.0);
+        assert_eq!(state.beat_len, 30.0);
+        assert_eq!(state.speed_mult, 45.0);
+    }
+}

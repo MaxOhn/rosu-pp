@@ -181,6 +181,7 @@ impl ManiaAttributeProvider for StarResult {
 }
 
 impl ManiaAttributeProvider for PpResult {
+    #[inline]
     fn attributes(self) -> Option<f32> {
         self.attributes.attributes()
     }
