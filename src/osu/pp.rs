@@ -145,21 +145,46 @@ impl<'m> OsuPP<'m> {
         let acc = acc / 100.0;
 
         if self.n100.or(self.n50).is_some() {
-            // TODO: Improve this branch
-            self.n300.replace(
-                n_objects - self.n100.unwrap_or(0) - self.n50.unwrap_or(0) - self.n_misses,
-            );
-            self.n100.get_or_insert(0);
-            self.n50.get_or_insert(0);
+            let mut n100 = self.n100.unwrap_or(0);
+            let mut n50 = self.n50.unwrap_or(0);
+
+            let placed_points = 2 * n100 + n50 + self.n_misses;
+            let missing_objects = n_objects - n100 - n50 - self.n_misses;
+            let missing_points = 6 * n_objects - placed_points;
+
+            let mut n300 = missing_objects.min(missing_points / 6);
+            n50 += missing_objects - n300;
+
+            if let Some(orig_n50) = self.n50.filter(|_| self.n100.is_none()) {
+                // Only n50s were changed, try to load some off again onto n100s
+                let difference = n50 - orig_n50;
+                let n = n300.min(difference / 4);
+
+                n300 -= n;
+                n100 += 5 * n;
+                n50 -= 4 * n;
+            }
+
+            self.n300.replace(n300);
+            self.n100.replace(n100);
+            self.n50.replace(n50);
         } else {
             let target_total = (acc * n_objects as f32 * 6.0).round() as usize;
             let delta = target_total - (n_objects - self.n_misses);
 
-            self.n300.replace(delta / 5);
-            self.n100.replace(delta % 5);
+            let mut n300 = delta / 5;
+            let mut n100 = delta % 5;
+            let mut n50 = n_objects - self.n300.unwrap() - self.n100.unwrap() - self.n_misses;
 
-            self.n50
-                .replace(n_objects - self.n300.unwrap() - self.n100.unwrap() - self.n_misses);
+            // Sacrifice n300s to transform n50s into n100s
+            let n = n300.min(n50 / 4);
+            n300 -= n;
+            n100 += 5 * n;
+            n50 -= 4 * n;
+
+            self.n300.replace(n300);
+            self.n100.replace(n100);
+            self.n50.replace(n50);
         }
 
         let acc = (6 * self.n300.unwrap() + 2 * self.n100.unwrap() + self.n50.unwrap()) as f32
@@ -377,13 +402,11 @@ impl<'m> OsuPP<'m> {
         let n_circles = attributes.n_circles;
 
         let better_acc_percentage = (n_circles > 0) as u8 as f32
-            * (((self.n300.unwrap() - (total_hits - n_circles)) * 6
+            * (((self.n300.unwrap_or(0) - (total_hits - n_circles)) * 6
                 + self.n100.unwrap_or(0) * 2
                 + self.n50.unwrap_or(0)) as f32
                 / (n_circles * 6) as f32)
                 .max(0.0);
-
-        let attributes = self.attributes.as_ref().unwrap();
 
         let mut acc_value = 1.52163_f32.powf(attributes.od) * better_acc_percentage.powi(24) * 2.83;
 
