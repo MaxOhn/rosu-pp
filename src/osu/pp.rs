@@ -150,7 +150,8 @@ impl<'m> OsuPP<'m> {
 
             let placed_points = 2 * n100 + n50 + self.n_misses;
             let missing_objects = n_objects - n100 - n50 - self.n_misses;
-            let missing_points = 6 * n_objects - placed_points;
+            let missing_points =
+                ((6.0 * acc * n_objects as f32).round() as usize).saturating_sub(placed_points);
 
             let mut n300 = missing_objects.min(missing_points / 6);
             n50 += missing_objects - n300;
@@ -174,7 +175,7 @@ impl<'m> OsuPP<'m> {
 
             let mut n300 = delta / 5;
             let mut n100 = delta % 5;
-            let mut n50 = n_objects - self.n300.unwrap() - self.n100.unwrap() - self.n_misses;
+            let mut n50 = n_objects - n300 - n100 - self.n_misses;
 
             // Sacrifice n300s to transform n50s into n100s
             let n = n300.min(n50 / 4);
