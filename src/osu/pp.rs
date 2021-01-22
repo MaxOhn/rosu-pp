@@ -1,36 +1,6 @@
 use super::DifficultyAttributes;
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
-pub trait OsuAttributeProvider {
-    fn attributes(self) -> Option<DifficultyAttributes>;
-}
-
-impl OsuAttributeProvider for DifficultyAttributes {
-    #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
-        Some(self)
-    }
-}
-
-impl OsuAttributeProvider for StarResult {
-    #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
-        if let Self::Osu(attributes) = self {
-            Some(attributes)
-        } else {
-            None
-        }
-    }
-}
-
-impl OsuAttributeProvider for PpResult {
-    #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
-        self.attributes.attributes()
-    }
-}
-
 /// Calculator for pp on osu!standard maps.
 #[derive(Clone, Debug)]
 pub struct OsuPP<'m> {
@@ -253,6 +223,16 @@ impl<'m> OsuPP<'m> {
         self.calculate_with_func(super::all_included::stars)
     }
 
+    // Omits an unnecessary error when enabled features are invalid
+    #[cfg(not(any(
+        feature = "no_leniency",
+        feature = "no_sliders_no_leniency",
+        feature = "all_included"
+    )))]
+    pub(crate) fn calculate(self) -> PpResult {
+        unreachable!()
+    }
+
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
     ///
@@ -268,15 +248,18 @@ impl<'m> OsuPP<'m> {
             self.attributes.replace(attributes);
         }
 
+        // Make sure the hitresults and accuracy are set
         self.assert_hitresults();
 
         let total_hits = self.total_hits();
         let mut multiplier = 1.12;
 
+        // NF penalty
         if self.mods.nf() {
             multiplier *= (1.0 - 0.02 * self.n_misses as f32).max(0.9);
         }
 
+        // SO penalty
         if self.mods.so() {
             let n_spinners = self.attributes.as_ref().unwrap().n_spinners;
             multiplier *= 1.0 - (n_spinners as f32 / total_hits as f32).powf(0.85);
@@ -438,6 +421,36 @@ impl<'m> OsuPP<'m> {
     #[inline]
     fn total_hits(&self) -> usize {
         self.n300.unwrap_or(0) + self.n100.unwrap_or(0) + self.n50.unwrap_or(0) + self.n_misses
+    }
+}
+
+pub trait OsuAttributeProvider {
+    fn attributes(self) -> Option<DifficultyAttributes>;
+}
+
+impl OsuAttributeProvider for DifficultyAttributes {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        Some(self)
+    }
+}
+
+impl OsuAttributeProvider for StarResult {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        #[allow(irrefutable_let_patterns)]
+        if let Self::Osu(attributes) = self {
+            Some(attributes)
+        } else {
+            None
+        }
+    }
+}
+
+impl OsuAttributeProvider for PpResult {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        self.attributes.attributes()
     }
 }
 

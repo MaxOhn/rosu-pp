@@ -1,36 +1,6 @@
 use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
-pub trait FruitsAttributeProvider {
-    fn attributes(self) -> Option<DifficultyAttributes>;
-}
-
-impl FruitsAttributeProvider for DifficultyAttributes {
-    #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
-        Some(self)
-    }
-}
-
-impl FruitsAttributeProvider for StarResult {
-    #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
-        if let Self::Fruits(attributes) = self {
-            Some(attributes)
-        } else {
-            None
-        }
-    }
-}
-
-impl FruitsAttributeProvider for PpResult {
-    #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
-        self.attributes.attributes()
-    }
-}
-
 /// Calculator for pp on osu!ctb maps.
 #[derive(Clone, Debug)]
 pub struct FruitsPP<'m> {
@@ -347,6 +317,36 @@ impl<'m> FruitsPP<'m> {
                 .max(0.0)
                 .min(1.0)
         }
+    }
+}
+
+pub trait FruitsAttributeProvider {
+    fn attributes(self) -> Option<DifficultyAttributes>;
+}
+
+impl FruitsAttributeProvider for DifficultyAttributes {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        Some(self)
+    }
+}
+
+impl FruitsAttributeProvider for StarResult {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        #[allow(irrefutable_let_patterns)]
+        if let Self::Fruits(attributes) = self {
+            Some(attributes)
+        } else {
+            None
+        }
+    }
+}
+
+impl FruitsAttributeProvider for PpResult {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        self.attributes.attributes()
     }
 }
 

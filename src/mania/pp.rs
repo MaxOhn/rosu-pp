@@ -1,42 +1,6 @@
 use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
-pub trait ManiaAttributeProvider {
-    fn attributes(self) -> Option<f32>;
-}
-
-impl ManiaAttributeProvider for f32 {
-    #[inline]
-    fn attributes(self) -> Option<f32> {
-        Some(self)
-    }
-}
-
-impl ManiaAttributeProvider for DifficultyAttributes {
-    #[inline]
-    fn attributes(self) -> Option<f32> {
-        Some(self.stars)
-    }
-}
-
-impl ManiaAttributeProvider for StarResult {
-    #[inline]
-    fn attributes(self) -> Option<f32> {
-        #[allow(irrefutable_let_patterns)]
-        if let Self::Mania(attributes) = self {
-            Some(attributes.stars)
-        } else {
-            None
-        }
-    }
-}
-
-impl ManiaAttributeProvider for PpResult {
-    fn attributes(self) -> Option<f32> {
-        self.attributes.attributes()
-    }
-}
-
 /// Calculator for pp on osu!mania maps.
 #[derive(Clone, Debug)]
 pub struct ManiaPP<'m> {
@@ -183,5 +147,41 @@ impl<'m> ManiaPP<'m> {
         (0.2 - (hit_window - 34.0) * 0.006667).max(0.0)
             * strain
             * ((score - 960_000.0).max(0.0) / 40_000.0).powf(1.1)
+    }
+}
+
+pub trait ManiaAttributeProvider {
+    fn attributes(self) -> Option<f32>;
+}
+
+impl ManiaAttributeProvider for f32 {
+    #[inline]
+    fn attributes(self) -> Option<f32> {
+        Some(self)
+    }
+}
+
+impl ManiaAttributeProvider for DifficultyAttributes {
+    #[inline]
+    fn attributes(self) -> Option<f32> {
+        Some(self.stars)
+    }
+}
+
+impl ManiaAttributeProvider for StarResult {
+    #[inline]
+    fn attributes(self) -> Option<f32> {
+        #[allow(irrefutable_let_patterns)]
+        if let Self::Mania(attributes) = self {
+            Some(attributes.stars)
+        } else {
+            None
+        }
+    }
+}
+
+impl ManiaAttributeProvider for PpResult {
+    fn attributes(self) -> Option<f32> {
+        self.attributes.attributes()
     }
 }

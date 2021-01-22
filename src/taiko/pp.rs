@@ -1,42 +1,6 @@
 use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
-pub trait TaikoAttributeProvider {
-    fn attributes(self) -> Option<f32>;
-}
-
-impl TaikoAttributeProvider for f32 {
-    #[inline]
-    fn attributes(self) -> Option<f32> {
-        Some(self)
-    }
-}
-
-impl TaikoAttributeProvider for DifficultyAttributes {
-    #[inline]
-    fn attributes(self) -> Option<f32> {
-        Some(self.stars)
-    }
-}
-
-impl TaikoAttributeProvider for StarResult {
-    #[inline]
-    fn attributes(self) -> Option<f32> {
-        #[allow(irrefutable_let_patterns)]
-        if let StarResult::Taiko(attributes) = self {
-            Some(attributes.stars)
-        } else {
-            None
-        }
-    }
-}
-
-impl TaikoAttributeProvider for PpResult {
-    fn attributes(self) -> Option<f32> {
-        self.attributes.attributes()
-    }
-}
-
 /// Calculator for pp on osu!taiko maps.
 #[derive(Clone, Debug)]
 pub struct TaikoPP<'m> {
@@ -213,4 +177,40 @@ const HITWINDOW_MAX: f32 = 20.0;
 #[inline]
 fn difficulty_range_od(ar: f32) -> f32 {
     crate::difficulty_range(ar, HITWINDOW_MAX, HITWINDOW_AVG, HITWINDOW_MIN)
+}
+
+pub trait TaikoAttributeProvider {
+    fn attributes(self) -> Option<f32>;
+}
+
+impl TaikoAttributeProvider for f32 {
+    #[inline]
+    fn attributes(self) -> Option<f32> {
+        Some(self)
+    }
+}
+
+impl TaikoAttributeProvider for DifficultyAttributes {
+    #[inline]
+    fn attributes(self) -> Option<f32> {
+        Some(self.stars)
+    }
+}
+
+impl TaikoAttributeProvider for StarResult {
+    #[inline]
+    fn attributes(self) -> Option<f32> {
+        #[allow(irrefutable_let_patterns)]
+        if let StarResult::Taiko(attributes) = self {
+            Some(attributes.stars)
+        } else {
+            None
+        }
+    }
+}
+
+impl TaikoAttributeProvider for PpResult {
+    fn attributes(self) -> Option<f32> {
+        self.attributes.attributes()
+    }
 }
