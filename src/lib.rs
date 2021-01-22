@@ -114,6 +114,12 @@ mod curve;
 mod math_util;
 mod mods;
 
+#[cfg(any(feature = "osu", feature = "fruits"))]
+pub(crate) mod control_point_iter;
+
+#[cfg(any(feature = "osu", feature = "fruits"))]
+pub(crate) use control_point_iter::{ControlPoint, ControlPointIter};
+
 #[cfg(feature = "fruits")]
 pub use fruits::FruitsPP;
 

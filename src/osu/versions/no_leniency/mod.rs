@@ -6,7 +6,6 @@
 
 use super::super::DifficultyAttributes;
 
-mod control_point_iter;
 mod difficulty_object;
 mod osu_object;
 mod skill;

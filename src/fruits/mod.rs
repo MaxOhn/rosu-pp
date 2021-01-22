@@ -1,7 +1,6 @@
 #![cfg(feature = "fruits")]
 
 mod catch_object;
-mod control_point_iter;
 mod difficulty_object;
 mod movement;
 mod pp;

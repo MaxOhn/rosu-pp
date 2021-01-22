@@ -1,5 +1,4 @@
-use super::control_point_iter::{ControlPoint, ControlPointIter};
-use crate::Beatmap;
+use crate::{Beatmap, ControlPoint, ControlPointIter};
 
 pub(crate) struct SliderState<'p> {
     control_points: ControlPointIter<'p>,

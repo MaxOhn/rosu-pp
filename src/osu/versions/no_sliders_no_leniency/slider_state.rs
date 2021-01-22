@@ -1,6 +1,4 @@
-use super::control_point_iter::{ControlPoint, ControlPointIter};
-
-use crate::Beatmap;
+use crate::{Beatmap, ControlPoint, ControlPointIter};
 
 pub(crate) struct SliderState<'p> {
     control_points: ControlPointIter<'p>,
@@ -35,12 +33,9 @@ impl<'p> SliderState<'p> {
                     self.next_time = time;
                     self.prev_sv = 1.0;
                 }
-                Some(ControlPoint::Difficulty {
-                    time,
-                    speed_multiplier,
-                }) => {
+                Some(ControlPoint::Difficulty { time, speed_mult }) => {
                     self.next_time = time;
-                    self.prev_sv = speed_multiplier;
+                    self.prev_sv = speed_mult;
                 }
                 None => break,
             }
