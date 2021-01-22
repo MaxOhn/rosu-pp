@@ -4,7 +4,6 @@ use std::cmp::Ordering;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TimingPoint {
     pub beat_len: f32,
-    pub bpm: f32, // TODO: Remove
     pub time: f32,
 }
 

@@ -369,13 +369,7 @@ impl Beatmap {
                     prev_diff = time;
                 }
             } else {
-                let point = TimingPoint {
-                    time,
-                    bpm: 60_000.0 / beat_len,
-                    beat_len,
-                };
-
-                self.timing_points.push(point);
+                self.timing_points.push(TimingPoint { time, beat_len });
 
                 if time < prev_time {
                     unsorted_timings = true;

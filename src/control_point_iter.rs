@@ -116,17 +116,14 @@ mod test {
                 TimingPoint {
                     time: 1.0,
                     beat_len: 10.0,
-                    bpm: 0.0,
                 },
                 TimingPoint {
                     time: 3.0,
                     beat_len: 10.0,
-                    bpm: 0.0,
                 },
                 TimingPoint {
                     time: 4.0,
                     beat_len: 10.0,
-                    bpm: 0.0,
                 },
             ],
             difficulty_points: vec![
