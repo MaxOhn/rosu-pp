@@ -422,6 +422,3 @@ compile_error!("Only one of the features `no_leniency`, `no_sliders_no_leniency`
     )
 ))]
 compile_error!("The features `no_leniency`, `no_sliders_no_leniency`, and `all_included` should only be enabled in combination with the `osu` feature");
-
-#[cfg(feature = "all_included")]
-compile_error!("The `all_included` version is still WIP and unavailable, use either the `no_leniency` or `no_sliders_no_leniency` feature");
