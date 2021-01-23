@@ -8,10 +8,20 @@ const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 pub(crate) struct OsuObject {
     pub(crate) time: f32,
     pub(crate) pos: Pos2,
-    pub(crate) end_pos: Pos2,
-    // circle: Some(0.0) | slider: Some(_) | spinner: None
-    pub(crate) travel_dist: Option<f32>,
     pub(crate) stack_height: f32,
+    kind: OsuObjectKind,
+}
+
+enum OsuObjectKind {
+    Circle,
+    Slider {
+        end_time: f32,
+        end_pos: Pos2,
+        travel_dist: f32,
+    },
+    Spinner {
+        end_time: f32,
+    },
 }
 
 impl OsuObject {
@@ -33,9 +43,8 @@ impl OsuObject {
                 Self {
                     time: h.start_time,
                     pos: h.pos,
-                    end_pos: h.pos,
-                    travel_dist: Some(0.0),
                     stack_height,
+                    kind: OsuObjectKind::Circle,
                 }
             }
             HitObjectKind::Slider {
@@ -157,20 +166,24 @@ impl OsuObject {
                 Self {
                     time: h.start_time,
                     pos: h.pos,
-                    end_pos,
-                    travel_dist: Some(travel_dist),
                     stack_height,
+                    kind: OsuObjectKind::Slider {
+                        end_time: final_span_end_time,
+                        end_pos,
+                        travel_dist,
+                    },
                 }
             }
-            HitObjectKind::Spinner { .. } => {
+            HitObjectKind::Spinner { end_time } => {
                 attributes.n_spinners += 1;
 
                 Self {
                     time: h.start_time,
                     pos: h.pos,
-                    end_pos: h.pos,
-                    travel_dist: None,
                     stack_height,
+                    kind: OsuObjectKind::Spinner {
+                        end_time: *end_time,
+                    },
                 }
             }
             HitObjectKind::Hold { .. } => return None,
@@ -180,7 +193,42 @@ impl OsuObject {
     }
 
     #[inline]
+    pub(crate) fn travel_dist(&self) -> f32 {
+        match &self.kind {
+            OsuObjectKind::Slider { travel_dist, .. } => *travel_dist,
+            OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => 0.0,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn end_time(&self) -> f32 {
+        match &self.kind {
+            OsuObjectKind::Circle => self.time,
+            OsuObjectKind::Slider { end_time, .. } => *end_time,
+            OsuObjectKind::Spinner { end_time } => *end_time,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn end_pos(&self) -> Pos2 {
+        match &self.kind {
+            OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => self.pos,
+            OsuObjectKind::Slider { end_pos, .. } => *end_pos,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn is_circle(&self) -> bool {
+        matches!(self.kind, OsuObjectKind::Circle)
+    }
+
+    #[inline]
+    pub(crate) fn is_slider(&self) -> bool {
+        matches!(self.kind, OsuObjectKind::Slider { .. })
+    }
+
+    #[inline]
     pub(crate) fn is_spinner(&self) -> bool {
-        self.travel_dist.is_none()
+        matches!(self.kind, OsuObjectKind::Spinner { .. })
     }
 }

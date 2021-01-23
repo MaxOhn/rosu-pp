@@ -5,6 +5,7 @@
 #![cfg(feature = "all_included")]
 
 use super::super::DifficultyAttributes;
+use crate::Pos2;
 
 mod difficulty_object;
 mod osu_object;
@@ -24,6 +25,8 @@ const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
 const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
 const NORMALIZED_RADIUS: f32 = 52.0;
+const TIME_PREEMPT: f32 = 600.0; // TODO: Check mod influences
+const STACK_DISTANCE: f32 = 3.0;
 
 /// Star calculation for osu!standard maps.
 ///
@@ -51,7 +54,8 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     }
 
     let section_len = SECTION_LEN * map_attributes.clock_rate;
-    let radius = OBJECT_RADIUS * (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
+    let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
+    let radius = OBJECT_RADIUS * scale;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
 
     if radius < 30.0 {
@@ -78,7 +82,22 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         })
         .collect();
 
-    // TODO: Calculate stack offsets here
+    if map.version >= 6 {
+        stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+    } else {
+        old_stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+    }
+
+    let mut hit_objects = hit_objects.into_iter().map(|mut h| {
+        let stack_offset = h.stack_height * scale * -6.4;
+
+        h.pos += Pos2 {
+            x: stack_offset,
+            y: stack_offset,
+        };
+
+        h
+    });
 
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);
@@ -176,7 +195,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     }
 
     let section_len = SECTION_LEN * map_attributes.clock_rate;
-    let radius = OBJECT_RADIUS * (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
+    let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
+    let radius = OBJECT_RADIUS * scale;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
 
     if radius < 30.0 {
@@ -187,15 +207,36 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
 
-    let mut hit_objects = map.hit_objects.iter().filter_map(|h| {
-        OsuObject::new(
-            h,
-            map,
-            radius,
-            &mut ticks_buf,
-            &mut diff_attributes,
-            &mut slider_state,
-        )
+    let mut hit_objects: Vec<_> = map
+        .hit_objects
+        .iter()
+        .filter_map(|h| {
+            OsuObject::new(
+                h,
+                map,
+                radius,
+                &mut ticks_buf,
+                &mut diff_attributes,
+                &mut slider_state,
+            )
+        })
+        .collect();
+
+    if map.version >= 6 {
+        stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+    } else {
+        old_stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+    }
+
+    let mut hit_objects = hit_objects.into_iter().map(|mut h| {
+        let stack_offset = h.stack_height * scale * -6.4;
+
+        h.pos += Pos2 {
+            x: stack_offset,
+            y: stack_offset,
+        };
+
+        h
     });
 
     let mut aim = Skill::new(SkillKind::Aim);
@@ -272,6 +313,99 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     Strains {
         section_length: section_len,
         strains,
+    }
+}
+
+fn stacking(hit_objects: &mut [OsuObject], stack_leniency: f32, time_preempt: f32) {
+    let mut extended_start_idx = 0;
+    let extended_end_idx = hit_objects.len() - 1;
+
+    let stack_threshold = time_preempt * stack_leniency; // TODO: Calculate outside?
+
+    for mut i in (1..=extended_end_idx).rev() {
+        let mut n = i;
+
+        if hit_objects[i].stack_height != 0.0 || !hit_objects[i].is_slider() {
+            continue;
+        }
+
+        if hit_objects[i].is_circle() {
+            loop {
+                n = match n.checked_sub(1) {
+                    Some(n) => n,
+                    None => break,
+                };
+
+                if hit_objects[n].is_spinner() {
+                    break;
+                } else if n < extended_start_idx {
+                    hit_objects[n].stack_height = 0.0;
+                    extended_start_idx = n;
+                }
+
+                if hit_objects[n].is_slider()
+                    && hit_objects[n].end_pos().distance(&hit_objects[i].pos) < STACK_DISTANCE
+                {
+                    let offset = hit_objects[i].stack_height - hit_objects[n].stack_height + 1.0;
+
+                    for j in n + 1..=i {
+                        if hit_objects[n].pos.distance(&hit_objects[j].pos) < STACK_DISTANCE {
+                            hit_objects[j].stack_height -= offset;
+                        }
+                    }
+
+                    break;
+                } else if hit_objects[n].pos.distance(&hit_objects[i].pos) < STACK_DISTANCE {
+                    hit_objects[n].stack_height = hit_objects[i].stack_height + 1.0;
+                    i = n;
+                }
+            }
+        } else if hit_objects[i].is_slider() {
+            loop {
+                n = match n.checked_sub(1) {
+                    Some(n) => n,
+                    None => break,
+                };
+
+                if hit_objects[n].is_spinner() {
+                    continue;
+                } else if hit_objects[i].time - hit_objects[n].time > stack_threshold {
+                    break;
+                } else if hit_objects[n].end_pos().distance(&hit_objects[i].pos) < STACK_DISTANCE {
+                    hit_objects[n].stack_height = hit_objects[i].stack_height + 1.0;
+                    i = n;
+                }
+            }
+        }
+    }
+}
+
+fn old_stacking(hit_objects: &mut [OsuObject], stack_leniency: f32, time_preempt: f32) {
+    let stack_threshold = time_preempt * stack_leniency; // TODO: Calculate outside?
+
+    for i in 0..hit_objects.len() {
+        if hit_objects[i].stack_height != 0.0 && !hit_objects[i].is_slider() {
+            continue;
+        }
+
+        let mut start_time = hit_objects[i].end_time();
+        let end_pos = hit_objects[i].end_pos(); // FIXME: Wrong for sliders? Position at 100% progress.
+        let mut slider_stack = 0.0;
+
+        for j in i + 1..hit_objects.len() {
+            if hit_objects[j].time - stack_threshold > start_time {
+                break;
+            }
+
+            if hit_objects[j].pos.distance(&hit_objects[i].pos) < STACK_DISTANCE {
+                hit_objects[i].stack_height += 1.0;
+                start_time = hit_objects[j].end_time();
+            } else if hit_objects[j].pos.distance(&end_pos) < STACK_DISTANCE {
+                slider_stack += 1.0;
+                hit_objects[j].stack_height -= slider_stack;
+                start_time = hit_objects[j].end_time();
+            }
+        }
     }
 }
 

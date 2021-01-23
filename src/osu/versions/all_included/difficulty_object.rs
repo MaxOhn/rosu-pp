@@ -25,8 +25,8 @@ impl<'h> DifficultyObject<'h> {
         let strain_time = delta.max(50.0);
 
         let pos = base.pos;
-        let travel_dist = prev.travel_dist.unwrap_or(0.0);
-        let prev_cursor_pos = prev.end_pos;
+        let travel_dist = prev.travel_dist();
+        let prev_cursor_pos = prev.end_pos();
 
         let jump_dist = if base.is_spinner() {
             0.0
@@ -35,7 +35,7 @@ impl<'h> DifficultyObject<'h> {
         };
 
         let angle = prev_prev.map(|prev_prev| {
-            let prev_prev_cursor_pos = prev_prev.end_pos;
+            let prev_prev_cursor_pos = prev_prev.end_pos();
 
             let v1 = prev_prev_cursor_pos - prev_cursor_pos;
             let v2 = pos - prev_cursor_pos;
