@@ -26,8 +26,6 @@ impl SkillKind {
                     return 0.0;
                 }
 
-                // println!("pos={:?}", current.base.pos());
-
                 let mut result = 0.0;
 
                 if let Some((prev_jump_dist, prev_strain_time)) = current.prev {
@@ -39,22 +37,13 @@ impl SkillKind {
                             * (current.jump_dist - scale).max(0.0))
                         .sqrt();
 
-                        // println!("angle_bonus={}", angle_bonus);
-
                         result = 1.5 * apply_diminishing_exp(angle_bonus.max(0.0))
                             / (TIMING_THRESHOLD).max(prev_strain_time)
-                    } else {
-                        // println!("nop");
                     }
-                } else {
-                    // println!("no prev");
                 }
 
                 let jump_dist_exp = apply_diminishing_exp(current.jump_dist);
                 let travel_dist_exp = apply_diminishing_exp(current.travel_dist);
-
-                // println!("jump_dist={} => {}", current.jump_dist, jump_dist_exp);
-                // println!("travel_dist={} => {}", current.travel_dist, travel_dist_exp);
 
                 let dist_exp =
                     jump_dist_exp + travel_dist_exp + (travel_dist_exp * jump_dist_exp).sqrt();
@@ -79,8 +68,6 @@ impl SkillKind {
 
                 let mut angle_bonus = 1.0;
 
-                // println!("angle: {:?}", current.angle);
-
                 if let Some(angle) = current.angle.filter(|a| *a < SPEED_ANGLE_BONUS_BEGIN) {
                     let exp_base = (1.5 * (SPEED_ANGLE_BONUS_BEGIN - angle)).sin();
                     angle_bonus = 1.0 + exp_base * exp_base / 3.57;
@@ -88,7 +75,6 @@ impl SkillKind {
                     if angle < PI_OVER_2 {
                         angle_bonus = 1.28;
 
-                        // TODO: Improve ifs
                         if dist < 90.0 && angle < PI_OVER_4 {
                             angle_bonus += (1.0 - angle_bonus) * ((90.0 - dist) / 10.0).min(1.0);
                         } else if dist < 90.0 {
@@ -98,11 +84,6 @@ impl SkillKind {
                         }
                     }
                 }
-
-                // println!(
-                //     "dist={} | speed_bonus={} | angle_bonus={}",
-                //     dist, speed_bonus, angle_bonus
-                // );
 
                 (1.0 + (speed_bonus - 1.0) * 0.75)
                     * angle_bonus
