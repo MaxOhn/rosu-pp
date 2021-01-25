@@ -67,7 +67,7 @@ impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn hit_results(mut self, n300: usize, n100: usize, misses: usize) -> Self {
         let hits = 2 * n300 + n100;
-        let acc = hits as f32 / (hits + misses) as f32;
+        let acc = hits as f32 / (2 * (n300 + n100 + misses)) as f32;
 
         self.acc = acc;
         self.n_misses = misses;
