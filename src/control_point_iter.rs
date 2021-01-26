@@ -37,7 +37,7 @@ impl<'p> ControlPointIter<'p> {
 pub(crate) enum ControlPoint {
     Timing {
         time: f32,
-        #[cfg(not(feature = "no_sliders_no_leniency"))]
+        #[allow(dead_code)]
         beat_len: f32,
     },
     Difficulty {
@@ -46,9 +46,9 @@ pub(crate) enum ControlPoint {
     },
 }
 
-#[cfg(not(feature = "no_sliders_no_leniency"))]
 impl ControlPoint {
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn time(&self) -> f32 {
         match self {
             Self::Timing { time, .. } => *time,
@@ -62,21 +62,10 @@ impl<'p> Iterator for ControlPointIter<'p> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match (self.next_timing, self.next_difficulty) {
-            (Some((time, _beat_len)), Some((d, _))) if time <= d => {
+            (Some((time, beat_len)), Some((d, _))) if time <= d => {
                 self.next_timing = next_tuple!(self.timing_points, (time, beat_len));
 
-                #[cfg(not(feature = "no_sliders_no_leniency"))]
-                {
-                    Some(ControlPoint::Timing {
-                        time,
-                        beat_len: _beat_len,
-                    })
-                }
-
-                #[cfg(feature = "no_sliders_no_leniency")]
-                {
-                    Some(ControlPoint::Timing { time })
-                }
+                Some(ControlPoint::Timing { time, beat_len })
             }
             (_, Some((time, speed_mult))) => {
                 self.next_difficulty =
@@ -84,21 +73,10 @@ impl<'p> Iterator for ControlPointIter<'p> {
 
                 Some(ControlPoint::Difficulty { time, speed_mult })
             }
-            (Some((time, _beat_len)), None) => {
+            (Some((time, beat_len)), None) => {
                 self.next_timing = next_tuple!(self.timing_points, (time, beat_len));
 
-                #[cfg(not(feature = "no_sliders_no_leniency"))]
-                {
-                    Some(ControlPoint::Timing {
-                        time,
-                        beat_len: _beat_len,
-                    })
-                }
-
-                #[cfg(feature = "no_sliders_no_leniency")]
-                {
-                    Some(ControlPoint::Timing { time })
-                }
+                Some(ControlPoint::Timing { time, beat_len })
             }
             (None, None) => None,
         }

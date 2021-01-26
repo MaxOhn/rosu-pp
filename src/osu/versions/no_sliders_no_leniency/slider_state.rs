@@ -29,7 +29,7 @@ impl<'p> SliderState<'p> {
             self.px_per_beat = map.sv * 100.0 * self.prev_sv;
 
             match self.control_points.next() {
-                Some(ControlPoint::Timing { time }) => {
+                Some(ControlPoint::Timing { time, .. }) => {
                     self.next_time = time;
                     self.prev_sv = 1.0;
                 }
