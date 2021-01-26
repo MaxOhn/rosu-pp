@@ -18,6 +18,7 @@ impl OsuObject {
         h: &HitObject,
         map: &Beatmap,
         radius: f32,
+        scaling_factor: f32,
         ticks: &mut Vec<f32>,
         attributes: &mut DifficultyAttributes,
         slider_state: &mut SliderState,
@@ -150,6 +151,8 @@ impl OsuObject {
                 compute_vertex(final_span_end_time);
 
                 ticks.clear();
+
+                travel_dist *= scaling_factor;
 
                 Self {
                     time: h.start_time,

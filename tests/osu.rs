@@ -14,12 +14,14 @@ struct MapResult {
 
 #[test]
 fn osu() {
-    let margin = if cfg!(feature = "no_leniency") {
-        0.0025
-    } else if cfg!(feature = "no_sliders_no_leniency") {
+    let margin = if cfg!(feature = "no_sliders_no_leniency") {
         0.0075
-    } else {
+    } else if cfg!(feature = "no_leniency") {
+        0.0025
+    } else if cfg!(feature = "all_included") {
         0.001
+    } else {
+        unreachable!()
     };
 
     let star_margin = margin;
@@ -48,9 +50,9 @@ fn osu() {
         assert!(
             (result.stars() - stars).abs() < star_margin * stars,
             "\nStars:\n\
-                    Calculated: {calculated} | Expected: {expected}\n \
-                    => {margin} margin ({allowed} allowed)\n\
-                    [map {map} | mods {mods}]\n",
+            Calculated: {calculated} | Expected: {expected}\n \
+            => {margin} margin ({allowed} allowed)\n\
+            [map {map} | mods {mods}]\n",
             calculated = result.stars(),
             expected = stars,
             margin = (result.stars() - stars).abs(),
@@ -62,9 +64,9 @@ fn osu() {
         assert!(
             (result.pp() - pp).abs() < pp_margin * pp,
             "\nPP:\n\
-                    Calculated: {calculated} | Expected: {expected}\n \
-                    => {margin} margin ({allowed} allowed)\n\
-                    [map {map} | mods {mods}]\n",
+            Calculated: {calculated} | Expected: {expected}\n \
+            => {margin} margin ({allowed} allowed)\n\
+            [map {map} | mods {mods}]\n",
             calculated = result.pp(),
             expected = pp,
             margin = (result.pp() - pp).abs(),

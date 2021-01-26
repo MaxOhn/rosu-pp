@@ -25,7 +25,6 @@ const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
 const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
 const NORMALIZED_RADIUS: f32 = 52.0;
-const TIME_PREEMPT: f32 = 600.0; // TODO: Check mod influences
 const STACK_DISTANCE: f32 = 3.0;
 
 /// Star calculation for osu!standard maps.
@@ -53,6 +52,16 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         return StarResult::Osu(diff_attributes);
     }
 
+    let mut raw_ar = map.ar;
+
+    if mods.hr() {
+        raw_ar *= 1.4;
+    } else if mods.ez() {
+        raw_ar *= 0.5;
+    }
+
+    let time_preempt = difficulty_range_ar(raw_ar);
+
     let section_len = SECTION_LEN * map_attributes.clock_rate;
     let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
     let radius = OBJECT_RADIUS * scale;
@@ -75,6 +84,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
                 h,
                 map,
                 radius,
+                scaling_factor,
                 &mut ticks_buf,
                 &mut diff_attributes,
                 &mut slider_state,
@@ -82,10 +92,12 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         })
         .collect();
 
+    let stack_threshold = time_preempt * map.stack_leniency;
+
     if map.version >= 6 {
-        stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+        stacking(&mut hit_objects, stack_threshold);
     } else {
-        old_stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+        old_stacking(&mut hit_objects, stack_threshold);
     }
 
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
@@ -194,6 +206,16 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         return Strains::default();
     }
 
+    let mut raw_ar = map.ar;
+
+    if mods.hr() {
+        raw_ar *= 1.4;
+    } else if mods.ez() {
+        raw_ar *= 0.5;
+    }
+
+    let time_preempt = difficulty_range_ar(raw_ar);
+
     let section_len = SECTION_LEN * map_attributes.clock_rate;
     let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
     let radius = OBJECT_RADIUS * scale;
@@ -215,6 +237,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 h,
                 map,
                 radius,
+                scaling_factor,
                 &mut ticks_buf,
                 &mut diff_attributes,
                 &mut slider_state,
@@ -222,10 +245,12 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         })
         .collect();
 
+    let stack_threshold = time_preempt * map.stack_leniency;
+
     if map.version >= 6 {
-        stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+        stacking(&mut hit_objects, stack_threshold);
     } else {
-        old_stacking(&mut hit_objects, map.stack_leniency, TIME_PREEMPT);
+        old_stacking(&mut hit_objects, stack_threshold);
     }
 
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
@@ -316,11 +341,9 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     }
 }
 
-fn stacking(hit_objects: &mut [OsuObject], stack_leniency: f32, time_preempt: f32) {
+fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
     let mut extended_start_idx = 0;
     let extended_end_idx = hit_objects.len() - 1;
-
-    let stack_threshold = time_preempt * stack_leniency; // TODO: Calculate outside?
 
     for mut i in (1..=extended_end_idx).rev() {
         let mut n = i;
@@ -380,16 +403,15 @@ fn stacking(hit_objects: &mut [OsuObject], stack_leniency: f32, time_preempt: f3
     }
 }
 
-fn old_stacking(hit_objects: &mut [OsuObject], stack_leniency: f32, time_preempt: f32) {
-    let stack_threshold = time_preempt * stack_leniency; // TODO: Calculate outside?
-
+fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
     for i in 0..hit_objects.len() {
         if hit_objects[i].stack_height != 0.0 && !hit_objects[i].is_slider() {
             continue;
         }
 
         let mut start_time = hit_objects[i].end_time();
-        let end_pos = hit_objects[i].end_pos(); // FIXME: Wrong for sliders? Position at 100% progress.
+        let end_pos = hit_objects[i].end_pos();
+
         let mut slider_stack = 0.0;
 
         for j in i + 1..hit_objects.len() {
@@ -409,6 +431,15 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_leniency: f32, time_preempt
     }
 }
 
+const OSU_AR_MAX: f32 = 450.0;
+const OSU_AR_AVG: f32 = 1200.0;
+const OSU_AR_MIN: f32 = 1800.0;
+
+#[inline]
+fn difficulty_range_ar(ar: f32) -> f32 {
+    crate::difficulty_range(ar, OSU_AR_MAX, OSU_AR_AVG, OSU_AR_MIN)
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::super::OsuPP;
@@ -416,9 +447,9 @@ mod tests {
     use std::fs::File;
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn all_included_single() {
-        let file = match File::open("./maps/295.osu") {
+        let file = match File::open("./maps/2514909.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };

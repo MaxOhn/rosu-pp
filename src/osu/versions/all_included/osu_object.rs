@@ -17,6 +17,7 @@ enum OsuObjectKind {
     Slider {
         end_time: f32,
         end_pos: Pos2,
+        lazy_end_pos: Pos2,
         travel_dist: f32,
     },
     Spinner {
@@ -29,6 +30,7 @@ impl OsuObject {
         h: &HitObject,
         map: &Beatmap,
         radius: f32,
+        scaling_factor: f32,
         ticks: &mut Vec<f32>,
         attributes: &mut DifficultyAttributes,
         slider_state: &mut SliderState,
@@ -54,7 +56,7 @@ impl OsuObject {
                 path_type,
             } => {
                 // Key values which are computed here
-                let mut end_pos = h.pos;
+                let mut lazy_end_pos = h.pos;
                 let mut travel_dist = 0.0;
 
                 // Responsible for timing point values
@@ -107,12 +109,12 @@ impl OsuObject {
                     let curr_dist = pixel_len * progress;
                     let curr_pos = curve.point_at_distance(curr_dist);
 
-                    let diff = curr_pos - end_pos;
+                    let diff = curr_pos - lazy_end_pos;
                     let mut dist = diff.length();
 
                     if dist > approx_follow_circle_radius {
                         dist -= approx_follow_circle_radius;
-                        end_pos += diff.normalize() * dist;
+                        lazy_end_pos += diff.normalize() * dist;
                         travel_dist += dist;
                     }
                 };
@@ -163,6 +165,10 @@ impl OsuObject {
 
                 ticks.clear();
 
+                travel_dist *= scaling_factor;
+
+                let end_pos = curve.point_at_distance(*pixel_len);
+
                 Self {
                     time: h.start_time,
                     pos: h.pos,
@@ -170,6 +176,7 @@ impl OsuObject {
                     kind: OsuObjectKind::Slider {
                         end_time: final_span_end_time,
                         end_pos,
+                        lazy_end_pos,
                         travel_dist,
                     },
                 }
@@ -214,6 +221,14 @@ impl OsuObject {
         match &self.kind {
             OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => self.pos,
             OsuObjectKind::Slider { end_pos, .. } => *end_pos,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn lazy_end_pos(&self) -> Pos2 {
+        match &self.kind {
+            OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => self.pos,
+            OsuObjectKind::Slider { lazy_end_pos, .. } => *lazy_end_pos,
         }
     }
 

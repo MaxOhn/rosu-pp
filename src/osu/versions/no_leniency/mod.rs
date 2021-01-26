@@ -68,6 +68,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
             h,
             map,
             radius,
+            scaling_factor,
             &mut ticks_buf,
             &mut diff_attributes,
             &mut slider_state,
@@ -186,6 +187,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
             h,
             map,
             radius,
+            scaling_factor,
             &mut ticks_buf,
             &mut diff_attributes,
             &mut slider_state,
@@ -278,7 +280,7 @@ mod tests {
     #[test]
     #[ignore]
     fn no_leniency_single() {
-        let file = match File::open("./maps/295.osu") {
+        let file = match File::open("./maps/2514909.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
