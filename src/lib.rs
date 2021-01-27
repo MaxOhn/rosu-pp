@@ -5,7 +5,7 @@
 //! ### Usage
 //! ```rust,no_run
 //! use std::fs::File;
-//! use rosu_pp::{Beatmap, BeatmapExt, GameMode, OsuPP, TaikoPP};
+//! use rosu_pp::{Beatmap, BeatmapExt};
 //!
 //! let file = match File::open("/path/to/file.osu") {
 //!     Ok(file) => file,
@@ -18,51 +18,35 @@
 //!     Err(why) => panic!("Error while parsing map: {}", why),
 //! };
 //!
-//! // The different modes make things annoying because their
-//! // pp calculations require different parameters.
-//! // You will have to match on the mode yourself
-//! // to be able to set all options for pp calculation.
-//! match map.mode {
-//!     GameMode::STD => {
-//!         let result = OsuPP::new(&map)
-//!             .mods(24) // HDHR
-//!             .combo(1234)
-//!             .misses(2)
-//!             .accuracy(99.2)
-//!             .calculate();
+//! // If `BeatmapExt` is included, you can make use of
+//! // some methods on `Beatmap` to make your life simpler.
+//! // However, to calculate specific pp values, it is recommended
+//! // to match on the map's mode yourself and modify the mode's
+//! // pp calculator, e.g. `TaikoPP`, manually.
+//! let result = map.pp()
+//!     .mods(24) // HDHR
+//!     .combo(1234)
+//!     .misses(2)
+//!     .accuracy(99.2)
+//!     .calculate();
 //!
-//!         println!("PP: {}", result.pp());
+//! println!("PP: {}", result.pp());
 //!
-//!         // If you intend to reuse the current map-mod combination,
-//!         // make use of the previous result!
-//!         // If attributes are given, then stars & co don't have to be recalculated.
-//!         let next_result = OsuPP::new(&map)
-//!             .mods(24) // HDHR
-//!             .attributes(result)
-//!             .combo(543)
-//!             .misses(5)
-//!             .n50(3)
-//!             .accuracy(97.5)
-//!             .calculate();
+//! // If you intend to reuse the current map-mod combination,
+//! // make use of the previous result!
+//! // If attributes are given, then stars & co don't have to be recalculated.
+//! let next_result = map.pp()
+//!     .mods(24) // HDHR
+//!     .attributes(result) // recycle
+//!     .combo(543)
+//!     .misses(5)
+//!     .n50(3)
+//!     .passed_objects(600)
+//!     .accuracy(96.5)
+//!     .calculate();
 //!
-//!         println!("Next PP: {}", next_result.pp());
-//!     },
-//!     GameMode::TKO => {
-//!         let result = TaikoPP::new(&map)
-//!             .mods(64) // DT
-//!             .combo(555)
-//!             .misses(10)
-//!             .passed_objects(600)
-//!             .accuracy(95.12345)
-//!             .calculate();
+//! println!("Next PP: {}", next_result.pp());
 //!
-//!         println!("Stars: {} | PP: {}", result.stars(), result.pp());
-//!     }
-//!     GameMode::MNA | GameMode::CTB => panic!("do your thing"),
-//! }
-//!
-//! // If all you want is the map's stars or max pp,
-//! // you can make use of the BeatmapExt trait.
 //! let stars = map.stars(16, None).stars(); // HR
 //! let max_pp = map.max_pp(16).pp();
 //!
@@ -70,7 +54,7 @@
 //! ```
 //!
 //! ### osu!standard versions
-//! - `all_included`: WIP
+//! - `all_included`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Most precise; Con: Least performant.
 //! - `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
 //! - `no_slider_no_leniency` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
 //!
@@ -89,7 +73,7 @@
 //!
 //! ### Roadmap
 //! - osu sr versions
-//!   - [ ] all included
+//!   - [x] all included
 //!   - [x] no_leniency
 //!   - [x] no_sliders_no_leniency (i.e. [oppai](https://github.com/Francesco149/oppai-ng))
 //! - [x] taiko sr
@@ -109,6 +93,9 @@ pub mod mania;
 pub mod osu;
 pub mod parse;
 pub mod taiko;
+
+mod pp;
+pub use pp::{AnyPP, AttributeProvider};
 
 mod curve;
 mod math_util;
@@ -151,6 +138,12 @@ pub trait BeatmapExt {
     /// If you seek more fine-tuning and options you need to match on the map's
     /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP) for taiko.
     fn max_pp(&self, mods: u32) -> PpResult;
+
+    /// Returns a builder to calculate a pp value.
+    ///
+    /// Although this method is not terribly bad, it is recommended to match on the
+    /// map's mode yourself and construct the pp builder accordingly.
+    fn pp(&self) -> AnyPP;
 
     /// Calculate the strains of a map.
     /// This essentially performs the same calculation as a `stars` function but
@@ -221,6 +214,7 @@ impl BeatmapExt for Beatmap {
             }
         }
     }
+
     fn max_pp(&self, mods: u32) -> PpResult {
         match self.mode {
             GameMode::STD => {
@@ -253,6 +247,11 @@ impl BeatmapExt for Beatmap {
             }
         }
     }
+
+    fn pp(&self) -> AnyPP {
+        AnyPP::new(self)
+    }
+
     fn strains(&self, mods: impl Mods) -> Strains {
         match self.mode {
             GameMode::STD => {

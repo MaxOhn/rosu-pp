@@ -47,8 +47,8 @@ impl<'m> ManiaPP<'m> {
         self
     }
 
-    /// Score of a play.
-    /// On `NoMod` its between 0 and 1,000,000, on `Easy` between 0 and 500,000, etc
+    /// Specify the score of a play.
+    /// On `NoMod` its between 0 and 1,000,000, on `Easy` between 0 and 500,000, etc.
     #[inline]
     pub fn score(mut self, score: u32) -> Self {
         self.score.replace(score as f32);

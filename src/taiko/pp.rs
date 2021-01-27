@@ -12,6 +12,9 @@ pub struct TaikoPP<'m> {
     acc: f32,
     n_misses: usize,
     passed_objects: Option<usize>,
+
+    n300: Option<usize>,
+    n100: Option<usize>,
 }
 
 impl<'m> TaikoPP<'m> {
@@ -26,6 +29,8 @@ impl<'m> TaikoPP<'m> {
             acc: 1.0,
             n_misses: 0,
             passed_objects: None,
+            n300: None,
+            n100: None,
         }
     }
 
@@ -61,16 +66,18 @@ impl<'m> TaikoPP<'m> {
         self
     }
 
-    /// osu!taiko pp calculation does not require specific hit results, but only accuracy.
-    /// If the accuracy is already available, provide it through the `accuracy` method,
-    /// otherwise use this method to calculate and set the accuracy through the hit results.
+    /// Specify the amount of 300s of a play.
     #[inline]
-    pub fn hit_results(mut self, n300: usize, n100: usize, misses: usize) -> Self {
-        let hits = 2 * n300 + n100;
-        let acc = hits as f32 / (2 * (n300 + n100 + misses)) as f32;
+    pub fn n300(mut self, n300: usize) -> Self {
+        self.n300.replace(n300);
 
-        self.acc = acc;
-        self.n_misses = misses;
+        self
+    }
+
+    /// Specify the amount of 100s of a play.
+    #[inline]
+    pub fn n100(mut self, n100: usize) -> Self {
+        self.n100.replace(n100);
 
         self
     }
@@ -78,7 +85,7 @@ impl<'m> TaikoPP<'m> {
     /// Specify the amount of misses of the play.
     #[inline]
     pub fn misses(mut self, n_misses: usize) -> Self {
-        self.n_misses = n_misses;
+        self.n_misses = n_misses.min(self.map.n_circles as usize);
 
         self
     }
@@ -87,6 +94,8 @@ impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn accuracy(mut self, acc: f32) -> Self {
         self.acc = acc / 100.0;
+        self.n300.take();
+        self.n100.take();
 
         self
     }
@@ -100,10 +109,30 @@ impl<'m> TaikoPP<'m> {
     }
 
     /// Returns an object which contains the pp and stars.
-    pub fn calculate(self) -> PpResult {
+    pub fn calculate(mut self) -> PpResult {
         let stars = self
             .stars
             .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars());
+
+        if self.n300.or(self.n100).is_some() {
+            let total = self.map.n_circles as usize;
+            let misses = self.n_misses;
+
+            let mut n300 = self.n300.unwrap_or(0).min(total - misses);
+            let mut n100 = self.n100.unwrap_or(0).min(total - n300 - misses);
+
+            let given = n300 + n100 + misses;
+            let missing = total - given;
+
+            match (self.n300, self.n100) {
+                (Some(_), Some(_)) => n300 += missing,
+                (Some(_), None) => n100 += missing,
+                (None, Some(_)) => n300 += missing,
+                (None, None) => unreachable!(),
+            };
+
+            self.acc = (2 * n300 + n100) as f32 / (2 * (n300 + n100 + misses)) as f32;
+        }
 
         let mut multiplier = 1.1;
 
