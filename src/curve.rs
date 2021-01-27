@@ -57,7 +57,7 @@ impl Curve {
     }
 
     fn _bezier(result: &mut Vec<Pos2>, points: &[Pos2]) {
-        let step = 0.25 / SLIDER_QUALITY / points.len() as f32;
+        let step = (0.25 / SLIDER_QUALITY / points.len() as f32).max(0.01);
         let mut i = 0.0;
         let n = points.len() as i32 - 1;
 
