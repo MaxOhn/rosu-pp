@@ -76,7 +76,9 @@ impl OsuObject {
                 let span_duration = duration / *repeats as f32;
 
                 // Ensure path type validity
-                let path_type = if *path_type == PathType::PerfectCurve && curve_points.len() > 3 {
+                let path_type = if (*path_type == PathType::PerfectCurve && curve_points.len() > 3)
+                    || (*path_type == PathType::Linear && curve_points.len() != 2)
+                {
                     PathType::Bezier
                 } else if curve_points.len() == 2 {
                     PathType::Linear

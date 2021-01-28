@@ -447,9 +447,10 @@ mod tests {
     use std::fs::File;
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn all_included_single() {
-        let file = match File::open("./maps/100.osu") {
+        // TOCHECK: 114708, 1208872
+        let file = match File::open("./maps/1295309.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
