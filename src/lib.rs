@@ -56,7 +56,7 @@
 //! ### osu!standard versions
 //! - `all_included`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Most precise; Con: Least performant.
 //! - `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
-//! - `no_slider_no_leniency` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
+//! - `no_slider_no_leniency` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): In addition to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it is generally faster than `no_leniency`.
 //!
 //! ### Features
 //!
@@ -75,7 +75,7 @@
 //! - osu sr versions
 //!   - [x] all included
 //!   - [x] no_leniency
-//!   - [x] no_sliders_no_leniency (i.e. [oppai](https://github.com/Francesco149/oppai-ng))
+//!   - [x] no_sliders_no_leniency
 //! - [x] taiko sr
 //! - [x] ctb sr
 //! - [x] mania sr
