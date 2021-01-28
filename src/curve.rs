@@ -79,33 +79,39 @@ impl Curve {
         }
 
         let order = points.len();
-        let step = 2.5 / SLIDER_QUALITY;
-        let target = step + 1.0;
 
-        let mut resulting_points = Vec::with_capacity(4);
+        let mut resulting_points =
+            Vec::with_capacity(((order - 1) as f32 * SLIDER_QUALITY * 2.0) as usize);
 
-        for x in 0..order - 1 {
-            let mut t = 0.0;
+        for i in 0..order - 1 {
+            let v1 = points[i.saturating_sub(1)];
+            let v2 = points[i];
 
-            while t < target {
-                let v1 = if x >= 1 { points[x - 1] } else { points[x] };
-                let v2 = points[x];
+            let v3 = if i < order - 1 {
+                points[i + 1]
+            } else {
+                v2 * 2.0 - v1
+            };
 
-                let v3 = if x + 1 < order {
-                    points[x + 1]
-                } else {
-                    v2.add_scaled(v2.add_scaled(v1, -1.0), 1.0)
-                };
+            let v4 = if i < order - 2 {
+                points[i + 2]
+            } else {
+                v3 * 2.0 - v2
+            };
 
-                let v4 = if x + 2 < order {
-                    points[x + 2]
-                } else {
-                    v3.add_scaled(v3.add_scaled(v2, -1.0), 1.0)
-                };
+            let mut c = 0.0;
 
-                let point = Self::catmull_point(v1, v2, v3, v4, t);
-                resulting_points.push(point);
-                t += step;
+            while c < SLIDER_QUALITY {
+                resulting_points.push(Self::catmull_point(v1, v2, v3, v4, c / SLIDER_QUALITY));
+                resulting_points.push(Self::catmull_point(
+                    v1,
+                    v2,
+                    v3,
+                    v4,
+                    (c + 1.0) / SLIDER_QUALITY,
+                ));
+
+                c += 1.0;
             }
         }
 

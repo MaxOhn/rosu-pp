@@ -449,7 +449,7 @@ mod tests {
     #[test]
     // #[ignore]
     fn all_included_single() {
-        let file = match File::open("./maps/2514909.osu") {
+        let file = match File::open("./maps/100.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };
