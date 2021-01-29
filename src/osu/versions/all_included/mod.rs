@@ -449,7 +449,7 @@ mod tests {
     #[test]
     #[ignore]
     fn all_included_single() {
-        // TOCHECK: 114708, 1208872
+        // TOCHECK: 114708, 1208872, 1322261
         let file = match File::open("./maps/1295309.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
