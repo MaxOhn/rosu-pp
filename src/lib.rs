@@ -141,7 +141,7 @@ pub use taiko::TaikoPP;
 pub use mods::Mods;
 pub use parse::{
     Beatmap, BeatmapAttributes, DifficultyPoint, GameMode, HitObject, HitObjectKind, HitSound,
-    PathType, Pos2, TimingPoint,
+    ParseError, ParseResult, PathType, Pos2, TimingPoint,
 };
 
 pub trait BeatmapExt {
