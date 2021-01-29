@@ -1,6 +1,6 @@
 //! The positional offset of notes created by stack leniency is not considered.
 //! This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies.
-//! Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
+//! Since calculating these offsets is relatively expensive though, this version is faster than `all_included`.
 
 #![cfg(feature = "no_leniency")]
 

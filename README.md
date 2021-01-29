@@ -4,7 +4,7 @@ A standalone crate to calculate star ratings and performance points for all [osu
 
 Conversions are generally not supported.
 
-#### Usage
+### Usage
 
 ```rust
 use std::fs::File;
@@ -56,15 +56,16 @@ let max_pp = map.max_pp(16).pp();
 println!("Stars: {} | Max PP: {}", stars, max_pp);
 ```
 
-#### osu!standard versions
+### osu!standard versions
 
 - `all_included`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Most precise; Con: Least performant.
-- `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
+- `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is faster than `all_included`.
 - `no_slider_no_leniency` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): In addition to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means 
 the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it is generally faster than `no_leniency`.
+
 **Note**: If the `fruits` feature is enabled, sliders will be parsed regardless, resulting in a reduced performance advantage of `no_sliders_no_leniency`.
 
-#### Features
+### Features
 
 | Flag | Description |
 |-----|-----|
@@ -75,9 +76,9 @@ the travel distance of notes is completely omitted which may cause further inacc
 | `osu` | Enable osu!standard. Requires to also enable exactly one of the features `no_leniency`, `no_sliders_no_leniency`, or `all_included`. |
 | `no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency but consider sliders. Solid middleground between performance and precision, hence the default version. |     
 | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
-| `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
+| `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but worse performance than `no_leniency`. |
 
-#### Benchmarks
+### Benchmarks
 
 Comparing the PP calculation speed between [osu-perf](https://gitlab.com/JackRedstonia/osu-perf/), an [oppai-ng](https://github.com/Francesco149/oppai-ng) rust binding, and rosu-pp's `no_sliders_no_leniency`:
 
@@ -95,20 +96,20 @@ Comparing the stars (in)accuracy between rosu-pp's `all_included`, `no_leniency`
 
 <img src="./benchmark_results/stars_inaccuracy.svg">
 
-#### Roadmap
+### Roadmap
 
 - osu sr versions
-  - [x] all included
-  - [x] no_leniency
-  - [x] no_sliders_no_leniency
-- [x] taiko sr
-- [x] ctb sr
-- [x] mania sr
+  - \[x\] all included
+  - \[x\] no_leniency
+  - \[x\] no_sliders_no_leniency
+- \[x\] taiko sr
+- \[x\] ctb sr
+- \[x\] mania sr
 ---
-- [x] osu pp
-- [x] taiko pp
-- [x] ctb pp
-- [x] mania pp
+- \[x\] osu pp
+- \[x\] taiko pp
+- \[x\] ctb pp
+- \[x\] mania pp
 ---
-- [x] refactoring
-- [x] benchmarking
+- \[x\] refactoring
+- \[x\] benchmarking

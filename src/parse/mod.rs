@@ -69,6 +69,7 @@ macro_rules! section {
     };
 }
 
+/// The mode of a beatmap.
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum GameMode {
     STD = 0,
@@ -83,6 +84,8 @@ impl Default for GameMode {
     }
 }
 
+/// The main beatmap struct containing all data relevant
+/// for difficulty and pp calculation
 #[derive(Clone, Default, Debug)]
 pub struct Beatmap {
     pub mode: GameMode,
@@ -558,6 +561,7 @@ fn split_colon(line: &str) -> Option<(&str, &str)> {
     Some((split.next()?, split.next()?.trim()))
 }
 
+/// The type of curve of a slider.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum PathType {
     Catmull = 0,

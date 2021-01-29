@@ -3,6 +3,12 @@ name = "rosu-pp"
 version = "0.1.0"
 authors = ["MaxOhn <ohn.m@hotmail.de>"]
 edition = "2018"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/MaxOhn/rosu-pp"
+documentation = "https://docs.rs/rosu-pp/"
+description = "osu! difficulty and pp calculation for all modes"
+keywords = ["osu", "pp", "stars"]
 
 [features]
 default = ["osu", "taiko", "fruits", "mania", "no_leniency"]
