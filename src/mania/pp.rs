@@ -2,6 +2,30 @@ use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 /// Calculator for pp on osu!mania maps.
+///
+/// # Example
+///
+/// ```
+/// # use rosu_pp::{ManiaPP, PpResult, Beatmap};
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+/// # let map = Beatmap::default();
+/// let pp_result: PpResult = ManiaPP::new(&map)
+///     .mods(64) // DT
+///     .score(765_432)
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
+///
+/// let next_result = ManiaPP::new(&map)
+///     .attributes(pp_result)  // reusing previous results for performance
+///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .score(950_000)
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
+/// ```
 #[derive(Clone, Debug)]
 pub struct ManiaPP<'m> {
     map: &'m Beatmap,

@@ -2,6 +2,32 @@ use super::{stars, DifficultyAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 /// Calculator for pp on osu!taiko maps.
+///
+/// # Example
+///
+/// ```
+/// # use rosu_pp::{TaikoPP, PpResult, Beatmap};
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+/// # let map = Beatmap::default();
+/// let pp_result: PpResult = TaikoPP::new(&map)
+///     .mods(8 + 64) // HDDT
+///     .combo(1234)
+///     .misses(1)
+///     .accuracy(98.5)
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
+///
+/// let next_result = TaikoPP::new(&map)
+///     .attributes(pp_result)  // reusing previous results for performance
+///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .accuracy(99.5)
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
+/// ```
 #[derive(Clone, Debug)]
 pub struct TaikoPP<'m> {
     map: &'m Beatmap,

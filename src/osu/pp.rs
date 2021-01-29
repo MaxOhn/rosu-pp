@@ -2,6 +2,32 @@ use super::DifficultyAttributes;
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 /// Calculator for pp on osu!standard maps.
+///
+/// # Example
+///
+/// ```
+/// # use rosu_pp::{OsuPP, PpResult, Beatmap};
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+/// # let map = Beatmap::default();
+/// let pp_result: PpResult = OsuPP::new(&map)
+///     .mods(8 + 64) // HDDT
+///     .combo(1234)
+///     .misses(1)
+///     .accuracy(98.5) // should be set last
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
+///
+/// let next_result = OsuPP::new(&map)
+///     .attributes(pp_result)  // reusing previous results for performance
+///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .accuracy(99.5)
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
+/// ```
 #[derive(Clone, Debug)]
 pub struct OsuPP<'m> {
     map: &'m Beatmap,
@@ -144,12 +170,13 @@ impl<'m> OsuPP<'m> {
             self.n100.replace(n100);
             self.n50.replace(n50);
         } else {
+            let misses = self.n_misses.min(n_objects);
             let target_total = (acc * n_objects as f32 * 6.0).round() as usize;
-            let delta = target_total - (n_objects - self.n_misses);
+            let delta = target_total - (n_objects - misses);
 
             let mut n300 = delta / 5;
             let mut n100 = delta % 5;
-            let mut n50 = n_objects - n300 - n100 - self.n_misses;
+            let mut n50 = n_objects - n300 - n100 - misses;
 
             // Sacrifice n300s to transform n50s into n100s
             let n = n300.min(n50 / 4);
@@ -420,7 +447,12 @@ impl<'m> OsuPP<'m> {
 
     #[inline]
     fn total_hits(&self) -> usize {
-        self.n300.unwrap_or(0) + self.n100.unwrap_or(0) + self.n50.unwrap_or(0) + self.n_misses
+        let n_objects = self
+            .passed_objects
+            .unwrap_or_else(|| self.map.hit_objects.len());
+
+        (self.n300.unwrap_or(0) + self.n100.unwrap_or(0) + self.n50.unwrap_or(0) + self.n_misses)
+            .min(n_objects)
     }
 }
 
