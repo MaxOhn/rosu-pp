@@ -274,7 +274,7 @@ mod tests {
     #[test]
     #[ignore]
     fn taiko_single() {
-        let file = match File::open("E:/Games/osu!/beatmaps/168450.osu") {
+        let file = match File::open("./maps/168450.osu") {
             Ok(file) => file,
             Err(why) => panic!("Could not open file: {}", why),
         };

@@ -222,6 +222,10 @@ impl<'m> OsuPP<'m> {
                 } else {
                     *self.n300.as_mut().unwrap() += remaining;
                 }
+            } else {
+                self.n300.get_or_insert(0);
+                self.n100.get_or_insert(0);
+                self.n50.get_or_insert(0);
             }
 
             let numerator = self.n50.unwrap() + self.n100.unwrap() * 2 + self.n300.unwrap() * 6;
