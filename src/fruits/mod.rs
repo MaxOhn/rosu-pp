@@ -48,7 +48,6 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let mut hit_objects = map
         .hit_objects
         .iter()
-        .take(take)
         .scan((None, 0.0), |(last_pos, last_time), h| match &h.kind {
             HitObjectKind::Circle => {
                 let mut h = CatchObject::new((h.pos, h.start_time));
@@ -171,7 +170,8 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
             HitObjectKind::Spinner { .. } | HitObjectKind::Hold { .. } => Some(None),
         })
         .filter_map(identity)
-        .flatten();
+        .flatten()
+        .take(take);
 
     // Hyper dash business
     let half_catcher_width = calculate_catch_width(attributes.cs) / 2.0 / ALLOWED_CATCH_RANGE;
