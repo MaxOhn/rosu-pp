@@ -109,6 +109,9 @@ impl<'m> ManiaPP<'m> {
             scaled_score /= percent_passed;
         }
 
+        let mut od = 34.0 + 3.0 * (10.0 - self.map.od).max(0.0).min(10.0);
+        let clock_rate = self.mods.speed();
+
         let mut multiplier = 0.8;
 
         if nf {
@@ -117,21 +120,10 @@ impl<'m> ManiaPP<'m> {
 
         if ez {
             multiplier *= 0.5;
+            od *= 1.4;
         }
 
-        let hit_window = {
-            let mut od = 34.0 + 3.0 * (10.0 - self.map.od).max(0.0).min(10.0);
-
-            if ez {
-                od *= 1.4;
-            } else if self.mods.hr() {
-                od /= 1.4;
-            }
-
-            let clock_rate = self.mods.speed();
-
-            ((od * clock_rate).floor() / clock_rate).ceil()
-        };
+        let hit_window = ((od * clock_rate).floor() / clock_rate).ceil();
 
         let strain_value = self.compute_strain(scaled_score, stars);
         let acc_value = self.compute_accuracy_value(scaled_score, strain_value, hit_window);
