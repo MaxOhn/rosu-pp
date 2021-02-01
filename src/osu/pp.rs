@@ -212,23 +212,20 @@ impl<'m> OsuPP<'m> {
             if remaining > 0 {
                 if self.n300.is_none() {
                     self.n300.replace(remaining);
-                    self.n100.get_or_insert(0);
-                    self.n50.get_or_insert(0);
                 } else if self.n100.is_none() {
                     self.n100.replace(remaining);
-                    self.n50.get_or_insert(0);
                 } else if self.n50.is_none() {
                     self.n50.replace(remaining);
                 } else {
                     *self.n300.as_mut().unwrap() += remaining;
                 }
-            } else {
-                self.n300.get_or_insert(0);
-                self.n100.get_or_insert(0);
-                self.n50.get_or_insert(0);
             }
 
-            let numerator = self.n50.unwrap() + self.n100.unwrap() * 2 + self.n300.unwrap() * 6;
+            let n300 = *self.n300.get_or_insert(0);
+            let n100 = *self.n100.get_or_insert(0);
+            let n50 = *self.n50.get_or_insert(0);
+
+            let numerator = n300 * 6 + n100 * 2 + n50;
             self.acc.replace(numerator as f32 / n_objects as f32 / 6.0);
         }
     }
