@@ -29,11 +29,11 @@ const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 // Slider parsing based on https://github.com/osufx/catch-the-pp
 pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
-    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
-
-    if take < 2 {
+    if map.hit_objects.len() < 2 {
         return StarResult::Fruits(DifficultyAttributes::default());
     }
+
+    let take = passed_objects.unwrap_or_else(|| usize::MAX);
 
     let attributes = map.attributes().mods(mods);
     let with_hr = mods.hr();
