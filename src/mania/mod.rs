@@ -6,7 +6,7 @@ mod strain;
 pub use pp::*;
 use strain::Strain;
 
-use crate::{Beatmap, HitObject, Mods, StarResult, Strains};
+use crate::{Beatmap, GameMode, HitObject, Mods, StarResult, Strains};
 
 const SECTION_LEN: f32 = 400.0;
 const STAR_SCALING_FACTOR: f32 = 0.018;
@@ -21,9 +21,32 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         return StarResult::Mania(DifficultyAttributes { stars: 0.0 });
     }
 
+    let rounded_cs = map.cs.round();
+
+    let columns = match map.mode {
+        GameMode::MNA => rounded_cs.max(1.0) as u8,
+        GameMode::STD => {
+            let rounded_od = map.od.round();
+
+            let n_objects = map.n_circles + map.n_sliders + map.n_spinners;
+            let slider_or_spinner_ratio = (n_objects - map.n_circles) as f32 / n_objects as f32;
+
+            if slider_or_spinner_ratio < 0.2 {
+                7
+            } else if slider_or_spinner_ratio < 0.3 || rounded_cs >= 5.0 {
+                6 + (rounded_od > 5.0) as u8
+            } else if slider_or_spinner_ratio > 0.6 {
+                4 + (rounded_od > 4.0) as u8
+            } else {
+                (rounded_od as u8 + 1).max(4).min(7)
+            }
+        }
+        other => panic!("can not calculate mania difficulty on a {:?} map", other),
+    };
+
     let clock_rate = mods.speed();
     let section_len = SECTION_LEN * clock_rate;
-    let mut strain = Strain::new(map.cs as u8);
+    let mut strain = Strain::new(columns);
 
     let mut hit_objects = map
         .hit_objects

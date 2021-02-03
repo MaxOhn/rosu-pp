@@ -230,8 +230,8 @@ const HITWINDOW_AVG: f32 = 35.0;
 const HITWINDOW_MAX: f32 = 20.0;
 
 #[inline]
-fn difficulty_range_od(ar: f32) -> f32 {
-    crate::difficulty_range(ar, HITWINDOW_MAX, HITWINDOW_AVG, HITWINDOW_MIN)
+fn difficulty_range_od(od: f32) -> f32 {
+    crate::difficulty_range(od, HITWINDOW_MAX, HITWINDOW_AVG, HITWINDOW_MIN)
 }
 
 pub trait TaikoAttributeProvider {

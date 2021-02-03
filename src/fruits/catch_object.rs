@@ -1,6 +1,6 @@
 use crate::Pos2;
 
-const PLAYFIELD_WIDHT: f32 = 512.0;
+const PLAYFIELD_WIDTH: f32 = 512.0;
 const BASE_SPEED: f32 = 1.0;
 
 #[derive(Clone)]
@@ -33,7 +33,7 @@ impl CatchObject {
             if pos_diff.abs() > f32::EPSILON {
                 if pos_diff.abs() < (time_diff / 3.0).floor() {
                     if pos_diff > 0.0 {
-                        if offset_pos + pos_diff < PLAYFIELD_WIDHT {
+                        if offset_pos + pos_diff < PLAYFIELD_WIDTH {
                             offset_pos += pos_diff;
                         }
                     } else if offset_pos + pos_diff > 0.0 {
