@@ -33,7 +33,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         return StarResult::Fruits(DifficultyAttributes::default());
     }
 
-    let take = passed_objects.unwrap_or_else(|| usize::MAX);
+    let take = passed_objects.unwrap_or(usize::MAX);
 
     let attributes = map.attributes().mods(mods);
     let with_hr = mods.hr();

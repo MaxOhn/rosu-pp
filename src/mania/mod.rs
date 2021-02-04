@@ -18,7 +18,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return StarResult::Mania(DifficultyAttributes { stars: 0.0 });
+        return StarResult::Mania(DifficultyAttributes::default());
     }
 
     let rounded_cs = map.cs.round();

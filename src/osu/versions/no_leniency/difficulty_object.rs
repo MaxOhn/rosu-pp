@@ -37,7 +37,7 @@ impl<'h> DifficultyObject<'h> {
         let angle = prev_prev.map(|prev_prev| {
             let prev_prev_cursor_pos = prev_prev.end_pos;
 
-            let v1 = prev_prev_cursor_pos - prev_cursor_pos;
+            let v1 = prev_prev_cursor_pos - prev.pos;
             let v2 = pos - prev_cursor_pos;
 
             let dot = v1.dot(v2);
