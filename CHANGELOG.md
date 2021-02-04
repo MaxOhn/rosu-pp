@@ -1,5 +1,8 @@
 # Upcoming
 
+- parse:
+  - Efficiently handle huge amounts of curvepoints
+
 - osu:
   - Fixed panic on unwrapping unavailable hit results
   - Fixed occasional underflow when calculating pp with passed_objects

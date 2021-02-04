@@ -115,6 +115,12 @@ pub struct Beatmap {
 
 pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
 
+#[cfg(any(
+    feature = "fruits",
+    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+))]
+const CURVE_POINT_THRESHOLD: usize = 256;
+
 impl Beatmap {
     const CIRCLE_FLAG: u8 = 1 << 0;
     const SLIDER_FLAG: u8 = 1 << 1;
@@ -473,6 +479,23 @@ impl Beatmap {
                             && (pos == curve_points[0] || pos == curve_points[1])
                         {
                             path_type = PathType::Linear;
+                        }
+                    }
+
+                    // Reduce amount of curvepoints but keep the elements evenly spaced.
+                    // Necessary to handle maps like XNOR (2573164) that have
+                    // tens of thousands of curvepoints more efficiently.
+                    if curve_points.len() > CURVE_POINT_THRESHOLD {
+                        while curve_points.len() > CURVE_POINT_THRESHOLD {
+                            let last = curve_points[curve_points.len() - 1];
+                            let last_idx = (curve_points.len() - 1) / 2;
+
+                            for i in 1..=last_idx {
+                                curve_points.swap(i, 2 * i);
+                            }
+
+                            curve_points[last_idx] = last;
+                            curve_points.truncate(last_idx + 1);
                         }
                     }
 
