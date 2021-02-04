@@ -279,7 +279,7 @@ impl<'m> OsuPP<'m> {
         // Make sure the hitresults and accuracy are set
         self.assert_hitresults();
 
-        let total_hits = self.total_hits();
+        let total_hits = self.total_hits() as f32;
         let mut multiplier = 1.12;
 
         // NF penalty
@@ -290,11 +290,11 @@ impl<'m> OsuPP<'m> {
         // SO penalty
         if self.mods.so() {
             let n_spinners = self.attributes.as_ref().unwrap().n_spinners;
-            multiplier *= 1.0 - (n_spinners as f32 / total_hits as f32).powf(0.85);
+            multiplier *= 1.0 - (n_spinners as f32 / total_hits).powf(0.85);
         }
 
-        let aim_value = self.compute_aim_value(total_hits as f32);
-        let speed_value = self.compute_speed_value(total_hits as f32);
+        let aim_value = self.compute_aim_value(total_hits);
+        let speed_value = self.compute_speed_value(total_hits);
         let acc_value = self.compute_accuracy_value(total_hits);
 
         let pp = (aim_value.powf(1.1) + speed_value.powf(1.1) + acc_value.powf(1.1))
@@ -417,15 +417,15 @@ impl<'m> OsuPP<'m> {
         speed_value
     }
 
-    fn compute_accuracy_value(&self, total_hits: usize) -> f32 {
+    fn compute_accuracy_value(&self, total_hits: f32) -> f32 {
         let attributes = self.attributes.as_ref().unwrap();
-        let n_circles = attributes.n_circles;
+        let n_circles = attributes.n_circles as f32;
+        let n300 = self.n300.unwrap_or(0) as f32;
+        let n100 = self.n100.unwrap_or(0) as f32;
+        let n50 = self.n50.unwrap_or(0) as f32;
 
-        let better_acc_percentage = (n_circles > 0) as u8 as f32
-            * (((self.n300.unwrap_or(0) - (total_hits - n_circles)) * 6
-                + self.n100.unwrap_or(0) * 2
-                + self.n50.unwrap_or(0)) as f32
-                / (n_circles * 6) as f32)
+        let better_acc_percentage = (n_circles > 0.0) as u8 as f32
+            * (((n300 - (total_hits - n_circles)) * 6.0 + n100 * 2.0 + n50) / (n_circles * 6.0))
                 .max(0.0);
 
         let mut acc_value = 1.52163_f32.powf(attributes.od) * better_acc_percentage.powi(24) * 2.83;
