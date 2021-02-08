@@ -136,7 +136,11 @@ impl Beatmap {
         loop {
             reader.read_line(&mut buf)?;
 
-            if !buf.trim().is_empty() {
+            // Check for character U+FEFF specifically thanks to map id 797130
+            if !buf
+                .trim_matches(|c: char| c.is_whitespace() || c == '﻿')
+                .is_empty()
+            {
                 break;
             }
 
@@ -638,7 +642,7 @@ mod tests {
     #[test]
     fn parsing() {
         let map_id = if cfg!(feature = "osu") {
-            61843
+            797130
         } else if cfg!(feature = "mania") {
             1355822
         } else if cfg!(feature = "fruits") {
