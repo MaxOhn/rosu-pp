@@ -121,6 +121,12 @@ pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
 ))]
 const CURVE_POINT_THRESHOLD: usize = 256;
 
+#[cfg(any(
+    feature = "fruits",
+    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+))]
+const MAX_COORDINATE_VALUE: f32 = 131_072.0;
+
 impl Beatmap {
     const CIRCLE_FLAG: u8 = 1 << 0;
     const SLIDER_FLAG: u8 = 1 << 1;
@@ -436,6 +442,7 @@ impl Beatmap {
             let time = next_field!(split.next(), hitobject time)
                 .trim()
                 .parse::<f32>()?;
+
             validate_float!(time);
 
             if !self.hit_objects.is_empty() && time < prev_time {
@@ -457,7 +464,7 @@ impl Beatmap {
                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
                 ))]
                 {
-                    let mut curve_points = Vec::with_capacity(16);
+                    let mut curve_points = Vec::with_capacity(8);
                     curve_points.push(pos);
 
                     let mut curve_point_iter = next_field!(split.next(), curve points).split('|');
@@ -506,8 +513,14 @@ impl Beatmap {
                     if curve_points.is_empty() {
                         HitObjectKind::Circle
                     } else {
-                        let repeats = next_field!(split.next(), repeats).parse::<usize>()?;
-                        let len: f32 = next_field!(split.next(), pixel len).parse()?;
+                        let repeats = next_field!(split.next(), repeats)
+                            .parse::<usize>()?
+                            .min(9000);
+
+                        let len = next_field!(split.next(), pixel len)
+                            .parse::<f32>()?
+                            .max(0.0)
+                            .min(MAX_COORDINATE_VALUE);
 
                         HitObjectKind::Slider {
                             repeats,
