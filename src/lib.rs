@@ -4,7 +4,7 @@
 //!
 //! Conversions are generally not supported.
 //!
-//! ### Usage
+//! ## Usage
 //!
 //! ```rust,no_run
 //! use std::fs::File;
@@ -56,7 +56,7 @@
 //! println!("Stars: {} | Max PP: {}", stars, max_pp);
 //! ```
 //!
-//! ### osu!standard versions
+//! ## osu!standard versions
 //!
 //! - `all_included`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Most precise; Con: Least performant.
 //! - `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
@@ -64,7 +64,7 @@
 //!
 //! **Note**: If the `fruits` feature is enabled, sliders will be parsed regardless, resulting in a reduced performance advantage of `no_sliders_no_leniency`.
 //!
-//! ### Features
+//! ## Features
 //!
 //! | Flag | Description |
 //! |-----|-----|
@@ -77,7 +77,7 @@
 //! | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
 //! | `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
 //!
-//! ### Roadmap
+//! ## Roadmap
 //!
 //! - osu sr versions
 //!   - \[x\] all included
@@ -146,13 +146,9 @@ pub use parse::{
 
 pub trait BeatmapExt {
     /// Calculate the stars and other attributes of a beatmap which are required for pp calculation.
-    ///
-    /// For osu!standard maps, the `no_leniency` version will be used.
     fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> StarResult;
 
-    /// Calculate the max pp of a beatmap if that is all you want.
-    ///
-    /// For osu!standard maps, the `no_leniency` version will be used.
+    /// Calculate the max pp of a beatmap.
     ///
     /// If you seek more fine-tuning and options you need to match on the map's
     /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP) for taiko.
@@ -169,8 +165,6 @@ pub trait BeatmapExt {
     /// instead of evaluating the final strains, they are just returned as is.
     ///
     /// Suitable to plot the difficulty of a map over time.
-    ///
-    /// For osu!standard maps, the `no_leniency` version will be used.
     fn strains(&self, mods: impl Mods) -> Strains;
 }
 
