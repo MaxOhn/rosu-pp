@@ -216,7 +216,7 @@ impl<'m> TaikoPP<'m> {
             od *= 0.5;
         }
 
-        let hit_window = difficulty_range_od(od) / self.mods.speed();
+        let hit_window = difficulty_range_od(od).floor() / self.mods.speed();
 
         (150.0 / hit_window).powf(1.1)
             * self.acc.powi(15)

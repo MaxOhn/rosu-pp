@@ -7,6 +7,9 @@
   - Fixed panic on unwrapping unavailable hit results
   - Fixed occasional underflow when calculating pp with passed_objects
 
+- taiko:
+  - Fixed missing flooring of hitwindow for pp calculation
+
 - fruits:
   - Fixed passed objects in star calculation
 
