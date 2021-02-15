@@ -1,4 +1,6 @@
-# Upcoming
+## Upcoming
+
+# v0.1.1
 
 - parse:
   - Efficiently handle huge amounts of curvepoints
