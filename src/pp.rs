@@ -55,6 +55,20 @@ impl<'m> AnyPP<'m> {
         }
     }
 
+    #[inline]
+    pub async fn calculate_async(self) -> PpResult {
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(f) => f.calculate_async().await,
+            #[cfg(feature = "mania")]
+            Self::Mania(m) => m.calculate_async().await,
+            #[cfg(feature = "osu")]
+            Self::Osu(o) => o.calculate_async().await,
+            #[cfg(feature = "taiko")]
+            Self::Taiko(t) => t.calculate_async().await,
+        }
+    }
+
     /// [`AttributeProvider`] is implemented by [`StarResult`](crate::StarResult)
     /// and [`PpResult`](crate::PpResult) meaning you can give the result of a \
     /// star calculation or the result of a pp calculation.

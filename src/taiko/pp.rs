@@ -181,6 +181,11 @@ impl<'m> TaikoPP<'m> {
         }
     }
 
+    #[inline]
+    pub async fn calculate_async(self) -> PpResult {
+        self.calculate()
+    }
+
     fn compute_strain_value(&self, stars: f32) -> f32 {
         let exp_base = 5.0 * (stars / 0.0075).max(1.0) - 4.0;
         let mut strain = exp_base * exp_base / 100_000.0;

@@ -18,6 +18,9 @@ use std::cmp::Ordering;
 use std::io::{BufRead, BufReader, Read};
 use std::str::FromStr;
 
+#[cfg(feature = "async_std")]
+use async_std::{fs::File, io::BufReader as AsyncBufReader, prelude::*};
+
 macro_rules! sort {
     ($slice:expr) => {
         $slice.sort_unstable_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal))
@@ -64,6 +67,14 @@ macro_rules! line_prepare {
 macro_rules! section {
     ($map:ident, $func:ident, $reader:ident, $buf:ident, $section:ident) => {
         if $map.$func(&mut $reader, &mut $buf, &mut $section)? {
+            break;
+        }
+    };
+}
+
+macro_rules! section_async {
+    ($map:ident, $func:ident, $reader:ident, $buf:ident, $section:ident) => {
+        if $map.$func(&mut $reader, &mut $buf, &mut $section).await? {
             break;
         }
     };
@@ -193,6 +204,71 @@ impl Beatmap {
         Ok(map)
     }
 
+    #[cfg(feature = "async_std")]
+    pub async fn parse_async(input: File) -> ParseResult<Self> {
+        let mut reader = AsyncBufReader::new(input);
+        let mut buf = String::new();
+
+        loop {
+            reader.read_line(&mut buf).await?;
+
+            // Check for character U+FEFF specifically thanks to map id 797130
+            if !buf
+                .trim_matches(|c: char| c.is_whitespace() || c == '﻿')
+                .is_empty()
+            {
+                break;
+            }
+
+            buf.clear();
+        }
+
+        let version = match buf.find(OSU_FILE_HEADER) {
+            Some(idx) => buf[idx + OSU_FILE_HEADER.len()..].trim_end().parse()?,
+            None => return Err(ParseError::IncorrectFileHeader),
+        };
+
+        buf.clear();
+
+        let mut map = Beatmap {
+            version,
+            hit_objects: Vec::with_capacity(256),
+            ..Default::default()
+        };
+
+        let mut section = Section::None;
+
+        loop {
+            match section {
+                Section::General => section_async!(map, parse_general_async, reader, buf, section),
+                Section::Difficulty => {
+                    section_async!(map, parse_difficulty_async, reader, buf, section)
+                }
+                Section::TimingPoints => {
+                    section_async!(map, parse_timingpoints_async, reader, buf, section)
+                }
+                Section::HitObjects => {
+                    section_async!(map, parse_hitobjects_async, reader, buf, section)
+                }
+                Section::None => {
+                    if reader.read_line(&mut buf).await? == 0 {
+                        break;
+                    }
+
+                    let line = line_prepare!(buf);
+
+                    if line.starts_with('[') && line.ends_with(']') {
+                        section = Section::from_str(&line[1..line.len() - 1]);
+                    }
+
+                    buf.clear();
+                }
+            }
+        }
+
+        Ok(map)
+    }
+
     fn parse_general<R: Read>(
         &mut self,
         reader: &mut BufReader<R>,
@@ -206,6 +282,79 @@ impl Beatmap {
         let mut stack_leniency = None;
 
         while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
+
+            if key == "Mode" {
+                mode = match value {
+                    "0" => Some(GameMode::STD),
+                    "1" => Some(GameMode::TKO),
+                    "2" => Some(GameMode::CTB),
+                    "3" => Some(GameMode::MNA),
+                    _ => return Err(ParseError::InvalidMode),
+                };
+            }
+
+            #[cfg(all(feature = "osu", feature = "all_included"))]
+            if key == "StackLeniency" {
+                stack_leniency = Some(value.parse()?);
+            }
+
+            buf.clear();
+        }
+
+        self.mode = mode.unwrap_or(GameMode::STD);
+
+        #[cfg(not(feature = "osu"))]
+        if self.mode == GameMode::STD {
+            return Err(ParseError::UnincludedMode(GameMode::STD));
+        }
+
+        #[cfg(not(feature = "taiko"))]
+        if self.mode == GameMode::TKO {
+            return Err(ParseError::UnincludedMode(GameMode::TKO));
+        }
+
+        #[cfg(not(feature = "fruits"))]
+        if self.mode == GameMode::CTB {
+            return Err(ParseError::UnincludedMode(GameMode::CTB));
+        }
+
+        #[cfg(not(feature = "mania"))]
+        if self.mode == GameMode::MNA {
+            return Err(ParseError::UnincludedMode(GameMode::MNA));
+        }
+
+        #[cfg(all(feature = "osu", feature = "all_included"))]
+        {
+            self.stack_leniency = stack_leniency.unwrap_or(0.7);
+        }
+
+        Ok(empty)
+    }
+
+    #[cfg(feature = "async_std")]
+    async fn parse_general_async(
+        &mut self,
+        reader: &mut AsyncBufReader<File>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut mode = None;
+        let mut empty = true;
+
+        #[cfg(all(feature = "osu", feature = "all_included"))]
+        let mut stack_leniency = None;
+
+        while reader.read_line(buf).await.unwrap() != 0 {
             let line = line_prepare!(buf);
 
             if line.starts_with('[') && line.ends_with(']') {
@@ -315,6 +464,57 @@ impl Beatmap {
         Ok(empty)
     }
 
+    #[cfg(feature = "async_std")]
+    async fn parse_difficulty_async(
+        &mut self,
+        reader: &mut AsyncBufReader<File>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut ar = None;
+        let mut od = None;
+        let mut cs = None;
+        let mut hp = None;
+        let mut sv = None;
+        let mut tick_rate = None;
+
+        let mut empty = true;
+
+        while reader.read_line(buf).await? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
+
+            match key {
+                "ApproachRate" => ar = Some(value.parse()?),
+                "OverallDifficulty" => od = Some(value.parse()?),
+                "CircleSize" => cs = Some(value.parse()?),
+                "HPDrainRate" => hp = Some(value.parse()?),
+                "SliderTickRate" => tick_rate = Some(value.parse()?),
+                "SliderMultiplier" => sv = Some(value.parse()?),
+                _ => {}
+            }
+
+            buf.clear();
+        }
+
+        self.od = next_field!(od, od);
+        self.cs = next_field!(cs, cs);
+        self.hp = next_field!(hp, hp);
+        self.ar = ar.unwrap_or(self.od);
+        self.sv = next_field!(sv, sv);
+        self.tick_rate = next_field!(tick_rate, sv);
+
+        Ok(empty)
+    }
+
     #[cfg(not(any(feature = "osu", feature = "fruits")))]
     fn parse_timingpoints<R: Read>(
         &mut self,
@@ -325,6 +525,32 @@ impl Beatmap {
         let mut empty = true;
 
         while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            buf.clear();
+        }
+
+        Ok(empty)
+    }
+
+    #[cfg(feature = "async_std")]
+    #[cfg(not(any(feature = "osu", feature = "fruits")))]
+    async fn parse_timingpoints_async<R: AsyncRead>(
+        &mut self,
+        reader: &mut AsyncBufReader<R>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut empty = true;
+
+        while reader.read_line(buf).await? != 0 {
             let line = line_prepare!(buf);
 
             if line.starts_with('[') && line.ends_with(']') {
@@ -356,6 +582,78 @@ impl Beatmap {
         let mut empty = true;
 
         while reader.read_line(buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let mut split = line.split(',');
+
+            let time = next_field!(split.next(), timing point time)
+                .trim()
+                .parse::<f32>()?;
+            validate_float!(time);
+
+            let beat_len = next_field!(split.next(), beat len).trim().parse::<f32>()?;
+
+            if beat_len < 0.0 {
+                let point = DifficultyPoint {
+                    time,
+                    speed_multiplier: -100.0 / beat_len,
+                };
+
+                self.difficulty_points.push(point);
+
+                if time < prev_diff {
+                    unsorted_difficulties = true;
+                } else {
+                    prev_diff = time;
+                }
+            } else {
+                self.timing_points.push(TimingPoint { time, beat_len });
+
+                if time < prev_time {
+                    unsorted_timings = true;
+                } else {
+                    prev_time = time;
+                }
+            }
+
+            buf.clear();
+        }
+
+        if unsorted_timings {
+            sort!(self.timing_points);
+        }
+
+        if unsorted_difficulties {
+            sort!(self.difficulty_points);
+        }
+
+        Ok(empty)
+    }
+
+    #[cfg(feature = "async_std")]
+    #[cfg(any(feature = "osu", feature = "fruits"))]
+    async fn parse_timingpoints_async(
+        &mut self,
+        reader: &mut AsyncBufReader<File>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut unsorted_timings = false;
+        let mut unsorted_difficulties = false;
+
+        let mut prev_diff = 0.0;
+        let mut prev_time = 0.0;
+
+        let mut empty = true;
+
+        while reader.read_line(buf).await? != 0 {
             let line = line_prepare!(buf);
 
             if line.starts_with('[') && line.ends_with(']') {
@@ -588,6 +886,184 @@ impl Beatmap {
         Ok(empty)
     }
 
+    #[cfg(feature = "async_std")]
+    async fn parse_hitobjects_async(
+        &mut self,
+        reader: &mut AsyncBufReader<File>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        let mut unsorted = false;
+        let mut prev_time = 0.0;
+
+        let mut empty = true;
+
+        while reader.read_line(buf).await? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let mut split = line.split(',');
+
+            let pos = Pos2 {
+                x: next_field!(split.next(), x position).parse()?,
+                y: next_field!(split.next(), y position).parse()?,
+            };
+
+            let time = next_field!(split.next(), hitobject time)
+                .trim()
+                .parse::<f32>()?;
+
+            validate_float!(time);
+
+            if !self.hit_objects.is_empty() && time < prev_time {
+                unsorted = true;
+            }
+
+            let kind: u8 = next_field!(split.next(), hitobject kind).parse()?;
+            let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
+
+            let kind = if kind & Self::CIRCLE_FLAG > 0 {
+                self.n_circles += 1;
+
+                HitObjectKind::Circle
+            } else if kind & Self::SLIDER_FLAG > 0 {
+                self.n_sliders += 1;
+
+                #[cfg(any(
+                    feature = "fruits",
+                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+                ))]
+                {
+                    let mut curve_points = Vec::with_capacity(8);
+                    curve_points.push(pos);
+
+                    let mut curve_point_iter = next_field!(split.next(), curve points).split('|');
+
+                    let mut path_type: PathType =
+                        next_field!(curve_point_iter.next(), path kind).parse()?;
+
+                    for pos in curve_point_iter {
+                        let mut v = pos.split(':').map(str::parse);
+
+                        match (v.next(), v.next()) {
+                            (Some(Ok(x)), Some(Ok(y))) => curve_points.push(Pos2 { x, y }),
+                            _ => return Err(ParseError::InvalidCurvePoints),
+                        }
+                    }
+
+                    if self.version <= 6 && curve_points.len() >= 2 {
+                        if path_type == PathType::Linear {
+                            path_type = PathType::Bezier;
+                        }
+
+                        if curve_points.len() == 2
+                            && (pos == curve_points[0] || pos == curve_points[1])
+                        {
+                            path_type = PathType::Linear;
+                        }
+                    }
+
+                    // Reduce amount of curvepoints but keep the elements evenly spaced.
+                    // Necessary to handle maps like XNOR (2573164) that have
+                    // tens of thousands of curvepoints more efficiently.
+                    if curve_points.len() > CURVE_POINT_THRESHOLD {
+                        while curve_points.len() > CURVE_POINT_THRESHOLD {
+                            let last = curve_points[curve_points.len() - 1];
+                            let last_idx = (curve_points.len() - 1) / 2;
+
+                            for i in 1..=last_idx {
+                                curve_points.swap(i, 2 * i);
+                            }
+
+                            curve_points[last_idx] = last;
+                            curve_points.truncate(last_idx + 1);
+                        }
+                    }
+
+                    if curve_points.is_empty() {
+                        HitObjectKind::Circle
+                    } else {
+                        let repeats = next_field!(split.next(), repeats)
+                            .parse::<usize>()?
+                            .min(9000);
+
+                        let len = next_field!(split.next(), pixel len)
+                            .parse::<f32>()?
+                            .max(0.0)
+                            .min(MAX_COORDINATE_VALUE);
+
+                        HitObjectKind::Slider {
+                            repeats,
+                            pixel_len: len,
+                            curve_points,
+                            path_type,
+                        }
+                    }
+                }
+
+                #[cfg(not(any(
+                    feature = "fruits",
+                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+                )))]
+                {
+                    let repeats = next_field!(split.nth(1), repeats).parse::<usize>()?;
+                    let len: f32 = next_field!(split.next(), pixel len).parse()?;
+
+                    HitObjectKind::Slider {
+                        repeats,
+                        pixel_len: len,
+                    }
+                }
+            } else if kind & Self::SPINNER_FLAG > 0 {
+                self.n_spinners += 1;
+                let end_time = next_field!(split.next(), spinner endtime).parse()?;
+
+                HitObjectKind::Spinner { end_time }
+            } else if kind & Self::HOLD_FLAG > 0 {
+                self.n_sliders += 1;
+                let mut end = time;
+
+                if let Some(next) = split.next() {
+                    end = end.max(next_field!(next.split(':').next(), hold endtime).parse()?);
+                }
+
+                HitObjectKind::Hold { end_time: end }
+            } else {
+                return Err(ParseError::UnknownHitObjectKind);
+            };
+
+            self.hit_objects.push(HitObject {
+                pos,
+                start_time: time,
+                kind,
+                sound,
+            });
+
+            prev_time = time;
+            buf.clear();
+        }
+
+        // BUG: If [General] section comes after [HitObjects] then the mode
+        // won't be set yet so mania objects won't be sorted properly
+        if self.mode == GameMode::MNA {
+            // First a stable sort by time, then the legacy sort for correct position order
+            self.hit_objects
+                .sort_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal));
+
+            legacy_sort(&mut self.hit_objects);
+        } else if unsorted {
+            sort!(self.hit_objects);
+        }
+
+        Ok(empty)
+    }
+
     #[inline]
     pub fn attributes(&self) -> BeatmapAttributes {
         BeatmapAttributes::new(self.ar, self.od, self.cs, self.hp)
@@ -654,16 +1130,17 @@ mod tests {
 
     #[test]
     fn parsing() {
-        let map_id = if cfg!(feature = "osu") {
-            797130
-        } else if cfg!(feature = "mania") {
-            1355822
-        } else if cfg!(feature = "fruits") {
-            1977380
-        } else {
-            110219
-        };
+        println!("test parse");
+        parse(map_id());
 
+        if cfg!(feature = "async-std") {
+            println!("test parse async");
+            async_std::task::block_on(parse_async(map_id()))
+        }
+    }
+
+    fn parse(map_id: i32) {
+        println!("map_id: {}", map_id);
         let file = match File::open(format!("./maps/{}.osu", map_id)) {
             Ok(file) => file,
             Err(why) => panic!("Could not read file: {}", why),
@@ -674,6 +1151,39 @@ mod tests {
             Err(why) => panic!("Error while parsing map: {}", why),
         };
 
+        print_info(map)
+    }
+
+    async fn parse_async(map_id: i32) {
+        use async_std::fs::File;
+
+        println!("map_id: {}", map_id);
+        let file = match File::open(format!("./maps/{}.osu", map_id)).await {
+            Ok(file) => file,
+            Err(why) => panic!("Could not read file: {}", why),
+        };
+
+        let map = match Beatmap::parse_async(file).await {
+            Ok(map) => map,
+            Err(why) => panic!("Error while parsing map: {}", why),
+        };
+
+        print_info(map)
+    }
+
+    fn map_id() -> i32 {
+        if cfg!(feature = "osu") {
+            797130
+        } else if cfg!(feature = "mania") {
+            1355822
+        } else if cfg!(feature = "fruits") {
+            1977380
+        } else {
+            110219
+        }
+    }
+
+    fn print_info(map: Beatmap) {
         println!("Mode: {}", map.mode as u8);
         println!("n_circles: {}", map.n_circles);
         println!("n_sliders: {}", map.n_sliders);

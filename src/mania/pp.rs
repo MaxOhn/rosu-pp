@@ -136,6 +136,11 @@ impl<'m> ManiaPP<'m> {
         }
     }
 
+    #[inline]
+    pub async fn calculate_async(self) -> PpResult {
+        self.calculate()
+    }
+
     fn compute_strain(&self, score: f32, stars: f32) -> f32 {
         let mut strain_value = (5.0 * (stars / 0.2).max(1.0) - 4.0).powf(2.2) / 135.0;
 

@@ -5,6 +5,7 @@
 A standalone crate to calculate star ratings and performance points for all [osu!](https://osu.ppy.sh/home) gamemodes.
 
 Conversions are generally not supported.
+Async is supported.
 
 ### Usage
 
@@ -58,6 +59,34 @@ let max_pp = map.max_pp(16).pp();
 println!("Stars: {} | Max PP: {}", stars, max_pp);
 ```
 
+### With async
+Need to enable `async_std` in Cargo.toml to use async parsing `Beatmap::parse_async`.
+
+```rust
+use async_std::fs::File;
+
+// Async read the map
+let file = match File::open("/path/to/file.osu").await {
+    Ok(file) => file,
+    Err(why) => panic!("Could not open file: {}", why),
+};
+
+// Async Parse the map
+let map = match Beatmap::parse_async(file).await {
+    Ok(map) => map,
+    Err(why) => panic!("Error while parsing map: {}", why),
+};
+
+let result = map.pp()
+    .mods(24) // HDHR
+    .combo(1234)
+    .misses(2)
+    .accuracy(99.2)
+    .calculate_async().await;
+
+println!("PP: {}", result.pp());
+```
+
 ### osu!standard versions
 
 - `all_included`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Most precise; Con: Least performant.
@@ -78,6 +107,7 @@ println!("Stars: {} | Max PP: {}", stars, max_pp);
 | `no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency but consider sliders. Solid middleground between performance and precision, hence the default version. |       
 | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
 | `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
+| `async_std` | Enable async beatmap parsing with `async-std` |
 
 ### Roadmap
 

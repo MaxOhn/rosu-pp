@@ -67,6 +67,66 @@ fn mania() {
     }
 }
 
+#[cfg(feature = "async_std")]
+#[test]
+fn mania_async() {
+    use async_std::{fs::File, task};
+
+    task::block_on(async {
+        let star_margin = 0.00001;
+        let pp_margin = 0.00001;
+
+        for result in RESULTS {
+            let MapResult {
+                map_id,
+                mods,
+                stars,
+                pp,
+            } = result;
+
+            let file = match File::open(format!("./maps/{}.osu", map_id)).await {
+                Ok(file) => file,
+                Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
+            };
+
+            let map = match Beatmap::parse_async(file).await {
+                Ok(map) => map,
+                Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+            };
+
+            let result = rosu_pp::ManiaPP::new(&map).mods(*mods).calculate();
+
+            assert!(
+                (result.stars() - stars).abs() < star_margin * stars,
+                "\nStars:\n\
+                Calculated: {calculated} | Expected: {expected}\n \
+                => {margin} margin ({allowed} allowed)\n\
+                [map {map} | mods {mods}]\n",
+                calculated = result.stars(),
+                expected = stars,
+                margin = (result.stars() - stars).abs(),
+                allowed = star_margin * stars,
+                map = map_id,
+                mods = mods
+            );
+
+            assert!(
+                (result.pp() - pp).abs() < pp_margin * pp,
+                "\nPP:\n\
+                Calculated: {calculated} | Expected: {expected}\n \
+                => {margin} margin ({allowed} allowed)\n\
+                [map {map} | mods {mods}]\n",
+                calculated = result.pp(),
+                expected = pp,
+                margin = (result.pp() - pp).abs(),
+                allowed = pp_margin * pp,
+                map = map_id,
+                mods = mods
+            );
+        }
+    })
+}
+
 const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1355822,

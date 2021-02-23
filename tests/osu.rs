@@ -77,6 +77,76 @@ fn osu() {
     }
 }
 
+#[cfg(feature = "async_std")]
+#[test]
+fn osu_async() {
+    use async_std::{fs::File, task};
+
+    task::block_on(async {
+        let margin = if cfg!(feature = "no_sliders_no_leniency") {
+            0.0075
+        } else if cfg!(feature = "no_leniency") {
+            0.0025
+        } else if cfg!(feature = "all_included") {
+            0.001
+        } else {
+            unreachable!()
+        };
+
+        let star_margin = margin;
+        let pp_margin = margin;
+
+        for result in RESULTS {
+            let MapResult {
+                map_id,
+                mods,
+                stars,
+                pp,
+            } = result;
+
+            let file = match File::open(format!("./maps/{}.osu", map_id)).await {
+                Ok(file) => file,
+                Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
+            };
+
+            let map = match Beatmap::parse_async(file).await {
+                Ok(map) => map,
+                Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+            };
+
+            let result = rosu_pp::OsuPP::new(&map).mods(*mods).calculate();
+
+            assert!(
+                (result.stars() - stars).abs() < star_margin * stars,
+                "\nStars:\n\
+                Calculated: {calculated} | Expected: {expected}\n \
+                => {margin} margin ({allowed} allowed)\n\
+                [map {map} | mods {mods}]\n",
+                calculated = result.stars(),
+                expected = stars,
+                margin = (result.stars() - stars).abs(),
+                allowed = star_margin * stars,
+                map = map_id,
+                mods = mods
+            );
+
+            assert!(
+                (result.pp() - pp).abs() < pp_margin * pp,
+                "\nPP:\n\
+                Calculated: {calculated} | Expected: {expected}\n \
+                => {margin} margin ({allowed} allowed)\n\
+                [map {map} | mods {mods}]\n",
+                calculated = result.pp(),
+                expected = pp,
+                margin = (result.pp() - pp).abs(),
+                allowed = pp_margin * pp,
+                map = map_id,
+                mods = mods
+            );
+        }
+    })
+}
+
 const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1851299,
