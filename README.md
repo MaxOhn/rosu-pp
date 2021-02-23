@@ -4,8 +4,9 @@
 
 A standalone crate to calculate star ratings and performance points for all [osu!](https://osu.ppy.sh/home) gamemodes.
 
-Conversions are generally not supported.
-Async is supported.
+Conversions between gamemodes are generally not supported.
+
+Async is supported through features, see below.
 
 ### Usage
 
@@ -72,7 +73,7 @@ let file = match File::open("/path/to/file.osu").await {
 };
 
 // Parse the map asynchronously
-let map = match Beatmap::parse_async(file).await {
+let map = match Beatmap::parse(file).await {
     Ok(map) => map,
     Err(why) => panic!("Error while parsing map: {}", why),
 };
