@@ -1155,13 +1155,15 @@ mod tests {
     }
 
     async fn parse_async(map_id: i32) {
+        use async_std::fs::File;
+
         println!("map_id: {}", map_id);
-        let file = match File::open(format!("./maps/{}.osu", map_id)) {
+        let file = match File::open(format!("./maps/{}.osu", map_id)).await {
             Ok(file) => file,
             Err(why) => panic!("Could not read file: {}", why),
         };
 
-        let map = match Beatmap::parse(file) {
+        let map = match Beatmap::parse_async(file).await {
             Ok(map) => map,
             Err(why) => panic!("Error while parsing map: {}", why),
         };
