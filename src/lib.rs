@@ -6,10 +6,11 @@
 //!
 //! ## Usage
 //!
-//! ```rust,no_run
+//! ```no_run
 //! use std::fs::File;
 //! use rosu_pp::{Beatmap, BeatmapExt};
 //!
+//! # /*
 //! let file = match File::open("/path/to/file.osu") {
 //!     Ok(file) => file,
 //!     Err(why) => panic!("Could not open file: {}", why),
@@ -20,6 +21,7 @@
 //!     Ok(map) => map,
 //!     Err(why) => panic!("Error while parsing map: {}", why),
 //! };
+//! # */ let map = Beatmap::default();
 //!
 //! // If `BeatmapExt` is included, you can make use of
 //! // some methods on `Beatmap` to make your life simpler.
@@ -56,6 +58,40 @@
 //! println!("Stars: {} | Max PP: {}", stars, max_pp);
 //! ```
 //!
+//! ## With async
+//! If either the `async_tokio` or `async_std` feature is enabled, beatmap parsing will be async.
+//!
+//! ```no_run
+//! use rosu_pp::{Beatmap, BeatmapExt};
+//! # /*
+//! use async_std::fs::File;
+//! # */
+//! // use tokio::fs::File;
+//!
+//! # /*
+//! let file = match File::open("/path/to/file.osu").await {
+//!     Ok(file) => file,
+//!     Err(why) => panic!("Could not open file: {}", why),
+//! };
+//!
+//! // Parse the map asynchronously
+//! let map = match Beatmap::parse(file).await {
+//!     Ok(map) => map,
+//!     Err(why) => panic!("Error while parsing map: {}", why),
+//! };
+//! # */ let map = Beatmap::default();
+//!
+//! // The rest stays the same
+//! let result = map.pp()
+//!     .mods(24) // HDHR
+//!     .combo(1234)
+//!     .misses(2)
+//!     .accuracy(99.2)
+//!     .calculate();
+//!
+//! println!("PP: {}", result.pp());
+//! ```
+//!
 //! ## osu!standard versions
 //!
 //! - `all_included`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Most precise; Con: Least performant.
@@ -76,6 +112,8 @@
 //! | `no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency but consider sliders. Solid middleground between performance and precision, hence the default version. |
 //! | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
 //! | `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
+//! | `async_tokio` | Beatmap parsing will be async through a [tokio](https://github.com/tokio-rs/tokio) runtime |
+//! | `async_std` | Beatmap parsing will be async through an [async-std](https://github.com/async-rs/async-std) runtime |
 //!
 //! ## Roadmap
 //!
@@ -94,6 +132,7 @@
 //! ---
 //! - \[x\] refactoring
 //! - \[x\] benchmarking
+//! - \[x\] async parsing
 
 #[cfg(feature = "fruits")]
 #[cfg_attr(docsrs, doc(cfg(feature = "fruits")))]
@@ -261,6 +300,7 @@ impl BeatmapExt for Beatmap {
         }
     }
 
+    #[inline]
     fn pp(&self) -> AnyPP {
         AnyPP::new(self)
     }
@@ -434,3 +474,8 @@ compile_error!("Only one of the features `no_leniency`, `no_sliders_no_leniency`
     )
 ))]
 compile_error!("The features `no_leniency`, `no_sliders_no_leniency`, and `all_included` should only be enabled in combination with the `osu` feature");
+
+#[cfg(all(feature = "async_tokio", feature = "async_std"))]
+compile_error!(
+    "Only one of the two async features `async_tokio` and `async_std` should be enabled"
+);

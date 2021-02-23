@@ -60,29 +60,30 @@ println!("Stars: {} | Max PP: {}", stars, max_pp);
 ```
 
 ### With async
-Need to enable `async_std` in Cargo.toml to use async parsing `Beatmap::parse_async`.
+If either the `async_tokio` or `async_std` feature is enabled, beatmap parsing will be async.
 
 ```rust
 use async_std::fs::File;
+// use tokio::fs::File;
 
-// Async read the map
 let file = match File::open("/path/to/file.osu").await {
     Ok(file) => file,
     Err(why) => panic!("Could not open file: {}", why),
 };
 
-// Async Parse the map
+// Parse the map asynchronously
 let map = match Beatmap::parse_async(file).await {
     Ok(map) => map,
     Err(why) => panic!("Error while parsing map: {}", why),
 };
 
+// The rest stays the same
 let result = map.pp()
     .mods(24) // HDHR
     .combo(1234)
     .misses(2)
     .accuracy(99.2)
-    .calculate_async().await;
+    .calculate();
 
 println!("PP: {}", result.pp());
 ```
@@ -107,7 +108,26 @@ println!("PP: {}", result.pp());
 | `no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency but consider sliders. Solid middleground between performance and precision, hence the default version. |       
 | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
 | `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
-| `async_std` | Enable async beatmap parsing with `async-std` |
+| `async_tokio` | Beatmap parsing will be async through a [tokio](https://github.com/tokio-rs/tokio) runtime |
+| `async_std` | Beatmap parsing will be async through an [async-std](https://github.com/async-rs/async-std) runtime |
+
+### Benchmarks
+
+Comparing the PP calculation speed between [osu-perf](https://gitlab.com/JackRedstonia/osu-perf/), an [oppai-ng](https://github.com/Francesco149/oppai-ng) rust binding, and rosu-pp's `no_sliders_no_leniency`:
+
+<img src="./benchmark_results/crates_pp_calc.svg">
+
+Comparing the PP calculation speed between rosu-pp's `all_included`, `no_leniency`, and `no_sliders_no_leniency` versions:
+
+<img src="./benchmark_results/rosu_pp_calc.svg">
+
+Comparing the PP (in)accuracy between rosu-pp's `all_included`, `no_leniency`, and `no_sliders_no_leniency` versions:
+
+<img src="./benchmark_results/pp_inaccuracy.svg">
+
+Comparing the stars (in)accuracy between rosu-pp's `all_included`, `no_leniency`, and `no_sliders_no_leniency` versions:
+
+<img src="./benchmark_results/stars_inaccuracy.svg">
 
 ### Roadmap
 
@@ -126,3 +146,4 @@ println!("PP: {}", result.pp());
 ---
 - \[x\] refactoring
 - \[x\] benchmarking
+- \[x\] async
