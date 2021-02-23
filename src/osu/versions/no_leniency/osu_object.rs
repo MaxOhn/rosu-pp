@@ -1,7 +1,11 @@
 use super::super::super::DifficultyAttributes;
 use super::slider_state::SliderState;
 
-use crate::{curve::Curve, Beatmap, HitObject, HitObjectKind, PathType, Pos2};
+use crate::{
+    curve::Curve,
+    parse::{HitObject, HitObjectKind, PathType, Pos2},
+    Beatmap,
+};
 
 const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 

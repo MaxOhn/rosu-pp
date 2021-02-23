@@ -3,7 +3,7 @@
     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
 ))]
 
-use crate::{math_util, Pos2};
+use crate::{math_util, parse::Pos2};
 
 const SLIDER_QUALITY: f32 = 50.0;
 

@@ -3,7 +3,7 @@
     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
 ))]
 
-use crate::Pos2;
+use crate::parse::Pos2;
 
 #[inline]
 pub(crate) fn cpn(mut p: i32, n: i32) -> f32 {

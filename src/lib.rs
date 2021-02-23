@@ -150,7 +150,7 @@ pub mod osu;
 #[cfg_attr(docsrs, doc(cfg(feature = "taiko")))]
 pub mod taiko;
 
-mod parse;
+pub mod parse;
 
 mod pp;
 pub use pp::{AnyPP, AttributeProvider};
@@ -178,10 +178,7 @@ pub use osu::OsuPP;
 pub use taiko::TaikoPP;
 
 pub use mods::Mods;
-pub use parse::{
-    Beatmap, BeatmapAttributes, DifficultyPoint, GameMode, HitObject, HitObjectKind, HitSound,
-    ParseError, ParseResult, PathType, Pos2, TimingPoint,
-};
+pub use parse::{Beatmap, BeatmapAttributes, GameMode, ParseError, ParseResult};
 
 pub trait BeatmapExt {
     /// Calculate the stars and other attributes of a beatmap which are required for pp calculation.

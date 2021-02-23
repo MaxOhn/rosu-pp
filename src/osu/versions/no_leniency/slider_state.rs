@@ -44,7 +44,10 @@ impl<'p> SliderState<'p> {
 
 #[cfg(test)]
 mod test {
-    use crate::{Beatmap, DifficultyPoint, TimingPoint};
+    use crate::{
+        parse::{DifficultyPoint, TimingPoint},
+        Beatmap,
+    };
 
     use super::SliderState;
 

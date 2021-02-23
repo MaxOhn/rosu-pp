@@ -1,5 +1,5 @@
 use super::{closest_rhythm, HitObjectRhythm};
-use crate::HitObject;
+use crate::parse::HitObject;
 
 #[derive(Clone, Debug)]
 pub(crate) struct DifficultyObject<'o> {

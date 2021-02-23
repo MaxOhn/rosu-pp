@@ -5,7 +5,7 @@
 #![cfg(feature = "all_included")]
 
 use super::super::DifficultyAttributes;
-use crate::Pos2;
+use crate::parse::Pos2;
 
 mod difficulty_object;
 mod osu_object;

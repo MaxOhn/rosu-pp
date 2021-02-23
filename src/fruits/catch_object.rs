@@ -1,4 +1,4 @@
-use crate::Pos2;
+use crate::parse::Pos2;
 
 const PLAYFIELD_WIDTH: f32 = 512.0;
 const BASE_SPEED: f32 = 1.0;

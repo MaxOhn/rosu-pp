@@ -6,7 +6,7 @@ mod strain;
 pub use pp::*;
 use strain::Strain;
 
-use crate::{Beatmap, GameMode, HitObject, Mods, StarResult, Strains};
+use crate::{parse::HitObject, Beatmap, GameMode, Mods, StarResult, Strains};
 
 const SECTION_LEN: f32 = 400.0;
 const STAR_SCALING_FACTOR: f32 = 0.018;

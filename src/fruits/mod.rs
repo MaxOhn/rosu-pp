@@ -12,7 +12,11 @@ use movement::Movement;
 pub use pp::*;
 use slider_state::SliderState;
 
-use crate::{curve::Curve, Beatmap, HitObjectKind, Mods, PathType, Pos2, StarResult, Strains};
+use crate::{
+    curve::Curve,
+    parse::{HitObjectKind, PathType, Pos2},
+    Beatmap, Mods, StarResult, Strains,
+};
 
 use std::convert::identity;
 

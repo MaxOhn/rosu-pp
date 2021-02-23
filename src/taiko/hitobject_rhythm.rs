@@ -1,4 +1,4 @@
-use crate::HitObject;
+use crate::parse::HitObject;
 
 use std::cmp::Ordering;
 

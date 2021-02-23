@@ -16,7 +16,10 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, HitObject, HitObjectKind, Mods, StarResult, Strains};
+use crate::{
+    parse::{HitObject, HitObjectKind},
+    Beatmap, Mods, StarResult, Strains,
+};
 
 use std::borrow::Cow;
 
