@@ -1,5 +1,7 @@
 ## Upcoming
 
+- Async beatmap parsing
+
 # v0.1.1
 
 - parse:
