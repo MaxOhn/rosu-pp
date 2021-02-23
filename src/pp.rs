@@ -112,8 +112,8 @@ impl<'m> AnyPP<'m> {
     /// be sure to call this last before calling `calculate`.
     ///
     /// Irrelevant for osu!mania.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(any(feature = "fruits", feature = "osu", feature = "taiko"))]
     pub fn accuracy(self, acc: f32) -> Self {
         match self {
             #[cfg(feature = "fruits")]
@@ -130,8 +130,8 @@ impl<'m> AnyPP<'m> {
     /// Specify the amount of misses of a play.
     ///
     /// Irrelevant for osu!mania.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(any(feature = "fruits", feature = "osu", feature = "taiko"))]
     pub fn misses(self, misses: usize) -> Self {
         match self {
             #[cfg(feature = "fruits")]
@@ -148,8 +148,8 @@ impl<'m> AnyPP<'m> {
     /// Specify the max combo of the play.
     ///
     /// Irrelevant for osu!mania.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(any(feature = "fruits", feature = "osu", feature = "taiko"))]
     pub fn combo(self, combo: usize) -> Self {
         match self {
             #[cfg(feature = "fruits")]
@@ -166,8 +166,8 @@ impl<'m> AnyPP<'m> {
     /// Specify the amount of 300s of a play.
     ///
     /// Irrelevant for osu!mania.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(any(feature = "fruits", feature = "osu", feature = "taiko"))]
     pub fn n300(self, n300: usize) -> Self {
         match self {
             #[cfg(feature = "fruits")]
@@ -184,8 +184,8 @@ impl<'m> AnyPP<'m> {
     /// Specify the amount of 100s of a play.
     ///
     /// Irrelevant for osu!mania.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(any(feature = "fruits", feature = "osu", feature = "taiko"))]
     pub fn n100(self, n100: usize) -> Self {
         match self {
             #[cfg(feature = "fruits")]
@@ -202,8 +202,8 @@ impl<'m> AnyPP<'m> {
     /// Specify the amount of 50s of a play.
     ///
     /// Irrelevant for osu!mania and osu!taiko.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(any(feature = "fruits", feature = "osu"))]
     pub fn n50(self, n50: usize) -> Self {
         match self {
             #[cfg(feature = "fruits")]
@@ -221,10 +221,11 @@ impl<'m> AnyPP<'m> {
     ///
     /// This value is only relevant for osu!ctb for which it represent
     /// the amount of tiny droplet misses.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(feature = "fruits")]
     pub fn n_katu(self, n_katu: usize) -> Self {
         match self {
+            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.tiny_droplet_misses(n_katu)),
             #[cfg(feature = "mania")]
             Self::Mania(_) => self,
@@ -240,8 +241,8 @@ impl<'m> AnyPP<'m> {
     /// This value is only relevant for osu!mania.
     ///
     /// On `NoMod` its between 0 and 1,000,000, on `Easy` between 0 and 500,000, etc.
+    #[allow(unused_variables)]
     #[inline]
-    #[cfg(feature = "mania")]
     pub fn score(self, score: u32) -> Self {
         match self {
             #[cfg(feature = "fruits")]
