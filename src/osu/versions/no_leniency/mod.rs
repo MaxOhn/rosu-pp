@@ -270,35 +270,3 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         strains,
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::super::super::OsuPP;
-    use crate::Beatmap;
-    use std::fs::File;
-
-    #[test]
-    #[ignore]
-    fn no_leniency_single() {
-        let file = match File::open("./maps/2573164.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        let result = OsuPP::new(&map)
-            .mods(0)
-            // .n300(1206)
-            // .n100(15)
-            // .n50(0)
-            // .combo(1643)
-            .calculate();
-
-        println!("Stars: {}", result.stars());
-        println!("PP: {}", result.pp());
-    }
-}

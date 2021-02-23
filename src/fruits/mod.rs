@@ -626,35 +626,3 @@ pub struct DifficultyAttributes {
     pub n_droplets: usize,
     pub n_tiny_droplets: usize,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs::File;
-
-    #[test]
-    #[ignore]
-    fn fruits_single() {
-        let file = match File::open("./maps/1587421.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        let result = FruitsPP::new(&map)
-            .mods(0)
-            .combo(266)
-            .fruits(644)
-            .droplets(33)
-            .tiny_droplet_misses(12)
-            .misses(10)
-            .calculate();
-
-        println!("Stars: {}", result.stars());
-        println!("PP: {}", result.pp());
-    }
-}

@@ -439,30 +439,3 @@ const OSU_AR_MIN: f32 = 1800.0;
 fn difficulty_range_ar(ar: f32) -> f32 {
     crate::difficulty_range(ar, OSU_AR_MAX, OSU_AR_AVG, OSU_AR_MIN)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::super::super::OsuPP;
-    use crate::Beatmap;
-    use std::fs::File;
-
-    #[test]
-    #[ignore]
-    fn all_included_single() {
-        // TOCHECK: 114708, 1208872, 1322261
-        let file = match File::open("./maps/1295309.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        let result = OsuPP::new(&map).mods(0).calculate();
-
-        println!("Stars: {}", result.stars());
-        println!("PP: {}", result.pp());
-    }
-}
