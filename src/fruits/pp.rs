@@ -316,6 +316,11 @@ impl<'m> FruitsPP<'m> {
     }
 
     #[inline]
+    pub async fn calculate_async(self) -> PpResult {
+        self.calculate()
+    }
+
+    #[inline]
     fn combo_hits(&self) -> usize {
         self.n_fruits.unwrap_or(0) + self.n_droplets.unwrap_or(0) + self.n_misses
     }
