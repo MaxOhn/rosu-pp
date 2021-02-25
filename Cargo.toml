@@ -1,6 +1,6 @@
 [package]
 name = "rosu-pp"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["MaxOhn <ohn.m@hotmail.de>"]
 edition = "2018"
 license = "MIT"
@@ -11,7 +11,7 @@ description = "osu! difficulty and pp calculation for all modes"
 keywords = ["osu", "pp", "stars", "async"]
 
 [features]
-default = ["osu", "taiko", "fruits", "mania", "no_leniency", "async_tokio"]
+default = ["osu", "taiko", "fruits", "mania", "no_leniency"]
 
 # game modes
 osu = []
