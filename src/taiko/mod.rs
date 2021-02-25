@@ -265,28 +265,3 @@ fn norm(p: f32, a: f32, b: f32, c: f32) -> f32 {
 pub struct DifficultyAttributes {
     pub stars: f32,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs::File;
-
-    #[test]
-    #[ignore]
-    fn taiko_single() {
-        let file = match File::open("./maps/168450.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        let result = TaikoPP::new(&map).mods(64).calculate();
-
-        println!("Stars: {}", result.stars());
-        println!("PP: {}", result.pp());
-    }
-}

@@ -1,6 +1,9 @@
 #![cfg(any(feature = "osu", feature = "fruits"))]
 
-use crate::{Beatmap, DifficultyPoint, TimingPoint};
+use crate::{
+    parse::{DifficultyPoint, TimingPoint},
+    Beatmap,
+};
 
 use std::slice::Iter;
 
@@ -85,7 +88,10 @@ impl<'p> Iterator for ControlPointIter<'p> {
 
 #[cfg(test)]
 mod test {
-    use crate::{Beatmap, ControlPoint, ControlPointIter, DifficultyPoint, TimingPoint};
+    use crate::{
+        parse::{DifficultyPoint, TimingPoint},
+        Beatmap, ControlPoint, ControlPointIter,
+    };
 
     #[test]
     fn control_point_iter() {

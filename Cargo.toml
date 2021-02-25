@@ -1,6 +1,6 @@
 [package]
 name = "rosu-pp"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["MaxOhn <ohn.m@hotmail.de>"]
 edition = "2018"
 license = "MIT"
@@ -8,20 +8,36 @@ readme = "README.md"
 repository = "https://github.com/MaxOhn/rosu-pp"
 documentation = "https://docs.rs/rosu-pp/"
 description = "osu! difficulty and pp calculation for all modes"
-keywords = ["osu", "pp", "stars", "async", "async-std"]
+keywords = ["osu", "pp", "stars", "async"]
 
 [features]
-default = ["osu", "taiko", "fruits", "mania", "no_leniency", "async_std"]
+default = ["osu", "taiko", "fruits", "mania", "no_leniency"]
 
+# game modes
 osu = []
 taiko = []
 fruits = []
 mania = []
 
+# osu!standard version
 all_included = []
 no_leniency = []
 no_sliders_no_leniency = []
-async_std = ["async-std"]
 
-[dependencies]
-async-std = { version = "1.9.0", optional = true }
+# async version
+async_std = ["async-std"]
+async_tokio = ["tokio"]
+
+[dependencies.async-std]
+version = "1.9"
+optional = true
+
+[dependencies.tokio]
+version = "1.2"
+optional = true
+default-features = false
+features = ["io-util"]
+
+[dev-dependencies.tokio]
+version = "1.2"
+features = ["fs", "rt-multi-thread"]

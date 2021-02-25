@@ -1,4 +1,4 @@
-use crate::{HitObject, HitSound};
+use crate::parse::{HitObject, HitSound};
 
 pub(crate) trait Rim {
     fn is_rim(&self) -> bool;

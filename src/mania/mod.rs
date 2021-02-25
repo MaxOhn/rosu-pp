@@ -6,7 +6,7 @@ mod strain;
 pub use pp::*;
 use strain::Strain;
 
-use crate::{Beatmap, GameMode, HitObject, Mods, StarResult, Strains};
+use crate::{parse::HitObject, Beatmap, GameMode, Mods, StarResult, Strains};
 
 const SECTION_LEN: f32 = 400.0;
 const STAR_SCALING_FACTOR: f32 = 0.018;
@@ -167,29 +167,4 @@ impl<'o> DifficultyHitObject<'o> {
 #[derive(Clone, Debug, Default)]
 pub struct DifficultyAttributes {
     pub stars: f32,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs::File;
-
-    #[test]
-    #[ignore]
-    fn mania_single() {
-        let file = match File::open("./maps/1355822.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        let result = ManiaPP::new(&map).mods(256).calculate();
-
-        println!("Stars: {}", result.stars());
-        println!("PP: {}", result.pp());
-    }
 }

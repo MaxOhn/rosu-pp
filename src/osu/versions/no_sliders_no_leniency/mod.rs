@@ -16,7 +16,10 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, HitObject, HitObjectKind, Mods, StarResult, Strains};
+use crate::{
+    parse::{HitObject, HitObjectKind},
+    Beatmap, Mods, StarResult, Strains,
+};
 
 use std::borrow::Cow;
 
@@ -280,31 +283,5 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     Strains {
         section_length: section_len,
         strains,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::super::super::OsuPP;
-    use crate::Beatmap;
-    use std::fs::File;
-
-    #[test]
-    #[ignore]
-    fn no_sliders_single() {
-        let file = match File::open("./maps/1851299.osu") {
-            Ok(file) => file,
-            Err(why) => panic!("Could not open file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        let result = OsuPP::new(&map).mods(2).calculate();
-
-        println!("Stars: {}", result.stars());
-        println!("PP: {}", result.pp());
     }
 }

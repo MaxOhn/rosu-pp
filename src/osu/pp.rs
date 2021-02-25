@@ -261,11 +261,6 @@ impl<'m> OsuPP<'m> {
         unreachable!()
     }
 
-    #[inline]
-    pub async fn calculate_async(self) -> PpResult {
-        self.calculate()
-    }
-
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
     ///

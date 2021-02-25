@@ -1,6 +1,6 @@
 use super::{LimitedQueue, Rim};
 
-use crate::{Beatmap, HitObject};
+use crate::{parse::HitObject, Beatmap};
 
 const ROLL_MIN_REPETITIONS: usize = 12;
 const TL_MIN_REPETITIONS: isize = 16;
