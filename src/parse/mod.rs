@@ -37,8 +37,8 @@ macro_rules! sort {
 }
 
 macro_rules! next_field {
-    ($opt:expr, $($val:tt)*) => {
-        $opt.ok_or_else(|| ParseError::MissingField(stringify!($($val)*)))?
+    ($opt:expr, $err:literal) => {
+        $opt.ok_or_else(|| ParseError::MissingField($err))?
     };
 }
 
@@ -172,24 +172,24 @@ macro_rules! parse_general_body {
 
 macro_rules! parse_general {
     ($reader:ident<$inner:ident>) => {
-        fn parse_difficulty<R: $inner>(
+        fn parse_general<R: $inner>(
             &mut self,
             reader: &mut $reader<R>,
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_difficulty_body!(self, reader, buf, section)
+            parse_general_body!(self, reader, buf, section)
         }
     };
 
     (async $reader:ident<$inner:ident>) => {
-        async fn parse_difficulty<R: $inner + Unpin>(
+        async fn parse_general<R: $inner + Unpin>(
             &mut self,
             reader: &mut $reader<R>,
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_difficulty_body!(self, reader, buf, section)
+            parse_general_body!(self, reader, buf, section)
         }
     };
 }
@@ -230,12 +230,12 @@ macro_rules! parse_difficulty_body {
             $buf.clear();
         }
 
-        $self.od = next_field!(od, od);
-        $self.cs = next_field!(cs, cs);
-        $self.hp = next_field!(hp, hp);
+        $self.od = next_field!(od, "od");
+        $self.cs = next_field!(cs, "cs");
+        $self.hp = next_field!(hp, "hp");
         $self.ar = ar.unwrap_or($self.od);
-        $self.sv = next_field!(sv, sv);
-        $self.tick_rate = next_field!(tick_rate, sv);
+        $self.sv = next_field!(sv, "sv");
+        $self.tick_rate = next_field!(tick_rate, "sv");
 
         Ok(empty)
     }};
@@ -243,24 +243,24 @@ macro_rules! parse_difficulty_body {
 
 macro_rules! parse_difficulty {
     ($reader:ident<$inner:ident>) => {
-        fn parse_general<R: $inner>(
+        fn parse_difficulty<R: $inner>(
             &mut self,
             reader: &mut $reader<R>,
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_general_body!(self, reader, buf, section)
+            parse_difficulty_body!(self, reader, buf, section)
         }
     };
 
     (async $reader:ident<$inner:ident>) => {
-        async fn parse_general<R: $inner + Unpin>(
+        async fn parse_difficulty<R: $inner + Unpin>(
             &mut self,
             reader: &mut $reader<R>,
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_general_body!(self, reader, buf, section)
+            parse_difficulty_body!(self, reader, buf, section)
         }
     };
 }
@@ -306,12 +306,14 @@ macro_rules! parse_timingpoints_body {
 
             let mut split = line.split(',');
 
-            let time = next_field!(split.next(), timing point time)
+            let time = next_field!(split.next(), "timing point time")
                 .trim()
                 .parse::<f32>()?;
             validate_float!(time);
 
-            let beat_len = next_field!(split.next(), beat len).trim().parse::<f32>()?;
+            let beat_len = next_field!(split.next(), "beat len")
+                .trim()
+                .parse::<f32>()?;
 
             if beat_len < 0.0 {
                 let point = DifficultyPoint {
@@ -383,7 +385,6 @@ macro_rules! parse_timingpoints {
 
             #[cfg(any(feature = "osu", feature = "fruits"))]
             parse_timingpoints_body!(self, reader, buf, section)
-
         }
     };
 }
@@ -408,11 +409,11 @@ macro_rules! parse_hitobjects_body {
             let mut split = line.split(',');
 
             let pos = Pos2 {
-                x: next_field!(split.next(), x position).parse()?,
-                y: next_field!(split.next(), y position).parse()?,
+                x: next_field!(split.next(), "x position").parse()?,
+                y: next_field!(split.next(), "y position").parse()?,
             };
 
-            let time = next_field!(split.next(), hitobject time)
+            let time = next_field!(split.next(), "hitobject time")
                 .trim()
                 .parse::<f32>()?;
 
@@ -422,7 +423,7 @@ macro_rules! parse_hitobjects_body {
                 unsorted = true;
             }
 
-            let kind: u8 = next_field!(split.next(), hitobject kind).parse()?;
+            let kind: u8 = next_field!(split.next(), "hitobject kind").parse()?;
             let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
 
             let kind = if kind & Self::CIRCLE_FLAG > 0 {
@@ -437,13 +438,13 @@ macro_rules! parse_hitobjects_body {
                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
                 ))]
                 {
-                    let mut curve_points = Vec::with_capacity(8);
+                    let mut curve_points = Vec::with_capacity(4);
                     curve_points.push(pos);
 
-                    let mut curve_point_iter = next_field!(split.next(), curve points).split('|');
+                    let mut curve_point_iter = next_field!(split.next(), "curve points").split('|');
 
                     let mut path_type: PathType =
-                        next_field!(curve_point_iter.next(), path kind).parse()?;
+                        next_field!(curve_point_iter.next(), "path kind").parse()?;
 
                     for pos in curve_point_iter {
                         let mut v = pos.split(':').map(str::parse);
@@ -457,9 +458,7 @@ macro_rules! parse_hitobjects_body {
                     if $self.version <= 6 && curve_points.len() >= 2 {
                         if path_type == PathType::Linear {
                             path_type = PathType::Bezier;
-                        }
-
-                        if curve_points.len() == 2
+                        } else if curve_points.len() == 2
                             && (pos == curve_points[0] || pos == curve_points[1])
                         {
                             path_type = PathType::Linear;
@@ -467,37 +466,35 @@ macro_rules! parse_hitobjects_body {
                     }
 
                     // Reduce amount of curvepoints but keep the elements evenly spaced.
-                    // Necessary to handle maps like XNOR (2573164) that have
+                    // Necessary to handle maps like XNOR (2573164) which have
                     // tens of thousands of curvepoints more efficiently.
-                    if curve_points.len() > CURVE_POINT_THRESHOLD {
-                        while curve_points.len() > CURVE_POINT_THRESHOLD {
-                            let last = curve_points[curve_points.len() - 1];
-                            let last_idx = (curve_points.len() - 1) / 2;
+                    while curve_points.len() > CURVE_POINT_THRESHOLD {
+                        let last = curve_points[curve_points.len() - 1];
+                        let last_idx = (curve_points.len() - 1) / 2;
 
-                            for i in 1..=last_idx {
-                                curve_points.swap(i, 2 * i);
-                            }
-
-                            curve_points[last_idx] = last;
-                            curve_points.truncate(last_idx + 1);
+                        for i in 1..=last_idx {
+                            curve_points.swap(i, 2 * i);
                         }
+
+                        curve_points[last_idx] = last;
+                        curve_points.truncate(last_idx + 1);
                     }
 
                     if curve_points.is_empty() {
                         HitObjectKind::Circle
                     } else {
-                        let repeats = next_field!(split.next(), repeats)
+                        let repeats = next_field!(split.next(), "repeats")
                             .parse::<usize>()?
                             .min(9000);
 
-                        let len = next_field!(split.next(), pixel len)
+                        let pixel_len = next_field!(split.next(), "pixel len")
                             .parse::<f32>()?
                             .max(0.0)
                             .min(MAX_COORDINATE_VALUE);
 
                         HitObjectKind::Slider {
                             repeats,
-                            pixel_len: len,
+                            pixel_len,
                             curve_points,
                             path_type,
                         }
@@ -519,7 +516,7 @@ macro_rules! parse_hitobjects_body {
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {
                 $self.n_spinners += 1;
-                let end_time = next_field!(split.next(), spinner endtime).parse()?;
+                let end_time = next_field!(split.next(), "spinner endtime").parse()?;
 
                 HitObjectKind::Spinner { end_time }
             } else if kind & Self::HOLD_FLAG > 0 {
@@ -527,7 +524,7 @@ macro_rules! parse_hitobjects_body {
                 let mut end = time;
 
                 if let Some(next) = split.next() {
-                    end = end.max(next_field!(next.split(':').next(), hold endtime).parse()?);
+                    end = end.max(next_field!(next.split(':').next(), "hold endtime").parse()?);
                 }
 
                 HitObjectKind::Hold { end_time: end }
