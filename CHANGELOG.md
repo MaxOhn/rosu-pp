@@ -1,9 +1,13 @@
 ## Upcoming
 
+- No changes so far
+
+# v0.2.1
+
 - parse & osu:
   - Cleanup and tiny optimizations
 
-# v0.2.0
+## v0.2.0
 
 - Async beatmap parsing through features `async_tokio` or `async_std` ([#1] - [@Pure-Peace])
 - Hide various parsing related types further inwards, i.e. `rosu_pp::parse::some_type` instead of `rosu_pp::some_type`
