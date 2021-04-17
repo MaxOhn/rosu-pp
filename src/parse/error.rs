@@ -16,6 +16,7 @@ use std::num::{ParseFloatError, ParseIntError};
 pub type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Debug)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum ParseError {
     IOError(IOError),
     IncorrectFileHeader,

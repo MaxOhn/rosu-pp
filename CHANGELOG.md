@@ -5,7 +5,7 @@
 
 # v0.2.0
 
-- Async beatmap parsing through features `async_tokio` or `async_std`
+- Async beatmap parsing through features `async_tokio` or `async_std` ([#1] - [@Pure-Peace])
 - Hide various parsing related types further inwards, i.e. `rosu_pp::parse::some_type` instead of `rosu_pp::some_type`
   - Affected types: `DifficultyPoint`, `HitObject`, `Pos2`, `TimingPoint`, `HitObjectKind`, `PathType`, `HitSound`
 
@@ -26,3 +26,7 @@
 
 - mania:
   - Fixed pp calculation on HR
+
+[@Pure-Peace]: https://github.com/Pure-Peace
+
+[#1]: https://github.com/MaxOhn/rosu-pp/pull/1

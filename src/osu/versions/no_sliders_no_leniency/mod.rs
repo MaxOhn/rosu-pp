@@ -1,6 +1,6 @@
 //! In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored.
 //! This means the travel distance of notes is completely omitted which may cause further inaccuracies.
-//! Since the slider paths don't have to be computed though, it should generally be faster than `no_leniency`.
+//! Since the slider paths don't have to be computed though, it is generally faster than `no_leniency`.
 
 #![cfg(feature = "no_sliders_no_leniency")]
 

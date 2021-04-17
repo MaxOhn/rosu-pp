@@ -27,9 +27,8 @@
 //!
 //! // If `BeatmapExt` is included, you can make use of
 //! // some methods on `Beatmap` to make your life simpler.
-//! // However, to calculate specific pp values, it is recommended
-//! // to match on the map's mode yourself and modify the mode's
-//! // pp calculator, e.g. `TaikoPP`, manually.
+//! // If the mode is known, it is recommended to use the
+//! // mode's pp calculator, e.g. `TaikoPP`, manually.
 //! let result = map.pp()
 //!     .mods(24) // HDHR
 //!     .combo(1234)
@@ -114,8 +113,8 @@
 //! | `no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency but consider sliders. Solid middleground between performance and precision, hence the default version. |
 //! | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
 //! | `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
-//! | `async_tokio` | Beatmap parsing will be async through a [tokio](https://github.com/tokio-rs/tokio) runtime |
-//! | `async_std` | Beatmap parsing will be async through an [async-std](https://github.com/async-rs/async-std) runtime |
+//! | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
+//! | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
 //!
 //! ## Roadmap
 //!
@@ -192,10 +191,9 @@ pub trait BeatmapExt {
     /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP) for taiko.
     fn max_pp(&self, mods: u32) -> PpResult;
 
-    /// Returns a builder to calculate a pp value.
+    /// Returns a builder to calculate pp and difficulty values.
     ///
-    /// Although this method is not terribly bad, it is recommended to match on the
-    /// map's mode yourself and construct the pp builder accordingly.
+    /// Convenient method that matches on the map's mode to choose the appropriate calculator.
     fn pp(&self) -> AnyPP;
 
     /// Calculate the strains of a map.

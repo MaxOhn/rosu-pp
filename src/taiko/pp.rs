@@ -29,6 +29,7 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 /// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
 /// ```
 #[derive(Clone, Debug)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'m> {
     map: &'m Beatmap,
     stars: Option<f32>,

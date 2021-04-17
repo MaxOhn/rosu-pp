@@ -659,6 +659,7 @@ macro_rules! parse {
 
 /// The mode of a beatmap.
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum GameMode {
     STD = 0,
     TKO = 1,

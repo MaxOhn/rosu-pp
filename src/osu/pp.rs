@@ -29,6 +29,7 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 /// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
 /// ```
 #[derive(Clone, Debug)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct OsuPP<'m> {
     map: &'m Beatmap,
     attributes: Option<DifficultyAttributes>,
@@ -261,10 +262,6 @@ impl<'m> OsuPP<'m> {
         unreachable!()
     }
 
-    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
-    /// containing stars and other attributes.
-    ///
-    /// `stars_func` will be used to calculate the difficulty attributes if they are not yet given.
     fn calculate_with_func(
         mut self,
         stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> StarResult,
