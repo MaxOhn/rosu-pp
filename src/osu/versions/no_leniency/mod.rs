@@ -144,6 +144,8 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     let stars = aim_strain + speed_strain + (aim_strain - speed_strain).abs() / 2.0;
 
+    diff_attributes.n_circles = map.n_circles as usize;
+    diff_attributes.n_spinners = map.n_spinners as usize;
     diff_attributes.stars = stars;
     diff_attributes.speed_strain = speed_strain;
     diff_attributes.aim_strain = aim_strain;

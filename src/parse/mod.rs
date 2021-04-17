@@ -506,8 +506,8 @@ macro_rules! parse_hitobjects_body {
                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
                 )))]
                 {
-                    let repeats = next_field!(split.nth(1), repeats).parse::<usize>()?;
-                    let len: f32 = next_field!(split.next(), pixel len).parse()?;
+                    let repeats = next_field!(split.nth(1), "repeats").parse::<usize>()?;
+                    let len: f32 = next_field!(split.next(), "pixel len").parse()?;
 
                     HitObjectKind::Slider {
                         repeats,

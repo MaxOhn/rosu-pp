@@ -30,16 +30,12 @@ impl OsuObject {
         attributes.max_combo += 1; // hitcircle, slider head, or spinner
 
         let obj = match &h.kind {
-            HitObjectKind::Circle => {
-                attributes.n_circles += 1;
-
-                Self {
-                    time: h.start_time,
-                    pos: h.pos,
-                    end_pos: h.pos,
-                    travel_dist: Some(0.0),
-                }
-            }
+            HitObjectKind::Circle => Self {
+                time: h.start_time,
+                pos: h.pos,
+                end_pos: h.pos,
+                travel_dist: Some(0.0),
+            },
             HitObjectKind::Slider {
                 pixel_len,
                 repeats,
@@ -167,16 +163,12 @@ impl OsuObject {
                     travel_dist: Some(travel_dist),
                 }
             }
-            HitObjectKind::Spinner { .. } => {
-                attributes.n_spinners += 1;
-
-                Self {
-                    time: h.start_time,
-                    pos: h.pos,
-                    end_pos: h.pos,
-                    travel_dist: None,
-                }
-            }
+            HitObjectKind::Spinner { .. } => Self {
+                time: h.start_time,
+                pos: h.pos,
+                end_pos: h.pos,
+                travel_dist: None,
+            },
             HitObjectKind::Hold { .. } => return None,
         };
 

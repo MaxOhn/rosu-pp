@@ -43,16 +43,12 @@ impl OsuObject {
         let stack_height = 0.0;
 
         let obj = match &h.kind {
-            HitObjectKind::Circle => {
-                attributes.n_circles += 1;
-
-                Self {
-                    time: h.start_time,
-                    pos: h.pos,
-                    stack_height,
-                    kind: OsuObjectKind::Circle,
-                }
-            }
+            HitObjectKind::Circle => Self {
+                time: h.start_time,
+                pos: h.pos,
+                stack_height,
+                kind: OsuObjectKind::Circle,
+            },
             HitObjectKind::Slider {
                 pixel_len,
                 repeats,
@@ -187,18 +183,14 @@ impl OsuObject {
                     },
                 }
             }
-            HitObjectKind::Spinner { end_time } => {
-                attributes.n_spinners += 1;
-
-                Self {
-                    time: h.start_time,
-                    pos: h.pos,
-                    stack_height,
-                    kind: OsuObjectKind::Spinner {
-                        end_time: *end_time,
-                    },
-                }
-            }
+            HitObjectKind::Spinner { end_time } => Self {
+                time: h.start_time,
+                pos: h.pos,
+                stack_height,
+                kind: OsuObjectKind::Spinner {
+                    end_time: *end_time,
+                },
+            },
             HitObjectKind::Hold { .. } => return None,
         };
 

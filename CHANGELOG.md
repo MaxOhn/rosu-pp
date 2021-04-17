@@ -1,7 +1,7 @@
 ## Upcoming
 
-- parse:
-  - Cleanup
+- parse & osu:
+  - Cleanup and tiny optimizations
 
 # v0.2.0
 
