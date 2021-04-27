@@ -5,7 +5,8 @@
 
 use crate::{math_util, parse::Pos2};
 
-const SLIDER_QUALITY: f32 = 50.0;
+const BEZIER_TOLERANCE: f32 = 0.25;
+const CATMULL_DETAIL: f32 = 50.0;
 
 pub(crate) enum Points {
     Single(Pos2),
@@ -57,7 +58,7 @@ impl Curve {
     }
 
     fn _bezier(result: &mut Vec<Pos2>, points: &[Pos2]) {
-        let step = (0.25 / SLIDER_QUALITY / points.len() as f32).max(0.01);
+        let step = (BEZIER_TOLERANCE / points.len() as f32).max(0.01);
         let mut i = 0.0;
         let n = points.len() as i32 - 1;
 
@@ -81,7 +82,7 @@ impl Curve {
         let order = points.len();
 
         let mut resulting_points =
-            Vec::with_capacity(((order - 1) as f32 * SLIDER_QUALITY * 2.0) as usize);
+            Vec::with_capacity(((order - 1) as f32 * CATMULL_DETAIL * 2.0) as usize);
 
         for i in 0..order - 1 {
             let v1 = points[i.saturating_sub(1)];
@@ -101,14 +102,14 @@ impl Curve {
 
             let mut c = 0.0;
 
-            while c < SLIDER_QUALITY {
-                resulting_points.push(Self::catmull_point(v1, v2, v3, v4, c / SLIDER_QUALITY));
+            while c < CATMULL_DETAIL {
+                resulting_points.push(Self::catmull_point(v1, v2, v3, v4, c / CATMULL_DETAIL));
                 resulting_points.push(Self::catmull_point(
                     v1,
                     v2,
                     v3,
                     v4,
-                    (c + 1.0) / SLIDER_QUALITY,
+                    (c + 1.0) / CATMULL_DETAIL,
                 ));
 
                 c += 1.0;

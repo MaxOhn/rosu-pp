@@ -42,25 +42,12 @@ pub(crate) fn point_on_line(p1: Pos2, p2: Pos2, len: f32) -> Pos2 {
 }
 
 #[inline]
-pub(crate) fn angle_from_points(p0: Pos2, p1: Pos2) -> f32 {
-    (p1.y - p0.y).atan2(p1.x - p0.x)
-}
-
-#[inline]
 pub(crate) fn distance_from_points(arr: &[Pos2]) -> f32 {
     arr.iter()
         .skip(1)
         .zip(arr.iter())
         .map(|(curr, prev)| curr.distance(prev))
         .sum()
-}
-
-#[inline]
-pub(crate) fn cart_from_pol(r: f32, t: f32) -> Pos2 {
-    Pos2 {
-        x: r * t.cos(),
-        y: r * t.sin(),
-    }
 }
 
 pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
@@ -88,14 +75,12 @@ pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
     }
 
     current_distance -= new_distance;
+    let init_dist = distance - current_distance;
 
-    if (distance - current_distance).abs() <= f32::EPSILON {
+    if init_dist.abs() <= f32::EPSILON {
         array[i]
     } else {
-        let angle = angle_from_points(array[i], array[i + 1]);
-        let cart = cart_from_pol(distance - current_distance, angle);
-
-        array[i] + cart * ((array[i].x <= array[i + 1].x) as i8 * 2 - 1) as f32
+        array[i] + (array[i + 1] - array[i]) * (init_dist / new_distance)
     }
 }
 
