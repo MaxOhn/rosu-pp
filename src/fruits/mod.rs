@@ -150,7 +150,9 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
                         // Actual ticks
                         if repeat_id & 1 == 1 {
-                            slider_objects.extend(ticks.iter().copied().rev());
+                            slider_objects.extend(ticks.iter().rev().enumerate().map(
+                                |(i, (pos, time))| (*pos, *time + time_add * 2.0 * (i + 1) as f32),
+                            ));
                         } else {
                             slider_objects.extend(ticks.iter().copied());
                         }

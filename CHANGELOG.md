@@ -1,6 +1,7 @@
 ## Upcoming
 
-- No changes so far
+- fruits:
+  - Fixed tick timing for reverse sliders
 
 # v0.2.1
 
