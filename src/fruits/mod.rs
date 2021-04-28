@@ -14,7 +14,7 @@ use slider_state::SliderState;
 
 use crate::{
     curve::Curve,
-    parse::{HitObjectKind, PathType, Pos2},
+    parse::{HitObjectKind, Pos2},
     Beatmap, Mods, StarResult, Strains,
 };
 
@@ -90,12 +90,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = match path_type {
-                    PathType::Linear => Curve::linear(curve_points),
-                    PathType::Bezier => Curve::bezier(curve_points),
-                    PathType::Catmull => Curve::catmull(curve_points),
-                    PathType::PerfectCurve => Curve::perfect(curve_points),
-                };
+                let curve = Curve::new(curve_points, *path_type);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
@@ -327,22 +322,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                     / (map.sv * slider_state.speed_mult)
                     / 100.0;
 
-                // Ensure path type validity
-                let path_type = if *path_type == PathType::PerfectCurve && curve_points.len() > 3 {
-                    PathType::Bezier
-                } else if curve_points.len() == 2 {
-                    PathType::Linear
-                } else {
-                    *path_type
-                };
-
                 // Build the curve w.r.t. the curve points
-                let curve = match path_type {
-                    PathType::Linear => Curve::linear(curve_points),
-                    PathType::Bezier => Curve::bezier(curve_points),
-                    PathType::Catmull => Curve::catmull(curve_points),
-                    PathType::PerfectCurve => Curve::perfect(curve_points),
-                };
+                let curve = Curve::new(curve_points, *path_type);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));

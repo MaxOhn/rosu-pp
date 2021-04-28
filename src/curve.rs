@@ -3,7 +3,10 @@
     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
 ))]
 
-use crate::{math_util, parse::Pos2};
+use crate::{
+    math_util,
+    parse::{PathType, Pos2},
+};
 
 const BEZIER_TOLERANCE: f32 = 0.25;
 const CATMULL_DETAIL: f32 = 50.0;
@@ -26,11 +29,16 @@ pub(crate) enum Curve<'p> {
 
 impl<'p> Curve<'p> {
     #[inline]
-    pub(crate) fn linear(points: &'p [Pos2]) -> Self {
-        Self::Linear(points)
+    pub(crate) fn new(points: &'p [Pos2], kind: PathType) -> Self {
+        match kind {
+            PathType::Bezier => Self::bezier(points),
+            PathType::Catmull => Self::catmull(points),
+            PathType::Linear => Self::Linear(points),
+            PathType::PerfectCurve => Self::perfect(points),
+        }
     }
 
-    pub(crate) fn bezier(points: &[Pos2]) -> Self {
+    fn bezier(points: &[Pos2]) -> Self {
         if points.len() == 1 {
             return Self::Bezier(Points::Single(points[0]));
         }
@@ -70,7 +78,7 @@ impl<'p> Curve<'p> {
         }
     }
 
-    pub(crate) fn catmull(points: &[Pos2]) -> Self {
+    fn catmull(points: &[Pos2]) -> Self {
         if points.len() == 1 {
             return Self::Catmull(Points::Single(points[0]));
         }
@@ -123,7 +131,7 @@ impl<'p> Curve<'p> {
         }
     }
 
-    pub(crate) fn perfect(points: &[Pos2]) -> Self {
+    fn perfect(points: &[Pos2]) -> Self {
         let (a, b, c) = (points[0], points[1], points[2]);
         let (center, mut radius) = math_util::get_circum_circle(a, b, c);
         radius *= ((!math_util::is_left(a, b, c)) as i8 * 2 - 1) as f32;
@@ -135,21 +143,21 @@ impl<'p> Curve<'p> {
         }
     }
 
-    pub(crate) fn point_at_distance(&self, len: f32) -> Pos2 {
+    pub(crate) fn point_at_distance(&self, dist: f32) -> Pos2 {
         let points = match self {
             Self::Bezier(points) => points,
             Self::Catmull(points) => points,
-            Self::Linear(points) => return math_util::point_on_lines(points, len),
+            Self::Linear(points) => return math_util::point_on_lines(points, dist),
             Self::Perfect {
                 origin,
                 center,
                 radius,
-            } => return math_util::rotate(*center, *origin, len / *radius),
+            } => return math_util::rotate(*center, *origin, dist / *radius),
         };
 
         match points {
             Points::Single(point) => *point,
-            Points::Multi(points) => math_util::point_at_distance(points, len),
+            Points::Multi(points) => math_util::point_at_distance(points, dist),
         }
     }
 }

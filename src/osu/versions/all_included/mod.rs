@@ -369,18 +369,18 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
                 }
 
                 if hit_objects[n].is_slider()
-                    && hit_objects[n].end_pos().distance(&hit_objects[i].pos) < STACK_DISTANCE
+                    && hit_objects[n].end_pos().distance(hit_objects[i].pos) < STACK_DISTANCE
                 {
                     let offset = hit_objects[i].stack_height - hit_objects[n].stack_height + 1.0;
 
                     for j in n + 1..=i {
-                        if hit_objects[n].pos.distance(&hit_objects[j].pos) < STACK_DISTANCE {
+                        if hit_objects[n].pos.distance(hit_objects[j].pos) < STACK_DISTANCE {
                             hit_objects[j].stack_height -= offset;
                         }
                     }
 
                     break;
-                } else if hit_objects[n].pos.distance(&hit_objects[i].pos) < STACK_DISTANCE {
+                } else if hit_objects[n].pos.distance(hit_objects[i].pos) < STACK_DISTANCE {
                     hit_objects[n].stack_height = hit_objects[i].stack_height + 1.0;
                     i = n;
                 }
@@ -396,7 +396,7 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
                     continue;
                 } else if hit_objects[i].time - hit_objects[n].time > stack_threshold {
                     break;
-                } else if hit_objects[n].end_pos().distance(&hit_objects[i].pos) < STACK_DISTANCE {
+                } else if hit_objects[n].end_pos().distance(hit_objects[i].pos) < STACK_DISTANCE {
                     hit_objects[n].stack_height = hit_objects[i].stack_height + 1.0;
                     i = n;
                 }
@@ -421,10 +421,10 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
                 break;
             }
 
-            if hit_objects[j].pos.distance(&hit_objects[i].pos) < STACK_DISTANCE {
+            if hit_objects[j].pos.distance(hit_objects[i].pos) < STACK_DISTANCE {
                 hit_objects[i].stack_height += 1.0;
                 start_time = hit_objects[j].end_time();
-            } else if hit_objects[j].pos.distance(&end_pos) < STACK_DISTANCE {
+            } else if hit_objects[j].pos.distance(end_pos) < STACK_DISTANCE {
                 slider_stack += 1.0;
                 hit_objects[j].stack_height -= slider_stack;
                 start_time = hit_objects[j].end_time();

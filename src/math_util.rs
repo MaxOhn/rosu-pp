@@ -12,10 +12,11 @@ pub(crate) fn cpn(mut p: i32, n: i32) -> f32 {
     }
 
     p = p.min(n - p);
+    let diff = n - p;
     let mut out = 1.0;
 
     for i in 1..=p {
-        out *= (n - p + i) as f32 / i as f32;
+        out *= (diff + i) as f32 / i as f32;
     }
 
     out
@@ -55,43 +56,32 @@ pub(crate) fn point_on_lines(points: &[Pos2], len: f32) -> Pos2 {
     point_on_line(points[points.len() - 2], points[points.len() - 1], len)
 }
 
-#[inline]
-pub(crate) fn distance_from_points(arr: &[Pos2]) -> f32 {
-    arr.iter()
-        .skip(1)
-        .zip(arr.iter())
-        .map(|(curr, prev)| curr.distance(*prev))
-        .sum()
-}
-
-pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
-    if array.len() < 2 {
+pub(crate) fn point_at_distance(points: &[Pos2], dist: f32) -> Pos2 {
+    if points.len() < 2 {
         return Pos2 { x: 0.0, y: 0.0 };
-    } else if distance.abs() <= f32::EPSILON {
-        return array[0];
-    } else if distance_from_points(array) <= distance {
-        return array[array.len() - 1];
+    } else if dist.abs() <= f32::EPSILON {
+        return points[0];
     }
 
-    let mut current_distance = 0.0;
-    let mut new_distance;
+    let mut curr_dist = 0.0;
+    let mut new_dist;
 
-    for (&curr, &next) in array.iter().zip(array.iter().skip(1)) {
-        new_distance = (curr - next).length();
-        current_distance += new_distance;
+    for (&curr, &next) in points.iter().zip(points.iter().skip(1)) {
+        new_dist = (curr - next).length();
+        curr_dist += new_dist;
 
-        if distance <= current_distance {
-            let remaining_dist = distance - (current_distance - new_distance);
+        if dist <= curr_dist {
+            let remaining_dist = dist - (curr_dist - new_dist);
 
             return if remaining_dist.abs() <= f32::EPSILON {
                 curr
             } else {
-                curr + (next - curr) * (remaining_dist / new_distance)
+                curr + (next - curr) * (remaining_dist / new_dist)
             };
         }
     }
 
-    array[array.len() - 1]
+    points[points.len() - 1]
 }
 
 pub(crate) fn get_circum_circle(p0: Pos2, p1: Pos2, p2: Pos2) -> (Pos2, f32) {
