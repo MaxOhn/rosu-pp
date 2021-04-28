@@ -150,7 +150,7 @@ impl SkillKind {
                 *current_strain *= RHYTHM_STRAIN_DECAY;
                 *notes_since_rhythm_change += 1;
 
-                if current.rhythm.difficulty.abs() < f32::EPSILON {
+                if current.rhythm.difficulty.abs() <= f32::EPSILON {
                     return 0.0;
                 }
 

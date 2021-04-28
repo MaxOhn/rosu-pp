@@ -31,25 +31,22 @@ pub(crate) fn catmull(p0: f32, p1: f32, p2: f32, p3: f32, t: f32) -> f32 {
 
 #[inline]
 pub(crate) fn point_on_line(p1: Pos2, p2: Pos2, len: f32) -> Pos2 {
-    let mut full_len = ((p1.x - p2.x).powi(2) + (p1.y - p2.y).powi(2)).sqrt();
-    let n = full_len - len;
+    let mut dist = p2.distance(p1);
+    let remaining_dist = dist - len;
+    dist += (dist.abs() <= f32::EPSILON) as u8 as f32;
 
-    if full_len.abs() < f32::EPSILON {
-        full_len = 1.0;
-    }
-
-    (p1 * n + p2 * len) / full_len
+    p2 + (p1 - p2) * (remaining_dist / dist)
 }
 
 #[inline]
 pub(crate) fn point_on_lines(points: &[Pos2], len: f32) -> Pos2 {
     let mut dist = 0.0;
 
-    for (curr, next) in points.iter().zip(points.iter().skip(1)) {
+    for (curr, &next) in points.iter().zip(points.iter().skip(1)) {
         let curr_dist = curr.distance(next);
 
         if dist + curr_dist >= len {
-            return point_on_line(*curr, *next, len - dist);
+            return point_on_line(*curr, next, len - dist);
         }
 
         dist += curr_dist;
@@ -63,14 +60,14 @@ pub(crate) fn distance_from_points(arr: &[Pos2]) -> f32 {
     arr.iter()
         .skip(1)
         .zip(arr.iter())
-        .map(|(curr, prev)| curr.distance(prev))
+        .map(|(curr, prev)| curr.distance(*prev))
         .sum()
 }
 
 pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
     if array.len() < 2 {
         return Pos2 { x: 0.0, y: 0.0 };
-    } else if distance.abs() < f32::EPSILON {
+    } else if distance.abs() <= f32::EPSILON {
         return array[0];
     } else if distance_from_points(array) <= distance {
         return array[array.len() - 1];

@@ -50,8 +50,8 @@ pub(crate) struct HitObjectRhythm {
 impl PartialEq for HitObjectRhythm {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        (self.ratio - other.ratio).abs() < f32::EPSILON
-            && (self.difficulty - other.difficulty).abs() < f32::EPSILON
+        (self.ratio - other.ratio).abs() <= f32::EPSILON
+            && (self.difficulty - other.difficulty).abs() <= f32::EPSILON
     }
 }
 

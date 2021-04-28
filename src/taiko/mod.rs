@@ -209,7 +209,7 @@ fn rescale(stars: f32) -> f32 {
     if stars < 0.0 {
         stars
     } else {
-        10.43 * (stars / 8.0 + 1.0).ln()
+        10.43 * (stars / 8.0).ln_1p()
     }
 }
 

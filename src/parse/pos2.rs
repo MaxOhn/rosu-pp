@@ -25,8 +25,8 @@ impl Pos2 {
     }
 
     #[inline]
-    pub fn distance(&self, other: &Self) -> f32 {
-        (*self - *other).length()
+    pub fn distance(&self, other: Self) -> f32 {
+        (*self - other).length()
     }
 
     #[inline]
