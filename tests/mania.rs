@@ -30,34 +30,38 @@ macro_rules! assert_result {
     };
 }
 
-#[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
-#[test]
-fn mania_sync() {
+fn mania_test(map: Beatmap, result: &MapResult) {
     let star_margin = 0.00001;
     let pp_margin = 0.00001;
 
-    for result in RESULTS {
-        let MapResult {
-            map_id,
-            mods,
-            stars,
-            pp,
-        } = result;
+    let MapResult {
+        map_id,
+        mods,
+        stars,
+        pp,
+    } = result;
 
-        let file = match std::fs::File::open(format!("./maps/{}.osu", map_id)) {
+    let result = rosu_pp::ManiaPP::new(&map).mods(*mods).calculate();
+
+    assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
+    assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+}
+
+#[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
+#[test]
+fn mania_sync() {
+    for result in RESULTS {
+        let file = match std::fs::File::open(format!("./maps/{}.osu", result.map_id)) {
             Ok(file) => file,
-            Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
+            Err(why) => panic!("Could not open file {}.osu: {}", result.map_id, why),
         };
 
         let map = match Beatmap::parse(file) {
             Ok(map) => map,
-            Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+            Err(why) => panic!("Error while parsing map {}: {}", result.map_id, why),
         };
 
-        let result = rosu_pp::ManiaPP::new(&map).mods(*mods).calculate();
-
-        assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
-        assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+        mania_test(map, result);
     }
 }
 
@@ -67,31 +71,19 @@ fn mania_async_tokio() {
     tokio::runtime::Runtime::new()
         .expect("could not start runtime")
         .block_on(async {
-            let star_margin = 0.00001;
-            let pp_margin = 0.00001;
-
             for result in RESULTS {
-                let MapResult {
-                    map_id,
-                    mods,
-                    stars,
-                    pp,
-                } = result;
-
-                let file = match tokio::fs::File::open(format!("./maps/{}.osu", map_id)).await {
-                    Ok(file) => file,
-                    Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
-                };
+                let file =
+                    match tokio::fs::File::open(format!("./maps/{}.osu", result.map_id)).await {
+                        Ok(file) => file,
+                        Err(why) => panic!("Could not open file {}.osu: {}", result.map_id, why),
+                    };
 
                 let map = match Beatmap::parse(file).await {
                     Ok(map) => map,
-                    Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+                    Err(why) => panic!("Error while parsing map {}: {}", result.map_id, why),
                 };
 
-                let result = rosu_pp::ManiaPP::new(&map).mods(*mods).calculate();
-
-                assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
-                assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+                mania_test(map, result);
             }
         });
 }
@@ -100,31 +92,19 @@ fn mania_async_tokio() {
 #[test]
 fn mania_async_std() {
     async_std::task::block_on(async {
-        let star_margin = 0.00001;
-        let pp_margin = 0.00001;
-
         for result in RESULTS {
-            let MapResult {
-                map_id,
-                mods,
-                stars,
-                pp,
-            } = result;
-
-            let file = match async_std::fs::File::open(format!("./maps/{}.osu", map_id)).await {
-                Ok(file) => file,
-                Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
-            };
+            let file =
+                match async_std::fs::File::open(format!("./maps/{}.osu", result.map_id)).await {
+                    Ok(file) => file,
+                    Err(why) => panic!("Could not open file {}.osu: {}", result.map_id, why),
+                };
 
             let map = match Beatmap::parse(file).await {
                 Ok(map) => map,
-                Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+                Err(why) => panic!("Error while parsing map {}: {}", result.map_id, why),
             };
 
-            let result = rosu_pp::ManiaPP::new(&map).mods(*mods).calculate();
-
-            assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
-            assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+            mania_test(map, result);
         }
     })
 }

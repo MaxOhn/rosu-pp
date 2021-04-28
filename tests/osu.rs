@@ -42,36 +42,40 @@ fn margin() -> f32 {
     }
 }
 
-#[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
-#[test]
-fn osu_sync() {
+fn osu_test(map: Beatmap, result: &MapResult) {
     let margin = margin();
 
     let star_margin = margin;
     let pp_margin = margin;
 
-    for result in RESULTS {
-        let MapResult {
-            map_id,
-            mods,
-            stars,
-            pp,
-        } = result;
+    let MapResult {
+        map_id,
+        mods,
+        stars,
+        pp,
+    } = result;
 
-        let file = match std::fs::File::open(format!("./maps/{}.osu", map_id)) {
+    let result = rosu_pp::OsuPP::new(&map).mods(*mods).calculate();
+
+    assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
+    assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+}
+
+#[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
+#[test]
+fn osu_sync() {
+    for result in RESULTS {
+        let file = match std::fs::File::open(format!("./maps/{}.osu", result.map_id)) {
             Ok(file) => file,
-            Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
+            Err(why) => panic!("Could not open file {}.osu: {}", result.map_id, why),
         };
 
         let map = match Beatmap::parse(file) {
             Ok(map) => map,
-            Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+            Err(why) => panic!("Error while parsing map {}: {}", result.map_id, why),
         };
 
-        let result = rosu_pp::OsuPP::new(&map).mods(*mods).calculate();
-
-        assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
-        assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+        osu_test(map, result);
     }
 }
 
@@ -81,33 +85,19 @@ fn osu_async_tokio() {
     tokio::runtime::Runtime::new()
         .expect("could not start runtime")
         .block_on(async {
-            let margin = margin();
-
-            let star_margin = margin;
-            let pp_margin = margin;
-
             for result in RESULTS {
-                let MapResult {
-                    map_id,
-                    mods,
-                    stars,
-                    pp,
-                } = result;
-
-                let file = match tokio::fs::File::open(format!("./maps/{}.osu", map_id)).await {
-                    Ok(file) => file,
-                    Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
-                };
+                let file =
+                    match tokio::fs::File::open(format!("./maps/{}.osu", result.map_id)).await {
+                        Ok(file) => file,
+                        Err(why) => panic!("Could not open file {}.osu: {}", result.map_id, why),
+                    };
 
                 let map = match Beatmap::parse(file).await {
                     Ok(map) => map,
-                    Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+                    Err(why) => panic!("Error while parsing map {}: {}", result.map_id, why),
                 };
 
-                let result = rosu_pp::OsuPP::new(&map).mods(*mods).calculate();
-
-                assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
-                assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+                osu_test(map, result);
             }
         });
 }
@@ -116,33 +106,19 @@ fn osu_async_tokio() {
 #[test]
 fn osu_async_std() {
     async_std::task::block_on(async {
-        let margin = margin();
-
-        let star_margin = margin;
-        let pp_margin = margin;
-
         for result in RESULTS {
-            let MapResult {
-                map_id,
-                mods,
-                stars,
-                pp,
-            } = result;
-
-            let file = match async_std::fs::File::open(format!("./maps/{}.osu", map_id)).await {
-                Ok(file) => file,
-                Err(why) => panic!("Could not open file {}.osu: {}", map_id, why),
-            };
+            let file =
+                match async_std::fs::File::open(format!("./maps/{}.osu", result.map_id)).await {
+                    Ok(file) => file,
+                    Err(why) => panic!("Could not open file {}.osu: {}", result.map_id, why),
+                };
 
             let map = match Beatmap::parse(file).await {
                 Ok(map) => map,
-                Err(why) => panic!("Error while parsing map {}: {}", map_id, why),
+                Err(why) => panic!("Error while parsing map {}: {}", result.map_id, why),
             };
 
-            let result = rosu_pp::OsuPP::new(&map).mods(*mods).calculate();
-
-            assert_result!("Stars" => result.stars(), star_margin, stars, map_id, mods);
-            assert_result!("PP" => result.pp(), pp_margin, pp, map_id, mods);
+            osu_test(map, result);
         }
     })
 }
