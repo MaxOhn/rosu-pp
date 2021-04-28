@@ -10,6 +10,11 @@ pub struct Pos2 {
 
 impl Pos2 {
     #[inline]
+    pub fn zero() -> Self {
+        Self::default()
+    }
+
+    #[inline]
     pub fn length_squared(&self) -> f32 {
         self.dot(*self)
     }

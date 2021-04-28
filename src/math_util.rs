@@ -58,7 +58,7 @@ pub(crate) fn point_on_lines(points: &[Pos2], len: f32) -> Pos2 {
 
 pub(crate) fn point_at_distance(points: &[Pos2], dist: f32) -> Pos2 {
     if points.len() < 2 {
-        return Pos2 { x: 0.0, y: 0.0 };
+        return Pos2::zero();
     } else if dist.abs() <= f32::EPSILON {
         return points[0];
     }

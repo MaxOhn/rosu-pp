@@ -44,19 +44,16 @@ impl<'p> Curve<'p> {
         }
 
         let mut start = 0;
-        let mut end = 0;
-        let mut result = Vec::with_capacity(4);
+        let mut result = Vec::new();
 
-        for i in 0..points.len() - 1 {
-            if end - start > 1 && points[i] == points[end - 1] {
+        for (end, (curr, next)) in (1..).zip(points.iter().zip(points.iter().skip(1))) {
+            if end - start > 1 && curr == next {
                 Self::_bezier(&mut result, &points[start..end]);
                 start = end;
             }
-
-            end += 1;
         }
 
-        Self::_bezier(&mut result, &points[start..end + 1]);
+        Self::_bezier(&mut result, &points[start..]);
 
         Self::Bezier(Points::Multi(result))
     }
@@ -67,10 +64,10 @@ impl<'p> Curve<'p> {
         let n = points.len() as i32 - 1;
 
         while i < 1.0 + step {
-            let point = (0..=n).fold(Pos2 { x: 0.0, y: 0.0 }, |point, p| {
+            let point = (0..).zip(points).fold(Pos2::zero(), |point, (p, curr)| {
                 let factor = math_util::cpn(p, n) * (1.0 - i).powi(n - p) * i.powi(p);
 
-                point + points[p as usize] * factor
+                point + *curr * factor
             });
 
             result.push(point);
