@@ -17,9 +17,9 @@ pub(crate) enum Points {
 }
 
 pub(crate) enum Curve<'p> {
-    Linear(&'p [Pos2]),
     Bezier(Points),
     Catmull(Points),
+    Linear(&'p [Pos2]),
     Perfect {
         origin: Pos2,
         center: Pos2,
@@ -65,9 +65,7 @@ impl<'p> Curve<'p> {
 
         while i < 1.0 + step {
             let point = (0..).zip(points).fold(Pos2::zero(), |point, (p, curr)| {
-                let factor = math_util::cpn(p, n) * (1.0 - i).powi(n - p) * i.powi(p);
-
-                point + *curr * factor
+                point + *curr * math_util::cpn(p, n) * (1.0 - i).powi(n - p) * i.powi(p)
             });
 
             result.push(point);
@@ -76,55 +74,71 @@ impl<'p> Curve<'p> {
     }
 
     fn catmull(points: &[Pos2]) -> Self {
-        if points.len() == 1 {
+        let len = points.len();
+
+        if len == 1 {
             return Self::Catmull(Points::Single(points[0]));
         }
 
-        let order = points.len();
+        let mut result = Vec::with_capacity((len as f32 * CATMULL_DETAIL * 2.0) as usize);
 
-        let mut resulting_points =
-            Vec::with_capacity(((order - 1) as f32 * CATMULL_DETAIL * 2.0) as usize);
+        // Handle first iteration distinctly because of v1
+        let v1 = points[0];
+        let v2 = points[0];
+        let v3 = points.get(1).copied().unwrap_or(v2);
+        let v4 = points.get(2).copied().unwrap_or_else(|| v3 * 2.0 - v2);
 
-        for i in 0..order - 1 {
-            let v1 = points[i.saturating_sub(1)];
-            let v2 = points[i];
+        Self::catmull_points(&mut result, v1, v2, v3, v4);
 
-            let v3 = if i < order - 1 {
-                points[i + 1]
-            } else {
-                v2 * 2.0 - v1
-            };
+        // Remaining iterations
+        for (i, (&v1, &v2)) in (2..).zip(points.iter().zip(points.iter().skip(1))) {
+            let v3 = points.get(i).copied().unwrap_or_else(|| v2 * 2.0 - v1);
+            let v3 = points.get(i + 1).copied().unwrap_or_else(|| v3 * 2.0 - v2);
 
-            let v4 = if i < order - 2 {
-                points[i + 2]
-            } else {
-                v3 * 2.0 - v2
-            };
-
-            let mut c = 0.0;
-
-            while c < CATMULL_DETAIL {
-                resulting_points.push(Self::catmull_point(v1, v2, v3, v4, c / CATMULL_DETAIL));
-                resulting_points.push(Self::catmull_point(
-                    v1,
-                    v2,
-                    v3,
-                    v4,
-                    (c + 1.0) / CATMULL_DETAIL,
-                ));
-
-                c += 1.0;
-            }
+            Self::catmull_points(&mut result, v1, v2, v3, v4);
         }
 
-        Self::Catmull(Points::Multi(resulting_points))
+        Self::Catmull(Points::Multi(result))
     }
 
     #[inline]
-    fn catmull_point(p0: Pos2, p1: Pos2, p2: Pos2, p3: Pos2, len: f32) -> Pos2 {
-        Pos2 {
-            x: math_util::catmull(p0.x, p1.x, p2.x, p3.x, len),
-            y: math_util::catmull(p0.y, p1.y, p2.y, p3.y, len),
+    fn catmull_points(result: &mut Vec<Pos2>, v1: Pos2, v2: Pos2, v3: Pos2, v4: Pos2) {
+        let mut c = 0.0;
+
+        let x1 = 2.0 * v1.x;
+        let x2 = -v1.x + v3.x;
+        let x3 = 2.0 * v1.x - 5.0 * v2.x + 4.0 * v3.x - v4.x;
+        let x4 = -v1.x + 3.0 * (v2.x - v3.x) + v4.x;
+
+        let y1 = 2.0 * v1.y;
+        let y2 = -v1.y + v3.y;
+        let y3 = 2.0 * v1.y - 5.0 * v2.y + 4.0 * v3.y - v4.y;
+        let y4 = -v1.y + 3.0 * (v2.y - v3.y) + v4.y;
+
+        loop {
+            let t1 = c / CATMULL_DETAIL;
+            let t2 = t1 * t1;
+            let t3 = t2 * t1;
+
+            result.push(Pos2 {
+                x: 0.5 * (x1 + x2 * t1 + x3 * t2 + x4 * t3),
+                y: 0.5 * (y1 + y2 * t1 + y3 * t2 + y4 * t3),
+            });
+
+            let t1 = (c + 1.0) / CATMULL_DETAIL;
+            let t2 = t1 * t1;
+            let t3 = t2 * t1;
+
+            result.push(Pos2 {
+                x: 0.5 * (x1 + x2 * t1 + x3 * t2 + x4 * t3),
+                y: 0.5 * (y1 + y2 * t1 + y3 * t2 + y4 * t3),
+            });
+
+            c += 1.0;
+
+            if c >= CATMULL_DETAIL {
+                return;
+            }
         }
     }
 
