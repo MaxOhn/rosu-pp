@@ -1,5 +1,7 @@
 use super::{DifficultyObject, HitObjectRhythm, LimitedQueue, Rim};
 
+use std::ops::Index;
+
 const RHYTHM_STRAIN_DECAY: f32 = 0.96;
 const MOST_RECENT_PATTERNS_TO_COMPARE: usize = 2;
 
@@ -102,9 +104,10 @@ impl SkillKind {
 
                     for start in iter {
                         let different_pattern = (0..MOST_RECENT_PATTERNS_TO_COMPARE).any(|i| {
-                            mono_history[start + i]
-                                != mono_history
-                                    [mono_history.len() + i - MOST_RECENT_PATTERNS_TO_COMPARE]
+                            let to_compare =
+                                mono_history.len() + i - MOST_RECENT_PATTERNS_TO_COMPARE;
+
+                            mono_history.index(start + i) != mono_history.index(to_compare)
                         });
 
                         if different_pattern {
@@ -168,17 +171,18 @@ impl SkillKind {
 
                     for start in iter {
                         let different_pattern = (0..most_recent_patterns_to_compare).any(|i| {
-                            rhythm_history[start + i].1
-                                != rhythm_history
-                                    [rhythm_history.len() + i - most_recent_patterns_to_compare]
-                                    .1
+                            let to_compare =
+                                rhythm_history.len() + i - most_recent_patterns_to_compare;
+
+                            rhythm_history.index(start + i).1 != rhythm_history.index(to_compare).1
                         });
 
                         if different_pattern {
                             continue;
                         }
 
-                        reps_penalty *= repetition_penalty(current.idx - rhythm_history[start].0);
+                        reps_penalty *=
+                            repetition_penalty(current.idx - rhythm_history.index(start).0);
 
                         break;
                     }

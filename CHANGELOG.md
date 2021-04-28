@@ -1,10 +1,14 @@
 ## Upcoming
 
 - osu & fruits:
-  - Fixed certain slider patterns
+  - Fixed specific slider patterns
+  - Optimized Bezier, Catmull, and other small things
 
 - fruits:
   - Fixed tick timing for reverse sliders
+
+- taiko:
+  - Micro optimizations
 
 # v0.2.1
 

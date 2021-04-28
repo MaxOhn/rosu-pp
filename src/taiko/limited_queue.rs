@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
+use std::iter::{Cycle, Skip, Take};
 use std::ops::Index;
+use std::slice::Iter;
 
 pub(crate) struct LimitedQueue<T> {
     queue: Vec<T>,
@@ -8,7 +10,6 @@ pub(crate) struct LimitedQueue<T> {
 }
 
 impl<T> LimitedQueue<T> {
-    /// Panics if `capacity` is zero.
     #[inline]
     pub(crate) fn new(capacity: usize) -> Self {
         Self {
@@ -25,7 +26,7 @@ impl<T> LimitedQueue<T> {
 
         if self.queue.len() == capacity {
             self.start = (self.start + 1) % capacity;
-            self.queue[self.end as usize] = elem;
+            self.queue[self.end] = elem;
         } else {
             self.queue.push(elem);
         }
@@ -38,7 +39,7 @@ impl<T> LimitedQueue<T> {
 
     #[inline]
     pub(crate) fn last(&self) -> Option<&T> {
-        self.queue.get(self.end as usize)
+        self.queue.get(self.end)
     }
 
     #[inline]
@@ -52,21 +53,30 @@ impl<T> LimitedQueue<T> {
     pub(crate) fn full(&self) -> bool {
         self.queue.len() == self.queue.capacity()
     }
+
+    #[inline]
+    pub(crate) fn iter(&self) -> LimitedQueueIter<T> {
+        let iter = self
+            .queue
+            .iter()
+            .cycle()
+            .skip(self.start)
+            .take(self.queue.len());
+
+        LimitedQueueIter { iter }
+    }
 }
 
 impl<T: PartialOrd> LimitedQueue<T> {
     pub(crate) fn min(&self) -> Option<&T> {
-        let mut iter = self.queue.iter();
-
-        let first = iter.next()?;
-        let min = iter.fold(first, |min, next| match min.partial_cmp(next) {
-            Some(Ordering::Less) => min,
-            Some(Ordering::Equal) => min,
-            Some(Ordering::Greater) => next,
-            None => min,
-        });
-
-        Some(min)
+        self.queue
+            .iter()
+            .reduce(|min, next| match min.partial_cmp(next) {
+                Some(Ordering::Less) => min,
+                Some(Ordering::Equal) => min,
+                Some(Ordering::Greater) => next,
+                None => min,
+            })
     }
 }
 
@@ -78,3 +88,23 @@ impl<T> Index<usize> for LimitedQueue<T> {
         &self.queue[(self.start + idx) % self.queue.capacity()]
     }
 }
+
+pub(crate) struct LimitedQueueIter<'a, T> {
+    iter: Take<Skip<Cycle<Iter<'a, T>>>>,
+}
+
+impl<'a, T> Iterator for LimitedQueueIter<'a, T> {
+    type Item = &'a T;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+
+impl<'a, T> ExactSizeIterator for LimitedQueueIter<'a, T> {}

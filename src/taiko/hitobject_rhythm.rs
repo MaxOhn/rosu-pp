@@ -4,38 +4,47 @@ use std::cmp::Ordering;
 
 static COMMON_RHYTHMS: [HitObjectRhythm; 9] = [
     HitObjectRhythm {
+        id: 0,
         ratio: 1.0,
         difficulty: 0.0,
     },
     HitObjectRhythm {
+        id: 1,
         ratio: 2.0 / 1.0,
         difficulty: 0.3,
     },
     HitObjectRhythm {
+        id: 2,
         ratio: 1.0 / 2.0,
         difficulty: 0.5,
     },
     HitObjectRhythm {
+        id: 3,
         ratio: 3.0 / 1.0,
         difficulty: 0.3,
     },
     HitObjectRhythm {
+        id: 4,
         ratio: 1.0 / 3.0,
         difficulty: 0.35,
     },
     HitObjectRhythm {
+        id: 5,
         ratio: 3.0 / 2.0,
         difficulty: 0.6,
     },
     HitObjectRhythm {
+        id: 6,
         ratio: 2.0 / 3.0,
         difficulty: 0.4,
     },
     HitObjectRhythm {
+        id: 7,
         ratio: 5.0 / 4.0,
         difficulty: 0.5,
     },
     HitObjectRhythm {
+        id: 8,
         ratio: 4.0 / 5.0,
         difficulty: 0.7,
     },
@@ -43,6 +52,7 @@ static COMMON_RHYTHMS: [HitObjectRhythm; 9] = [
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct HitObjectRhythm {
+    id: u8,
     ratio: f32,
     pub(crate) difficulty: f32,
 }
@@ -50,8 +60,7 @@ pub(crate) struct HitObjectRhythm {
 impl PartialEq for HitObjectRhythm {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        (self.ratio - other.ratio).abs() <= f32::EPSILON
-            && (self.difficulty - other.difficulty).abs() <= f32::EPSILON
+        self.id == other.id
     }
 }
 

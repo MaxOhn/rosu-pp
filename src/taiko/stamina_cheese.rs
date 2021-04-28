@@ -1,5 +1,4 @@
 use super::{LimitedQueue, Rim};
-
 use crate::{parse::HitObject, Beatmap};
 
 const ROLL_MIN_REPETITIONS: usize = 12;
@@ -12,7 +11,6 @@ pub(crate) trait StaminaCheeseDetector {
 }
 
 impl StaminaCheeseDetector for Beatmap {
-    // TODO: Optimize
     fn find_cheese(&self) -> Vec<bool> {
         let mut cheese = vec![false; self.hit_objects.len()];
 
@@ -33,8 +31,8 @@ impl StaminaCheeseDetector for Beatmap {
         let mut index_before_last_repeat = -1;
         let mut last_mark_end = 0;
 
-        for i in 0..self.hit_objects.len() {
-            history.push(&self.hit_objects[i]);
+        for (i, h) in self.hit_objects.iter().enumerate() {
+            history.push(h);
 
             if !history.full() {
                 continue;
@@ -44,6 +42,7 @@ impl StaminaCheeseDetector for Beatmap {
 
             if !contains {
                 index_before_last_repeat = (i + 1 - history.len()) as isize;
+
                 continue;
             }
 
@@ -63,8 +62,8 @@ impl StaminaCheeseDetector for Beatmap {
         let mut tl_len = -2;
         let mut last_mark_end = 0;
 
-        for i in (parity..self.hit_objects.len()).step_by(2) {
-            if self.hit_objects[i].is_rim() == is_rin {
+        for (i, h) in self.hit_objects.iter().enumerate().skip(parity).step_by(2) {
+            if h.is_rim() == is_rin {
                 tl_len += 2;
             } else {
                 tl_len = -2;
@@ -96,8 +95,8 @@ fn mark_as_cheese(start: usize, end: usize, cheese: &mut [bool]) {
 
 #[inline]
 fn contains_pattern_repeat(history: &LimitedQueue<&HitObject>, pattern_len: usize) -> bool {
-    for j in 0..pattern_len {
-        if history[j].is_rim() != history[j + pattern_len].is_rim() {
+    for (&curr, &to_compare) in history.iter().zip(history.iter().skip(pattern_len)) {
+        if curr.is_rim() != to_compare.is_rim() {
             return false;
         }
     }
