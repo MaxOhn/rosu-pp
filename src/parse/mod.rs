@@ -455,15 +455,25 @@ macro_rules! parse_hitobjects_body {
                         }
                     }
 
-                    if $self.version <= 6 && curve_points.len() >= 2 {
-                        if path_type == PathType::Linear {
-                            path_type = PathType::Bezier;
-                        } else if curve_points.len() == 2
-                            && (pos == curve_points[0] || pos == curve_points[1])
-                        {
-                            path_type = PathType::Linear;
+                    match path_type {
+                        PathType::Linear if curve_points.len() % 2 == 0 => {
+                            // Assert that the points are of the form A|B|B|C|C|E
+                            if valid_linear(&curve_points) {
+                                for i in (2..curve_points.len() - 1).rev().step_by(2) {
+                                    curve_points.remove(i);
+                                }
+                            } else {
+                                path_type = PathType::Bezier;
+                            }
                         }
-                    }
+                        PathType::PerfectCurve if curve_points.len() == 3 => {
+                            if is_linear(curve_points[0], curve_points[1], curve_points[2]) {
+                                path_type = PathType::Linear;
+                            }
+                        },
+                        PathType::Catmull => {},
+                        _ => path_type = PathType::Bezier,
+                    };
 
                     // Reduce amount of curvepoints but keep the elements evenly spaced.
                     // Necessary to handle maps like XNOR (2573164) which have
@@ -763,6 +773,22 @@ fn split_colon(line: &str) -> Option<(&str, &str)> {
     let mut split = line.split(':');
 
     Some((split.next()?, split.next()?.trim()))
+}
+
+#[inline]
+fn valid_linear(points: &[Pos2]) -> bool {
+    for i in (1..points.len() - 1).step_by(2) {
+        if points[i] != points[i + 1] {
+            return false;
+        }
+    }
+
+    true
+}
+
+#[inline]
+fn is_linear(p0: Pos2, p1: Pos2, p2: Pos2) -> bool {
+    ((p1.y - p0.y) * (p2.x - p0.x) - (p1.x - p0.x) * (p2.y - p0.y)).abs() <= f32::EPSILON
 }
 
 /// The type of curve of a slider.

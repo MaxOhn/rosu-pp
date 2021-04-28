@@ -1,5 +1,8 @@
 ## Upcoming
 
+- osu & fruits:
+  - Fixed certain slider patterns
+
 - fruits:
   - Fixed tick timing for reverse sliders
 

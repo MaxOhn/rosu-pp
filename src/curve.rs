@@ -13,25 +13,21 @@ pub(crate) enum Points {
     Multi(Vec<Pos2>),
 }
 
-pub(crate) enum Curve {
-    Linear {
-        a: Pos2,
-        b: Pos2,
-    },
+pub(crate) enum Curve<'p> {
+    Linear(&'p [Pos2]),
     Bezier(Points),
     Catmull(Points),
     Perfect {
         origin: Pos2,
-        cx: f32,
-        cy: f32,
+        center: Pos2,
         radius: f32,
     },
 }
 
-impl Curve {
+impl<'p> Curve<'p> {
     #[inline]
-    pub(crate) fn linear(a: Pos2, b: Pos2) -> Self {
-        Self::Linear { a, b }
+    pub(crate) fn linear(points: &'p [Pos2]) -> Self {
+        Self::Linear(points)
     }
 
     pub(crate) fn bezier(points: &[Pos2]) -> Self {
@@ -128,13 +124,13 @@ impl Curve {
     }
 
     pub(crate) fn perfect(points: &[Pos2]) -> Self {
-        let (cx, cy, mut radius) = math_util::get_circum_circle(&points);
-        radius *= ((!math_util::is_left(&points)) as i8 * 2 - 1) as f32;
+        let (a, b, c) = (points[0], points[1], points[2]);
+        let (center, mut radius) = math_util::get_circum_circle(a, b, c);
+        radius *= ((!math_util::is_left(a, b, c)) as i8 * 2 - 1) as f32;
 
         Self::Perfect {
-            origin: points[0],
-            cx,
-            cy,
+            origin: a,
+            center,
             radius,
         }
     }
@@ -143,13 +139,12 @@ impl Curve {
         let points = match self {
             Self::Bezier(points) => points,
             Self::Catmull(points) => points,
-            Self::Linear { a, b } => return math_util::point_on_line(*a, *b, len),
+            Self::Linear(points) => return math_util::point_on_lines(points, len),
             Self::Perfect {
                 origin,
-                cx,
-                cy,
+                center,
                 radius,
-            } => return math_util::rotate(*cx, *cy, *origin, len / *radius),
+            } => return math_util::rotate(*center, *origin, len / *radius),
         };
 
         match points {

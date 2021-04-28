@@ -42,6 +42,23 @@ pub(crate) fn point_on_line(p1: Pos2, p2: Pos2, len: f32) -> Pos2 {
 }
 
 #[inline]
+pub(crate) fn point_on_lines(points: &[Pos2], len: f32) -> Pos2 {
+    let mut dist = 0.0;
+
+    for (curr, next) in points.iter().zip(points.iter().skip(1)) {
+        let curr_dist = curr.distance(next);
+
+        if dist + curr_dist >= len {
+            return point_on_line(*curr, *next, len - dist);
+        }
+
+        dist += curr_dist;
+    }
+
+    point_on_line(points[points.len() - 2], points[points.len() - 1], len)
+}
+
+#[inline]
 pub(crate) fn distance_from_points(arr: &[Pos2]) -> f32 {
     arr.iter()
         .skip(1)
@@ -59,61 +76,56 @@ pub(crate) fn point_at_distance(array: &[Pos2], distance: f32) -> Pos2 {
         return array[array.len() - 1];
     }
 
-    let mut i = 0;
     let mut current_distance = 0.0;
-    let mut new_distance = 0.0;
+    let mut new_distance;
 
-    while i < array.len() - 2 {
-        new_distance = (array[i] - array[i + 1]).length();
+    for (&curr, &next) in array.iter().zip(array.iter().skip(1)) {
+        new_distance = (curr - next).length();
         current_distance += new_distance;
 
         if distance <= current_distance {
-            break;
+            let remaining_dist = distance - (current_distance - new_distance);
+
+            return if remaining_dist.abs() <= f32::EPSILON {
+                curr
+            } else {
+                curr + (next - curr) * (remaining_dist / new_distance)
+            };
         }
-
-        i += 1;
     }
 
-    current_distance -= new_distance;
-    let init_dist = distance - current_distance;
-
-    if init_dist.abs() <= f32::EPSILON {
-        array[i]
-    } else {
-        array[i] + (array[i + 1] - array[i]) * (init_dist / new_distance)
-    }
+    array[array.len() - 1]
 }
 
-pub(crate) fn get_circum_circle(p: &[Pos2]) -> (f32, f32, f32) {
-    let d = 2.0
-        * (p[0].x * (p[1].y - p[2].y) + p[1].x * (p[2].y - p[0].y) + p[2].x * (p[0].y - p[1].y));
+pub(crate) fn get_circum_circle(p0: Pos2, p1: Pos2, p2: Pos2) -> (Pos2, f32) {
+    let a = 2.0 * (p0.x * (p1.y - p2.y) - p0.y * (p1.x - p2.x) + p1.x * p2.y - p2.x * p1.y);
 
-    let p0 = p[0].x * p[0].x + p[0].y * p[0].y;
-    let p1 = p[1].x * p[1].x + p[1].y * p[1].y;
-    let p2 = p[2].x * p[2].x + p[2].y * p[2].y;
+    let q0 = p0.length_squared();
+    let q1 = p1.length_squared();
+    let q2 = p2.length_squared();
 
-    let ux = (p0 * (p[1].y - p[2].y) + p1 * (p[2].y - p[0].y) + p2 * (p[0].y - p[1].y)) / d;
-    let uy = (p0 * (p[2].x - p[1].x) + p1 * (p[0].x - p[2].x) + p2 * (p[1].x - p[0].x)) / d;
+    let cx = (q0 * (p1.y - p2.y) + q1 * (p2.y - p0.y) + q2 * (p0.y - p1.y)) / a;
+    let cy = (q0 * (p2.x - p1.x) + q1 * (p0.x - p2.x) + q2 * (p1.x - p0.x)) / a;
 
-    let px = ux - p[0].x;
-    let py = uy - p[0].y;
-    let r = (px * px + py * py).sqrt();
+    let r = (cx - p0.x).hypot(cy - p0.y);
 
-    (ux, uy, r)
+    (Pos2 { x: cx, y: cy }, r)
 }
 
 #[inline]
-pub(crate) fn is_left(p: &[Pos2]) -> bool {
-    ((p[1].x - p[0].x) * (p[2].y - p[0].y) - (p[1].y - p[0].y) * (p[2].x - p[0].x)) < 0.0
+pub(crate) fn is_left(p0: Pos2, p1: Pos2, p2: Pos2) -> bool {
+    ((p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x)) < 0.0
 }
 
 #[inline]
-pub(crate) fn rotate(cx: f32, cy: f32, p: Pos2, radians: f32) -> Pos2 {
-    let cos = radians.cos();
-    let sin = radians.sin();
+pub(crate) fn rotate(center: Pos2, origin: Pos2, theta: f32) -> Pos2 {
+    let (sin, cos) = theta.sin_cos();
+    let diff = origin - center;
 
-    Pos2 {
-        x: (cos * (p.x - cx)) - (sin * (p.y - cy)) + cx,
-        y: (sin * (p.x - cx)) + (cos * (p.y - cy)) + cy,
-    }
+    let offset = Pos2 {
+        x: cos * diff.x - sin * diff.y,
+        y: sin * diff.x + cos * diff.y,
+    };
+
+    center + offset
 }
