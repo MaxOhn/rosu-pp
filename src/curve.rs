@@ -93,7 +93,7 @@ impl<'p> Curve<'p> {
         // Remaining iterations
         for (i, (&v1, &v2)) in (2..).zip(points.iter().zip(points.iter().skip(1))) {
             let v3 = points.get(i).copied().unwrap_or_else(|| v2 * 2.0 - v1);
-            let v3 = points.get(i + 1).copied().unwrap_or_else(|| v3 * 2.0 - v2);
+            let v4 = points.get(i + 1).copied().unwrap_or_else(|| v3 * 2.0 - v2);
 
             Self::catmull_points(&mut result, v1, v2, v3, v4);
         }

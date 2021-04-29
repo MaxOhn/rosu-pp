@@ -3,6 +3,7 @@
 - osu & fruits:
   - Fixed specific slider patterns
   - Optimized Bezier, Catmull, and other small things
+    Benchmarking for osu!standard showed a 25%+ improvement for performance aswell as accuracy
 
 - fruits:
   - Fixed tick timing for reverse sliders

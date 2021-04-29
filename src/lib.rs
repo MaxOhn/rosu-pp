@@ -118,7 +118,7 @@
 //!
 //! ## Roadmap
 //!
-//! - osu sr versions
+//! - \[x\] osu sr versions
 //!   - \[x\] all included
 //!   - \[x\] no_leniency
 //!   - \[x\] no_sliders_no_leniency
@@ -473,4 +473,4 @@ compile_error!("Only one of the features `no_leniency`, `no_sliders_no_leniency`
 compile_error!("The features `no_leniency`, `no_sliders_no_leniency`, and `all_included` should only be enabled in combination with the `osu` feature");
 
 #[cfg(all(feature = "async_tokio", feature = "async_std"))]
-compile_error!("Only one of the async features `async_tokio` and `async_std` should be enabled");
+compile_error!("Only one of the features `async_tokio` and `async_std` should be enabled");

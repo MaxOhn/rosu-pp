@@ -113,7 +113,7 @@ println!("PP: {}", result.pp());
 
 ### Benchmarks
 
-Comparing the PP calculation speed between [osu-perf](https://gitlab.com/JackRedstonia/osu-perf/), an [oppai-ng](https://github.com/Francesco149/oppai-ng) rust binding, and rosu-pp's `no_sliders_no_leniency`:
+Comparing the PP calculation speed between [osu-perf](https://gitlab.com/JackRedstonia/osu-perf/) (alternative rust pp calculculation crate), an [oppai-ng](https://github.com/Francesco149/oppai-ng) rust binding, and rosu-pp's `no_sliders_no_leniency`:
 
 <img src="./benchmark_results/crates_pp_calc.svg">
 
@@ -131,7 +131,7 @@ Comparing the stars (in)accuracy between rosu-pp's `all_included`, `no_leniency`
 
 ### Roadmap
 
-- osu sr versions
+- \[x\] osu sr versions
   - \[x\] all included
   - \[x\] no_leniency
   - \[x\] no_sliders_no_leniency

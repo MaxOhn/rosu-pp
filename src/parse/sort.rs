@@ -22,6 +22,7 @@ fn depth_limited_quick_sort(
     loop {
         if depth_limit == 0 {
             heap_sort(keys, left, right);
+
             return;
         }
 
