@@ -176,7 +176,7 @@ impl<'m> OsuPP<'m> {
             let delta = target_total - (n_objects - misses);
 
             let mut n300 = delta / 5;
-            let mut n100 = delta % 5;
+            let mut n100 = (delta % 5).min(n_objects - n300 - misses);
             let mut n50 = n_objects - n300 - n100 - misses;
 
             // Sacrifice n300s to transform n50s into n100s
