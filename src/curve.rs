@@ -16,6 +16,16 @@ pub(crate) enum Points {
     Multi(Vec<Pos2>),
 }
 
+impl Points {
+    #[inline]
+    fn point_at_distance(&self, dist: f32) -> Pos2 {
+        match self {
+            Points::Multi(points) => math_util::point_at_distance(points, dist),
+            Points::Single(point) => *point,
+        }
+    }
+}
+
 pub(crate) enum Curve<'p> {
     Bezier(Points),
     Catmull(Points),
@@ -155,20 +165,15 @@ impl<'p> Curve<'p> {
     }
 
     pub(crate) fn point_at_distance(&self, dist: f32) -> Pos2 {
-        let points = match self {
-            Self::Bezier(points) => points,
-            Self::Catmull(points) => points,
-            Self::Linear(points) => return math_util::point_on_lines(points, dist),
+        match self {
+            Self::Bezier(points) => points.point_at_distance(dist),
+            Self::Catmull(points) => points.point_at_distance(dist),
+            Self::Linear(points) => math_util::point_at_distance(points, dist),
             Self::Perfect {
                 origin,
                 center,
                 radius,
-            } => return math_util::rotate(*center, *origin, dist / *radius),
-        };
-
-        match points {
-            Points::Single(point) => *point,
-            Points::Multi(points) => math_util::point_at_distance(points, dist),
+            } => math_util::rotate(*center, *origin, dist / *radius),
         }
     }
 }

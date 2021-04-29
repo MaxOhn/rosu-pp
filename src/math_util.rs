@@ -22,32 +22,6 @@ pub(crate) fn cpn(mut p: i32, n: i32) -> f32 {
     out
 }
 
-#[inline]
-pub(crate) fn point_on_line(p1: Pos2, p2: Pos2, len: f32) -> Pos2 {
-    let mut dist = p2.distance(p1);
-    let remaining_dist = dist - len;
-    dist += (dist.abs() <= f32::EPSILON) as u8 as f32;
-
-    p2 + (p1 - p2) * (remaining_dist / dist)
-}
-
-#[inline]
-pub(crate) fn point_on_lines(points: &[Pos2], len: f32) -> Pos2 {
-    let mut dist = 0.0;
-
-    for (curr, &next) in points.iter().zip(points.iter().skip(1)) {
-        let curr_dist = curr.distance(next);
-
-        if dist + curr_dist >= len {
-            return point_on_line(*curr, next, len - dist);
-        }
-
-        dist += curr_dist;
-    }
-
-    point_on_line(points[points.len() - 2], points[points.len() - 1], len)
-}
-
 pub(crate) fn point_at_distance(points: &[Pos2], dist: f32) -> Pos2 {
     if points.len() < 2 {
         return Pos2::zero();
@@ -56,7 +30,11 @@ pub(crate) fn point_at_distance(points: &[Pos2], dist: f32) -> Pos2 {
     }
 
     let mut curr_dist = 0.0;
-    let mut new_dist;
+
+    // If points.len() < 2 it wont be reassigned and would cause division by zero.
+    // Before that division happens though, unwrapping the last two elements
+    // would already have panicked so this is fine to keep at zero.
+    let mut new_dist = 0.0;
 
     for (&curr, &next) in points.iter().zip(points.iter().skip(1)) {
         new_dist = (curr - next).length();
@@ -73,7 +51,11 @@ pub(crate) fn point_at_distance(points: &[Pos2], dist: f32) -> Pos2 {
         }
     }
 
-    points[points.len() - 1]
+    let remaining_dist = dist - (curr_dist - new_dist);
+    let pre_last = points[points.len() - 2];
+    let last = points[points.len() - 1];
+
+    pre_last + (last - pre_last) * (remaining_dist / new_dist)
 }
 
 pub(crate) fn get_circum_circle(p0: Pos2, p1: Pos2, p2: Pos2) -> (Pos2, f32) {
