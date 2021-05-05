@@ -1,5 +1,9 @@
 ## Upcoming
 
+- Nothing as of now
+
+# v0.2.2
+
 - osu & fruits:
   - Fixed specific slider patterns
   - Optimized Bezier, Catmull, and other small things
@@ -11,7 +15,7 @@
 - taiko:
   - Micro optimizations
 
-# v0.2.1
+## v0.2.1
 
 - parse & osu:
   - Cleanup and tiny optimizations
