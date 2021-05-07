@@ -68,7 +68,8 @@ fn taiko_sync() {
 #[cfg(feature = "async_tokio")]
 #[test]
 fn taiko_async_tokio() {
-    tokio::runtime::Runtime::new()
+    tokio::runtime::Builder::new_current_thread()
+        .build()
         .expect("could not start runtime")
         .block_on(async {
             for result in RESULTS {

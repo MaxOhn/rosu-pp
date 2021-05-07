@@ -855,9 +855,10 @@ mod tests {
     #[cfg(feature = "async_tokio")]
     #[test]
     fn parsing_async_tokio() {
-        use tokio::{fs::File, runtime::Runtime};
+        use tokio::{fs::File, runtime::Builder};
 
-        Runtime::new()
+        Builder::new_current_thread()
+            .build()
             .expect("could not start runtime")
             .block_on(async {
                 let map_id = map_id();

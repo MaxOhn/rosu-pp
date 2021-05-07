@@ -1,12 +1,13 @@
 ## Upcoming
 
-- Nothing as of now
+- Reduced amount of required features of `async_std` and `async_tokio`
 
 # v0.2.2
 
 - osu & fruits:
   - Fixed specific slider patterns
   - Optimized Bezier, Catmull, and other small things
+
     Benchmarking for osu!standard showed a 25%+ improvement for performance aswell as accuracy
 
 - fruits:
