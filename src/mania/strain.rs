@@ -77,7 +77,7 @@ impl Strain {
         let mut hold_addition = 0.0;
 
         for col in 0..self.hold_end_times.len() {
-            let hold_end_time = self.hold_end_times[col as usize];
+            let hold_end_time = self.hold_end_times[col];
 
             if end_time > hold_end_time + 1.0 {
                 if hold_end_time > current.base.start_time + 1.0 {

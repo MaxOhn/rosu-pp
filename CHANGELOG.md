@@ -1,6 +1,7 @@
 ## Upcoming
 
 - Reduced amount of required features of `async_std` and `async_tokio`
+- Fixed a panic for some mania difficulty calculations on converts
 
 # v0.2.2
 

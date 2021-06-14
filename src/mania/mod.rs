@@ -47,6 +47,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let clock_rate = mods.speed();
     let section_len = SECTION_LEN * clock_rate;
     let mut strain = Strain::new(columns);
+    let columns = columns as f32;
 
     let mut hit_objects = map
         .hit_objects
@@ -54,7 +55,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         .take(take)
         .skip(1)
         .zip(map.hit_objects.iter())
-        .map(|(base, prev)| DifficultyHitObject::new(base, prev, map.cs, clock_rate));
+        .map(|(base, prev)| DifficultyHitObject::new(base, prev, columns, clock_rate));
 
     // No strain for first object
     let mut current_section_end =
@@ -150,9 +151,9 @@ pub(crate) struct DifficultyHitObject<'o> {
 
 impl<'o> DifficultyHitObject<'o> {
     #[inline]
-    fn new(base: &'o HitObject, prev: &'o HitObject, cs: f32, clock_rate: f32) -> Self {
-        let x_divisor = 512.0 / cs;
-        let column = (base.pos.x / x_divisor).floor() as usize;
+    fn new(base: &'o HitObject, prev: &'o HitObject, columns: f32, clock_rate: f32) -> Self {
+        let x_divisor = 512.0 / columns;
+        let column = (base.pos.x / x_divisor).floor().min(columns - 1.0) as usize;
 
         Self {
             base,

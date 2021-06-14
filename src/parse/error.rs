@@ -64,7 +64,7 @@ impl fmt::Display for ParseError {
             )))]
             Self::UnincludedMode(mode) => write!(
                 f,
-                "cannot process {:?} map its mode's feature has not been included",
+                "cannot process {:?} map; its mode's feature has not been included",
                 mode
             ),
         }
