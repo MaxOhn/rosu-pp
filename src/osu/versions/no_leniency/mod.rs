@@ -140,16 +140,16 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     aim.save_current_peak();
     speed.save_current_peak();
 
-    let aim_strain = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-    let speed_strain = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+    let aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+    let speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
-    let stars = aim_strain + speed_strain + (aim_strain - speed_strain).abs() / 2.0;
+    let stars = aim_rating + speed_rating + (aim_rating - speed_rating).abs() / 2.0;
 
     diff_attributes.n_circles = map.n_circles as usize;
     diff_attributes.n_spinners = map.n_spinners as usize;
     diff_attributes.stars = stars;
-    diff_attributes.speed_strain = speed_strain;
-    diff_attributes.aim_strain = aim_strain;
+    diff_attributes.speed_strain = speed_rating;
+    diff_attributes.aim_strain = aim_rating;
 
     StarResult::Osu(diff_attributes)
 }
@@ -271,5 +271,22 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     Strains {
         section_length: section_len,
         strains,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn custom() {
+        let map_id = 1579923;
+        let file = std::fs::File::open(format!(
+            "C:/Users/Max/Desktop/Coding/C#/osu-tools/cache/{}_.osu",
+            map_id
+        ))
+        .unwrap();
+        let map = crate::Beatmap::parse(file).unwrap();
+        let result = crate::OsuPP::new(&map).mods((1 << 10) + 24).calculate();
+
+        println!("Stars: {} | PP: {}", result.stars(), result.pp());
     }
 }

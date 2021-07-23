@@ -37,7 +37,7 @@ impl SkillKind {
                             * (current.jump_dist - scale).max(0.0))
                         .sqrt();
 
-                        result = 1.5 * apply_diminishing_exp(angle_bonus.max(0.0))
+                        result = 1.4 * apply_diminishing_exp(angle_bonus.max(0.0))
                             / (TIMING_THRESHOLD).max(prev_strain_time)
                     }
                 }

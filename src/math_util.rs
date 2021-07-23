@@ -106,3 +106,8 @@ pub(crate) fn rotate(center: Pos2, origin: Pos2, theta: f32) -> Pos2 {
 
     center + offset
 }
+
+#[inline]
+pub(crate) fn lerp(start: f32, end: f32, percent: f32) -> f32 {
+    start + (end - start) * percent
+}

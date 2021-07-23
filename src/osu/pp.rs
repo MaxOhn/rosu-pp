@@ -334,13 +334,17 @@ impl<'m> OsuPP<'m> {
         }
 
         // AR bonus
-        let mut ar_factor = 0.0;
-        if attributes.ar > 10.33 {
-            ar_factor += 0.4 * (attributes.ar - 10.33);
+        let mut ar_factor = if attributes.ar > 10.33 {
+            attributes.ar - 10.33
         } else if attributes.ar < 8.0 {
-            ar_factor += 0.01 * (8.0 - attributes.ar);
-        }
-        aim_value *= 1.0 + ar_factor.min(ar_factor * total_hits / 1000.0);
+            0.025 * (8.0 - attributes.ar)
+        } else {
+            0.0
+        };
+
+        let ar_total_hits_factor = (1.0 + (-(0.007 * (total_hits - 400.0))).exp()).recip();
+
+        ar_factor *= 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
 
         // HD bonus
         if self.mods.hd() {
@@ -348,12 +352,15 @@ impl<'m> OsuPP<'m> {
         }
 
         // FL bonus
-        if self.mods.fl() {
-            aim_value *= 1.0
-                + 0.35 * (total_hits / 200.0).min(1.0)
+        let fl_bonus = if self.mods.fl() {
+            1.0 + 0.35 * (total_hits / 200.0).min(1.0)
                 + (total_hits > 200.0) as u8 as f32 * 0.3 * ((total_hits - 200.0) / 300.0).min(1.0)
-                + (total_hits > 500.0) as u8 as f32 * (total_hits - 500.0) / 1200.0;
-        }
+                + (total_hits > 500.0) as u8 as f32 * (total_hits - 500.0) / 1200.0
+        } else {
+            1.0
+        };
+
+        aim_value *= ar_factor.max(fl_bonus);
 
         // Scale with accuracy
         aim_value *= 0.5 + self.acc.unwrap() / 2.0;
@@ -387,10 +394,15 @@ impl<'m> OsuPP<'m> {
         }
 
         // AR bonus
-        if attributes.ar > 10.33 {
-            let ar_factor = 0.4 * (attributes.ar - 10.33);
-            speed_value *= 1.0 + ar_factor.min(ar_factor * total_hits / 1000.0);
-        }
+        let ar_factor = if attributes.ar > 10.33 {
+            attributes.ar - 10.33
+        } else {
+            0.0
+        };
+
+        let ar_total_hits_factor = (1.0 + (-(0.007 * (total_hits - 400.0))).exp()).recip();
+
+        speed_value *= 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
 
         // HD bonus
         if self.mods.hd() {
