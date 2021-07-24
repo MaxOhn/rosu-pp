@@ -334,7 +334,7 @@ impl<'m> OsuPP<'m> {
         }
 
         // AR bonus
-        let mut ar_factor = if attributes.ar > 10.33 {
+        let ar_factor = if attributes.ar > 10.33 {
             attributes.ar - 10.33
         } else if attributes.ar < 8.0 {
             0.025 * (8.0 - attributes.ar)
@@ -343,8 +343,7 @@ impl<'m> OsuPP<'m> {
         };
 
         let ar_total_hits_factor = (1.0 + (-(0.007 * (total_hits - 400.0))).exp()).recip();
-
-        ar_factor *= 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
+        let ar_bonus = 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
 
         // HD bonus
         if self.mods.hd() {
@@ -360,7 +359,7 @@ impl<'m> OsuPP<'m> {
             1.0
         };
 
-        aim_value *= ar_factor.max(fl_bonus);
+        aim_value *= ar_bonus.max(fl_bonus);
 
         // Scale with accuracy
         aim_value *= 0.5 + self.acc.unwrap() / 2.0;

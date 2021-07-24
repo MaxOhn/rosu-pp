@@ -18,10 +18,9 @@ impl<'h> DifficultyObject<'h> {
         prev: &OsuObject,
         prev_vals: Option<(f32, f32)>, // (jump_dist, strain_time)
         prev_prev: Option<OsuObject>,
-        clock_rate: f32,
         scaling_factor: f32,
     ) -> Self {
-        let delta = (base.time - prev.time) / clock_rate;
+        let delta = base.time - prev.time;
         let strain_time = delta.max(50.0);
 
         let pos = base.pos; // stacked position

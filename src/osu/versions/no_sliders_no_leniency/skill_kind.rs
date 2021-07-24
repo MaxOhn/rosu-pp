@@ -28,7 +28,7 @@ impl SkillKind {
     pub(crate) fn strain_value_of(self, current: &DifficultyObject) -> f32 {
         match self {
             Self::Aim => {
-                if current.base.is_spinner() {
+                if current.base.is_spinner {
                     return 0.0;
                 }
 
@@ -54,7 +54,7 @@ impl SkillKind {
                     .max(jump_dist_exp / current.strain_time)
             }
             Self::Speed => {
-                if current.base.is_spinner() {
+                if current.base.is_spinner {
                     return 0.0;
                 }
 

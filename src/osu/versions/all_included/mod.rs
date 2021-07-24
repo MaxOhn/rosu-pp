@@ -62,8 +62,6 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     }
 
     let time_preempt = difficulty_range_ar(raw_ar);
-
-    let section_len = SECTION_LEN * map_attributes.clock_rate;
     let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
     let radius = OBJECT_RADIUS * scale;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
@@ -76,23 +74,21 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
 
-    let mut hit_objects: Vec<_> = map
-        .hit_objects
-        .iter()
-        .take(take)
-        .filter_map(|h| {
-            OsuObject::new(
-                h,
-                map,
-                radius,
-                scaling_factor,
-                hr,
-                &mut ticks_buf,
-                &mut diff_attributes,
-                &mut slider_state,
-            )
-        })
-        .collect();
+    let hit_objects_iter = map.hit_objects.iter().take(take).filter_map(|h| {
+        OsuObject::new(
+            h,
+            map,
+            radius,
+            scaling_factor,
+            hr,
+            &mut ticks_buf,
+            &mut diff_attributes,
+            &mut slider_state,
+        )
+    });
+
+    let mut hit_objects = Vec::with_capacity(take);
+    hit_objects.extend(hit_objects_iter);
 
     let stack_threshold = time_preempt * map.stack_leniency;
 
@@ -107,6 +103,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
         let stack_offset = h.stack_height * scale_factor;
 
+        h.time /= map_attributes.clock_rate;
         h.pos += Pos2 {
             x: stack_offset,
             y: stack_offset,
@@ -118,27 +115,19 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);
 
-    // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
-
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
     let mut prev_vals = None;
 
+    // First object has no predecessor and thus no strain, handle distinctly
+    let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
+
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
-    let h = DifficultyObject::new(
-        &curr,
-        &prev,
-        prev_vals,
-        prev_prev,
-        map_attributes.clock_rate,
-        scaling_factor,
-    );
+    let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
     while h.base.time > current_section_end {
-        current_section_end += section_len;
+        current_section_end += SECTION_LEN;
     }
 
     aim.process(&h);
@@ -150,14 +139,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     // Handle all other objects
     for curr in hit_objects {
-        let h = DifficultyObject::new(
-            &curr,
-            &prev,
-            prev_vals,
-            prev_prev,
-            map_attributes.clock_rate,
-            scaling_factor,
-        );
+        let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
         while h.base.time > current_section_end {
             aim.save_current_peak();
@@ -165,7 +147,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
             speed.save_current_peak();
             speed.start_new_section_from(current_section_end);
 
-            current_section_end += section_len;
+            current_section_end += SECTION_LEN;
         }
 
         aim.process(&h);
@@ -222,8 +204,6 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     }
 
     let time_preempt = difficulty_range_ar(raw_ar);
-
-    let section_len = SECTION_LEN * map_attributes.clock_rate;
     let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
     let radius = OBJECT_RADIUS * scale;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
@@ -236,22 +216,21 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
 
-    let mut hit_objects: Vec<_> = map
-        .hit_objects
-        .iter()
-        .filter_map(|h| {
-            OsuObject::new(
-                h,
-                map,
-                radius,
-                scaling_factor,
-                hr,
-                &mut ticks_buf,
-                &mut diff_attributes,
-                &mut slider_state,
-            )
-        })
-        .collect();
+    let hit_objects_iter = map.hit_objects.iter().filter_map(|h| {
+        OsuObject::new(
+            h,
+            map,
+            radius,
+            scaling_factor,
+            hr,
+            &mut ticks_buf,
+            &mut diff_attributes,
+            &mut slider_state,
+        )
+    });
+
+    let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
+    hit_objects.extend(hit_objects_iter);
 
     let stack_threshold = time_preempt * map.stack_leniency;
 
@@ -266,6 +245,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
         let stack_offset = h.stack_height * scale_factor;
 
+        h.time /= map_attributes.clock_rate;
         h.pos += Pos2 {
             x: stack_offset,
             y: stack_offset,
@@ -277,27 +257,19 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);
 
-    // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
-
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
     let mut prev_vals = None;
 
+    // First object has no predecessor and thus no strain, handle distinctly
+    let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
+
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
-    let h = DifficultyObject::new(
-        &curr,
-        &prev,
-        prev_vals,
-        prev_prev,
-        map_attributes.clock_rate,
-        scaling_factor,
-    );
+    let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
     while h.base.time > current_section_end {
-        current_section_end += section_len;
+        current_section_end += SECTION_LEN;
     }
 
     aim.process(&h);
@@ -309,14 +281,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
     // Handle all other objects
     for curr in hit_objects {
-        let h = DifficultyObject::new(
-            &curr,
-            &prev,
-            prev_vals,
-            prev_prev,
-            map_attributes.clock_rate,
-            scaling_factor,
-        );
+        let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
         while h.base.time > current_section_end {
             aim.save_current_peak();
@@ -324,7 +289,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
             speed.save_current_peak();
             speed.start_new_section_from(current_section_end);
 
-            current_section_end += section_len;
+            current_section_end += SECTION_LEN;
         }
 
         aim.process(&h);
@@ -346,7 +311,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         .collect();
 
     Strains {
-        section_length: section_len,
+        section_length: SECTION_LEN,
         strains,
     }
 }

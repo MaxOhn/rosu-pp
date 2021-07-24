@@ -1,9 +1,7 @@
-use crate::parse::HitObject;
-
-use std::borrow::Cow;
+use super::OsuObject;
 
 pub(crate) struct DifficultyObject<'h> {
-    pub(crate) base: &'h HitObject,
+    pub(crate) base: &'h OsuObject,
     pub(crate) prev: Option<(f32, f32)>, // (jump_dist, strain_time)
 
     pub(crate) jump_dist: f32,
@@ -15,17 +13,16 @@ pub(crate) struct DifficultyObject<'h> {
 
 impl<'h> DifficultyObject<'h> {
     pub(crate) fn new(
-        base: &'h HitObject,
-        prev: &HitObject,
+        base: &'h OsuObject,
+        prev: &OsuObject,
         prev_vals: Option<(f32, f32)>, // (jump_dist, strain_time)
-        prev_prev: Option<Cow<HitObject>>,
-        clock_rate: f32,
+        prev_prev: Option<OsuObject>,
         scaling_factor: f32,
     ) -> Self {
-        let delta = (base.start_time - prev.start_time) / clock_rate;
+        let delta = base.time - prev.time;
         let strain_time = delta.max(50.0);
 
-        let jump_dist = if base.is_spinner() {
+        let jump_dist = if base.is_spinner {
             0.0
         } else {
             ((base.pos - prev.pos) * scaling_factor).length()

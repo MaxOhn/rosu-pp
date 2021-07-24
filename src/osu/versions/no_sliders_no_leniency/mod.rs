@@ -7,21 +7,18 @@
 use super::super::DifficultyAttributes;
 
 mod difficulty_object;
+mod osu_object;
 mod skill;
 mod skill_kind;
 mod slider_state;
 
 use difficulty_object::DifficultyObject;
+use osu_object::OsuObject;
 use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{
-    parse::{HitObject, HitObjectKind},
-    Beatmap, Mods, StarResult, Strains,
-};
-
-use std::borrow::Cow;
+use crate::{parse::HitObjectKind, Beatmap, Mods, StarResult, Strains};
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -50,7 +47,6 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         });
     }
 
-    let section_len = SECTION_LEN * attributes.clock_rate;
     let radius = OBJECT_RADIUS * (1.0 - 0.7 * (attributes.cs - 5.0) / 5.0) / 2.0;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
 
@@ -58,6 +54,8 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         let small_circle_bonus = (30.0 - radius).min(5.0) / 50.0;
         scaling_factor *= 1.0 + small_circle_bonus;
     }
+
+    let clock_rate = attributes.clock_rate;
 
     let mut max_combo = 0;
     let mut state = SliderState::new(&map);
@@ -70,24 +68,19 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
             HitObjectKind::Circle => {
                 max_combo += 1;
 
-                Some(Cow::Borrowed(h))
+                Some(OsuObject::new(h.pos, h.start_time, false, clock_rate))
             }
             HitObjectKind::Slider {
                 pixel_len, repeats, ..
             } => {
                 max_combo += state.count_ticks(h.start_time, *pixel_len, *repeats, &map);
 
-                Some(Cow::Owned(HitObject {
-                    pos: h.pos,
-                    start_time: h.start_time,
-                    kind: HitObjectKind::Circle,
-                    sound: h.sound,
-                }))
+                Some(OsuObject::new(h.pos, h.start_time, false, clock_rate))
             }
             HitObjectKind::Spinner { .. } => {
                 max_combo += 1;
 
-                Some(Cow::Borrowed(h))
+                Some(OsuObject::new(h.pos, h.start_time, true, clock_rate))
             }
             HitObjectKind::Hold { .. } => None,
         });
@@ -95,27 +88,19 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);
 
-    // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
-
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
     let mut prev_vals = None;
 
+    // First object has no predecessor and thus no strain, handle distinctly
+    let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
+
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
-    let h = DifficultyObject::new(
-        curr.as_ref(),
-        prev.as_ref(),
-        prev_vals,
-        prev_prev,
-        attributes.clock_rate,
-        scaling_factor,
-    );
+    let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
-    while h.base.start_time > current_section_end {
-        current_section_end += section_len;
+    while h.base.time > current_section_end {
+        current_section_end += SECTION_LEN;
     }
 
     aim.process(&h);
@@ -127,22 +112,15 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     // Handle all other objects
     for curr in hit_objects {
-        let h = DifficultyObject::new(
-            curr.as_ref(),
-            prev.as_ref(),
-            prev_vals,
-            prev_prev,
-            attributes.clock_rate,
-            scaling_factor,
-        );
+        let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
-        while h.base.start_time > current_section_end {
+        while h.base.time > current_section_end {
             aim.save_current_peak();
             aim.start_new_section_from(current_section_end);
             speed.save_current_peak();
             speed.start_new_section_from(current_section_end);
 
-            current_section_end += section_len;
+            current_section_end += SECTION_LEN;
         }
 
         aim.process(&h);
@@ -184,7 +162,6 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         return Strains::default();
     }
 
-    let section_len = SECTION_LEN * attributes.clock_rate;
     let radius = OBJECT_RADIUS * (1.0 - 0.7 * (attributes.cs - 5.0) / 5.0) / 2.0;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
 
@@ -193,42 +170,34 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         scaling_factor *= 1.0 + small_circle_bonus;
     }
 
+    let clock_rate = attributes.clock_rate;
+
     let mut hit_objects = map.hit_objects.iter().filter_map(|h| match &h.kind {
-        HitObjectKind::Circle => Some(Cow::Borrowed(h)),
-        HitObjectKind::Slider { .. } => Some(Cow::Owned(HitObject {
-            pos: h.pos,
-            start_time: h.start_time,
-            kind: HitObjectKind::Circle,
-            sound: h.sound,
-        })),
-        HitObjectKind::Spinner { .. } => Some(Cow::Borrowed(h)),
+        HitObjectKind::Circle | HitObjectKind::Slider { .. } => {
+            Some(OsuObject::new(h.pos, h.start_time, false, clock_rate))
+        }
+        HitObjectKind::Spinner { .. } => {
+            Some(OsuObject::new(h.pos, h.start_time, true, clock_rate))
+        }
         HitObjectKind::Hold { .. } => None,
     });
 
     let mut aim = Skill::new(SkillKind::Aim);
     let mut speed = Skill::new(SkillKind::Speed);
 
-    // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
-
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
     let mut prev_vals = None;
 
+    // First object has no predecessor and thus no strain, handle distinctly
+    let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
+
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
-    let h = DifficultyObject::new(
-        curr.as_ref(),
-        prev.as_ref(),
-        prev_vals,
-        prev_prev,
-        attributes.clock_rate,
-        scaling_factor,
-    );
+    let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
-    while h.base.start_time > current_section_end {
-        current_section_end += section_len;
+    while h.base.time > current_section_end {
+        current_section_end += SECTION_LEN;
     }
 
     aim.process(&h);
@@ -240,22 +209,15 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
     // Handle all other objects
     for curr in hit_objects {
-        let h = DifficultyObject::new(
-            curr.as_ref(),
-            prev.as_ref(),
-            prev_vals,
-            prev_prev,
-            attributes.clock_rate,
-            scaling_factor,
-        );
+        let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
-        while h.base.start_time > current_section_end {
+        while h.base.time > current_section_end {
             aim.save_current_peak();
             aim.start_new_section_from(current_section_end);
             speed.save_current_peak();
             speed.start_new_section_from(current_section_end);
 
-            current_section_end += section_len;
+            current_section_end += SECTION_LEN;
         }
 
         aim.process(&h);
@@ -277,7 +239,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         .collect();
 
     Strains {
-        section_length: section_len,
+        section_length: SECTION_LEN,
         strains,
     }
 }
