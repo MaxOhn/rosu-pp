@@ -273,20 +273,3 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         strains,
     }
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn custom() {
-        let map_id = 1579923;
-        let file = std::fs::File::open(format!(
-            "C:/Users/Max/Desktop/Coding/C#/osu-tools/cache/{}_.osu",
-            map_id
-        ))
-        .unwrap();
-        let map = crate::Beatmap::parse(file).unwrap();
-        let result = crate::OsuPP::new(&map).mods((1 << 10) + 24).calculate();
-
-        println!("Stars: {} | PP: {}", result.stars(), result.pp());
-    }
-}

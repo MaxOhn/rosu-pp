@@ -12,6 +12,12 @@ const SPEED_BALANCING_FACTOR: f32 = 40.0;
 const AIM_ANGLE_BONUS_BEGIN: f32 = std::f32::consts::FRAC_PI_3;
 const TIMING_THRESHOLD: f32 = 107.0;
 
+const AIM_REDUCED_SECTION_COUNT: usize = 10;
+const SPEED_REDUCED_SECTION_COUNT: usize = 5;
+
+const AIM_DIFFICULTY_MULTIPLIER: f32 = 1.06;
+const SPEED_DIFFICULTY_MULTIPLIER: f32 = 1.04;
+
 #[derive(Copy, Clone)]
 pub(crate) enum SkillKind {
     Aim,
@@ -90,6 +96,14 @@ impl SkillKind {
                     * (0.95 + speed_bonus * (dist / SINGLE_SPACING_TRESHOLD).powf(3.5))
                     / current.strain_time
             }
+        }
+    }
+
+    #[inline]
+    pub(crate) fn difficulty_values(&self) -> (usize, f32) {
+        match self {
+            Self::Aim => (AIM_REDUCED_SECTION_COUNT, AIM_DIFFICULTY_MULTIPLIER),
+            Self::Speed => (SPEED_REDUCED_SECTION_COUNT, SPEED_DIFFICULTY_MULTIPLIER),
         }
     }
 }

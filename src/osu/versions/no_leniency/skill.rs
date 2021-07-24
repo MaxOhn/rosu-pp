@@ -7,7 +7,6 @@ use std::cmp::Ordering;
 const SPEED_SKILL_MULTIPLIER: f32 = 1400.0;
 const SPEED_STRAIN_DECAY_BASE: f32 = 0.3;
 const REDUCED_STRAIN_BASELINE: f32 = 0.75;
-const DIFFICULTY_MULTIPLIER: f32 = 1.06;
 
 const AIM_SKILL_MULTIPLIER: f32 = 26.25;
 const AIM_STRAIN_DECAY_BASE: f32 = 0.15;
@@ -60,7 +59,7 @@ impl Skill {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
-        let reduced_section_count = self.kind.reduced_section_count();
+        let (reduced_section_count, difficulty_multiplier) = self.kind.difficulty_values();
         let reduced_section_count_f32 = reduced_section_count as f32;
 
         self.strain_peaks
@@ -85,7 +84,7 @@ impl Skill {
             weight *= DECAY_WEIGHT;
         }
 
-        difficulty * DIFFICULTY_MULTIPLIER
+        difficulty * difficulty_multiplier
     }
 
     #[inline]

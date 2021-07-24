@@ -6,9 +6,7 @@ use std::cmp::Ordering;
 
 const SPEED_SKILL_MULTIPLIER: f32 = 1400.0;
 const SPEED_STRAIN_DECAY_BASE: f32 = 0.3;
-const REDUCED_SECTION_COUNT: f32 = 10.0;
 const REDUCED_STRAIN_BASELINE: f32 = 0.75;
-const DIFFICULTY_MULTIPLIER: f32 = 1.06;
 
 const AIM_SKILL_MULTIPLIER: f32 = 26.25;
 const AIM_STRAIN_DECAY_BASE: f32 = 0.15;
@@ -61,11 +59,19 @@ impl Skill {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
+        let (reduced_section_count, difficulty_multiplier) = self.kind.difficulty_values();
+        let reduced_section_count_f32 = reduced_section_count as f32;
+
         self.strain_peaks
             .sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
-        for (i, strain) in self.strain_peaks.iter_mut().enumerate() {
-            let clamped = (i as f32 / REDUCED_SECTION_COUNT).clamp(0.0, 1.0);
+        for (i, strain) in self
+            .strain_peaks
+            .iter_mut()
+            .take(reduced_section_count)
+            .enumerate()
+        {
+            let clamped = (i as f32 / reduced_section_count_f32).clamp(0.0, 1.0);
             let scale = (math_util::lerp(1.0, 10.0, clamped)).log10();
             *strain *= math_util::lerp(REDUCED_STRAIN_BASELINE, 1.0, scale);
         }
@@ -78,7 +84,7 @@ impl Skill {
             weight *= DECAY_WEIGHT;
         }
 
-        difficulty * DIFFICULTY_MULTIPLIER
+        difficulty * difficulty_multiplier
     }
 
     #[inline]

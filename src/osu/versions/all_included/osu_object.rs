@@ -30,23 +30,29 @@ enum OsuObjectKind {
 }
 
 impl OsuObject {
+    #[allow(clippy::clippy::too_many_arguments)]
     pub(crate) fn new(
         h: &HitObject,
         map: &Beatmap,
         radius: f32,
         scaling_factor: f32,
+        hr: bool,
         ticks: &mut Vec<f32>,
         attributes: &mut DifficultyAttributes,
         slider_state: &mut SliderState,
     ) -> Option<Self> {
         attributes.max_combo += 1; // hitcircle, slider head, or spinner
-        let stack_height = 0.0;
+        let mut pos = h.pos;
+
+        if hr {
+            pos.y = 384.0 - pos.y;
+        }
 
         let obj = match &h.kind {
             HitObjectKind::Circle => Self {
                 time: h.start_time,
-                pos: h.pos,
-                stack_height,
+                pos,
+                stack_height: 0.0,
                 kind: OsuObjectKind::Circle,
             },
             HitObjectKind::Slider {
@@ -56,7 +62,7 @@ impl OsuObject {
                 path_type,
             } => {
                 // Key values which are computed here
-                let mut lazy_end_pos = h.pos;
+                let mut lazy_end_pos = pos;
                 let mut travel_dist = 0.0;
 
                 // Responsible for timing point values
@@ -93,7 +99,11 @@ impl OsuObject {
                     }
 
                     let curr_dist = pixel_len * progress;
-                    let curr_pos = curve.point_at_distance(curr_dist);
+                    let mut curr_pos = curve.point_at_distance(curr_dist);
+
+                    if hr {
+                        curr_pos.y = 384.0 - curr_pos.y;
+                    }
 
                     let diff = curr_pos - lazy_end_pos;
                     let mut dist = diff.length();
@@ -153,12 +163,16 @@ impl OsuObject {
 
                 travel_dist *= scaling_factor;
 
-                let end_pos = curve.point_at_distance(*pixel_len);
+                let mut end_pos = curve.point_at_distance(*pixel_len);
+
+                if hr {
+                    end_pos.y = 384.0 - end_pos.y;
+                }
 
                 Self {
                     time: h.start_time,
-                    pos: h.pos,
-                    stack_height,
+                    pos,
+                    stack_height: 0.0,
                     kind: OsuObjectKind::Slider {
                         end_time: final_span_end_time,
                         end_pos,
@@ -169,8 +183,8 @@ impl OsuObject {
             }
             HitObjectKind::Spinner { end_time } => Self {
                 time: h.start_time,
-                pos: h.pos,
-                stack_height,
+                pos,
+                stack_height: 0.0,
                 kind: OsuObjectKind::Spinner {
                     end_time: *end_time,
                 },

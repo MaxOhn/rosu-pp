@@ -53,9 +53,10 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     }
 
     let mut raw_ar = map.ar;
+    let hr = mods.hr();
 
-    if mods.hr() {
-        raw_ar *= 1.4;
+    if hr {
+        raw_ar = (raw_ar * 1.4).min(10.0);
     } else if mods.ez() {
         raw_ar *= 0.5;
     }
@@ -85,6 +86,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
                 map,
                 radius,
                 scaling_factor,
+                hr,
                 &mut ticks_buf,
                 &mut diff_attributes,
                 &mut slider_state,
@@ -100,8 +102,10 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         old_stacking(&mut hit_objects, stack_threshold);
     }
 
+    let scale_factor = scale * -6.4;
+
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
-        let stack_offset = h.stack_height * scale * -6.4;
+        let stack_offset = h.stack_height * scale_factor;
 
         h.pos += Pos2 {
             x: stack_offset,
@@ -175,16 +179,16 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     aim.save_current_peak();
     speed.save_current_peak();
 
-    let aim_strain = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-    let speed_strain = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+    let aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+    let speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
-    let stars = aim_strain + speed_strain + (aim_strain - speed_strain).abs() / 2.0;
+    let stars = aim_rating + speed_rating + (aim_rating - speed_rating).abs() / 2.0;
 
     diff_attributes.n_circles = map.n_circles as usize;
     diff_attributes.n_spinners = map.n_spinners as usize;
     diff_attributes.stars = stars;
-    diff_attributes.speed_strain = speed_strain;
-    diff_attributes.aim_strain = aim_strain;
+    diff_attributes.speed_strain = speed_rating;
+    diff_attributes.aim_strain = aim_rating;
 
     StarResult::Osu(diff_attributes)
 }
@@ -209,8 +213,9 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     }
 
     let mut raw_ar = map.ar;
+    let hr = mods.hr();
 
-    if mods.hr() {
+    if hr {
         raw_ar *= 1.4;
     } else if mods.ez() {
         raw_ar *= 0.5;
@@ -240,6 +245,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 map,
                 radius,
                 scaling_factor,
+                hr,
                 &mut ticks_buf,
                 &mut diff_attributes,
                 &mut slider_state,
@@ -255,8 +261,10 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         old_stacking(&mut hit_objects, stack_threshold);
     }
 
+    let scale_factor = scale * -6.4;
+
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
-        let stack_offset = h.stack_height * scale * -6.4;
+        let stack_offset = h.stack_height * scale_factor;
 
         h.pos += Pos2 {
             x: stack_offset,
@@ -350,7 +358,7 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
     for mut i in (1..=extended_end_idx).rev() {
         let mut n = i;
 
-        if hit_objects[i].stack_height != 0.0 || !hit_objects[i].is_slider() {
+        if hit_objects[i].stack_height.abs() > 0.0 || hit_objects[i].is_spinner() {
             continue;
         }
 
@@ -362,6 +370,8 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
                 };
 
                 if hit_objects[n].is_spinner() {
+                    continue;
+                } else if hit_objects[i].time - hit_objects[n].end_time() > stack_threshold {
                     break;
                 } else if n < extended_start_idx {
                     hit_objects[n].stack_height = 0.0;
