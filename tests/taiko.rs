@@ -114,8 +114,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 110219,
         mods: 256,
-        stars: 4.090461690284154,
-        pp: 172.2934532692781,
+        stars: 4.08968885024159,
+        pp: 172.2618767481684,
     },
     MapResult {
         map_id: 110219,
@@ -126,15 +126,15 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 110219,
         mods: 64,
-        stars: 6.785308286298745,
-        pp: 420.66337091577,
+        stars: 6.7868926972961,
+        pp: 420.7721479461209,
     },
     // -----
     MapResult {
         map_id: 168450,
         mods: 256,
-        stars: 3.9102755155437663,
-        pp: 159.66231311695273,
+        stars: 3.906304814419791,
+        pp: 159.50978823553345,
     },
     MapResult {
         map_id: 168450,
@@ -145,15 +145,15 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 168450,
         mods: 64,
-        stars: 5.894260068145283,
-        pp: 352.08717183038954,
+        stars: 5.900723352868479,
+        pp: 352.4632039368069,
     },
     // -----
     MapResult {
         map_id: 1097541,
         mods: 256,
-        stars: 4.0027499635116595,
-        pp: 181.18594125657705,
+        stars: 4.001086710846427,
+        pp: 181.1195995270953,
     },
     MapResult {
         map_id: 1097541,
@@ -164,15 +164,15 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1097541,
         mods: 64,
-        stars: 6.587467490088248,
-        pp: 433.97174733352375,
+        stars: 6.588219669147997,
+        pp: 434.0217833573784,
     },
     // -----
     MapResult {
         map_id: 1432878,
         mods: 256,
-        stars: 3.5850143199594258,
-        pp: 127.27033873288904,
+        stars: 3.5826958150176584,
+        pp: 127.191831998499,
     },
     MapResult {
         map_id: 1432878,
@@ -183,7 +183,7 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1432878,
         mods: 64,
-        stars: 5.908970879987477,
-        pp: 307.9875634986321,
+        stars: 5.912036178782906,
+        pp: 308.1608793395345,
     },
 ];

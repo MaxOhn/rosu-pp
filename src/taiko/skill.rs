@@ -53,7 +53,7 @@ impl Skill {
         self.current_strain +=
             self.kind.strain_value_of(&current, cheese) * self.skill_multiplier();
         self.current_section_peak = self.current_section_peak.max(self.current_strain);
-        self.prev_time.replace(current.base.start_time);
+        self.prev_time.replace(current.start_time);
     }
 
     #[inline]

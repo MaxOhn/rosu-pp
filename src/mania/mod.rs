@@ -74,7 +74,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     for h in hit_objects {
         while h.base.start_time > current_section_end {
             strain.save_current_peak();
-            strain.start_new_section_from(current_section_end);
+            strain.start_new_section_from(current_section_end / clock_rate);
 
             current_section_end += section_len;
         }
@@ -126,7 +126,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     for h in hit_objects {
         while h.base.start_time > current_section_end {
             strain.save_current_peak();
-            strain.start_new_section_from(current_section_end);
+            strain.start_new_section_from(current_section_end / clock_rate);
 
             current_section_end += section_len;
         }
@@ -147,6 +147,7 @@ pub(crate) struct DifficultyHitObject<'o> {
     base: &'o HitObject,
     column: usize,
     delta: f32,
+    start_time: f32,
 }
 
 impl<'o> DifficultyHitObject<'o> {
@@ -159,6 +160,7 @@ impl<'o> DifficultyHitObject<'o> {
             base,
             column,
             delta: (base.start_time - prev.start_time) / clock_rate,
+            start_time: base.start_time / clock_rate,
         }
     }
 }

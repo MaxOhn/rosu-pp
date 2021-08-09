@@ -59,7 +59,7 @@ impl Movement {
         self.current_strain *= strain_decay(current.delta);
         self.current_strain += self.strain_value_of(&current) * SKILL_MULTIPLIER;
         self.current_section_peak = self.current_strain.max(self.current_section_peak);
-        self.prev_time.replace(current.base.time);
+        self.prev_time.replace(current.start_time);
     }
 
     pub(crate) fn difficulty_value(&mut self) -> f32 {

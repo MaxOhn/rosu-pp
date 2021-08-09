@@ -227,7 +227,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
         while h.base.time > current_section_end {
             movement.save_current_peak();
-            movement.start_new_section_from(current_section_end);
+            movement.start_new_section_from(current_section_end / attributes.clock_rate);
             current_section_end += section_len;
         }
 
@@ -247,7 +247,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     while h.base.time > current_section_end {
         movement.save_current_peak();
-        movement.start_new_section_from(current_section_end);
+        movement.start_new_section_from(current_section_end / attributes.clock_rate);
 
         current_section_end += section_len;
     }
@@ -451,7 +451,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
         while h.base.time > current_section_end {
             movement.save_current_peak();
-            movement.start_new_section_from(current_section_end);
+            movement.start_new_section_from(current_section_end / attributes.clock_rate);
             current_section_end += section_len;
         }
 
@@ -471,7 +471,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
     while h.base.time > current_section_end {
         movement.save_current_peak();
-        movement.start_new_section_from(current_section_end);
+        movement.start_new_section_from(current_section_end / attributes.clock_rate);
 
         current_section_end += section_len;
     }

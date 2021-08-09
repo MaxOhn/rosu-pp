@@ -8,6 +8,7 @@ pub(crate) struct DifficultyObject<'o> {
     pub(crate) prev: &'o HitObject,
     pub(crate) delta: f32,
     pub(crate) rhythm: &'static HitObjectRhythm,
+    pub(crate) start_time: f32,
 }
 
 impl<'o> DifficultyObject<'o> {
@@ -28,6 +29,7 @@ impl<'o> DifficultyObject<'o> {
             prev,
             delta,
             rhythm,
+            start_time: base.start_time / clock_rate,
         }
     }
 }

@@ -84,7 +84,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         while h.base.start_time > current_section_end {
             for skill in skills.iter_mut() {
                 skill.save_current_peak();
-                skill.start_new_section_from(current_section_end);
+                skill.start_new_section_from(current_section_end / clock_rate);
             }
 
             current_section_end += section_len;
@@ -172,7 +172,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         while h.base.start_time > current_section_end {
             for skill in skills.iter_mut() {
                 skill.save_current_peak();
-                skill.start_new_section_from(current_section_end);
+                skill.start_new_section_from(current_section_end / clock_rate);
             }
 
             current_section_end += section_len;

@@ -114,8 +114,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1977380,
         mods: 256,
-        stars: 2.0564713386286573,
-        pp: 45.1590377326849,
+        stars: 2.053266215316665,
+        pp: 45.018113339112304,
     },
     MapResult {
         map_id: 1977380,
@@ -132,8 +132,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1977380,
         mods: 64,
-        stars: 3.589887228221038,
-        pp: 141.14620680718699,
+        stars: 3.5912721232736073,
+        pp: 141.25524875691985,
     },
     MapResult {
         map_id: 1977380,
@@ -151,8 +151,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1974968,
         mods: 256,
-        stars: 1.9544305373156605,
-        pp: 42.91338693937752,
+        stars: 1.9502416666346483,
+        pp: 42.729265293038324,
     },
     MapResult {
         map_id: 1974968,
@@ -169,8 +169,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 1974968,
         mods: 64,
-        stars: 3.650649037957456,
-        pp: 139.53871429136828,
+        stars: 3.655540489429042,
+        pp: 139.91329907739348,
     },
     MapResult {
         map_id: 1974968,
@@ -188,8 +188,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 2420076,
         mods: 256,
-        stars: 4.791039358886245,
-        pp: 258.46694642171224,
+        stars: 4.789614811665553,
+        pp: 258.3131405278226,
     },
     MapResult {
         map_id: 2420076,
@@ -206,8 +206,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 2420076,
         mods: 64,
-        stars: 8.908315960310958,
-        pp: 1138.695343583009,
+        stars: 8.910276701845461,
+        pp: 1139.1968785738873,
     },
     MapResult {
         map_id: 2420076,
@@ -225,8 +225,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 2206596,
         mods: 256,
-        stars: 4.767182611189798,
-        pp: 300.15942914986067,
+        stars: 4.7660034867565795,
+        pp: 300.0108412850544,
     },
     MapResult {
         map_id: 2206596,
@@ -243,8 +243,8 @@ const RESULTS: &[MapResult] = &[
     MapResult {
         map_id: 2206596,
         mods: 64,
-        stars: 8.93391286552717,
-        pp: 1315.2112887084272,
+        stars: 8.937404638714733,
+        pp: 1316.2400280229178,
     },
     MapResult {
         map_id: 2206596,

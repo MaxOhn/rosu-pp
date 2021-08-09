@@ -2,6 +2,9 @@
 
 - Reduced amount of required features of `async_std` and `async_tokio`
 - Fixed a panic for some mania difficulty calculations on converts
+- Updated the difficulty & pp changes from 21.07.27
+- Fixed dead loop when reading empty `.osu` files ([#2] - [@Pure-Peace])
+- Updated osu's clockrate bugfix for all modes
 
 # v0.2.2
 

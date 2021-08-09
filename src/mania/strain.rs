@@ -67,7 +67,7 @@ impl Strain {
         self.current_strain *= self.strain_decay(current.delta);
         self.current_strain += self.strain_value_of(&current) * SKILL_MULTIPLIER;
         self.current_section_peak = self.current_strain.max(self.current_section_peak);
-        self.prev_time.replace(current.base.start_time);
+        self.prev_time.replace(current.start_time);
     }
 
     fn strain_value_of(&mut self, current: &DifficultyHitObject) -> f32 {
