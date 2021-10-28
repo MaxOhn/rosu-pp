@@ -27,9 +27,18 @@ const AIM_DIFFICULTY_MULTIPLIER: f32 = 1.06;
 const FLASHLIGHT_DIFFICULTY_MULTIPLIER: f32 = 1.06;
 const SPEED_DIFFICULTY_MULTIPLIER: f32 = 1.04;
 
+const SPEED_HISTORY_TIME_MAX: f32 = 4.0;
+const SPEED_RHYTHM_MULTIPLIER: f32 = 1.0;
+
 pub(crate) struct FlashlightHistoryEntry {
     is_spinner: bool,
     end_pos: Pos2,
+    strain_time: f32,
+}
+
+pub(crate) struct SpeedHistoryEntry {
+    is_slider: bool,
+    start_time: f32,
     strain_time: f32,
 }
 
@@ -40,7 +49,7 @@ pub(crate) enum SkillKind {
         scaling_factor: f32,
     },
     Speed {
-        history: VecDeque<()>,
+        history: VecDeque<SpeedHistoryEntry>,
     },
 }
 
@@ -78,7 +87,15 @@ impl SkillKind {
 
                 history.push_front(entry);
             }
-            Self::Speed { history } => {}
+            Self::Speed { history } => {
+                let entry = SpeedHistoryEntry {
+                    is_slider: current.base.is_slider(),
+                    start_time: current.base.time,
+                    strain_time: current.strain_time,
+                };
+
+                history.push_front(entry);
+            }
         }
     }
 
@@ -156,7 +173,7 @@ impl SkillKind {
 
                 result * result
             }
-            Self::Speed { history } => {
+            Self::Speed { .. } => {
                 if current.base.is_spinner() {
                     return 0.0;
                 }
@@ -201,11 +218,13 @@ impl SkillKind {
     pub(crate) fn total_current_strain(
         &self,
         current_strain: f32,
-        _current: &DifficultyObject,
+        current: &DifficultyObject,
     ) -> f32 {
         match self {
             SkillKind::Aim | SkillKind::Flashlight { .. } => current_strain,
-            SkillKind::Speed { history } => current_strain * 1.0,
+            SkillKind::Speed { history } => {
+                current_strain * calculate_speed_rhythm_bonus(history, current.base.time)
+            }
         }
     }
 
@@ -222,7 +241,68 @@ impl SkillKind {
     }
 }
 
+fn calculate_speed_rhythm_bonus(history: &VecDeque<SpeedHistoryEntry>, start_time: f32) -> f32 {
+    let mut previous_island_size = usize::MAX;
+    let mut island_times = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    let mut island_size = 0;
+    let mut first_delta_switch = false;
+
+    for (prev, curr) in history.iter().skip(1).zip(history) {
+        let prev_delta = prev.strain_time;
+        let curr_delta = curr.strain_time;
+
+        let mut effective_ratio = prev_delta.min(curr_delta) / prev_delta.max(curr_delta);
+
+        let curr_historical_decay = (SPEED_HISTORY_TIME_MAX - (start_time - curr.start_time))
+            .max(0.0)
+            / SPEED_HISTORY_TIME_MAX;
+
+        if first_delta_switch {
+            if is_ratio_equal(1.0, prev_delta, curr_delta) {
+                island_size += 1;
+            } else {
+                if island_size > 6 {
+                    island_size = 6;
+                }
+
+                if curr.is_slider {
+                    effective_ratio /= 2.0;
+                }
+
+                if prev.is_slider {
+                    effective_ratio *= 0.75;
+                }
+
+                if previous_island_size == island_size {
+                    effective_ratio /= 0.5;
+                }
+
+                island_times[island_size] += effective_ratio * curr_historical_decay;
+                previous_island_size = island_size;
+
+                if prev_delta * 1.25 < curr_delta {
+                    first_delta_switch = false;
+                }
+
+                island_size = 6;
+            }
+        } else if prev_delta > 1.25 * curr_delta {
+            first_delta_switch = true;
+            island_size = 0;
+        }
+    }
+
+    let rhythm_complexity_sum: f32 = island_times.iter().sum();
+
+    ((4.0 + rhythm_complexity_sum * SPEED_RHYTHM_MULTIPLIER).sqrt() / 2.0).min(1.5)
+}
+
 #[inline]
 fn apply_diminishing_exp(val: f32) -> f32 {
     val.powf(0.99)
+}
+
+#[inline]
+fn is_ratio_equal(ratio: f32, a: f32, b: f32) -> bool {
+    a + 15.0 > ratio * b && a - 15.0 < ratio * b
 }

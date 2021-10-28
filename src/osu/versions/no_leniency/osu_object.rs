@@ -194,6 +194,11 @@ impl OsuObject {
     }
 
     #[inline]
+    pub(crate) fn is_slider(&self) -> bool {
+        matches!(self.kind, OsuObjectKind::Slider { .. })
+    }
+
+    #[inline]
     pub(crate) fn is_spinner(&self) -> bool {
         matches!(self.kind, OsuObjectKind::Spinner)
     }
