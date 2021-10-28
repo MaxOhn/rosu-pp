@@ -141,7 +141,9 @@ impl SkillKind {
                     }
                 }
 
-                (small_dist_nerf * result).powf(2.5)
+                result *= small_dist_nerf;
+
+                result * result
             }
             Self::Speed => {
                 if current.base.is_spinner() {
