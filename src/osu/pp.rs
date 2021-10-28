@@ -482,10 +482,10 @@ impl<'m> OsuPP<'m> {
             }
 
             // Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius
-            flashlight_value *= 0.5
-                + 0.15 * (total_hits / 200.0).min(1.0)
+            flashlight_value *= 0.7
+                + 0.1 * (total_hits / 200.0).min(1.0)
                 + (total_hits > 200.0) as u8 as f32
-                    * (0.35 * ((total_hits - 200.0) / 600.0).min(1.0));
+                    * (0.2 * ((total_hits - 200.0) / 200.0).min(1.0));
 
             // Scale the aim value with accuracy _slightly_
             flashlight_value *= 0.5 + self.acc.unwrap() / 2.0;
