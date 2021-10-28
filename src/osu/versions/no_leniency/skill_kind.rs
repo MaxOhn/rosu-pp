@@ -187,6 +187,17 @@ impl SkillKind {
         }
     }
 
+    pub(crate) fn total_current_strain(
+        &self,
+        current_strain: f32,
+        _current: &DifficultyObject,
+    ) -> f32 {
+        match self {
+            SkillKind::Aim | SkillKind::Flashlight { .. } => current_strain,
+            SkillKind::Speed => current_strain * 1.0,
+        }
+    }
+
     #[inline]
     pub(crate) fn difficulty_values(&self) -> (usize, f32) {
         match self {

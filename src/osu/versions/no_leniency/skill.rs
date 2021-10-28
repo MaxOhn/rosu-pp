@@ -56,9 +56,18 @@ impl Skill {
         self.kind.pre_process();
         self.current_strain *= self.strain_decay(current.delta);
         self.current_strain += self.kind.strain_value_of(&current) * self.skill_multiplier();
-        self.current_section_peak = self.current_section_peak.max(self.current_strain);
+
+        self.current_section_peak = self
+            .current_section_peak
+            .max(self.total_current_strain(current));
+
         self.prev_time.replace(current.base.time);
         self.kind.post_process(current);
+    }
+
+    #[inline]
+    fn total_current_strain(&self, current: &DifficultyObject) -> f32 {
+        self.kind.total_current_strain(self.current_strain, current)
     }
 
     pub(crate) fn difficulty_value(&mut self) -> f32 {
