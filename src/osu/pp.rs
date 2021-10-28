@@ -464,7 +464,7 @@ impl<'m> OsuPP<'m> {
 
             // Add an additional bonus for HDFL
             if self.mods.hd() {
-                flashlight_value *= 1.2;
+                flashlight_value *= 1.3;
             }
 
             // Penalize misses by assessing # of misses relative to the total # of objects.
