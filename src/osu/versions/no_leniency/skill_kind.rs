@@ -20,6 +20,9 @@ const AIM_REDUCED_SECTION_COUNT: usize = 10;
 const FLASHLIGHT_REDUCED_SECTION_COUNT: usize = 10;
 const SPEED_REDUCED_SECTION_COUNT: usize = 5;
 
+const FLASHLIGHT_HISTORY_LENGTH: usize = 10;
+const SPEED_HISTORY_LENGTH: usize = 32;
+
 const AIM_DIFFICULTY_MULTIPLIER: f32 = 1.06;
 const FLASHLIGHT_DIFFICULTY_MULTIPLIER: f32 = 1.06;
 const SPEED_DIFFICULTY_MULTIPLIER: f32 = 1.04;
@@ -36,22 +39,30 @@ pub(crate) enum SkillKind {
         history: VecDeque<FlashlightHistoryEntry>,
         scaling_factor: f32,
     },
-    Speed,
+    Speed {
+        history: VecDeque<()>,
+    },
 }
 
 impl SkillKind {
     pub(crate) fn flashlight(scaling_factor: f32) -> Self {
         Self::Flashlight {
-            history: VecDeque::with_capacity(FLASHLIGHT_REDUCED_SECTION_COUNT),
+            history: VecDeque::with_capacity(FLASHLIGHT_HISTORY_LENGTH),
             scaling_factor,
+        }
+    }
+
+    pub(crate) fn speed() -> Self {
+        Self::Speed {
+            history: VecDeque::with_capacity(SPEED_HISTORY_LENGTH),
         }
     }
 
     pub(crate) fn pre_process(&mut self) {
         match self {
             Self::Aim => {}
-            Self::Flashlight { history, .. } => history.truncate(FLASHLIGHT_REDUCED_SECTION_COUNT),
-            Self::Speed => {}
+            Self::Flashlight { history, .. } => history.truncate(FLASHLIGHT_HISTORY_LENGTH),
+            Self::Speed { history } => history.truncate(SPEED_HISTORY_LENGTH),
         }
     }
 
@@ -67,7 +78,7 @@ impl SkillKind {
 
                 history.push_front(entry);
             }
-            Self::Speed => {}
+            Self::Speed { history } => {}
         }
     }
 
@@ -145,7 +156,7 @@ impl SkillKind {
 
                 result * result
             }
-            Self::Speed => {
+            Self::Speed { history } => {
                 if current.base.is_spinner() {
                     return 0.0;
                 }
@@ -194,7 +205,7 @@ impl SkillKind {
     ) -> f32 {
         match self {
             SkillKind::Aim | SkillKind::Flashlight { .. } => current_strain,
-            SkillKind::Speed => current_strain * 1.0,
+            SkillKind::Speed { history } => current_strain * 1.0,
         }
     }
 
@@ -206,7 +217,7 @@ impl SkillKind {
                 FLASHLIGHT_REDUCED_SECTION_COUNT,
                 FLASHLIGHT_DIFFICULTY_MULTIPLIER,
             ),
-            Self::Speed => (SPEED_REDUCED_SECTION_COUNT, SPEED_DIFFICULTY_MULTIPLIER),
+            Self::Speed { .. } => (SPEED_REDUCED_SECTION_COUNT, SPEED_DIFFICULTY_MULTIPLIER),
         }
     }
 }

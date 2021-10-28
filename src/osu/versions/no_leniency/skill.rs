@@ -108,7 +108,7 @@ impl Skill {
         match self.kind {
             SkillKind::Aim => AIM_SKILL_MULTIPLIER,
             SkillKind::Flashlight { .. } => FLASHLIGHT_SKILL_MULTIPLIER,
-            SkillKind::Speed => SPEED_SKILL_MULTIPLIER,
+            SkillKind::Speed { .. } => SPEED_SKILL_MULTIPLIER,
         }
     }
 
@@ -117,7 +117,7 @@ impl Skill {
         match self.kind {
             SkillKind::Aim => AIM_STRAIN_DECAY_BASE,
             SkillKind::Flashlight { .. } => FLASHLIGHT_STRAIN_DECAY_BASE,
-            SkillKind::Speed => SPEED_STRAIN_DECAY_BASE,
+            SkillKind::Speed { .. } => SPEED_STRAIN_DECAY_BASE,
         }
     }
 
@@ -126,7 +126,7 @@ impl Skill {
         match self.kind {
             SkillKind::Aim => AIM_DECAY_WEIGHT,
             SkillKind::Flashlight { .. } => FLASHLIGHT_DECAY_WEIGHT,
-            SkillKind::Speed => SPEED_DECAY_WEIGHT,
+            SkillKind::Speed { .. } => SPEED_DECAY_WEIGHT,
         }
     }
 

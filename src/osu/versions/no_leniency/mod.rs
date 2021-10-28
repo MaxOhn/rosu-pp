@@ -88,7 +88,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let mut skills = Vec::with_capacity(2 + fl as usize);
 
     skills.push(Skill::new(SkillKind::Aim));
-    skills.push(Skill::new(SkillKind::Speed));
+    skills.push(Skill::new(SkillKind::speed()));
 
     if fl {
         skills.push(Skill::new(SkillKind::flashlight(scaling_factor)));
@@ -208,7 +208,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     });
 
     let mut aim = Skill::new(SkillKind::Aim);
-    let mut speed = Skill::new(SkillKind::Speed);
+    let mut speed = Skill::new(SkillKind::speed());
 
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
