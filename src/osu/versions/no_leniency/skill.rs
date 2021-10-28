@@ -7,11 +7,15 @@ use std::cmp::Ordering;
 const SPEED_SKILL_MULTIPLIER: f32 = 1400.0;
 const SPEED_STRAIN_DECAY_BASE: f32 = 0.3;
 const REDUCED_STRAIN_BASELINE: f32 = 0.75;
+const SPEED_DECAY_WEIGHT: f32 = 0.9;
 
 const AIM_SKILL_MULTIPLIER: f32 = 26.25;
 const AIM_STRAIN_DECAY_BASE: f32 = 0.15;
+const AIM_DECAY_WEIGHT: f32 = 0.9;
 
-const DECAY_WEIGHT: f32 = 0.9;
+const FLASHLIGHT_SKILL_MULTIPLIER: f32 = 0.065;
+const FLASHLIGHT_STRAIN_DECAY_BASE: f32 = 0.15;
+const FLASHLIGHT_DECAY_WEIGHT: f32 = 1.0;
 
 pub(crate) struct Skill {
     current_strain: f32,
@@ -49,15 +53,18 @@ impl Skill {
 
     #[inline]
     pub(crate) fn process(&mut self, current: &DifficultyObject) {
+        self.kind.pre_process();
         self.current_strain *= self.strain_decay(current.delta);
         self.current_strain += self.kind.strain_value_of(&current) * self.skill_multiplier();
         self.current_section_peak = self.current_section_peak.max(self.current_strain);
         self.prev_time.replace(current.base.time);
+        self.kind.post_process(current);
     }
 
     pub(crate) fn difficulty_value(&mut self) -> f32 {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
+        let decay_weight = self.decay_weight();
 
         let (reduced_section_count, difficulty_multiplier) = self.kind.difficulty_values();
         let reduced_section_count_f32 = reduced_section_count as f32;
@@ -81,7 +88,7 @@ impl Skill {
 
         for &strain in self.strain_peaks.iter() {
             difficulty += strain * weight;
-            weight *= DECAY_WEIGHT;
+            weight *= decay_weight;
         }
 
         difficulty * difficulty_multiplier
@@ -91,6 +98,7 @@ impl Skill {
     fn skill_multiplier(&self) -> f32 {
         match self.kind {
             SkillKind::Aim => AIM_SKILL_MULTIPLIER,
+            SkillKind::Flashlight { .. } => FLASHLIGHT_SKILL_MULTIPLIER,
             SkillKind::Speed => SPEED_SKILL_MULTIPLIER,
         }
     }
@@ -99,7 +107,17 @@ impl Skill {
     fn strain_decay_base(&self) -> f32 {
         match self.kind {
             SkillKind::Aim => AIM_STRAIN_DECAY_BASE,
+            SkillKind::Flashlight { .. } => FLASHLIGHT_STRAIN_DECAY_BASE,
             SkillKind::Speed => SPEED_STRAIN_DECAY_BASE,
+        }
+    }
+
+    #[inline]
+    fn decay_weight(&self) -> f32 {
+        match self.kind {
+            SkillKind::Aim => AIM_DECAY_WEIGHT,
+            SkillKind::Flashlight { .. } => FLASHLIGHT_DECAY_WEIGHT,
+            SkillKind::Speed => SPEED_DECAY_WEIGHT,
         }
     }
 

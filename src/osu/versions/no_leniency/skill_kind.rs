@@ -1,3 +1,7 @@
+use std::collections::VecDeque;
+
+use crate::parse::Pos2;
+
 use super::DifficultyObject;
 
 const SINGLE_SPACING_TRESHOLD: f32 = 125.0;
@@ -13,19 +17,61 @@ const AIM_ANGLE_BONUS_BEGIN: f32 = std::f32::consts::FRAC_PI_3;
 const TIMING_THRESHOLD: f32 = 107.0;
 
 const AIM_REDUCED_SECTION_COUNT: usize = 10;
+const FLASHLIGHT_REDUCED_SECTION_COUNT: usize = 10;
 const SPEED_REDUCED_SECTION_COUNT: usize = 5;
 
 const AIM_DIFFICULTY_MULTIPLIER: f32 = 1.06;
+const FLASHLIGHT_DIFFICULTY_MULTIPLIER: f32 = 1.06;
 const SPEED_DIFFICULTY_MULTIPLIER: f32 = 1.04;
 
-#[derive(Copy, Clone)]
+pub(crate) struct FlashlightHistoryEntry {
+    is_spinner: bool,
+    end_pos: Pos2,
+    strain_time: f32,
+}
+
 pub(crate) enum SkillKind {
     Aim,
+    Flashlight {
+        history: VecDeque<FlashlightHistoryEntry>,
+        scaling_factor: f32,
+    },
     Speed,
 }
 
 impl SkillKind {
-    pub(crate) fn strain_value_of(self, current: &DifficultyObject) -> f32 {
+    pub(crate) fn flashlight(scaling_factor: f32) -> Self {
+        Self::Flashlight {
+            history: VecDeque::with_capacity(FLASHLIGHT_REDUCED_SECTION_COUNT),
+            scaling_factor,
+        }
+    }
+
+    pub(crate) fn pre_process(&mut self) {
+        match self {
+            Self::Aim => {}
+            Self::Flashlight { history, .. } => history.truncate(FLASHLIGHT_REDUCED_SECTION_COUNT),
+            Self::Speed => {}
+        }
+    }
+
+    pub(crate) fn post_process(&mut self, current: &DifficultyObject) {
+        match self {
+            Self::Aim => {}
+            Self::Flashlight { history, .. } => {
+                let entry = FlashlightHistoryEntry {
+                    is_spinner: current.base.is_spinner(),
+                    end_pos: current.base.end_pos(),
+                    strain_time: current.strain_time,
+                };
+
+                history.push_front(entry);
+            }
+            Self::Speed => {}
+        }
+    }
+
+    pub(crate) fn strain_value_of(&self, current: &DifficultyObject) -> f32 {
         match self {
             Self::Aim => {
                 if current.base.is_spinner() {
@@ -56,6 +102,46 @@ impl SkillKind {
 
                 (result + dist_exp / (current.strain_time).max(TIMING_THRESHOLD))
                     .max(dist_exp / current.strain_time)
+            }
+            Self::Flashlight {
+                history,
+                scaling_factor,
+            } => {
+                if current.base.is_spinner() {
+                    return 0.0;
+                }
+
+                let mut small_dist_nerf = 1.0;
+
+                let mut result = 0.0;
+                let mut cumulative_strain_time = 0.0;
+                let mut history = history.iter();
+
+                if let Some(entry) = history.next() {
+                    if !entry.is_spinner {
+                        let jump_dist = (current.base.pos - entry.end_pos).length();
+                        cumulative_strain_time += entry.strain_time;
+
+                        // We want to nerf objects that can be easily seen within the Flashlight circle radius
+                        if jump_dist < 50.0 {
+                            small_dist_nerf = jump_dist / 50.0;
+                        }
+
+                        result += scaling_factor * jump_dist / cumulative_strain_time;
+                    }
+
+                    for (i, entry) in (1..).zip(history) {
+                        if !entry.is_spinner {
+                            let jump_dist = (current.base.pos - entry.end_pos).length();
+                            cumulative_strain_time += entry.strain_time;
+
+                            result += 0.8_f32.powi(i) * scaling_factor * jump_dist
+                                / cumulative_strain_time;
+                        }
+                    }
+                }
+
+                (small_dist_nerf * result).powf(2.5)
             }
             Self::Speed => {
                 if current.base.is_spinner() {
@@ -103,6 +189,10 @@ impl SkillKind {
     pub(crate) fn difficulty_values(&self) -> (usize, f32) {
         match self {
             Self::Aim => (AIM_REDUCED_SECTION_COUNT, AIM_DIFFICULTY_MULTIPLIER),
+            Self::Flashlight { .. } => (
+                FLASHLIGHT_REDUCED_SECTION_COUNT,
+                FLASHLIGHT_DIFFICULTY_MULTIPLIER,
+            ),
             Self::Speed => (SPEED_REDUCED_SECTION_COUNT, SPEED_DIFFICULTY_MULTIPLIER),
         }
     }

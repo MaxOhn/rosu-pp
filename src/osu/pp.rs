@@ -293,9 +293,13 @@ impl<'m> OsuPP<'m> {
         let aim_value = self.compute_aim_value(total_hits);
         let speed_value = self.compute_speed_value(total_hits);
         let acc_value = self.compute_accuracy_value(total_hits);
+        let flashlight_value = self.compute_flashlight_value(total_hits);
 
-        let pp = (aim_value.powf(1.1) + speed_value.powf(1.1) + acc_value.powf(1.1))
-            .powf(1.0 / 1.1)
+        let pp = (aim_value.powf(1.1)
+            + speed_value.powf(1.1)
+            + acc_value.powf(1.1)
+            + flashlight_value.powf(1.1))
+        .powf(1.0 / 1.1)
             * multiplier;
 
         let attributes = StarResult::Osu(self.attributes.unwrap());
@@ -350,16 +354,7 @@ impl<'m> OsuPP<'m> {
             aim_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
         }
 
-        // FL bonus
-        let fl_bonus = if self.mods.fl() {
-            1.0 + 0.35 * (total_hits / 200.0).min(1.0)
-                + (total_hits > 200.0) as u8 as f32 * 0.3 * ((total_hits - 200.0) / 300.0).min(1.0)
-                + (total_hits > 500.0) as u8 as f32 * (total_hits - 500.0) / 1200.0
-        } else {
-            1.0
-        };
-
-        aim_value *= ar_bonus.max(fl_bonus);
+        aim_value *= ar_bonus;
 
         // Scale with accuracy
         aim_value *= 0.5 + self.acc.unwrap() / 2.0;
@@ -452,6 +447,56 @@ impl<'m> OsuPP<'m> {
         }
 
         acc_value
+    }
+
+    fn compute_flashlight_value(&self, total_hits: f32) -> f32 {
+        if self.mods.fl() {
+            let attributes = self.attributes.as_ref().unwrap();
+
+            // TD penalty
+            let raw_flashlight = if self.mods.td() {
+                attributes.flashlight_strain.powf(0.8)
+            } else {
+                attributes.flashlight_strain
+            };
+
+            let mut flashlight_value = raw_flashlight * raw_flashlight * 25.0;
+
+            // Add an additional bonus for HDFL
+            if self.mods.hd() {
+                flashlight_value *= 1.2;
+            }
+
+            // Penalize misses by assessing # of misses relative to the total # of objects.
+            // Default a 3% reduction for any # of misses
+            if self.n_misses > 0 {
+                flashlight_value *= 0.97
+                    * (1.0 - (self.n_misses as f32 / total_hits).powf(0.775))
+                        .powf((self.n_misses as f32).powf(0.875));
+            }
+
+            // Combo scaling
+            if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
+                flashlight_value *=
+                    ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
+            }
+
+            // Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius
+            flashlight_value *= 0.5
+                + 0.15 * (total_hits / 200.0).min(1.0)
+                + (total_hits > 200.0) as u8 as f32
+                    * (0.35 * ((total_hits - 200.0) / 600.0).min(1.0));
+
+            // Scale the aim value with accuracy _slightly_
+            flashlight_value *= 0.5 + self.acc.unwrap() / 2.0;
+
+            // It is important to also consider accuracy difficulty when doing that
+            flashlight_value *= 0.98 + attributes.od * attributes.od / 2500.0;
+
+            flashlight_value
+        } else {
+            0.0
+        }
     }
 
     #[inline]

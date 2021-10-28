@@ -15,6 +15,7 @@ pub struct DifficultyAttributes {
     pub od: f32,
     pub speed_strain: f32,
     pub aim_strain: f32,
+    pub flashlight_strain: f32,
     pub max_combo: usize,
     pub n_circles: usize,
     pub n_spinners: usize,

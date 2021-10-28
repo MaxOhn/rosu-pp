@@ -12,9 +12,17 @@ const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 pub(crate) struct OsuObject {
     pub(crate) time: f32,
     pub(crate) pos: Pos2,
-    pub(crate) end_pos: Pos2,
-    // circle: Some(0.0) | slider: Some(_) | spinner: None
-    pub(crate) travel_dist: Option<f32>,
+    pub(crate) kind: OsuObjectKind,
+}
+
+pub(crate) enum OsuObjectKind {
+    Circle,
+    Slider {
+        end_pos: Pos2,
+        lazy_end_pos: Pos2,
+        travel_dist: f32,
+    },
+    Spinner,
 }
 
 impl OsuObject {
@@ -33,8 +41,7 @@ impl OsuObject {
             HitObjectKind::Circle => Self {
                 time: h.start_time,
                 pos: h.pos,
-                end_pos: h.pos,
-                travel_dist: Some(0.0),
+                kind: OsuObjectKind::Circle,
             },
             HitObjectKind::Slider {
                 pixel_len,
@@ -43,7 +50,7 @@ impl OsuObject {
                 path_type,
             } => {
                 // Key values which are computed here
-                let mut end_pos = h.pos;
+                let mut lazy_end_pos = h.pos;
                 let mut travel_dist = 0.0;
 
                 // Responsible for timing point values
@@ -82,12 +89,12 @@ impl OsuObject {
                     let curr_dist = pixel_len * progress;
                     let curr_pos = curve.point_at_distance(curr_dist);
 
-                    let diff = curr_pos - end_pos;
+                    let diff = curr_pos - lazy_end_pos;
                     let mut dist = diff.length();
 
                     if dist > approx_follow_circle_radius {
                         dist -= approx_follow_circle_radius;
-                        end_pos += diff.normalize() * dist;
+                        lazy_end_pos += diff.normalize() * dist;
                         travel_dist += dist;
                     }
                 };
@@ -138,20 +145,23 @@ impl OsuObject {
 
                 ticks.clear();
 
+                let end_pos = curve.point_at_distance(*pixel_len);
                 travel_dist *= scaling_factor;
 
                 Self {
                     time: h.start_time,
                     pos: h.pos,
-                    end_pos,
-                    travel_dist: Some(travel_dist),
+                    kind: OsuObjectKind::Slider {
+                        end_pos,
+                        lazy_end_pos,
+                        travel_dist,
+                    },
                 }
             }
             HitObjectKind::Spinner { .. } => Self {
                 time: h.start_time,
                 pos: h.pos,
-                end_pos: h.pos,
-                travel_dist: None,
+                kind: OsuObjectKind::Spinner,
             },
             HitObjectKind::Hold { .. } => return None,
         };
@@ -160,7 +170,31 @@ impl OsuObject {
     }
 
     #[inline]
+    pub(crate) fn end_pos(&self) -> Pos2 {
+        match self.kind {
+            OsuObjectKind::Circle | OsuObjectKind::Spinner => self.pos,
+            OsuObjectKind::Slider { end_pos, .. } => end_pos,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn lazy_end_pos(&self) -> Pos2 {
+        match self.kind {
+            OsuObjectKind::Circle | OsuObjectKind::Spinner => self.pos,
+            OsuObjectKind::Slider { lazy_end_pos, .. } => lazy_end_pos,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn travel_dist(&self) -> f32 {
+        match self.kind {
+            OsuObjectKind::Circle | OsuObjectKind::Spinner => 0.0,
+            OsuObjectKind::Slider { travel_dist, .. } => travel_dist,
+        }
+    }
+
+    #[inline]
     pub(crate) fn is_spinner(&self) -> bool {
-        self.travel_dist.is_none()
+        matches!(self.kind, OsuObjectKind::Spinner)
     }
 }
