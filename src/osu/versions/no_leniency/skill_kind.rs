@@ -27,8 +27,8 @@ const AIM_DIFFICULTY_MULTIPLIER: f32 = 1.06;
 const FLASHLIGHT_DIFFICULTY_MULTIPLIER: f32 = 1.06;
 const SPEED_DIFFICULTY_MULTIPLIER: f32 = 1.04;
 
-const SPEED_HISTORY_TIME_MAX: f32 = 4.0;
-const SPEED_RHYTHM_MULTIPLIER: f32 = 1.0;
+const SPEED_HISTORY_TIME_MAX: f32 = 3000.0;
+const SPEED_RHYTHM_MULTIPLIER: f32 = 1.5;
 
 pub(crate) struct FlashlightHistoryEntry {
     is_spinner: bool,
@@ -247,11 +247,15 @@ fn calculate_speed_rhythm_bonus(history: &VecDeque<SpeedHistoryEntry>, start_tim
     let mut island_size = 0;
     let mut first_delta_switch = false;
 
-    for (prev, curr) in history.iter().skip(1).zip(history) {
+    for (prev, curr) in history.iter().skip(1).zip(history).rev() {
         let prev_delta = prev.strain_time;
         let curr_delta = curr.strain_time;
 
         let mut effective_ratio = prev_delta.min(curr_delta) / prev_delta.max(curr_delta);
+
+        if effective_ratio > 0.5 {
+            effective_ratio = 0.5 + (effective_ratio - 0.5) * 5.0;
+        }
 
         let curr_historical_decay = (SPEED_HISTORY_TIME_MAX - (start_time - curr.start_time))
             .max(0.0)
@@ -294,7 +298,7 @@ fn calculate_speed_rhythm_bonus(history: &VecDeque<SpeedHistoryEntry>, start_tim
 
     let rhythm_complexity_sum: f32 = island_times.iter().sum();
 
-    ((4.0 + rhythm_complexity_sum * SPEED_RHYTHM_MULTIPLIER).sqrt() / 2.0).min(1.5)
+    (4.0 + rhythm_complexity_sum * SPEED_RHYTHM_MULTIPLIER).sqrt() / 2.0
 }
 
 #[inline]
