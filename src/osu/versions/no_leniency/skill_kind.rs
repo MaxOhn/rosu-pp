@@ -145,10 +145,8 @@ impl SkillKind {
                 let dist_exp =
                     jump_dist_exp + travel_dist_exp + (travel_dist_exp * jump_dist_exp).sqrt();
 
-                let res = (aim_strain + dist_exp / (curr.strain_time).max(TIMING_THRESHOLD))
-                    .max(dist_exp / curr.strain_time);
-
-                res
+                (aim_strain + dist_exp / (curr.strain_time).max(TIMING_THRESHOLD))
+                    .max(dist_exp / curr.strain_time)
             }
             Self::Flashlight {
                 history,

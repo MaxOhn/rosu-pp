@@ -158,11 +158,9 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
     };
 
-    let flashlight_rating = if let Some(skill) = skills.get_mut(2) {
+    let flashlight_rating = skills.get_mut(2).map_or(0.0, |skill| {
         skill.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
-    } else {
-        0.0
-    };
+    });
 
     let base_aim_performance = {
         let base = 5.0 * (aim_rating / 0.0675).max(1.0) - 4.0;

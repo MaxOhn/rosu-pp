@@ -4,6 +4,8 @@
 
 #![cfg(feature = "all_included")]
 
+use std::mem;
+
 use super::super::DifficultyAttributes;
 use crate::parse::Pos2;
 
@@ -39,11 +41,13 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
-    let hitwindow = super::difficulty_range(map_attributes.od).floor() / map_attributes.clock_rate;
-    let od = (80.0 - hitwindow) / 6.0;
+    let hit_window =
+        super::difficulty_range_od(map_attributes.od).floor() / map_attributes.clock_rate;
+    let od = (80.0 - hit_window) / 6.0;
 
     let mut diff_attributes = DifficultyAttributes {
         ar: map_attributes.ar,
+        hp: map_attributes.hp,
         od,
         ..Default::default()
     };
@@ -112,8 +116,15 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         h
     });
 
-    let mut aim = Skill::new(SkillKind::Aim);
-    let mut speed = Skill::new(SkillKind::Speed);
+    let fl = mods.fl();
+    let mut skills = Vec::with_capacity(2 + fl as usize);
+
+    skills.push(Skill::new(SkillKind::Aim));
+    skills.push(Skill::new(SkillKind::speed(hit_window)));
+
+    if fl {
+        skills.push(Skill::new(SkillKind::flashlight(scaling_factor)));
+    }
 
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
@@ -127,11 +138,16 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
     while h.base.time > current_section_end {
+        for skill in skills.iter_mut() {
+            skill.start_new_section_from(current_section_end);
+        }
+
         current_section_end += SECTION_LEN;
     }
 
-    aim.process(&h);
-    speed.process(&h);
+    for skill in skills.iter_mut() {
+        skill.process(&h);
+    }
 
     prev_prev = Some(prev);
     prev_vals = Some((h.jump_dist, h.strain_time));
@@ -142,35 +158,77 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
         while h.base.time > current_section_end {
-            aim.save_current_peak();
-            aim.start_new_section_from(current_section_end);
-            speed.save_current_peak();
-            speed.start_new_section_from(current_section_end);
+            for skill in skills.iter_mut() {
+                skill.save_current_peak();
+                skill.start_new_section_from(current_section_end);
+            }
 
             current_section_end += SECTION_LEN;
         }
 
-        aim.process(&h);
-        speed.process(&h);
+        for skill in skills.iter_mut() {
+            skill.process(&h);
+        }
 
         prev_prev = Some(prev);
         prev_vals = Some((h.jump_dist, h.strain_time));
         prev = curr;
     }
 
-    aim.save_current_peak();
-    speed.save_current_peak();
+    for skill in skills.iter_mut() {
+        skill.save_current_peak();
+    }
 
-    let aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-    let speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+    let aim_rating = skills[0].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
-    let stars = aim_rating + speed_rating + (aim_rating - speed_rating).abs() / 2.0;
+    let speed_rating = if mods.rx() {
+        0.0
+    } else {
+        skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
+    };
+
+    let flashlight_rating = skills.get_mut(2).map_or(0.0, |skill| {
+        skill.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
+    });
+
+    let base_aim_performance = {
+        let base = 5.0 * (aim_rating / 0.0675).max(1.0) - 4.0;
+
+        base * base * base / 100_000.0
+    };
+
+    let base_speed_performance = {
+        let base = 5.0 * (speed_rating / 0.0675).max(1.0) - 4.0;
+
+        base * base * base / 100_000.0
+    };
+
+    let base_flashlight_performance = if fl {
+        flashlight_rating * flashlight_rating * 25.0
+    } else {
+        0.0
+    };
+
+    let base_performance = (base_aim_performance.powf(1.1)
+        + base_speed_performance.powf(1.1)
+        + base_flashlight_performance.powf(1.1))
+    .powf(1.0 / 1.1);
+
+    let star_rating = if base_performance > 0.00001 {
+        1.12_f32.cbrt()
+            * 0.027
+            * ((100_000.0 / (1.0_f32 / 1.1).exp2() * base_performance).cbrt() + 4.0)
+    } else {
+        0.0
+    };
 
     diff_attributes.n_circles = map.n_circles as usize;
     diff_attributes.n_spinners = map.n_spinners as usize;
-    diff_attributes.stars = stars;
+    diff_attributes.n_sliders = map.n_sliders as usize;
+    diff_attributes.stars = star_rating;
     diff_attributes.speed_strain = speed_rating;
     diff_attributes.aim_strain = aim_rating;
+    diff_attributes.flashlight_rating = flashlight_rating;
 
     StarResult::Osu(diff_attributes)
 }
@@ -181,11 +239,13 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 /// Suitable to plot the difficulty of a map over time.
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let map_attributes = map.attributes().mods(mods);
-    let hitwindow = super::difficulty_range(map_attributes.od).floor() / map_attributes.clock_rate;
-    let od = (80.0 - hitwindow) / 6.0;
+    let hit_window =
+        super::difficulty_range_od(map_attributes.od).floor() / map_attributes.clock_rate;
+    let od = (80.0 - hit_window) / 6.0;
 
     let mut diff_attributes = DifficultyAttributes {
         ar: map_attributes.ar,
+        hp: map_attributes.hp,
         od,
         ..Default::default()
     };
@@ -254,8 +314,15 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         h
     });
 
-    let mut aim = Skill::new(SkillKind::Aim);
-    let mut speed = Skill::new(SkillKind::Speed);
+    let fl = mods.fl();
+    let mut skills = Vec::with_capacity(2 + fl as usize);
+
+    skills.push(Skill::new(SkillKind::Aim));
+    skills.push(Skill::new(SkillKind::speed(hit_window)));
+
+    if fl {
+        skills.push(Skill::new(SkillKind::flashlight(scaling_factor)));
+    }
 
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
@@ -269,11 +336,16 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
     while h.base.time > current_section_end {
+        for skill in skills.iter_mut() {
+            skill.start_new_section_from(current_section_end);
+        }
+
         current_section_end += SECTION_LEN;
     }
 
-    aim.process(&h);
-    speed.process(&h);
+    for skill in skills.iter_mut() {
+        skill.process(&h);
+    }
 
     prev_prev = Some(prev);
     prev_vals = Some((h.jump_dist, h.strain_time));
@@ -284,31 +356,47 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
 
         while h.base.time > current_section_end {
-            aim.save_current_peak();
-            aim.start_new_section_from(current_section_end);
-            speed.save_current_peak();
-            speed.start_new_section_from(current_section_end);
+            for skill in skills.iter_mut() {
+                skill.save_current_peak();
+                skill.start_new_section_from(current_section_end);
+            }
 
             current_section_end += SECTION_LEN;
         }
 
-        aim.process(&h);
-        speed.process(&h);
+        for skill in skills.iter_mut() {
+            skill.process(&h);
+        }
 
         prev_prev = Some(prev);
         prev_vals = Some((h.jump_dist, h.strain_time));
         prev = curr;
     }
 
-    aim.save_current_peak();
-    speed.save_current_peak();
+    for skill in skills.iter_mut() {
+        skill.save_current_peak();
+    }
 
-    let strains = aim
-        .strain_peaks
-        .into_iter()
-        .zip(speed.strain_peaks.into_iter())
-        .map(|(aim, speed)| aim + speed)
-        .collect();
+    let mut speed_strains = skills.pop().unwrap().strain_peaks;
+    let mut aim_strains = skills.pop().unwrap().strain_peaks;
+
+    let strains = if let Some(mut flashlight_strains) = skills.pop().map(|s| s.strain_peaks) {
+        mem::swap(&mut speed_strains, &mut aim_strains);
+        mem::swap(&mut aim_strains, &mut flashlight_strains);
+
+        aim_strains
+            .into_iter()
+            .zip(speed_strains)
+            .zip(flashlight_strains)
+            .map(|((aim, speed), flashlight)| aim + speed + flashlight)
+            .collect()
+    } else {
+        aim_strains
+            .into_iter()
+            .zip(speed_strains)
+            .map(|(aim, speed)| aim + speed)
+            .collect()
+    };
 
     Strains {
         section_length: SECTION_LEN,
