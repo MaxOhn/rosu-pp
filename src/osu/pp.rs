@@ -42,6 +42,8 @@ pub struct OsuPP<'m> {
     n50: Option<usize>,
     n_misses: usize,
     passed_objects: Option<usize>,
+
+    effective_misses: Option<usize>,
 }
 
 impl<'m> OsuPP<'m> {
@@ -59,6 +61,8 @@ impl<'m> OsuPP<'m> {
             n50: None,
             n_misses: 0,
             passed_objects: None,
+
+            effective_misses: None,
         }
     }
 
@@ -279,15 +283,25 @@ impl<'m> OsuPP<'m> {
         let total_hits = self.total_hits() as f32;
         let mut multiplier = 1.12;
 
+        self.calculate_effective_misses(total_hits);
+
         // NF penalty
         if self.mods.nf() {
-            multiplier *= (1.0 - 0.02 * self.n_misses as f32).max(0.9);
+            multiplier *= (1.0 - 0.02 * self.effective_misses.map_or(0.0, |m| m as f32)).max(0.9);
         }
 
         // SO penalty
         if self.mods.so() {
             let n_spinners = self.attributes.as_ref().unwrap().n_spinners;
             multiplier *= 1.0 - (n_spinners as f32 / total_hits).powf(0.85);
+        }
+
+        // Relax penalty
+        if self.mods.rx() {
+            *self.effective_misses.as_mut().unwrap() +=
+                self.n100.unwrap_or(0) + self.n50.unwrap_or(0);
+
+            multiplier *= 0.6;
         }
 
         let aim_value = self.compute_aim_value(total_hits);
@@ -326,10 +340,10 @@ impl<'m> OsuPP<'m> {
         aim_value *= len_bonus;
 
         // Penalize misses
-        if self.n_misses > 0 {
+        let effective_misses = self.effective_misses.map_or(0, |m| m as i32);
+        if effective_misses > 0 {
             aim_value *= 0.97
-                * (1.0 - (self.n_misses as f32 / total_hits).powf(0.775))
-                    .powi(self.n_misses as i32);
+                * (1.0 - (effective_misses as f32 / total_hits).powf(0.775)).powi(effective_misses);
         }
 
         // Combo scaling
@@ -349,7 +363,7 @@ impl<'m> OsuPP<'m> {
         let ar_total_hits_factor = (1.0 + (-(0.007 * (total_hits - 400.0))).exp()).recip();
         let ar_bonus = 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
 
-        // HD bonus
+        // HD bonus (this would include the Blinds mod but it's currently not representable)
         if self.mods.hd() {
             aim_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
         }
@@ -376,10 +390,11 @@ impl<'m> OsuPP<'m> {
         speed_value *= len_bonus;
 
         // Penalize misses
-        if self.n_misses > 0 {
+        let effective_misses = self.effective_misses.map_or(0.0, |m| m as f32);
+        if effective_misses > 0.0 {
             speed_value *= 0.97
-                * (1.0 - (self.n_misses as f32 / total_hits).powf(0.775))
-                    .powf((self.n_misses as f32).powf(0.875));
+                * (1.0 - (effective_misses / total_hits).powf(0.775))
+                    .powf(effective_misses.powf(0.875));
         }
 
         // Combo scaling
@@ -398,7 +413,7 @@ impl<'m> OsuPP<'m> {
 
         speed_value *= 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
 
-        // HD bonus
+        // HD bonus (this would include the Blinds mod but it's currently not representable)
         if self.mods.hd() {
             speed_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
         }
@@ -421,6 +436,10 @@ impl<'m> OsuPP<'m> {
     }
 
     fn compute_accuracy_value(&self, total_hits: f32) -> f32 {
+        if self.mods.rx() {
+            return 0.0;
+        }
+
         let attributes = self.attributes.as_ref().unwrap();
         let n_circles = attributes.n_circles as f32;
         let n300 = self.n300.unwrap_or(0) as f32;
@@ -436,7 +455,7 @@ impl<'m> OsuPP<'m> {
         // Bonus for many hitcircles
         acc_value *= ((n_circles as f32 / 1000.0).powf(0.3)).min(1.15);
 
-        // HD bonus
+        // HD bonus (this would include the Blinds mod but it's currently not representable)
         if self.mods.hd() {
             acc_value *= 1.08;
         }
@@ -450,53 +469,76 @@ impl<'m> OsuPP<'m> {
     }
 
     fn compute_flashlight_value(&self, total_hits: f32) -> f32 {
-        if self.mods.fl() {
-            let attributes = self.attributes.as_ref().unwrap();
-
-            // TD penalty
-            let raw_flashlight = if self.mods.td() {
-                attributes.flashlight_strain.powf(0.8)
-            } else {
-                attributes.flashlight_strain
-            };
-
-            let mut flashlight_value = raw_flashlight * raw_flashlight * 25.0;
-
-            // Add an additional bonus for HDFL
-            if self.mods.hd() {
-                flashlight_value *= 1.3;
-            }
-
-            // Penalize misses by assessing # of misses relative to the total # of objects.
-            // Default a 3% reduction for any # of misses
-            if self.n_misses > 0 {
-                flashlight_value *= 0.97
-                    * (1.0 - (self.n_misses as f32 / total_hits).powf(0.775))
-                        .powf((self.n_misses as f32).powf(0.875));
-            }
-
-            // Combo scaling
-            if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
-                flashlight_value *=
-                    ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
-            }
-
-            // Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius
-            flashlight_value *= 0.7
-                + 0.1 * (total_hits / 200.0).min(1.0)
-                + (total_hits > 200.0) as u8 as f32
-                    * (0.2 * ((total_hits - 200.0) / 200.0).min(1.0));
-
-            // Scale the aim value with accuracy _slightly_
-            flashlight_value *= 0.5 + self.acc.unwrap() / 2.0;
-
-            // It is important to also consider accuracy difficulty when doing that
-            flashlight_value *= 0.98 + attributes.od * attributes.od / 2500.0;
-
-            flashlight_value
-        } else {
-            0.0
+        if !self.mods.fl() {
+            return 0.0;
         }
+
+        let attributes = self.attributes.as_ref().unwrap();
+
+        // TD penalty
+        let raw_flashlight = if self.mods.td() {
+            attributes.flashlight_rating.powf(0.8)
+        } else {
+            attributes.flashlight_rating
+        };
+
+        let mut flashlight_value = raw_flashlight * raw_flashlight * 25.0;
+
+        // Add an additional bonus for HDFL
+        if self.mods.hd() {
+            flashlight_value *= 1.3;
+        }
+
+        // Penalize misses by assessing # of misses relative to the total # of objects.
+        // Default a 3% reduction for any # of misses
+        let effective_misses = self.effective_misses.map_or(0.0, |m| m as f32);
+        if effective_misses > 0.0 {
+            flashlight_value *= 0.97
+                * (1.0 - (effective_misses / total_hits).powf(0.775))
+                    .powf(effective_misses.powf(0.875));
+        }
+
+        // Combo scaling
+        if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
+            flashlight_value *= ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
+        }
+
+        // Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius
+        flashlight_value *= 0.7
+            + 0.1 * (total_hits / 200.0).min(1.0)
+            + (total_hits > 200.0) as u8 as f32 * (0.2 * ((total_hits - 200.0) / 200.0).min(1.0));
+
+        // Scale the aim value with accuracy _slightly_
+        flashlight_value *= 0.5 + self.acc.unwrap() / 2.0;
+
+        // It is important to also consider accuracy difficulty when doing that
+        flashlight_value *= 0.98 + attributes.od * attributes.od / 2500.0;
+
+        flashlight_value
+    }
+
+    fn calculate_effective_misses(&mut self, total_hits: f32) {
+        // Guess the number of misses + slider breaks from combo
+        let mut combo_based_misses: f32 = 0.0;
+
+        let attributes = self.attributes.as_ref().unwrap();
+
+        if attributes.n_sliders > 0 {
+            let full_combo_threshold =
+                attributes.max_combo as f32 - 0.1 * attributes.n_sliders as f32;
+
+            let f32_combo = self.combo.map(|c| c as f32);
+
+            if let Some(combo) = f32_combo.filter(|&c| c < full_combo_threshold) {
+                combo_based_misses = full_combo_threshold / combo.max(1.0);
+            }
+        }
+
+        // We're clamping misses because since it's derived from combo it
+        // can be higher than total hits and that breaks some calculations
+        combo_based_misses = combo_based_misses.min(total_hits);
+
+        self.effective_misses = Some(self.n_misses.max(combo_based_misses.floor() as usize))
     }
 
     #[inline]

@@ -1,5 +1,7 @@
 ## Upcoming
 
+- osu: Updated up to commit [6944151486e677bfd11f2390163aca9161defbbf](https://github.com/ppy/osu/commit/6944151486e677bfd11f2390163aca9161defbbf) (2021-10-27)
+
 # v0.2.3
 
 - Reduced amount of required features of `async_std` and `async_tokio`
