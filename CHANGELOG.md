@@ -1,5 +1,6 @@
 ## Upcoming
 
+- added internal binary crate `pp-gen` to calculate difficulty & pp values via `PerformanceCalculator.dll`
 - osu: Updated up to commit [6944151486e677bfd11f2390163aca9161defbbf](https://github.com/ppy/osu/commit/6944151486e677bfd11f2390163aca9161defbbf) (2021-10-27)
 
 # v0.2.3

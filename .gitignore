@@ -1,3 +1,7 @@
 /target
 Cargo.lock
 /maps
+/pp-gen/.env
+/pp-gen/target
+/pp-gen/input/*
+/pp-gen/output/*
