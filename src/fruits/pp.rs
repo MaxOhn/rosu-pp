@@ -11,7 +11,7 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
-/// let pp_result: PpResult = FruitsPP::new(&map)
+/// let pp_result = FruitsPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
 ///     .misses(1)

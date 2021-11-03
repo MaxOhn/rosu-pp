@@ -11,7 +11,7 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
-/// let pp_result: PpResult = ManiaPP::new(&map)
+/// let pp_result = ManiaPP::new(&map)
 ///     .mods(64) // DT
 ///     .score(765_432)
 ///     .calculate();
