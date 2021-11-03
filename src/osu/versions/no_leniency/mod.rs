@@ -21,7 +21,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, Mods, StarResult, Strains};
+use crate::{Beatmap, Mods, Strains};
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -37,7 +37,11 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// processing stack leniency is relatively expensive.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
+pub fn stars(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> DifficultyAttributes {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
@@ -52,7 +56,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     };
 
     if take < 2 {
-        return StarResult::Osu(diff_attributes);
+        return diff_attributes;
     }
 
     let radius = OBJECT_RADIUS * (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
@@ -201,7 +205,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     diff_attributes.n_spinners = map.n_spinners as usize;
     diff_attributes.stars = star_rating;
 
-    StarResult::Osu(diff_attributes)
+    diff_attributes
 }
 
 /// Essentially the same as the `stars` function but instead of

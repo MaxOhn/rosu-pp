@@ -18,7 +18,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use stamina_cheese::StaminaCheeseDetector;
 
-use crate::{Beatmap, Mods, StarResult, Strains};
+use crate::{Beatmap, Mods, Strains};
 
 use std::cmp::Ordering;
 use std::f32::consts::PI;
@@ -32,11 +32,15 @@ const STAMINA_SKILL_MULTIPLIER: f32 = 0.02;
 /// Star calculation for osu!taiko maps.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
+pub fn stars(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> DifficultyAttributes {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return StarResult::Taiko(DifficultyAttributes { stars: 0.0 });
+        return DifficultyAttributes { stars: 0.0 };
     }
 
     // True if the object at that index is stamina cheese
@@ -116,7 +120,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
 
-    StarResult::Taiko(DifficultyAttributes { stars })
+    DifficultyAttributes { stars }
 }
 
 /// Essentially the same as the `stars` function but instead of

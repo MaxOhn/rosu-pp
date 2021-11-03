@@ -15,7 +15,7 @@ use slider_state::SliderState;
 use crate::{
     curve::Curve,
     parse::{HitObjectKind, Pos2},
-    Beatmap, Mods, StarResult, Strains,
+    Beatmap, Mods, Strains,
 };
 
 const SECTION_LENGTH: f32 = 750.0;
@@ -30,9 +30,13 @@ const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 // Slider parsing based on https://github.com/osufx/catch-the-pp
-pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
+pub fn stars(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> DifficultyAttributes {
     if map.hit_objects.len() < 2 {
-        return StarResult::Fruits(DifficultyAttributes::default());
+        return DifficultyAttributes::default();
     }
 
     let take = passed_objects.unwrap_or(usize::MAX);
@@ -255,16 +259,14 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
 
     let stars = movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR;
 
-    let attributes = DifficultyAttributes {
+    DifficultyAttributes {
         stars,
         ar: attributes.ar,
         n_fruits: fruits,
         n_droplets: droplets,
         n_tiny_droplets: tiny_droplets,
         max_combo: fruits + droplets,
-    };
-
-    StarResult::Fruits(attributes)
+    }
 }
 
 /// Essentially the same as the `stars` function but instead of

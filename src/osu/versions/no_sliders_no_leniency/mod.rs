@@ -20,7 +20,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{parse::HitObjectKind, Beatmap, Mods, StarResult, Strains};
+use crate::{parse::HitObjectKind, Beatmap, Mods, Strains};
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -34,7 +34,11 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// However, this is the most efficient one.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
+pub fn stars(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> DifficultyAttributes {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let attributes = map.attributes().mods(mods);
@@ -42,12 +46,12 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let od = (80.0 - hit_window) / 6.0;
 
     if take < 2 {
-        return StarResult::Osu(DifficultyAttributes {
+        return DifficultyAttributes {
             ar: attributes.ar,
             hp: attributes.hp,
             od,
             ..Default::default()
-        });
+        };
     }
 
     let radius = OBJECT_RADIUS * (1.0 - 0.7 * (attributes.cs - 5.0) / 5.0) / 2.0;
@@ -194,7 +198,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         0.0
     };
 
-    StarResult::Osu(DifficultyAttributes {
+    DifficultyAttributes {
         stars: star_rating,
         ar: attributes.ar,
         hp: attributes.hp,
@@ -206,7 +210,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
         n_circles: map.n_circles as usize,
         n_spinners: map.n_spinners as usize,
         n_sliders: map.n_sliders as usize,
-    })
+    }
 }
 
 /// Essentially the same as the `stars` function but instead of

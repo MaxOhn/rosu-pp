@@ -93,7 +93,7 @@ impl<'m> ManiaPP<'m> {
     pub fn calculate(self) -> PerformanceAttributes {
         let stars = self
             .stars
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars());
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars);
 
         let ez = self.mods.ez();
         let nf = self.mods.nf();

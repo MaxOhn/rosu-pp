@@ -42,8 +42,6 @@ pub struct OsuPP<'m> {
     n50: Option<usize>,
     n_misses: usize,
     passed_objects: Option<usize>,
-
-    effective_misses: Option<usize>,
 }
 
 impl<'m> OsuPP<'m> {
@@ -61,8 +59,6 @@ impl<'m> OsuPP<'m> {
             n50: None,
             n_misses: 0,
             passed_objects: None,
-
-            effective_misses: None,
         }
     }
 
@@ -202,36 +198,82 @@ impl<'m> OsuPP<'m> {
         self
     }
 
-    fn assert_hitresults(&mut self) {
-        if self.acc.is_none() {
+    fn assert_hitresults(self, attributes: DifficultyAttributes) -> OsuPPInner {
+        let mut n300 = self.n300;
+        let mut n100 = self.n100;
+        let mut n50 = self.n50;
+
+        let n_objects = self
+            .passed_objects
+            .unwrap_or_else(|| self.map.hit_objects.len());
+
+        if let Some(acc) = self.acc {
+            let n300 = n300.unwrap_or(0);
+            let n100 = n100.unwrap_or(0);
+            let n50 = n50.unwrap_or(0);
+
+            let total_hits = (n300 + n100 + n50 + self.n_misses).min(n_objects) as f32;
+
+            let effective_misses =
+                calculate_effective_misses(&attributes, self.combo, self.n_misses, total_hits);
+
+            OsuPPInner {
+                attributes,
+                mods: self.mods,
+                combo: self.combo,
+                acc,
+                n300,
+                n100,
+                n50,
+                total_hits,
+                effective_misses,
+            }
+        } else {
             let n_objects = self
                 .passed_objects
                 .unwrap_or_else(|| self.map.hit_objects.len());
 
             let remaining = n_objects
-                .saturating_sub(self.n300.unwrap_or(0))
-                .saturating_sub(self.n100.unwrap_or(0))
-                .saturating_sub(self.n50.unwrap_or(0))
+                .saturating_sub(n300.unwrap_or(0))
+                .saturating_sub(n100.unwrap_or(0))
+                .saturating_sub(n50.unwrap_or(0))
                 .saturating_sub(self.n_misses);
 
             if remaining > 0 {
-                if self.n300.is_none() {
-                    self.n300.replace(remaining);
-                } else if self.n100.is_none() {
-                    self.n100.replace(remaining);
-                } else if self.n50.is_none() {
-                    self.n50.replace(remaining);
+                if n300.is_none() {
+                    n300.replace(remaining);
+                } else if n100.is_none() {
+                    n100.replace(remaining);
+                } else if n50.is_none() {
+                    n50.replace(remaining);
                 } else {
-                    *self.n300.as_mut().unwrap() += remaining;
+                    *n300.as_mut().unwrap() += remaining;
                 }
             }
 
-            let n300 = *self.n300.get_or_insert(0);
-            let n100 = *self.n100.get_or_insert(0);
-            let n50 = *self.n50.get_or_insert(0);
+            let n300 = n300.unwrap_or(0);
+            let n100 = n100.unwrap_or(0);
+            let n50 = n50.unwrap_or(0);
 
             let numerator = n300 * 6 + n100 * 2 + n50;
-            self.acc.replace(numerator as f32 / n_objects as f32 / 6.0);
+            let acc = numerator as f32 / n_objects as f32 / 6.0;
+
+            let total_hits = (n300 + n100 + n50 + self.n_misses).min(n_objects) as f32;
+
+            let effective_misses =
+                calculate_effective_misses(&attributes, self.combo, self.n_misses, total_hits);
+
+            OsuPPInner {
+                attributes,
+                mods: self.mods,
+                combo: self.combo,
+                acc,
+                n300,
+                n100,
+                n50,
+                total_hits,
+                effective_misses,
+            }
         }
     }
 
@@ -256,6 +298,8 @@ impl<'m> OsuPP<'m> {
         self.calculate_with_func(super::all_included::stars)
     }
 
+    // TODO: import `stars` function based on features
+
     // Omits an unnecessary error when enabled features are invalid
     #[cfg(not(any(
         feature = "no_leniency",
@@ -268,46 +312,56 @@ impl<'m> OsuPP<'m> {
 
     fn calculate_with_func(
         mut self,
-        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> StarResult,
+        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> DifficultyAttributes,
     ) -> PerformanceAttributes {
-        if self.attributes.is_none() {
-            let attributes = stars_func(self.map, self.mods, self.passed_objects)
-                .attributes()
-                .unwrap();
-            self.attributes.replace(attributes);
-        }
+        let attributes = self
+            .attributes
+            .take()
+            .unwrap_or_else(|| stars_func(self.map, self.mods, self.passed_objects));
 
-        // Make sure the hitresults and accuracy are set
-        self.assert_hitresults();
+        self.assert_hitresults(attributes).calculate()
+    }
+}
 
-        let total_hits = self.total_hits() as f32;
+struct OsuPPInner {
+    attributes: DifficultyAttributes,
+    mods: u32,
+    combo: Option<usize>,
+    acc: f32,
+
+    n300: usize,
+    n100: usize,
+    n50: usize,
+
+    total_hits: f32,
+    effective_misses: usize,
+}
+
+impl OsuPPInner {
+    fn calculate(mut self) -> PerformanceAttributes {
         let mut multiplier = 1.12;
-
-        self.calculate_effective_misses(total_hits);
 
         // NF penalty
         if self.mods.nf() {
-            multiplier *= (1.0 - 0.02 * self.effective_misses.map_or(0.0, |m| m as f32)).max(0.9);
+            multiplier *= (1.0 - 0.02 * (self.effective_misses as f32)).max(0.9);
         }
 
         // SO penalty
         if self.mods.so() {
-            let n_spinners = self.attributes.as_ref().unwrap().n_spinners;
-            multiplier *= 1.0 - (n_spinners as f32 / total_hits).powf(0.85);
+            let n_spinners = self.attributes.n_spinners;
+            multiplier *= 1.0 - (n_spinners as f32 / self.total_hits).powf(0.85);
         }
 
         // Relax penalty
         if self.mods.rx() {
-            *self.effective_misses.as_mut().unwrap() +=
-                self.n100.unwrap_or(0) + self.n50.unwrap_or(0);
-
+            self.effective_misses += self.n100 + self.n50;
             multiplier *= 0.6;
         }
 
-        let aim_value = self.compute_aim_value(total_hits);
-        let speed_value = self.compute_speed_value(total_hits);
-        let acc_value = self.compute_accuracy_value(total_hits);
-        let flashlight_value = self.compute_flashlight_value(total_hits);
+        let aim_value = self.compute_aim_value();
+        let speed_value = self.compute_speed_value();
+        let acc_value = self.compute_accuracy_value();
+        let flashlight_value = self.compute_flashlight_value();
 
         let pp = (aim_value.powf(1.1)
             + speed_value.powf(1.1)
@@ -317,7 +371,7 @@ impl<'m> OsuPP<'m> {
             * multiplier;
 
         PerformanceAttributes {
-            attributes: self.attributes.unwrap(),
+            attributes: self.attributes,
             pp_acc: aim_value,
             pp_aim: aim_value,
             pp_flashlight: flashlight_value,
@@ -326,8 +380,9 @@ impl<'m> OsuPP<'m> {
         }
     }
 
-    fn compute_aim_value(&self, total_hits: f32) -> f32 {
-        let attributes = self.attributes.as_ref().unwrap();
+    fn compute_aim_value(&self) -> f32 {
+        let attributes = &self.attributes;
+        let total_hits = self.total_hits;
 
         // TD penalty
         let raw_aim = if self.mods.td() {
@@ -345,7 +400,7 @@ impl<'m> OsuPP<'m> {
         aim_value *= len_bonus;
 
         // Penalize misses
-        let effective_misses = self.effective_misses.map_or(0, |m| m as i32);
+        let effective_misses = self.effective_misses as i32;
         if effective_misses > 0 {
             aim_value *= 0.97
                 * (1.0 - (effective_misses as f32 / total_hits).powf(0.775)).powi(effective_misses);
@@ -376,14 +431,15 @@ impl<'m> OsuPP<'m> {
         aim_value *= ar_bonus;
 
         // Scale with accuracy
-        aim_value *= 0.5 + self.acc.unwrap() / 2.0;
+        aim_value *= 0.5 + self.acc / 2.0;
         aim_value *= 0.98 + attributes.od * attributes.od / 2500.0;
 
         aim_value
     }
 
-    fn compute_speed_value(&self, total_hits: f32) -> f32 {
-        let attributes = self.attributes.as_ref().unwrap();
+    fn compute_speed_value(&self) -> f32 {
+        let attributes = &self.attributes;
+        let total_hits = self.total_hits;
 
         let mut speed_value =
             (5.0 * (attributes.speed_strain / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
@@ -395,7 +451,7 @@ impl<'m> OsuPP<'m> {
         speed_value *= len_bonus;
 
         // Penalize misses
-        let effective_misses = self.effective_misses.map_or(0.0, |m| m as f32);
+        let effective_misses = self.effective_misses as f32;
         if effective_misses > 0.0 {
             speed_value *= 0.97
                 * (1.0 - (effective_misses / total_hits).powf(0.775))
@@ -425,31 +481,29 @@ impl<'m> OsuPP<'m> {
 
         // Scaling the speed value with accuracy and OD
         let od_factor = 0.95 + attributes.od * attributes.od / 750.0;
-        let acc_factor = self
-            .acc
-            .unwrap()
-            .powf((14.5 - attributes.od.max(8.0)) / 2.0);
+        let acc_factor = self.acc.powf((14.5 - attributes.od.max(8.0)) / 2.0);
         speed_value *= od_factor * acc_factor;
 
         // Penalize n50s
         speed_value *= 0.98_f32.powf(
-            (self.n50.unwrap_or(0) as f32 >= total_hits / 500.0) as u8 as f32
-                * (self.n50.unwrap_or(0) as f32 - total_hits / 500.0),
+            (self.n50 as f32 >= total_hits / 500.0) as u8 as f32
+                * (self.n50 as f32 - total_hits / 500.0),
         );
 
         speed_value
     }
 
-    fn compute_accuracy_value(&self, total_hits: f32) -> f32 {
+    fn compute_accuracy_value(&self) -> f32 {
         if self.mods.rx() {
             return 0.0;
         }
 
-        let attributes = self.attributes.as_ref().unwrap();
+        let attributes = &self.attributes;
+        let total_hits = self.total_hits;
         let n_circles = attributes.n_circles as f32;
-        let n300 = self.n300.unwrap_or(0) as f32;
-        let n100 = self.n100.unwrap_or(0) as f32;
-        let n50 = self.n50.unwrap_or(0) as f32;
+        let n300 = self.n300 as f32;
+        let n100 = self.n100 as f32;
+        let n50 = self.n50 as f32;
 
         let better_acc_percentage = (n_circles > 0.0) as u8 as f32
             * (((n300 - (total_hits - n_circles)) * 6.0 + n100 * 2.0 + n50) / (n_circles * 6.0))
@@ -473,12 +527,13 @@ impl<'m> OsuPP<'m> {
         acc_value
     }
 
-    fn compute_flashlight_value(&self, total_hits: f32) -> f32 {
+    fn compute_flashlight_value(&self) -> f32 {
         if !self.mods.fl() {
             return 0.0;
         }
 
-        let attributes = self.attributes.as_ref().unwrap();
+        let attributes = &self.attributes;
+        let total_hits = self.total_hits;
 
         // TD penalty
         let raw_flashlight = if self.mods.td() {
@@ -496,7 +551,7 @@ impl<'m> OsuPP<'m> {
 
         // Penalize misses by assessing # of misses relative to the total # of objects.
         // Default a 3% reduction for any # of misses
-        let effective_misses = self.effective_misses.map_or(0.0, |m| m as f32);
+        let effective_misses = self.effective_misses as f32;
         if effective_misses > 0.0 {
             flashlight_value *= 0.97
                 * (1.0 - (effective_misses / total_hits).powf(0.775))
@@ -514,47 +569,39 @@ impl<'m> OsuPP<'m> {
             + (total_hits > 200.0) as u8 as f32 * (0.2 * ((total_hits - 200.0) / 200.0).min(1.0));
 
         // Scale the aim value with accuracy _slightly_
-        flashlight_value *= 0.5 + self.acc.unwrap() / 2.0;
+        flashlight_value *= 0.5 + self.acc / 2.0;
 
         // It is important to also consider accuracy difficulty when doing that
         flashlight_value *= 0.98 + attributes.od * attributes.od / 2500.0;
 
         flashlight_value
     }
+}
 
-    fn calculate_effective_misses(&mut self, total_hits: f32) {
-        // Guess the number of misses + slider breaks from combo
-        let mut combo_based_misses: f32 = 0.0;
+fn calculate_effective_misses(
+    attributes: &DifficultyAttributes,
+    combo: Option<usize>,
+    n_misses: usize,
+    total_hits: f32,
+) -> usize {
+    // Guess the number of misses + slider breaks from combo
+    let mut combo_based_misses: f32 = 0.0;
 
-        let attributes = self.attributes.as_ref().unwrap();
+    if attributes.n_sliders > 0 {
+        let full_combo_threshold = attributes.max_combo as f32 - 0.1 * attributes.n_sliders as f32;
 
-        if attributes.n_sliders > 0 {
-            let full_combo_threshold =
-                attributes.max_combo as f32 - 0.1 * attributes.n_sliders as f32;
+        let f32_combo = combo.map(|c| c as f32);
 
-            let f32_combo = self.combo.map(|c| c as f32);
-
-            if let Some(combo) = f32_combo.filter(|&c| c < full_combo_threshold) {
-                combo_based_misses = full_combo_threshold / combo.max(1.0);
-            }
+        if let Some(combo) = f32_combo.filter(|&c| c < full_combo_threshold) {
+            combo_based_misses = full_combo_threshold / combo.max(1.0);
         }
-
-        // We're clamping misses because since it's derived from combo it
-        // can be higher than total hits and that breaks some calculations
-        combo_based_misses = combo_based_misses.min(total_hits);
-
-        self.effective_misses = Some(self.n_misses.max(combo_based_misses.floor() as usize))
     }
 
-    #[inline]
-    fn total_hits(&self) -> usize {
-        let n_objects = self
-            .passed_objects
-            .unwrap_or_else(|| self.map.hit_objects.len());
+    // We're clamping misses because since it's derived from combo it
+    // can be higher than total hits and that breaks some calculations
+    combo_based_misses = combo_based_misses.min(total_hits);
 
-        (self.n300.unwrap_or(0) + self.n100.unwrap_or(0) + self.n50.unwrap_or(0) + self.n_misses)
-            .min(n_objects)
-    }
+    n_misses.max(combo_based_misses.floor() as usize)
 }
 
 pub trait OsuAttributeProvider {
@@ -666,24 +713,21 @@ mod test {
     #[test]
     fn osu_missing_objects() {
         let map = Beatmap::default();
+        let attributes = DifficultyAttributes::default();
 
         let total_objects = 1234;
         let n300 = 1000;
         let n100 = 200;
         let n50 = 30;
 
-        let mut calculator = OsuPP::new(&map)
+        let calculator = OsuPP::new(&map)
             .passed_objects(total_objects)
             .n300(n300)
             .n100(n100)
-            .n50(n50);
+            .n50(n50)
+            .assert_hitresults(attributes);
 
-        calculator.assert_hitresults();
-
-        let n_objects = calculator.n300.unwrap()
-            + calculator.n100.unwrap()
-            + calculator.n50.unwrap()
-            + calculator.n_misses;
+        let n_objects = calculator.n300 + calculator.n100 + calculator.n50;
 
         assert_eq!(
             total_objects, n_objects,

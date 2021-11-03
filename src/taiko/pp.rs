@@ -139,7 +139,7 @@ impl<'m> TaikoPP<'m> {
     pub fn calculate(mut self) -> PerformanceAttributes {
         let stars = self
             .stars
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars());
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars);
 
         if self.n300.or(self.n100).is_some() {
             let total = self.map.n_circles as usize;
@@ -161,6 +161,30 @@ impl<'m> TaikoPP<'m> {
             self.acc = (2 * n300 + n100) as f32 / (2 * (n300 + n100 + misses)) as f32;
         }
 
+        let inner = TaikoPPInner {
+            map: self.map,
+            stars,
+            mods: self.mods,
+            max_combo: self.max_combo,
+            acc: self.acc,
+            n_misses: self.n_misses,
+        };
+
+        inner.calculate()
+    }
+}
+
+struct TaikoPPInner<'m> {
+    map: &'m Beatmap,
+    stars: f32,
+    mods: u32,
+    max_combo: usize,
+    acc: f32,
+    n_misses: usize,
+}
+
+impl<'m> TaikoPPInner<'m> {
+    fn calculate(self) -> PerformanceAttributes {
         let mut multiplier = 1.1;
 
         if self.mods.nf() {
@@ -171,13 +195,13 @@ impl<'m> TaikoPP<'m> {
             multiplier *= 1.1;
         }
 
-        let strain_value = self.compute_strain_value(stars);
+        let strain_value = self.compute_strain_value(self.stars);
         let acc_value = self.compute_accuracy_value();
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
         PerformanceAttributes {
-            attributes: DifficultyAttributes { stars },
+            attributes: DifficultyAttributes { stars: self.stars },
             pp,
             pp_acc: acc_value,
             pp_strain: strain_value,

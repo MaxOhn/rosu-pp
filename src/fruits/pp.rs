@@ -186,7 +186,7 @@ impl<'m> FruitsPP<'m> {
         self
     }
 
-    fn assert_hitresults(&mut self, attributes: &DifficultyAttributes) {
+    fn assert_hitresults(self, attributes: DifficultyAttributes) -> FruitsPPInner {
         let correct_combo_hits = self
             .n_fruits
             .and_then(|f| self.n_droplets.map(|d| f + d + self.n_misses))
@@ -232,25 +232,56 @@ impl<'m> FruitsPP<'m> {
                 .saturating_sub(n_tiny_droplets)
                 .saturating_sub(n_tiny_droplet_misses);
 
-            self.n_fruits.replace(n_fruits);
-            self.n_droplets.replace(n_droplets);
-            self.n_tiny_droplets.replace(n_tiny_droplets);
-            self.n_tiny_droplet_misses.replace(n_tiny_droplet_misses);
+            return FruitsPPInner {
+                attributes,
+                mods: self.mods,
+                combo: self.combo,
+                n_fruits,
+                n_droplets,
+                n_tiny_droplets,
+                n_tiny_droplet_misses,
+                n_misses: self.n_misses,
+            };
+        }
+
+        FruitsPPInner {
+            attributes,
+            mods: self.mods,
+            combo: self.combo,
+            n_fruits: self.n_fruits.unwrap_or(0),
+            n_droplets: self.n_droplets.unwrap_or(0),
+            n_tiny_droplets: self.n_tiny_droplets.unwrap_or(0),
+            n_tiny_droplet_misses: self.n_tiny_droplet_misses.unwrap_or(0),
+            n_misses: self.n_misses,
         }
     }
 
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
     /// containing stars and other attributes.
     pub fn calculate(mut self) -> PerformanceAttributes {
-        let attributes = self.attributes.take().unwrap_or_else(|| {
-            stars(self.map, self.mods, self.passed_objects)
-                .attributes()
-                .unwrap()
-        });
+        let attributes = self
+            .attributes
+            .take()
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
 
-        // Make sure all objects are set
-        self.assert_hitresults(&attributes);
+        self.assert_hitresults(attributes).calculate()
+    }
+}
 
+struct FruitsPPInner {
+    attributes: DifficultyAttributes,
+    mods: u32,
+    combo: Option<usize>,
+    n_fruits: usize,
+    n_droplets: usize,
+    n_tiny_droplets: usize,
+    n_tiny_droplet_misses: usize,
+    n_misses: usize,
+}
+
+impl FruitsPPInner {
+    fn calculate(self) -> PerformanceAttributes {
+        let attributes = &self.attributes;
         let stars = attributes.stars;
 
         // Relying heavily on aim
@@ -310,24 +341,25 @@ impl<'m> FruitsPP<'m> {
             pp *= 0.9;
         }
 
-        PerformanceAttributes { attributes, pp }
+        PerformanceAttributes {
+            attributes: self.attributes,
+            pp,
+        }
     }
 
     #[inline]
     fn combo_hits(&self) -> usize {
-        self.n_fruits.unwrap_or(0) + self.n_droplets.unwrap_or(0) + self.n_misses
+        self.n_fruits + self.n_droplets + self.n_misses
     }
 
     #[inline]
     fn successful_hits(&self) -> usize {
-        self.n_fruits.unwrap_or(0)
-            + self.n_droplets.unwrap_or(0)
-            + self.n_tiny_droplets.unwrap_or(0)
+        self.n_fruits + self.n_droplets + self.n_tiny_droplets
     }
 
     #[inline]
     fn total_hits(&self) -> usize {
-        self.successful_hits() + self.n_tiny_droplet_misses.unwrap_or(0) + self.n_misses
+        self.successful_hits() + self.n_tiny_droplet_misses + self.n_misses
     }
 
     #[inline]
@@ -481,42 +513,38 @@ mod test {
         let n_tiny_droplet_misses = 20;
         let n_misses = 2;
 
-        let mut calculator = FruitsPP::new(&map)
+        let calculator = FruitsPP::new(&map)
             .attributes(attributes.clone())
             .passed_objects(total_objects)
             .fruits(n_fruits)
             .droplets(n_droplets)
             .tiny_droplets(n_tiny_droplets)
             .tiny_droplet_misses(n_tiny_droplet_misses)
-            .misses(n_misses);
-
-        calculator.assert_hitresults(&attributes);
+            .misses(n_misses)
+            .assert_hitresults(attributes.clone());
 
         assert!(
-            (attributes.n_fruits as i32 - calculator.n_fruits.unwrap() as i32).abs()
-                <= n_misses as i32,
+            (attributes.n_fruits as i32 - calculator.n_fruits as i32).abs() <= n_misses as i32,
             "Expected: {} | Actual: {} [+/- {} misses]",
             attributes.n_fruits,
-            calculator.n_fruits.unwrap(),
+            calculator.n_fruits,
             n_misses
         );
 
         assert_eq!(
             attributes.n_droplets,
-            calculator.n_droplets.unwrap()
-                - (n_misses - (attributes.n_fruits - calculator.n_fruits.unwrap())),
+            calculator.n_droplets - (n_misses - (attributes.n_fruits - calculator.n_fruits)),
             "Expected: {} | Actual: {}",
             attributes.n_droplets,
-            calculator.n_droplets.unwrap()
-                - (n_misses - (attributes.n_fruits - calculator.n_fruits.unwrap())),
+            calculator.n_droplets - (n_misses - (attributes.n_fruits - calculator.n_fruits)),
         );
 
         assert_eq!(
             attributes.n_tiny_droplets,
-            calculator.n_tiny_droplets.unwrap() + calculator.n_tiny_droplet_misses.unwrap(),
+            calculator.n_tiny_droplets + calculator.n_tiny_droplet_misses,
             "Expected: {} | Actual: {}",
             attributes.n_tiny_droplets,
-            calculator.n_tiny_droplets.unwrap() + calculator.n_tiny_droplet_misses.unwrap(),
+            calculator.n_tiny_droplets + calculator.n_tiny_droplet_misses,
         );
     }
 }

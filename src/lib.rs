@@ -215,12 +215,16 @@ impl BeatmapExt for Beatmap {
                 {
                     #[cfg(feature = "no_leniency")]
                     {
-                        osu::no_leniency::stars(self, mods, passed_objects)
+                        StarResult::Osu(osu::no_leniency::stars(self, mods, passed_objects))
                     }
 
                     #[cfg(all(not(feature = "no_leniency"), feature = "no_sliders_no_leniency"))]
                     {
-                        osu::no_sliders_no_leniency::stars(self, mods, passed_objects)
+                        StarResult::Osu(osu::no_sliders_no_leniency::stars(
+                            self,
+                            mods,
+                            passed_objects,
+                        ))
                     }
 
                     #[cfg(all(
@@ -229,7 +233,7 @@ impl BeatmapExt for Beatmap {
                         feature = "all_included"
                     ))]
                     {
-                        osu::all_included::stars(self, mods, passed_objects)
+                        StarResult::Osu(osu::all_included::stars(self, mods, passed_objects))
                     }
 
                     #[cfg(not(any(
@@ -245,21 +249,21 @@ impl BeatmapExt for Beatmap {
                 panic!("`mania` feature is not enabled");
 
                 #[cfg(feature = "mania")]
-                mania::stars(self, mods, passed_objects)
+                StarResult::Mania(mania::stars(self, mods, passed_objects))
             }
             GameMode::TKO => {
                 #[cfg(not(feature = "taiko"))]
                 panic!("`osu` feature is not enabled");
 
                 #[cfg(feature = "taiko")]
-                taiko::stars(self, mods, passed_objects)
+                StarResult::Taiko(taiko::stars(self, mods, passed_objects))
             }
             GameMode::CTB => {
                 #[cfg(not(feature = "fruits"))]
                 panic!("`fruits` feature is not enabled");
 
                 #[cfg(feature = "fruits")]
-                fruits::stars(self, mods, passed_objects)
+                StarResult::Fruits(fruits::stars(self, mods, passed_objects))
             }
         }
     }
