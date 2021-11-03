@@ -65,7 +65,7 @@ impl Strain {
     #[inline]
     pub(crate) fn process(&mut self, current: &DifficultyHitObject) {
         self.current_strain *= self.strain_decay(current.delta);
-        self.current_strain += self.strain_value_of(&current) * SKILL_MULTIPLIER;
+        self.current_strain += self.strain_value_of(current) * SKILL_MULTIPLIER;
         self.current_section_peak = self.current_strain.max(self.current_section_peak);
         self.prev_time.replace(current.start_time);
     }

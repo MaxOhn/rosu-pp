@@ -61,7 +61,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
     let clock_rate = attributes.clock_rate;
 
     let mut max_combo = 0;
-    let mut state = SliderState::new(&map);
+    let mut state = SliderState::new(map);
 
     let mut hit_objects = map
         .hit_objects
@@ -76,7 +76,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
             HitObjectKind::Slider {
                 pixel_len, repeats, ..
             } => {
-                max_combo += state.count_ticks(h.start_time, *pixel_len, *repeats, &map);
+                max_combo += state.count_ticks(h.start_time, *pixel_len, *repeats, map);
 
                 OsuObject::from(h, clock_rate)
             }

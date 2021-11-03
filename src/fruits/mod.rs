@@ -18,8 +18,6 @@ use crate::{
     Beatmap, Mods, StarResult, Strains,
 };
 
-use std::convert::identity;
-
 const SECTION_LENGTH: f32 = 750.0;
 const STAR_SCALING_FACTOR: f32 = 0.153;
 
@@ -159,7 +157,7 @@ pub fn stars(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> S
             }
             HitObjectKind::Spinner { .. } | HitObjectKind::Hold { .. } => Some(None),
         })
-        .filter_map(identity)
+        .flatten()
         .flatten()
         .take(take);
 
@@ -384,7 +382,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
             }
             HitObjectKind::Spinner { .. } | HitObjectKind::Hold { .. } => Some(None),
         })
-        .filter_map(identity)
+        .flatten()
         .flatten();
 
     // Hyper dash business
@@ -601,4 +599,25 @@ pub struct DifficultyAttributes {
     pub n_fruits: usize,
     pub n_droplets: usize,
     pub n_tiny_droplets: usize,
+}
+
+/// Various data created through the pp calculation.
+#[derive(Clone, Debug, Default)]
+pub struct PerformanceAttributes {
+    pub attributes: DifficultyAttributes,
+    pub pp: f32,
+}
+
+impl PerformanceAttributes {
+    /// Return the star value.
+    #[inline]
+    pub fn stars(&self) -> f32 {
+        self.attributes.stars
+    }
+
+    /// Return the performance point value.
+    #[inline]
+    pub fn pp(&self) -> f32 {
+        self.pp
+    }
 }

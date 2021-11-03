@@ -271,28 +271,28 @@ impl BeatmapExt for Beatmap {
                 panic!("`osu` feature is not enabled");
 
                 #[cfg(feature = "osu")]
-                OsuPP::new(self).mods(mods).calculate()
+                PpResult::Osu(OsuPP::new(self).mods(mods).calculate())
             }
             GameMode::MNA => {
                 #[cfg(not(feature = "mania"))]
                 panic!("`mania` feature is not enabled");
 
                 #[cfg(feature = "mania")]
-                ManiaPP::new(self).mods(mods).calculate()
+                PpResult::Mania(ManiaPP::new(self).mods(mods).calculate())
             }
             GameMode::TKO => {
                 #[cfg(not(feature = "taiko"))]
                 panic!("`osu` feature is not enabled");
 
                 #[cfg(feature = "taiko")]
-                TaikoPP::new(self).mods(mods).calculate()
+                PpResult::Taiko(TaikoPP::new(self).mods(mods).calculate())
             }
             GameMode::CTB => {
                 #[cfg(not(feature = "fruits"))]
                 panic!("`fruits` feature is not enabled");
 
                 #[cfg(feature = "fruits")]
-                FruitsPP::new(self).mods(mods).calculate()
+                PpResult::Fruits(FruitsPP::new(self).mods(mods).calculate())
             }
         }
     }
@@ -406,22 +406,46 @@ impl StarResult {
 
 /// Basic struct containing the result of a PP calculation.
 #[derive(Clone, Debug)]
-pub struct PpResult {
-    pub pp: f32,
-    pub attributes: StarResult,
+pub enum PpResult {
+    #[cfg(feature = "fruits")]
+    Fruits(fruits::PerformanceAttributes),
+    #[cfg(feature = "mania")]
+    Mania(mania::PerformanceAttributes),
+    #[cfg(feature = "osu")]
+    Osu(osu::PerformanceAttributes),
+    #[cfg(feature = "taiko")]
+    Taiko(taiko::PerformanceAttributes),
 }
 
 impl PpResult {
     /// The final pp value.
     #[inline]
     pub fn pp(&self) -> f32 {
-        self.pp
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(attributes) => attributes.pp,
+            #[cfg(feature = "mania")]
+            Self::Mania(attributes) => attributes.pp,
+            #[cfg(feature = "osu")]
+            Self::Osu(attributes) => attributes.pp,
+            #[cfg(feature = "taiko")]
+            Self::Taiko(attributes) => attributes.pp,
+        }
     }
 
     /// The final star value.
     #[inline]
     pub fn stars(&self) -> f32 {
-        self.attributes.stars()
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(attributes) => attributes.stars(),
+            #[cfg(feature = "mania")]
+            Self::Mania(attributes) => attributes.stars(),
+            #[cfg(feature = "osu")]
+            Self::Osu(attributes) => attributes.stars(),
+            #[cfg(feature = "taiko")]
+            Self::Taiko(attributes) => attributes.stars(),
+        }
     }
 }
 

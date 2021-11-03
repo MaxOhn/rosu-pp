@@ -167,7 +167,30 @@ impl<'o> DifficultyHitObject<'o> {
 
 /// Various data created through the star calculation.
 /// This data is necessary to calculate PP.
-#[derive(Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct DifficultyAttributes {
     pub stars: f32,
+}
+
+/// Various data created through the pp calculation.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct PerformanceAttributes {
+    pub attributes: DifficultyAttributes,
+    pub pp_acc: f32,
+    pub pp_strain: f32,
+    pub pp: f32,
+}
+
+impl PerformanceAttributes {
+    /// Return the star value.
+    #[inline]
+    pub fn stars(&self) -> f32 {
+        self.attributes.stars
+    }
+
+    /// Return the performance point value.
+    #[inline]
+    pub fn pp(&self) -> f32 {
+        self.pp
+    }
 }

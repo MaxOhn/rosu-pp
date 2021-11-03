@@ -1,4 +1,4 @@
-use super::{stars, DifficultyAttributes};
+use super::{stars, DifficultyAttributes, PerformanceAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 /// Calculator for pp on osu!ctb maps.
@@ -241,7 +241,7 @@ impl<'m> FruitsPP<'m> {
 
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
     /// containing stars and other attributes.
-    pub fn calculate(mut self) -> PpResult {
+    pub fn calculate(mut self) -> PerformanceAttributes {
         let attributes = self.attributes.take().unwrap_or_else(|| {
             stars(self.map, self.mods, self.passed_objects)
                 .attributes()
@@ -310,10 +310,7 @@ impl<'m> FruitsPP<'m> {
             pp *= 0.9;
         }
 
-        PpResult {
-            pp,
-            attributes: StarResult::Fruits(attributes),
-        }
+        PerformanceAttributes { attributes, pp }
     }
 
     #[inline]
@@ -358,6 +355,13 @@ impl FruitsAttributeProvider for DifficultyAttributes {
     }
 }
 
+impl FruitsAttributeProvider for PerformanceAttributes {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        Some(self.attributes)
+    }
+}
+
 impl FruitsAttributeProvider for StarResult {
     #[inline]
     fn attributes(self) -> Option<DifficultyAttributes> {
@@ -373,7 +377,12 @@ impl FruitsAttributeProvider for StarResult {
 impl FruitsAttributeProvider for PpResult {
     #[inline]
     fn attributes(self) -> Option<DifficultyAttributes> {
-        self.attributes.attributes()
+        #[allow(irrefutable_let_patterns)]
+        if let Self::Fruits(attributes) = self {
+            Some(attributes.attributes)
+        } else {
+            None
+        }
     }
 }
 

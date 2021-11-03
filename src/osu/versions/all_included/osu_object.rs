@@ -30,7 +30,7 @@ enum OsuObjectKind {
 }
 
 impl OsuObject {
-    #[allow(clippy::clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         h: &HitObject,
         map: &Beatmap,

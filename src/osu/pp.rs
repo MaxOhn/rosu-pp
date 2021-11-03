@@ -1,4 +1,4 @@
-use super::DifficultyAttributes;
+use super::{DifficultyAttributes, PerformanceAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 /// Calculator for pp on osu!standard maps.
@@ -238,21 +238,21 @@ impl<'m> OsuPP<'m> {
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
     #[cfg(feature = "no_leniency")]
-    pub fn calculate(self) -> PpResult {
+    pub fn calculate(self) -> PerformanceAttributes {
         self.calculate_with_func(super::no_leniency::stars)
     }
 
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
     #[cfg(feature = "no_sliders_no_leniency")]
-    pub fn calculate(self) -> PpResult {
+    pub fn calculate(self) -> PerformanceAttributes {
         self.calculate_with_func(super::no_sliders_no_leniency::stars)
     }
 
     /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
     /// containing stars and other attributes.
     #[cfg(feature = "all_included")]
-    pub fn calculate(self) -> PpResult {
+    pub fn calculate(self) -> PerformanceAttributes {
         self.calculate_with_func(super::all_included::stars)
     }
 
@@ -262,14 +262,14 @@ impl<'m> OsuPP<'m> {
         feature = "no_sliders_no_leniency",
         feature = "all_included"
     )))]
-    pub(crate) fn calculate(self) -> PpResult {
+    pub(crate) fn calculate(self) -> PerformanceAttributes {
         unreachable!()
     }
 
     fn calculate_with_func(
         mut self,
         stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> StarResult,
-    ) -> PpResult {
+    ) -> PerformanceAttributes {
         if self.attributes.is_none() {
             let attributes = stars_func(self.map, self.mods, self.passed_objects)
                 .attributes()
@@ -316,9 +316,14 @@ impl<'m> OsuPP<'m> {
         .powf(1.0 / 1.1)
             * multiplier;
 
-        let attributes = StarResult::Osu(self.attributes.unwrap());
-
-        PpResult { pp, attributes }
+        PerformanceAttributes {
+            attributes: self.attributes.unwrap(),
+            pp_acc: aim_value,
+            pp_aim: aim_value,
+            pp_flashlight: flashlight_value,
+            pp_speed: speed_value,
+            pp,
+        }
     }
 
     fn compute_aim_value(&self, total_hits: f32) -> f32 {
@@ -563,6 +568,13 @@ impl OsuAttributeProvider for DifficultyAttributes {
     }
 }
 
+impl OsuAttributeProvider for PerformanceAttributes {
+    #[inline]
+    fn attributes(self) -> Option<DifficultyAttributes> {
+        Some(self.attributes)
+    }
+}
+
 impl OsuAttributeProvider for StarResult {
     #[inline]
     fn attributes(self) -> Option<DifficultyAttributes> {
@@ -578,7 +590,12 @@ impl OsuAttributeProvider for StarResult {
 impl OsuAttributeProvider for PpResult {
     #[inline]
     fn attributes(self) -> Option<DifficultyAttributes> {
-        self.attributes.attributes()
+        #[allow(irrefutable_let_patterns)]
+        if let Self::Osu(attributes) = self {
+            Some(attributes.attributes)
+        } else {
+            None
+        }
     }
 }
 

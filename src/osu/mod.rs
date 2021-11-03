@@ -22,3 +22,28 @@ pub struct DifficultyAttributes {
     pub stars: f32,
     pub max_combo: usize,
 }
+
+/// Various data created through the pp calculation.
+#[derive(Clone, Debug, Default)]
+pub struct PerformanceAttributes {
+    pub attributes: DifficultyAttributes,
+    pub pp_acc: f32,
+    pub pp_aim: f32,
+    pub pp_flashlight: f32,
+    pub pp_speed: f32,
+    pub pp: f32,
+}
+
+impl PerformanceAttributes {
+    /// Return the star value.
+    #[inline]
+    pub fn stars(&self) -> f32 {
+        self.attributes.stars
+    }
+
+    /// Return the performance point value.
+    #[inline]
+    pub fn pp(&self) -> f32 {
+        self.pp
+    }
+}

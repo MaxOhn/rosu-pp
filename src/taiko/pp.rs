@@ -1,4 +1,4 @@
-use super::{stars, DifficultyAttributes};
+use super::{stars, DifficultyAttributes, PerformanceAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
 /// Calculator for pp on osu!taiko maps.
@@ -136,7 +136,7 @@ impl<'m> TaikoPP<'m> {
     }
 
     /// Returns an object which contains the pp and stars.
-    pub fn calculate(mut self) -> PpResult {
+    pub fn calculate(mut self) -> PerformanceAttributes {
         let stars = self
             .stars
             .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars());
@@ -176,9 +176,11 @@ impl<'m> TaikoPP<'m> {
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
-        PpResult {
+        PerformanceAttributes {
+            attributes: DifficultyAttributes { stars },
             pp,
-            attributes: StarResult::Taiko(DifficultyAttributes { stars }),
+            pp_acc: acc_value,
+            pp_strain: strain_value,
         }
     }
 
@@ -253,11 +255,18 @@ impl TaikoAttributeProvider for DifficultyAttributes {
     }
 }
 
+impl TaikoAttributeProvider for PerformanceAttributes {
+    #[inline]
+    fn attributes(self) -> Option<f32> {
+        Some(self.attributes.stars)
+    }
+}
+
 impl TaikoAttributeProvider for StarResult {
     #[inline]
     fn attributes(self) -> Option<f32> {
         #[allow(irrefutable_let_patterns)]
-        if let StarResult::Taiko(attributes) = self {
+        if let Self::Taiko(attributes) = self {
             Some(attributes.stars)
         } else {
             None
@@ -268,6 +277,11 @@ impl TaikoAttributeProvider for StarResult {
 impl TaikoAttributeProvider for PpResult {
     #[inline]
     fn attributes(self) -> Option<f32> {
-        self.attributes.attributes()
+        #[allow(irrefutable_let_patterns)]
+        if let Self::Taiko(attributes) = self {
+            Some(attributes.attributes.stars)
+        } else {
+            None
+        }
     }
 }

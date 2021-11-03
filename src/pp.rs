@@ -46,13 +46,13 @@ impl<'m> AnyPP<'m> {
     pub fn calculate(self) -> PpResult {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(f) => f.calculate(),
+            Self::Fruits(f) => PpResult::Fruits(f.calculate()),
             #[cfg(feature = "mania")]
-            Self::Mania(m) => m.calculate(),
+            Self::Mania(m) => PpResult::Mania(m.calculate()),
             #[cfg(feature = "osu")]
-            Self::Osu(o) => o.calculate(),
+            Self::Osu(o) => PpResult::Osu(o.calculate()),
             #[cfg(feature = "taiko")]
-            Self::Taiko(t) => t.calculate(),
+            Self::Taiko(t) => PpResult::Taiko(t.calculate()),
         }
     }
 
@@ -272,6 +272,15 @@ impl AttributeProvider for StarResult {
 impl AttributeProvider for PpResult {
     #[inline]
     fn attributes(self) -> StarResult {
-        self.attributes
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(f) => StarResult::Fruits(f.attributes),
+            #[cfg(feature = "mania")]
+            Self::Mania(m) => StarResult::Mania(m.attributes),
+            #[cfg(feature = "osu")]
+            Self::Osu(o) => StarResult::Osu(o.attributes),
+            #[cfg(feature = "taiko")]
+            Self::Taiko(t) => StarResult::Taiko(t.attributes),
+        }
     }
 }
