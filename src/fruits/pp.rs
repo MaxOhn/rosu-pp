@@ -256,8 +256,7 @@ impl<'m> FruitsPP<'m> {
         }
     }
 
-    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::fruits::DifficultyAttributes)
-    /// containing stars and other attributes.
+    /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> PerformanceAttributes {
         let attributes = self
             .attributes

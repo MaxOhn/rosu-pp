@@ -135,7 +135,7 @@ impl<'m> TaikoPP<'m> {
         self
     }
 
-    /// Returns an object which contains the pp and stars.
+    /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> PerformanceAttributes {
         let stars = self
             .stars

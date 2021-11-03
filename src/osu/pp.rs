@@ -1,6 +1,15 @@
 use super::{DifficultyAttributes, PerformanceAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
+#[cfg(feature = "no_sliders_no_leniency")]
+use super::no_sliders_no_leniency::stars;
+
+#[cfg(feature = "no_leniency")]
+use super::no_leniency::stars;
+
+#[cfg(feature = "all_included")]
+use super::all_included::stars;
+
 /// Calculator for pp on osu!standard maps.
 ///
 /// # Example
@@ -277,47 +286,12 @@ impl<'m> OsuPP<'m> {
         }
     }
 
-    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
-    /// containing stars and other attributes.
-    #[cfg(feature = "no_leniency")]
-    pub fn calculate(self) -> PerformanceAttributes {
-        self.calculate_with_func(super::no_leniency::stars)
-    }
-
-    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
-    /// containing stars and other attributes.
-    #[cfg(feature = "no_sliders_no_leniency")]
-    pub fn calculate(self) -> PerformanceAttributes {
-        self.calculate_with_func(super::no_sliders_no_leniency::stars)
-    }
-
-    /// Returns an object which contains the pp and [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
-    /// containing stars and other attributes.
-    #[cfg(feature = "all_included")]
-    pub fn calculate(self) -> PerformanceAttributes {
-        self.calculate_with_func(super::all_included::stars)
-    }
-
-    // TODO: import `stars` function based on features
-
-    // Omits an unnecessary error when enabled features are invalid
-    #[cfg(not(any(
-        feature = "no_leniency",
-        feature = "no_sliders_no_leniency",
-        feature = "all_included"
-    )))]
-    pub(crate) fn calculate(self) -> PerformanceAttributes {
-        unreachable!()
-    }
-
-    fn calculate_with_func(
-        mut self,
-        stars_func: impl FnOnce(&Beatmap, u32, Option<usize>) -> DifficultyAttributes,
-    ) -> PerformanceAttributes {
+    /// Calculate all performance related values, including pp and stars.
+    pub fn calculate(mut self) -> PerformanceAttributes {
         let attributes = self
             .attributes
             .take()
-            .unwrap_or_else(|| stars_func(self.map, self.mods, self.passed_objects));
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
 
         self.assert_hitresults(attributes).calculate()
     }
