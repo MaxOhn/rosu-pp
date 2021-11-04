@@ -92,7 +92,7 @@ pub fn stars(
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *path_type);
+                let curve = Curve::new(curve_points, *path_type, *pixel_len);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
@@ -323,7 +323,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *path_type);
+                let curve = Curve::new(curve_points, *path_type, *pixel_len);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));

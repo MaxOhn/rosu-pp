@@ -70,7 +70,7 @@ impl OsuObject {
                 let span_duration = duration / *repeats as f32;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *path_type);
+                let curve = Curve::new(curve_points, *path_type, *pixel_len);
 
                 // Called on each slider object except for the head.
                 // Increases combo and adjusts `end_pos` and `travel_dist`
@@ -95,6 +95,7 @@ impl OsuObject {
                     if dist > approx_follow_circle_radius {
                         dist -= approx_follow_circle_radius;
                         lazy_end_pos += diff.normalize() * dist;
+
                         travel_dist += dist;
                     }
                 };

@@ -3,6 +3,8 @@
     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
 ))]
 
+use std::{borrow::Cow, cmp::Ordering, convert::identity};
+
 use crate::{
     math_util,
     parse::{PathType, Pos2},
@@ -27,7 +29,10 @@ impl Points {
 }
 
 pub(crate) enum Curve<'p> {
-    Bezier(Points),
+    Bezier {
+        path: Vec<Pos2>,
+        lengths: Vec<f32>,
+    },
     Catmull(Points),
     Linear(&'p [Pos2]),
     Perfect {
@@ -37,50 +42,235 @@ pub(crate) enum Curve<'p> {
     },
 }
 
+struct BezierBuffers {
+    buf1: Vec<Pos2>,
+    buf2: Vec<Pos2>,
+    buf3: Vec<Pos2>,
+}
+
+impl BezierBuffers {
+    fn new(len: usize) -> Self {
+        Self {
+            buf1: vec![Pos2::zero(); len],
+            buf2: vec![Pos2::zero(); (len - 1) * 2 + 1],
+            buf3: vec![Pos2::zero(); len],
+        }
+    }
+}
+
 impl<'p> Curve<'p> {
     #[inline]
-    pub(crate) fn new(points: &'p [Pos2], kind: PathType) -> Self {
+    pub(crate) fn new(points: &'p [Pos2], kind: PathType, expected_len: f32) -> Self {
         match kind {
-            PathType::Bezier => Self::bezier(points),
+            PathType::Bezier => Self::bezier(points, expected_len),
             PathType::Catmull => Self::catmull(points),
             PathType::Linear => Self::Linear(points),
             PathType::PerfectCurve => Self::perfect(points),
         }
     }
 
-    fn bezier(points: &[Pos2]) -> Self {
-        if points.len() == 1 {
-            return Self::Bezier(Points::Single(points[0]));
+    fn bezier(points: &[Pos2], expected_len: f32) -> Self {
+        let points: Vec<_> = points
+            .iter()
+            .copied()
+            .map(|point| point - points[0])
+            .collect();
+
+        let len = points.len();
+
+        if len == 1 {
+            return Self::Bezier {
+                path: points.to_owned(),
+                lengths: vec![0.0],
+            };
         }
 
+        // First calculate a path of coordinates
         let mut start = 0;
-        let mut result = Vec::new();
+        let mut path = Vec::new();
+        let mut bufs = BezierBuffers::new(len);
 
         for (end, (curr, next)) in (1..).zip(points.iter().zip(points.iter().skip(1))) {
             if end - start > 1 && curr == next {
-                Self::_bezier(&mut result, &points[start..end]);
+                Self::bezier_subpath(&mut path, &points[start..end], &mut bufs);
                 start = end;
             }
         }
 
-        Self::_bezier(&mut result, &points[start..]);
+        Self::bezier_subpath(&mut path, &points[start..], &mut bufs);
+        let last_point = &points[len - 1];
+        path.push(*last_point);
 
-        Self::Bezier(Points::Multi(result))
+        // Then calculated cumulative lenghts
+        let mut calculated_len = 0.0;
+        let mut cumulative_len = Vec::new();
+        cumulative_len.push(0.0);
+
+        for i in 0..path.len() - 1 {
+            let diff = path[i + 1] - path[i];
+            calculated_len += diff.length();
+            cumulative_len.push(calculated_len);
+        }
+
+        if (expected_len - calculated_len).abs() > f32::EPSILON {
+            // * In osu-stable, if the last two control points of a slider are equal, extension is not performed
+            if points
+                .get(len - 2)
+                .filter(|&p| p == last_point && expected_len > calculated_len)
+                .is_some()
+            {
+                cumulative_len.push(calculated_len);
+
+                return Self::Bezier {
+                    path,
+                    lengths: cumulative_len,
+                };
+            }
+
+            // * The last length is always incorrect
+            cumulative_len.pop();
+
+            let mut path_end_idx = path.len() - 1;
+
+            if calculated_len > expected_len {
+                // * The path will be shortened further, in which case we should trim
+                // * any more unnecessary lengths and their associated path segments
+                while cumulative_len
+                    .last()
+                    .filter(|&l| *l > expected_len)
+                    .is_some()
+                {
+                    cumulative_len.pop();
+                    path.remove(path_end_idx);
+                    path_end_idx -= 1;
+                }
+            }
+
+            if path_end_idx == 0 {
+                // * The expected distance is negative or zero
+                // * Perhaps negative path lengths should be disallowed altogether
+                cumulative_len.push(0.0);
+
+                return Self::Bezier {
+                    path,
+                    lengths: cumulative_len,
+                };
+            }
+
+            // * The direction of the segment to shorten or lengthen
+            let dir = (path[path_end_idx] - path[path_end_idx - 1]).normalize();
+
+            path[path_end_idx] =
+                path[path_end_idx - 1] + dir * (expected_len - cumulative_len.last().unwrap());
+            cumulative_len.push(expected_len);
+        }
+
+        Self::Bezier {
+            path,
+            lengths: cumulative_len,
+        }
     }
 
-    fn _bezier(result: &mut Vec<Pos2>, points: &[Pos2]) {
-        let step = (BEZIER_TOLERANCE / points.len() as f32).max(0.01);
-        let mut i = 0.0;
-        let n = points.len() as i32 - 1;
+    fn bezier_subpath(result: &mut Vec<Pos2>, points: &[Pos2], bufs: &mut BezierBuffers) {
+        let p = points.len();
 
-        while i < 1.0 + step {
-            let point = (0..).zip(points).fold(Pos2::zero(), |point, (p, curr)| {
-                point + *curr * math_util::cpn(p, n) * (1.0 - i).powi(n - p) * i.powi(p)
-            });
+        let mut to_flatten = Vec::new();
+        let mut free_bufs = Vec::with_capacity(1);
 
-            result.push(point);
-            i += step;
+        // In osu!lazer's code, `p` is always 0 when approximating bezier
+        // so the first big `if` can be omitted
+
+        to_flatten.push(Cow::Borrowed(points));
+
+        // * "toFlatten" contains all the curves which are not yet approximated well enough.
+        // * We use a stack to emulate recursion without the risk of running into a stack overflow.
+        // * (More specifically, we iteratively and adaptively refine our curve with a
+        // * <a href="https://en.wikipedia.org/wiki/Depth-first_search">Depth-first search</a>
+        // * over the tree resulting from the subdivisions we make.)
+
+        let mut left_child = bufs.buf2.to_owned();
+
+        while let Some(mut parent) = to_flatten.pop() {
+            if Self::bezier_is_flat_enough(&parent) {
+                // * If the control points we currently operate on are sufficiently "flat", we use
+                // * an extension to De Casteljau's algorithm to obtain a piecewise-linear approximation
+                // * of the bezier curve represented by our control points, consisting of the same amount
+                // * of points as there are control points.
+                Self::bezier_approximate(&parent, result, bufs);
+                free_bufs.push(parent);
+
+                continue;
+            }
+
+            // * If we do not yet have a sufficiently "flat" (in other words, detailed) approximation we keep
+            // * subdividing the curve we are currently operating on.
+            let mut right_child = free_bufs
+                .pop()
+                .unwrap_or_else(|| Cow::Owned(vec![Pos2::zero(); p]));
+
+            Self::bezier_subdivide(
+                &parent,
+                &mut left_child,
+                right_child.to_mut(),
+                &mut bufs.buf1,
+            );
+
+            // * We re-use the buffer of the parent for one of the children, so that we save one allocation per iteration.
+            parent.to_mut().copy_from_slice(&left_child[..p]);
+
+            to_flatten.push(right_child);
+            to_flatten.push(parent);
         }
+    }
+
+    fn bezier_is_flat_enough(points: &[Pos2]) -> bool {
+        let limit = BEZIER_TOLERANCE * BEZIER_TOLERANCE * 4.0;
+
+        !points
+            .iter()
+            .zip(points.iter().skip(1))
+            .zip(points.iter().skip(2))
+            .any(|((&prev, &curr), &next)| (prev - curr * 2.0 + next).length_squared() > limit)
+    }
+
+    fn bezier_subdivide(points: &[Pos2], l: &mut [Pos2], r: &mut [Pos2], buf: &mut [Pos2]) {
+        let count = points.len();
+        let midpoints = buf;
+        midpoints[..count].copy_from_slice(&points[..count]);
+
+        for i in (1..count).rev() {
+            l[count - i - 1] = midpoints[0];
+            r[i] = midpoints[i];
+
+            for j in 0..i {
+                midpoints[j] = (midpoints[j] + midpoints[j + 1]) / 2.0;
+            }
+        }
+
+        l[count - 1] = midpoints[0];
+        r[0] = midpoints[0];
+    }
+
+    // * https://en.wikipedia.org/wiki/De_Casteljau%27s_algorithm
+    fn bezier_approximate(points: &[Pos2], output: &mut Vec<Pos2>, bufs: &mut BezierBuffers) {
+        let count = points.len();
+        let r = &mut bufs.buf1;
+        let l = &mut bufs.buf2;
+
+        Self::bezier_subdivide(points, l, r, &mut bufs.buf3);
+        l[count..2 * count - 1].copy_from_slice(&r[1..count]);
+        output.push(points[0]);
+
+        let new_points = l
+            .iter()
+            .skip(1)
+            .zip(l.iter().skip(2))
+            .zip(l.iter().skip(3))
+            .step_by(2)
+            .take(count.saturating_sub(2))
+            .map(|((&prev, &curr), &next)| (prev + curr * 2.0 + next) * 0.25);
+
+        output.extend(new_points);
     }
 
     fn catmull(points: &[Pos2]) -> Self {
@@ -164,9 +354,43 @@ impl<'p> Curve<'p> {
         }
     }
 
+    fn interpolate_vertices(path: &[Pos2], lengths: &[f32], i: usize, d: f32) -> Pos2 {
+        if path.is_empty() {
+            return Pos2::zero();
+        }
+
+        if i == 0 {
+            return path[0];
+        } else if i >= path.len() {
+            return path[path.len() - 1];
+        }
+
+        let p0 = path[i - 1];
+        let p1 = path[i];
+
+        let d0 = lengths[i - 1];
+        let d1 = lengths[i];
+
+        // * Avoid division by an almost-zero number in case
+        // * two points are extremely close to each other
+        if (d0 - d1).abs() <= f32::EPSILON {
+            return p0;
+        }
+
+        let w = (d - d0) / (d1 - d0);
+
+        p0 + (p1 - p0) * w
+    }
+
     pub(crate) fn point_at_distance(&self, dist: f32) -> Pos2 {
         match self {
-            Self::Bezier(points) => points.point_at_distance(dist),
+            Self::Bezier { path, lengths } => {
+                let idx = lengths
+                    .binary_search_by(|len| len.partial_cmp(&dist).unwrap_or(Ordering::Equal))
+                    .map_or_else(identity, identity);
+
+                Self::interpolate_vertices(path, lengths, idx, dist)
+            }
             Self::Catmull(points) => points.point_at_distance(dist),
             Self::Linear(points) => math_util::point_at_distance(points, dist),
             Self::Perfect {

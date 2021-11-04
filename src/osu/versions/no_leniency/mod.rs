@@ -337,3 +337,27 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         strains,
     }
 }
+
+#[test]
+fn custom_osu() {
+    let file = std::fs::File::open("E:Games/osu!/beatmaps/2753127_.osu").unwrap();
+    // let file = std::fs::File::open("E:Games/osu!/beatmaps/2571051.osu").unwrap();
+    let map = Beatmap::parse(file).unwrap();
+
+    let start = std::time::Instant::now();
+    let result = crate::OsuPP::new(&map).mods(0).calculate();
+
+    let iters = 500;
+    let accum = start.elapsed();
+
+    // let mut accum = accum;
+
+    // for _ in 0..iters {
+    //     let start = std::time::Instant::now();
+    //     let _result = crate::OsuPP::new(&map).mods(0).calculate();
+    //     accum += start.elapsed();
+    // }
+
+    println!("{:#?}", result);
+    println!("Average: {:?}", accum / iters);
+}

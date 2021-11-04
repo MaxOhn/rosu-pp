@@ -70,7 +70,7 @@ impl Skill {
         self.strain_peaks
             .sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
-        for &strain in &self.strain_peaks {
+        for &strain in self.strain_peaks.iter() {
             difficulty += strain * weight;
             weight *= decay_weight;
         }

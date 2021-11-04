@@ -346,7 +346,7 @@ impl OsuPPInner {
 
         PerformanceAttributes {
             attributes: self.attributes,
-            pp_acc: aim_value,
+            pp_acc: acc_value,
             pp_aim: aim_value,
             pp_flashlight: flashlight_value,
             pp_speed: speed_value,

@@ -419,9 +419,9 @@ macro_rules! parse_hitobjects_body {
                 y: next_field!(split.next(), "y position").parse()?,
             };
 
-            let time = next_field!(split.next(), "hitobject time")
+            let time: f32 = next_field!(split.next(), "hitobject time")
                 .trim()
-                .parse::<f32>()?;
+                .parse()?;
 
             validate_float!(time);
 
@@ -448,6 +448,17 @@ macro_rules! parse_hitobjects_body {
                     curve_points.push(pos);
 
                     let mut curve_point_iter = next_field!(split.next(), "curve points").split('|');
+
+                    let mut repeats: usize = next_field!(split.next(), "repeats")
+                        .parse()?;
+
+                    if repeats > 9000 {
+                        return Err(ParseError::TooManyRepeats);
+                    }
+
+                    // * osu-stable treated the first span of the slider
+                    // * as a repeat, but no repeats are happening
+                    repeats = repeats.saturating_sub(1);
 
                     let mut path_type: PathType =
                         next_field!(curve_point_iter.next(), "path kind").parse()?;
@@ -499,10 +510,7 @@ macro_rules! parse_hitobjects_body {
                     if curve_points.is_empty() {
                         HitObjectKind::Circle
                     } else {
-                        let repeats = next_field!(split.next(), "repeats")
-                            .parse::<usize>()?
-                            .min(9000);
-
+                        // TODO: Should be Option<f32>?
                         let pixel_len = next_field!(split.next(), "pixel len")
                             .parse::<f32>()?
                             .max(0.0)
@@ -552,7 +560,7 @@ macro_rules! parse_hitobjects_body {
                 pos,
                 start_time: time,
                 kind,
-                sound,
+                sound, // TODO: omit if not taiko?
             });
 
             prev_time = time;

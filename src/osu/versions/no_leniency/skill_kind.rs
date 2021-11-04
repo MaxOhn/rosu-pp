@@ -159,9 +159,9 @@ impl SkillKind {
                 let mut small_dist_nerf = 1.0;
                 let mut result = 0.0;
                 let mut cumulative_strain_time = 0.0;
-                let mut history = history.iter();
+                let mut history_iter = history.iter();
 
-                if let Some(prev) = history.next() {
+                if let Some(prev) = history_iter.next() {
                     // Handle first entry distinctly for slight optimization
                     if !prev.is_spinner {
                         let jump_dist = (curr.base.pos - prev.end_pos).length();
@@ -180,7 +180,7 @@ impl SkillKind {
 
                     let factors = iter::successors(Some(0.8), |s| Some(s * 0.8));
 
-                    for (factor, prev) in factors.zip(history) {
+                    for (factor, prev) in factors.zip(history_iter) {
                         if !prev.is_spinner {
                             let jump_dist = (curr.base.pos - prev.end_pos).length();
                             cumulative_strain_time += prev.strain_time;

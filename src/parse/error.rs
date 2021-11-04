@@ -28,6 +28,7 @@ pub enum ParseError {
     InvalidPathType,
     InvalidTimingSignature,
     MissingField(&'static str),
+    TooManyRepeats,
     UnknownHitObjectKind,
 
     #[cfg(not(all(
@@ -54,6 +55,7 @@ impl fmt::Display for ParseError {
             Self::InvalidPathType => f.write_str("invalid path type"),
             Self::InvalidTimingSignature => f.write_str("invalid timing signature"),
             Self::MissingField(field) => write!(f, "missing field `{}`", field),
+            Self::TooManyRepeats => f.write_str("repeat count is way too high"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
 
             #[cfg(not(all(
@@ -84,6 +86,7 @@ impl StdError for ParseError {
             Self::InvalidPathType => None,
             Self::InvalidTimingSignature => None,
             Self::MissingField(_) => None,
+            Self::TooManyRepeats => None,
             Self::UnknownHitObjectKind => None,
 
             #[cfg(not(all(

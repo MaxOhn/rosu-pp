@@ -11,23 +11,6 @@ pub(crate) use fruits_osu::*;
 mod fruits_osu {
     use crate::parse::Pos2;
 
-    #[inline]
-    pub(crate) fn cpn(mut p: i32, n: i32) -> f32 {
-        if p < 0 || p > n {
-            return 0.0;
-        }
-
-        p = p.min(n - p);
-        let diff = n - p;
-        let mut out = 1.0;
-
-        for i in 1..=p {
-            out *= (diff + i) as f32 / i as f32;
-        }
-
-        out
-    }
-
     pub(crate) fn point_at_distance(points: &[Pos2], dist: f32) -> Pos2 {
         if points.len() < 2 {
             return Pos2::zero();
@@ -43,7 +26,7 @@ mod fruits_osu {
         let mut new_dist = 0.0;
 
         for (&curr, &next) in points.iter().zip(points.iter().skip(1)) {
-            new_dist = (curr - next).length();
+            new_dist = (curr - next).length().max(f32::EPSILON);
             curr_dist += new_dist;
 
             if dist <= curr_dist {
