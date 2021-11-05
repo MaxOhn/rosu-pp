@@ -16,7 +16,7 @@ pub use hitsound::HitSound;
 pub use pos2::Pos2;
 use sort::legacy_sort;
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, mem};
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::io::{BufRead, BufReader, Read};
@@ -28,11 +28,11 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use async_std::io::{prelude::BufReadExt, BufReader as AsyncBufReader, Read as AsyncRead};
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
-    slice.sort_unstable_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal));
+    slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 }
 
 fn sort<T: PartialOrd>(slice: &mut [T]) {
-    slice.sort_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal));
+    slice.sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 }
 
 trait OptionExt<T> {
@@ -41,7 +41,7 @@ trait OptionExt<T> {
 
 impl<T> OptionExt<T> for Option<T> {
     fn next_field(self, field: &'static str) -> Result<T, ParseError> {
-        self.ok_or_else(|| ParseError::MissingField(field))
+        self.ok_or(ParseError::MissingField(field))
     }
 }
 
@@ -765,8 +765,19 @@ impl Beatmap {
 
         let mut unsorted = false;
         let mut prev_time = 0.0;
-
         let mut empty = true;
+
+        // `point_split` elements will have the lifetime of `buf`.
+        // If it wasn't split into parts, the borrow checker would complain.
+        // The ptr is cast to a `*const u8` so its lifetime is not bound to `buf`.
+        // At the end of this scope, the vec will be built one last time
+        // so it can be dropped and thus deallocated.
+        let mut point_split_ptr = Vec::new().as_mut_ptr() as *const u8;
+        let mut point_split_length = 0;
+        let mut point_split_capacity = 0;
+
+        let mut segments = Vec::new();
+        let mut vertices = Vec::new();
 
         while read_line!(reader, buf)? != 0 {
             let line = line_prepare!(buf);
@@ -814,7 +825,7 @@ impl Beatmap {
                     let mut curve_points = Vec::with_capacity(4);
                     curve_points.push(pos);
 
-                    let curve_point_iter = split.next().next_field("curve points")?.split("|");
+                    let curve_point_iter = split.next().next_field("curve points")?.split('|');
                     let mut repeats: usize = split.next().next_field("repeats")?.parse()?;
 
                     if repeats > 9000 {
@@ -829,9 +840,19 @@ impl Beatmap {
                     let mut end_idx = 0;
                     let mut first = true;
 
-                    let point_split: Vec<_> = curve_point_iter.collect();
-                    let mut segments = Vec::new();
+                    // SAFETY: Parts originate from an actual Vec and are updated each iteration
+                    let mut point_split = unsafe {
+                        Vec::from_raw_parts(
+                            point_split_ptr as *mut &str,
+                            point_split_length,
+                            point_split_capacity,
+                        )
+                    };
 
+                    point_split.clear();
+                    point_split.extend(curve_point_iter);
+
+                    #[allow(clippy::blocks_in_if_conditions)]
                     while {
                         end_idx += 1;
 
@@ -848,29 +869,25 @@ impl Beatmap {
                         // * The start of the next segment is the index after the type descriptor.
                         let end_point = point_split.get(end_idx + 1).copied();
 
-                        convert_points(
-                            &point_split[start_idx..end_idx],
-                            end_point,
-                            first,
-                            pos,
-                            &mut segments,
-                        )?;
+                        let slice = &point_split[start_idx..end_idx];
+                        convert_points(slice, end_point, first, pos, &mut segments, &mut vertices)?;
 
                         start_idx = end_idx;
                         first = false;
                     }
 
                     if end_idx > start_idx {
-                        convert_points(
-                            &point_split[start_idx..end_idx],
-                            None,
-                            first,
-                            pos,
-                            &mut segments,
-                        )?;
+                        let slice = &point_split[start_idx..end_idx];
+                        convert_points(slice, None, first, pos, &mut segments, &mut vertices)?;
                     }
 
-                    let curve_points = merge_points_lists(segments);
+                    point_split_ptr = point_split.as_mut_ptr() as *const u8;
+                    point_split_length = point_split.len();
+                    point_split_capacity = point_split.capacity();
+                    mem::forget(point_split);
+
+                    // Drains `segments` so it doesn't have to be cleared
+                    let curve_points = merge_points_lists(&mut segments);
 
                     if curve_points.is_empty() {
                         HitObjectKind::Circle
@@ -944,17 +961,27 @@ impl Beatmap {
             sort_unstable(&mut self.hit_objects);
         }
 
+        // Construct vec one last time so it gets deallocated.
+        // SAFETY: Parts originate from an actual Vec and are updated each iteration
+        let _ = unsafe {
+            Vec::from_raw_parts(
+                point_split_ptr as *mut &str,
+                point_split_length,
+                point_split_capacity,
+            )
+        };
+
         Ok(empty)
     }
 }
 
-// TODO: Cleanup
 fn convert_points(
     points: &[&str],
     end_point: Option<&str>,
     first: bool,
     offset: Pos2,
     segments: &mut Vec<Vec<PathControlPoint>>,
+    vertices: &mut Vec<PathControlPoint>,
 ) -> Result<(), ParseError> {
     let mut path_kind = PathType::from_str(points[0]);
 
@@ -962,20 +989,20 @@ fn convert_points(
     let readable_points = points.len() - 1;
     let end_point_len = end_point.is_some() as usize;
 
-    let mut vertices =
-        vec![PathControlPoint::default(); read_offset + readable_points + end_point_len];
+    vertices.clear();
+    vertices.reserve(read_offset + readable_points + end_point_len);
 
     // * Fill any non-read points.
-    // Not necessary since vertices are already initialized
+    vertices.extend((0..read_offset).map(|_| PathControlPoint::default()));
 
     // * Parse into control points.
-    for i in 1..points.len() {
-        read_point(points[i], offset, &mut vertices[read_offset + i - 1])?;
+    for &point in points.iter().skip(1) {
+        vertices.push(read_point(point, offset)?);
     }
 
     // * If an endpoint is given, add it to the end.
     if let Some(end_point) = end_point {
-        read_point(end_point, offset, vertices.last_mut().unwrap())?;
+        vertices.push(read_point(end_point, offset)?);
     }
 
     // * Edge-case rules (to match stable).
@@ -1002,6 +1029,7 @@ fn convert_points(
     let mut start_idx = 0;
     let mut end_idx = 0;
 
+    #[allow(clippy::blocks_in_if_conditions)]
     while {
         end_idx += 1;
 
@@ -1034,25 +1062,21 @@ fn convert_points(
     Ok(())
 }
 
-fn read_point(
-    value: &str,
-    start_pos: Pos2,
-    point: &mut PathControlPoint,
-) -> Result<(), ParseError> {
+fn read_point(value: &str, start_pos: Pos2) -> Result<PathControlPoint, ParseError> {
     let mut v = value.split(':').map(str::parse);
 
     match (v.next(), v.next()) {
-        (Some(Ok(x)), Some(Ok(y))) => point.pos = Pos2 { x, y } - start_pos,
-        _ => return Err(ParseError::InvalidCurvePoints),
-    };
-
-    Ok(())
+        (Some(Ok(x)), Some(Ok(y))) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
+        _ => Err(ParseError::InvalidCurvePoints),
+    }
 }
 
-fn merge_points_lists(control_point_list: Vec<Vec<PathControlPoint>>) -> Vec<PathControlPoint> {
+fn merge_points_lists(
+    control_point_list: &mut Vec<Vec<PathControlPoint>>,
+) -> Vec<PathControlPoint> {
     let total_count = control_point_list.iter().map(Vec::len).sum();
     let mut merged_list = Vec::with_capacity(total_count);
-    let iter = control_point_list.into_iter().map(Vec::into_iter).flatten();
+    let iter = control_point_list.drain(..).map(Vec::into_iter).flatten();
     merged_list.extend(iter);
 
     merged_list
@@ -1087,6 +1111,12 @@ fn split_colon(line: &str) -> Option<(&str, &str)> {
 pub struct PathControlPoint {
     pub pos: Pos2,
     pub kind: Option<PathType>,
+}
+
+impl From<Pos2> for PathControlPoint {
+    fn from(pos: Pos2) -> Self {
+        Self { pos, kind: None }
+    }
 }
 
 /// The type of curve of a slider.

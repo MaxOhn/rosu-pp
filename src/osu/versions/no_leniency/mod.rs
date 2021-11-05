@@ -340,11 +340,30 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
 #[test]
 fn custom_osu() {
-    let file = std::fs::File::open("E:Games/osu!/beatmaps/2753127.osu").unwrap();
-    // let file = std::fs::File::open("E:Games/osu!/beatmaps/2571051.osu").unwrap();
+    use std::{fs::File, time::Instant};
+
+    let path = "E:Games/osu!/beatmaps/2753127.osu";
+    // let path = "E:Games/osu!/beatmaps/2571051.osu";
+    let file = File::open(path).unwrap();
+
+    let start = Instant::now();
     let map = Beatmap::parse(file).unwrap();
 
-    let start = std::time::Instant::now();
+    let iters = 100;
+    let accum = start.elapsed();
+
+    let mut accum = accum;
+
+    for _ in 0..iters {
+        let file = File::open(path).unwrap();
+        let start = Instant::now();
+        let _map = Beatmap::parse(file).unwrap();
+        accum += start.elapsed();
+    }
+
+    println!("Parsing average: {:?}", accum / iters);
+
+    let start = Instant::now();
     let result = crate::OsuPP::new(&map).mods(0).calculate();
 
     let iters = 500;
@@ -354,11 +373,11 @@ fn custom_osu() {
     // let mut accum = accum;
 
     // for _ in 0..iters {
-    //     let start = std::time::Instant::now();
+    //     let start = Instant::now();
     //     let _result = crate::OsuPP::new(&map).mods(0).calculate();
     //     accum += start.elapsed();
     // }
 
     println!("{:#?}", result);
-    println!("Average: {:?}", accum / iters);
+    println!("Calculation average: {:?}", accum / iters);
 }
