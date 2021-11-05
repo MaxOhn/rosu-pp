@@ -1,8 +1,4 @@
-#[cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
-use crate::math_util;
+use crate::math_util::is_linear;
 
 mod attributes;
 mod control_point;
@@ -21,7 +17,6 @@ pub use pos2::Pos2;
 use sort::legacy_sort;
 
 use std::cmp::Ordering;
-use std::str::FromStr;
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::io::{BufRead, BufReader, Read};
@@ -32,30 +27,34 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 #[cfg(feature = "async_std")]
 use async_std::io::{prelude::BufReadExt, BufReader as AsyncBufReader, Read as AsyncRead};
 
-macro_rules! sort {
-    ($slice:expr) => {
-        $slice.sort_unstable_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal))
-    };
-
-    (stable $slice:expr) => {
-        $slice.sort_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal))
-    };
+fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
+    slice.sort_unstable_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal));
 }
 
-macro_rules! next_field {
-    ($opt:expr, $err:literal) => {
-        $opt.ok_or_else(|| ParseError::MissingField($err))?
-    };
+fn sort<T: PartialOrd>(slice: &mut [T]) {
+    slice.sort_by(|p1, p2| p1.partial_cmp(&p2).unwrap_or(Ordering::Equal));
 }
 
-macro_rules! validate_float {
-    ($x:expr) => {{
-        if $x.is_finite() {
-            $x
-        } else {
-            return Err(ParseError::InvalidFloatingPoint);
-        }
-    }};
+trait OptionExt<T> {
+    fn next_field(self, field: &'static str) -> Result<T, ParseError>;
+}
+
+impl<T> OptionExt<T> for Option<T> {
+    fn next_field(self, field: &'static str) -> Result<T, ParseError> {
+        self.ok_or_else(|| ParseError::MissingField(field))
+    }
+}
+
+trait F32Ext: Sized {
+    fn validate(self) -> Result<Self, ParseError>;
+}
+
+impl F32Ext for f32 {
+    fn validate(self) -> Result<Self, ParseError> {
+        self.is_finite()
+            .then(|| self)
+            .ok_or(ParseError::InvalidFloatingPoint)
+    }
 }
 
 macro_rules! line_prepare {
@@ -236,12 +235,12 @@ macro_rules! parse_difficulty_body {
             $buf.clear();
         }
 
-        $self.od = next_field!(od, "od");
-        $self.cs = next_field!(cs, "cs");
-        $self.hp = next_field!(hp, "hp");
+        $self.od = od.next_field("od")?;
+        $self.cs = cs.next_field("cs")?;
+        $self.hp = hp.next_field("hp")?;
         $self.ar = ar.unwrap_or($self.od);
-        $self.sv = next_field!(sv, "sv");
-        $self.tick_rate = next_field!(tick_rate, "sv");
+        $self.slider_mult = sv.next_field("sv")?;
+        $self.tick_rate = tick_rate.next_field("tick rate")?;
 
         Ok(empty)
     }};
@@ -312,14 +311,14 @@ macro_rules! parse_timingpoints_body {
 
             let mut split = line.split(',');
 
-            let time = next_field!(split.next(), "timing point time")
+            let time = split
+                .next()
+                .next_field("timing point time")?
                 .trim()
-                .parse::<f32>()?;
-            validate_float!(time);
+                .parse::<f32>()?
+                .validate()?;
 
-            let beat_len = next_field!(split.next(), "beat len")
-                .trim()
-                .parse::<f32>()?;
+            let beat_len: f32 = split.next().next_field("beat len")?.trim().parse()?;
 
             if beat_len < 0.0 {
                 let point = DifficultyPoint {
@@ -348,11 +347,11 @@ macro_rules! parse_timingpoints_body {
         }
 
         if unsorted_timings {
-            sort!($self.timing_points);
+            sort_unstable(&mut $self.timing_points);
         }
 
         if unsorted_difficulties {
-            sort!($self.difficulty_points);
+            sort_unstable(&mut $self.difficulty_points);
         }
 
         Ok(empty)
@@ -395,217 +394,217 @@ macro_rules! parse_timingpoints {
     };
 }
 
-macro_rules! parse_hitobjects_body {
-    ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
-        let mut unsorted = false;
-        let mut prev_time = 0.0;
+// macro_rules! parse_hitobjects_body {
+//     ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
+//         let mut unsorted = false;
+//         let mut prev_time = 0.0;
 
-        let mut empty = true;
+//         let mut empty = true;
 
-        while read_line!($reader, $buf)? != 0 {
-            let line = line_prepare!($buf);
+//         while read_line!($reader, $buf)? != 0 {
+//             let line = line_prepare!($buf);
 
-            if line.starts_with('[') && line.ends_with(']') {
-                *$section = Section::from_str(&line[1..line.len() - 1]);
-                empty = false;
-                $buf.clear();
-                break;
-            }
+//             if line.starts_with('[') && line.ends_with(']') {
+//                 *$section = Section::from_str(&line[1..line.len() - 1]);
+//                 empty = false;
+//                 $buf.clear();
+//                 break;
+//             }
 
-            let mut split = line.split(',');
+//             let mut split = line.split(',');
 
-            let pos = Pos2 {
-                x: next_field!(split.next(), "x position").parse()?,
-                y: next_field!(split.next(), "y position").parse()?,
-            };
+//             let pos = Pos2 {
+//                 x: next_field!(split.next(), "x position").parse()?,
+//                 y: next_field!(split.next(), "y position").parse()?,
+//             };
 
-            let time: f32 = next_field!(split.next(), "hitobject time")
-                .trim()
-                .parse()?;
+//             let time: f32 = next_field!(split.next(), "hitobject time")
+//                 .trim()
+//                 .parse()?;
 
-            validate_float!(time);
+//             validate_float!(time);
 
-            if !$self.hit_objects.is_empty() && time < prev_time {
-                unsorted = true;
-            }
+//             if !$self.hit_objects.is_empty() && time < prev_time {
+//                 unsorted = true;
+//             }
 
-            let kind: u8 = next_field!(split.next(), "hitobject kind").parse()?;
-            let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
+//             let kind: u8 = next_field!(split.next(), "hitobject kind").parse()?;
+//             let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
 
-            let kind = if kind & Self::CIRCLE_FLAG > 0 {
-                $self.n_circles += 1;
+//             let kind = if kind & Self::CIRCLE_FLAG > 0 {
+//                 $self.n_circles += 1;
 
-                HitObjectKind::Circle
-            } else if kind & Self::SLIDER_FLAG > 0 {
-                $self.n_sliders += 1;
+//                 HitObjectKind::Circle
+//             } else if kind & Self::SLIDER_FLAG > 0 {
+//                 $self.n_sliders += 1;
 
-                #[cfg(any(
-                    feature = "fruits",
-                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-                ))]
-                {
-                    let mut curve_points = Vec::with_capacity(4);
-                    curve_points.push(pos);
+//                 #[cfg(any(
+//                     feature = "fruits",
+//                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+//                 ))]
+//                 {
+//                     let mut curve_points = Vec::with_capacity(4);
+//                     curve_points.push(pos);
 
-                    let mut curve_point_iter = next_field!(split.next(), "curve points").split('|');
+//                     let mut curve_point_iter = next_field!(split.next(), "curve points").split('|');
 
-                    let mut repeats: usize = next_field!(split.next(), "repeats")
-                        .parse()?;
+//                     let mut repeats: usize = next_field!(split.next(), "repeats")
+//                         .parse()?;
 
-                    if repeats > 9000 {
-                        return Err(ParseError::TooManyRepeats);
-                    }
+//                     if repeats > 9000 {
+//                         return Err(ParseError::TooManyRepeats);
+//                     }
 
-                    // * osu-stable treated the first span of the slider
-                    // * as a repeat, but no repeats are happening
-                    repeats = repeats.saturating_sub(1);
+//                     // * osu-stable treated the first span of the slider
+//                     // * as a repeat, but no repeats are happening
+//                     repeats = repeats.saturating_sub(1);
 
-                    let mut path_type: PathType =
-                        next_field!(curve_point_iter.next(), "path kind").parse()?;
+//                     let mut path_type: PathType =
+//                         next_field!(curve_point_iter.next(), "path kind").parse()?;
 
-                    for pos in curve_point_iter {
-                        let mut v = pos.split(':').map(str::parse);
+//                     for pos in curve_point_iter {
+//                         let mut v = pos.split(':').map(str::parse);
 
-                        match (v.next(), v.next()) {
-                            (Some(Ok(x)), Some(Ok(y))) => curve_points.push(Pos2 { x, y }),
-                            _ => return Err(ParseError::InvalidCurvePoints),
-                        }
-                    }
+//                         match (v.next(), v.next()) {
+//                             (Some(Ok(x)), Some(Ok(y))) => curve_points.push(Pos2 { x, y }),
+//                             _ => return Err(ParseError::InvalidCurvePoints),
+//                         }
+//                     }
 
-                    match path_type {
-                        PathType::Linear if curve_points.len() % 2 == 0 => {
-                            // Assert that the points are of the form A|B|B|C|C|E
-                            if math_util::valid_linear(&curve_points) {
-                                for i in (2..curve_points.len() - 1).rev().step_by(2) {
-                                    curve_points.remove(i);
-                                }
-                            } else {
-                                path_type = PathType::Bezier;
-                            }
-                        }
-                        PathType::PerfectCurve if curve_points.len() == 3 => {
-                            if math_util::is_linear(curve_points[0], curve_points[1], curve_points[2]) {
-                                path_type = PathType::Linear;
-                            }
-                        },
-                        PathType::Catmull => {},
-                        _ => path_type = PathType::Bezier,
-                    };
+//                     match path_type {
+//                         PathType::Linear if curve_points.len() % 2 == 0 => {
+//                             // Assert that the points are of the form A|B|B|C|C|E
+//                             if math_util::valid_linear(&curve_points) {
+//                                 for i in (2..curve_points.len() - 1).rev().step_by(2) {
+//                                     curve_points.remove(i);
+//                                 }
+//                             } else {
+//                                 path_type = PathType::Bezier;
+//                             }
+//                         }
+//                         PathType::PerfectCurve if curve_points.len() == 3 => {
+//                             if math_util::is_linear(curve_points[0], curve_points[1], curve_points[2]) {
+//                                 path_type = PathType::Linear;
+//                             }
+//                         },
+//                         PathType::Catmull => {},
+//                         _ => path_type = PathType::Bezier,
+//                     };
 
-                    // Reduce amount of curvepoints but keep the elements evenly spaced.
-                    // Necessary to handle maps like XNOR (2573164) which have
-                    // tens of thousands of curvepoints more efficiently.
-                    while curve_points.len() > CURVE_POINT_THRESHOLD {
-                        let last = curve_points[curve_points.len() - 1];
-                        let last_idx = (curve_points.len() - 1) / 2;
+//                     // Reduce amount of curvepoints but keep the elements evenly spaced.
+//                     // Necessary to handle maps like XNOR (2573164) which have
+//                     // tens of thousands of curvepoints more efficiently.
+//                     while curve_points.len() > CURVE_POINT_THRESHOLD {
+//                         let last = curve_points[curve_points.len() - 1];
+//                         let last_idx = (curve_points.len() - 1) / 2;
 
-                        for i in 1..=last_idx {
-                            curve_points.swap(i, 2 * i);
-                        }
+//                         for i in 1..=last_idx {
+//                             curve_points.swap(i, 2 * i);
+//                         }
 
-                        curve_points[last_idx] = last;
-                        curve_points.truncate(last_idx + 1);
-                    }
+//                         curve_points[last_idx] = last;
+//                         curve_points.truncate(last_idx + 1);
+//                     }
 
-                    if curve_points.is_empty() {
-                        HitObjectKind::Circle
-                    } else {
-                        // TODO: Should be Option<f32>?
-                        let pixel_len = next_field!(split.next(), "pixel len")
-                            .parse::<f32>()?
-                            .max(0.0)
-                            .min(MAX_COORDINATE_VALUE);
+//                     if curve_points.is_empty() {
+//                         HitObjectKind::Circle
+//                     } else {
+//                         // TODO: Should be Option<f32>?
+//                         let pixel_len = next_field!(split.next(), "pixel len")
+//                             .parse::<f32>()?
+//                             .max(0.0)
+//                             .min(MAX_COORDINATE_VALUE);
 
-                        HitObjectKind::Slider {
-                            repeats,
-                            pixel_len,
-                            curve_points,
-                            path_type,
-                        }
-                    }
-                }
+//                         HitObjectKind::Slider {
+//                             repeats,
+//                             pixel_len,
+//                             curve_points,
+//                             path_type,
+//                         }
+//                     }
+//                 }
 
-                #[cfg(not(any(
-                    feature = "fruits",
-                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-                )))]
-                {
-                    let repeats = next_field!(split.nth(1), "repeats").parse::<usize>()?;
-                    let len: f32 = next_field!(split.next(), "pixel len").parse()?;
+//                 #[cfg(not(any(
+//                     feature = "fruits",
+//                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+//                 )))]
+//                 {
+//                     let repeats = next_field!(split.nth(1), "repeats").parse::<usize>()?;
+//                     let len: f32 = next_field!(split.next(), "pixel len").parse()?;
 
-                    HitObjectKind::Slider {
-                        repeats,
-                        pixel_len: len,
-                    }
-                }
-            } else if kind & Self::SPINNER_FLAG > 0 {
-                $self.n_spinners += 1;
-                let end_time = next_field!(split.next(), "spinner endtime").parse()?;
+//                     HitObjectKind::Slider {
+//                         repeats,
+//                         pixel_len: len,
+//                     }
+//                 }
+//             } else if kind & Self::SPINNER_FLAG > 0 {
+//                 $self.n_spinners += 1;
+//                 let end_time = next_field!(split.next(), "spinner endtime").parse()?;
 
-                HitObjectKind::Spinner { end_time }
-            } else if kind & Self::HOLD_FLAG > 0 {
-                $self.n_sliders += 1;
-                let mut end = time;
+//                 HitObjectKind::Spinner { end_time }
+//             } else if kind & Self::HOLD_FLAG > 0 {
+//                 $self.n_sliders += 1;
+//                 let mut end = time;
 
-                if let Some(next) = split.next() {
-                    end = end.max(next_field!(next.split(':').next(), "hold endtime").parse()?);
-                }
+//                 if let Some(next) = split.next() {
+//                     end = end.max(next_field!(next.split(':').next(), "hold endtime").parse()?);
+//                 }
 
-                HitObjectKind::Hold { end_time: end }
-            } else {
-                return Err(ParseError::UnknownHitObjectKind);
-            };
+//                 HitObjectKind::Hold { end_time: end }
+//             } else {
+//                 return Err(ParseError::UnknownHitObjectKind);
+//             };
 
-            $self.hit_objects.push(HitObject {
-                pos,
-                start_time: time,
-                kind,
-                sound, // TODO: omit if not taiko?
-            });
+//             $self.hit_objects.push(HitObject {
+//                 pos,
+//                 start_time: time,
+//                 kind,
+//                 sound, // TODO: omit if not taiko?
+//             });
 
-            prev_time = time;
-            $buf.clear();
-        }
+//             prev_time = time;
+//             $buf.clear();
+//         }
 
-        // BUG: If [General] section comes after [HitObjects] then the mode
-        // won't be set yet so mania objects won't be sorted properly
-        if $self.mode == GameMode::MNA {
-            // First a _stable_ sort by time
-            sort!(stable $self.hit_objects);
+//         // BUG: If [General] section comes after [HitObjects] then the mode
+//         // won't be set yet so mania objects won't be sorted properly
+//         if $self.mode == GameMode::MNA {
+//             // First a _stable_ sort by time
+//             sort!(stable $self.hit_objects);
 
-            // Then the legacy sort for correct position order
-            legacy_sort(&mut $self.hit_objects);
-        } else if unsorted {
-            sort!($self.hit_objects);
-        }
+//             // Then the legacy sort for correct position order
+//             legacy_sort(&mut $self.hit_objects);
+//         } else if unsorted {
+//             sort!($self.hit_objects);
+//         }
 
-        Ok(empty)
-    }};
-}
+//         Ok(empty)
+//     }};
+// }
 
-macro_rules! parse_hitobjects {
-    ($reader:ident<$inner:ident>) => {
-        fn parse_hitobjects<R: $inner>(
-            &mut self,
-            reader: &mut $reader<R>,
-            buf: &mut String,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_hitobjects_body!(self, reader, buf, section)
-        }
-    };
+// macro_rules! parse_hitobjects {
+//     ($reader:ident<$inner:ident>) => {
+//         fn parse_hitobjects<R: $inner>(
+//             &mut self,
+//             reader: &mut $reader<R>,
+//             buf: &mut String,
+//             section: &mut Section,
+//         ) -> ParseResult<bool> {
+//             parse_hitobjects_body!(self, reader, buf, section)
+//         }
+//     };
 
-    (async $reader:ident<$inner:ident>) => {
-        async fn parse_hitobjects<R: $inner + Unpin>(
-            &mut self,
-            reader: &mut $reader<R>,
-            buf: &mut String,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_hitobjects_body!(self, reader, buf, section)
-        }
-    };
-}
+//     (async $reader:ident<$inner:ident>) => {
+//         async fn parse_hitobjects<R: $inner + Unpin>(
+//             &mut self,
+//             reader: &mut $reader<R>,
+//             buf: &mut String,
+//             section: &mut Section,
+//         ) -> ParseResult<bool> {
+//             parse_hitobjects_body!(self, reader, buf, section)
+//         }
+//     };
+// }
 
 macro_rules! parse_body {
     ($reader:ident<$inner:ident>: $input:ident) => {{
@@ -711,7 +710,7 @@ pub struct Beatmap {
     pub od: f32,
     pub cs: f32,
     pub hp: f32,
-    pub sv: f32,
+    pub slider_mult: f32,
     pub tick_rate: f32,
     pub hit_objects: Vec<HitObject>,
 
@@ -726,12 +725,6 @@ pub struct Beatmap {
 }
 
 pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
-
-#[cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
-const CURVE_POINT_THRESHOLD: usize = 256;
 
 #[cfg(any(
     feature = "fruits",
@@ -759,7 +752,310 @@ impl Beatmap {
     parse_general!(BufReader<Read>);
     parse_difficulty!(BufReader<Read>);
     parse_timingpoints!(BufReader<Read>);
-    parse_hitobjects!(BufReader<Read>);
+    // parse_hitobjects!(BufReader<Read>);
+
+    // TODO: Remove
+    fn parse_hitobjects<R: Read>(
+        &mut self,
+        reader: &mut BufReader<R>,
+        buf: &mut String,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        // parse_hitobjects_body!(self, reader, buf, section)
+
+        let mut unsorted = false;
+        let mut prev_time = 0.0;
+
+        let mut empty = true;
+
+        while read_line!(reader, buf)? != 0 {
+            let line = line_prepare!(buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                buf.clear();
+                break;
+            }
+
+            let mut split = line.split(',');
+
+            let pos = Pos2 {
+                x: split.next().next_field("x pos")?.parse()?,
+                y: split.next().next_field("y pos")?.parse()?,
+            };
+
+            let time = split
+                .next()
+                .next_field("hitobject time")?
+                .trim()
+                .parse::<f32>()?
+                .validate()?;
+
+            if !self.hit_objects.is_empty() && time < prev_time {
+                unsorted = true;
+            }
+
+            let kind: u8 = split.next().next_field("hitobject kind")?.parse()?;
+            let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
+
+            let kind = if kind & Self::CIRCLE_FLAG > 0 {
+                self.n_circles += 1;
+
+                HitObjectKind::Circle
+            } else if kind & Self::SLIDER_FLAG > 0 {
+                self.n_sliders += 1;
+
+                #[cfg(any(
+                    feature = "fruits",
+                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+                ))]
+                {
+                    let mut curve_points = Vec::with_capacity(4);
+                    curve_points.push(pos);
+
+                    let curve_point_iter = split.next().next_field("curve points")?.split("|");
+                    let mut repeats: usize = split.next().next_field("repeats")?.parse()?;
+
+                    if repeats > 9000 {
+                        return Err(ParseError::TooManyRepeats);
+                    }
+
+                    // * osu-stable treated the first span of the slider
+                    // * as a repeat, but no repeats are happening
+                    repeats = repeats.saturating_sub(1);
+
+                    let mut start_idx = 0;
+                    let mut end_idx = 0;
+                    let mut first = true;
+
+                    let point_split: Vec<_> = curve_point_iter.collect();
+                    let mut segments = Vec::new();
+
+                    while {
+                        end_idx += 1;
+
+                        end_idx < point_split.len()
+                    } {
+                        // * Keep incrementing end_idx while it's not the start of a new segment
+                        // * (indicated by having a type descriptor of length 1).
+                        if point_split[end_idx].len() > 1 {
+                            continue;
+                        }
+
+                        // * Multi-segmented sliders DON'T contain the end point as part of the
+                        // * current segment as it's assumed to be the start of the next segment.
+                        // * The start of the next segment is the index after the type descriptor.
+                        let end_point = point_split.get(end_idx + 1).copied();
+
+                        convert_points(
+                            &point_split[start_idx..end_idx],
+                            end_point,
+                            first,
+                            pos,
+                            &mut segments,
+                        )?;
+
+                        start_idx = end_idx;
+                        first = false;
+                    }
+
+                    if end_idx > start_idx {
+                        convert_points(
+                            &point_split[start_idx..end_idx],
+                            None,
+                            first,
+                            pos,
+                            &mut segments,
+                        )?;
+                    }
+
+                    let curve_points = merge_points_lists(segments);
+
+                    if curve_points.is_empty() {
+                        HitObjectKind::Circle
+                    } else {
+                        let pixel_len = split
+                            .next()
+                            .next_field("pixel len")?
+                            .parse::<f32>()?
+                            .max(0.0)
+                            .min(MAX_COORDINATE_VALUE);
+
+                        HitObjectKind::Slider {
+                            repeats,
+                            pixel_len,
+                            curve_points,
+                        }
+                    }
+                }
+
+                #[cfg(not(any(
+                    feature = "fruits",
+                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+                )))]
+                {
+                    let repeats = next_field!(split.nth(1), "repeats").parse::<usize>()?;
+                    let len: f32 = next_field!(split.next(), "pixel len").parse()?;
+
+                    HitObjectKind::Slider {
+                        repeats,
+                        pixel_len: len,
+                    }
+                }
+            } else if kind & Self::SPINNER_FLAG > 0 {
+                self.n_spinners += 1;
+                let end_time = split.next().next_field("spinner endtime")?.parse()?;
+
+                HitObjectKind::Spinner { end_time }
+            } else if kind & Self::HOLD_FLAG > 0 {
+                self.n_sliders += 1;
+                let mut end = time;
+
+                if let Some(next) = split.next() {
+                    end = end.max(next.split(':').next().next_field("hold endtime")?.parse()?);
+                }
+
+                HitObjectKind::Hold { end_time: end }
+            } else {
+                return Err(ParseError::UnknownHitObjectKind);
+            };
+
+            self.hit_objects.push(HitObject {
+                pos,
+                start_time: time,
+                kind,
+                sound, // TODO: omit if not taiko?
+            });
+
+            prev_time = time;
+            buf.clear();
+        }
+
+        // BUG: If [General] section comes after [HitObjects] then the mode
+        // won't be set yet so mania objects won't be sorted properly
+        if self.mode == GameMode::MNA {
+            // First a _stable_ sort by time
+            sort(&mut self.hit_objects);
+
+            // Then the legacy sort for correct position order
+            legacy_sort(&mut self.hit_objects);
+        } else if unsorted {
+            sort_unstable(&mut self.hit_objects);
+        }
+
+        Ok(empty)
+    }
+}
+
+// TODO: Cleanup
+fn convert_points(
+    points: &[&str],
+    end_point: Option<&str>,
+    first: bool,
+    offset: Pos2,
+    segments: &mut Vec<Vec<PathControlPoint>>,
+) -> Result<(), ParseError> {
+    let mut path_kind = PathType::from_str(points[0]);
+
+    let read_offset = first as usize;
+    let readable_points = points.len() - 1;
+    let end_point_len = end_point.is_some() as usize;
+
+    let mut vertices =
+        vec![PathControlPoint::default(); read_offset + readable_points + end_point_len];
+
+    // * Fill any non-read points.
+    // Not necessary since vertices are already initialized
+
+    // * Parse into control points.
+    for i in 1..points.len() {
+        read_point(points[i], offset, &mut vertices[read_offset + i - 1])?;
+    }
+
+    // * If an endpoint is given, add it to the end.
+    if let Some(end_point) = end_point {
+        read_point(end_point, offset, vertices.last_mut().unwrap())?;
+    }
+
+    // * Edge-case rules (to match stable).
+    if path_kind == PathType::PerfectCurve {
+        if vertices.len() != 3 {
+            path_kind = PathType::Bezier;
+        } else if is_linear(vertices[0].pos, vertices[1].pos, vertices[2].pos) {
+            // * osu-stable special-cased colinear perfect curves to a linear path
+            path_kind = PathType::Linear;
+        }
+    }
+
+    // * The first control point must have a definite type.
+    vertices[0].kind = Some(path_kind);
+
+    // * A path can have multiple implicit segments of the same type if
+    // * there are two sequential control points with the same position.
+    // * To handle such cases, this code may return multiple path segments
+    // * with the final control point in each segment having a non-null type.
+    // * For the point string X|1:1|2:2|2:2|3:3, this code returns the segments:
+    // * X: { (1,1), (2, 2) }
+    // * X: { (3, 3) }
+    // * Note: (2, 2) is not returned in the second segments, as it is implicit in the path.
+    let mut start_idx = 0;
+    let mut end_idx = 0;
+
+    while {
+        end_idx += 1;
+
+        end_idx < vertices.len() - end_point_len
+    } {
+        // * Keep incrementing while an implicit segment doesn't need to be started
+        if vertices[end_idx].pos != vertices[end_idx - 1].pos {
+            continue;
+        }
+
+        // * The last control point of each segment is not
+        // * allowed to start a new implicit segment.
+        if end_idx == vertices.len() - end_point_len - 1 {
+            continue;
+        }
+
+        // * Force a type on the last point, and return
+        // * the current control point set as a segment.
+        vertices[end_idx - 1].kind = Some(path_kind);
+        segments.push(vertices[start_idx..end_idx].to_owned());
+
+        // * Skip the current control point - as it's the same as the one that's just been returned.
+        start_idx = end_idx + 1;
+    }
+
+    if end_idx > start_idx {
+        segments.push(vertices[start_idx..end_idx].to_owned());
+    }
+
+    Ok(())
+}
+
+fn read_point(
+    value: &str,
+    start_pos: Pos2,
+    point: &mut PathControlPoint,
+) -> Result<(), ParseError> {
+    let mut v = value.split(':').map(str::parse);
+
+    match (v.next(), v.next()) {
+        (Some(Ok(x)), Some(Ok(y))) => point.pos = Pos2 { x, y } - start_pos,
+        _ => return Err(ParseError::InvalidCurvePoints),
+    };
+
+    Ok(())
+}
+
+fn merge_points_lists(control_point_list: Vec<Vec<PathControlPoint>>) -> Vec<PathControlPoint> {
+    let total_count = control_point_list.iter().map(Vec::len).sum();
+    let mut merged_list = Vec::with_capacity(total_count);
+    let iter = control_point_list.into_iter().map(Vec::into_iter).flatten();
+    merged_list.extend(iter);
+
+    merged_list
 }
 
 #[cfg(feature = "async_tokio")]
@@ -787,6 +1083,12 @@ fn split_colon(line: &str) -> Option<(&str, &str)> {
     Some((split.next()?, split.next()?.trim()))
 }
 
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
+pub struct PathControlPoint {
+    pub pos: Pos2,
+    pub kind: Option<PathType>,
+}
+
 /// The type of curve of a slider.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum PathType {
@@ -796,17 +1098,14 @@ pub enum PathType {
     PerfectCurve = 3,
 }
 
-impl FromStr for PathType {
-    type Err = ParseError;
-
+impl PathType {
     #[inline]
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Self {
         match s {
-            "L" => Ok(Self::Linear),
-            "C" => Ok(Self::Catmull),
-            "B" => Ok(Self::Bezier),
-            "P" => Ok(Self::PerfectCurve),
-            _ => Err(ParseError::InvalidPathType),
+            "L" => Self::Linear,
+            "B" => Self::Bezier,
+            "P" => Self::PerfectCurve,
+            _ => Self::Catmull,
         }
     }
 }
@@ -928,7 +1227,7 @@ mod tests {
         println!("od: {}", map.od);
         println!("cs: {}", map.cs);
         println!("hp: {}", map.hp);
-        println!("sv: {}", map.sv);
+        println!("slider_mult: {}", map.slider_mult);
         println!("tick_rate: {}", map.tick_rate);
         println!("hit_objects: {}", map.hit_objects.len());
 

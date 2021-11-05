@@ -1,11 +1,9 @@
-use super::Pos2;
+use super::{PathControlPoint, Pos2};
 
 #[cfg(any(
     feature = "fruits",
     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
 ))]
-use super::PathType;
-
 use std::cmp::Ordering;
 
 /// "Intermediate" hitobject created through parsing.
@@ -63,8 +61,7 @@ pub enum HitObjectKind {
     Slider {
         pixel_len: f32,
         repeats: usize,
-        curve_points: Vec<Pos2>,
-        path_type: PathType,
+        curve_points: Vec<PathControlPoint>,
     },
     #[cfg(not(any(
         feature = "fruits",

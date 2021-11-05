@@ -45,7 +45,7 @@ pub(crate) enum ControlPoint {
     },
     Difficulty {
         time: f32,
-        speed_mult: f32,
+        slider_velocity: f32,
     },
 }
 
@@ -74,7 +74,10 @@ impl<'p> Iterator for ControlPointIter<'p> {
                 self.next_difficulty =
                     next_tuple!(self.difficulty_points, (time, speed_multiplier));
 
-                Some(ControlPoint::Difficulty { time, speed_mult })
+                Some(ControlPoint::Difficulty {
+                    time,
+                    slider_velocity: speed_mult,
+                })
             }
             (Some((time, beat_len)), None) => {
                 self.next_timing = next_tuple!(self.timing_points, (time, beat_len));

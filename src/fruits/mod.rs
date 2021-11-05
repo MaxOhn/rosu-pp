@@ -70,17 +70,17 @@ pub fn stars(
                 pixel_len,
                 repeats,
                 curve_points,
-                path_type,
             } => {
                 // HR business
-                last_pos
-                    .replace(h.pos.x + curve_points[curve_points.len() - 1].x - curve_points[0].x);
+                last_pos.replace(
+                    h.pos.x + curve_points[curve_points.len() - 1].pos.x - curve_points[0].pos.x,
+                );
                 *last_time = h.start_time;
 
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
-                let mut tick_distance = 100.0 * map.sv / map.tick_rate;
+                let mut tick_distance = 100.0 * map.slider_mult / map.tick_rate;
 
                 if map.version >= 8 {
                     tick_distance /=
@@ -88,11 +88,11 @@ pub fn stars(
                 }
 
                 let duration = *repeats as f32 * slider_state.beat_len * pixel_len
-                    / (map.sv * slider_state.speed_mult)
+                    / (map.slider_mult * slider_state.speed_mult)
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *path_type, *pixel_len);
+                let curve = Curve::new(curve_points, *pixel_len);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
@@ -103,7 +103,8 @@ pub fn stars(
                 // Tick of the first span
                 if current_distance < target {
                     for tick_idx in 1.. {
-                        let pos = curve.point_at_distance(current_distance);
+                        let progress = current_distance / *pixel_len;
+                        let pos = curve.position_at(progress);
                         let time = h.start_time + time_add * tick_idx as f32;
                         ticks.push((pos, time));
                         current_distance += tick_distance;
@@ -129,7 +130,8 @@ pub fn stars(
                     for repeat_id in 1..*repeats {
                         let dist = (repeat_id % 2) as f32 * *pixel_len;
                         let time_offset = (duration / *repeats as f32) * repeat_id as f32;
-                        let pos = curve.point_at_distance(dist);
+                        let progress = dist / *pixel_len;
+                        let pos = curve.position_at(progress);
 
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
@@ -148,8 +150,8 @@ pub fn stars(
                 }
 
                 // Slider tail
-                let dist_end = (*repeats % 2) as f32 * *pixel_len;
-                let pos = curve.point_at_distance(dist_end);
+                // let dist_end = (*repeats % 2) as f32 * *pixel_len;
+                let pos = curve.position_at(1.0); // TODO: what if reversing odd amount?
                 slider_objects.push((pos, h.start_time + duration));
 
                 fruits += 1 + *repeats;
@@ -301,17 +303,17 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 pixel_len,
                 repeats,
                 curve_points,
-                path_type,
             } => {
                 // HR business
-                last_pos
-                    .replace(h.pos.x + curve_points[curve_points.len() - 1].x - curve_points[0].x);
+                last_pos.replace(
+                    h.pos.x + curve_points[curve_points.len() - 1].pos.x - curve_points[0].pos.x,
+                );
                 *last_time = h.start_time;
 
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
-                let mut tick_distance = 100.0 * map.sv / map.tick_rate;
+                let mut tick_distance = 100.0 * map.slider_mult / map.tick_rate;
 
                 if map.version >= 8 {
                     tick_distance /=
@@ -319,11 +321,11 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 }
 
                 let duration = *repeats as f32 * slider_state.beat_len * pixel_len
-                    / (map.sv * slider_state.speed_mult)
+                    / (map.slider_mult * slider_state.speed_mult)
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *path_type, *pixel_len);
+                let curve = Curve::new(curve_points, *pixel_len);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
@@ -334,7 +336,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 // Tick of the first span
                 if current_distance < target {
                     for tick_idx in 1.. {
-                        let pos = curve.point_at_distance(current_distance);
+                        let progress = current_distance / *pixel_len;
+                        let pos = curve.position_at(progress);
                         let time = h.start_time + time_add * tick_idx as f32;
                         ticks.push((pos, time));
                         current_distance += tick_distance;
@@ -357,7 +360,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                     for repeat_id in 1..*repeats {
                         let dist = (repeat_id % 2) as f32 * *pixel_len;
                         let time_offset = (duration / *repeats as f32) * repeat_id as f32;
-                        let pos = curve.point_at_distance(dist);
+                        let progress = dist / *pixel_len;
+                        let pos = curve.position_at(progress);
 
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
@@ -374,8 +378,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 }
 
                 // Slider tail
-                let dist_end = (*repeats % 2) as f32 * *pixel_len;
-                let pos = curve.point_at_distance(dist_end);
+                // let dist_end = (*repeats % 2) as f32 * *pixel_len;
+                let pos = curve.position_at(1.0); // TODO: what if reversing odd amount?
                 slider_objects.push((pos, h.start_time + duration));
 
                 let iter = slider_objects.into_iter().map(CatchObject::new);

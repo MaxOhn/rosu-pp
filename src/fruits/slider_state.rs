@@ -14,7 +14,10 @@ impl<'p> SliderState<'p> {
 
         let (beat_len, speed_mult) = match control_points.next() {
             Some(ControlPoint::Timing { beat_len, .. }) => (beat_len, 1.0),
-            Some(ControlPoint::Difficulty { speed_mult, .. }) => (1000.0, speed_mult),
+            Some(ControlPoint::Difficulty {
+                slider_velocity: speed_mult,
+                ..
+            }) => (1000.0, speed_mult),
             None => (1000.0, 1.0),
         };
 
@@ -34,7 +37,10 @@ impl<'p> SliderState<'p> {
                     self.beat_len = *beat_len;
                     self.speed_mult = 1.0;
                 }
-                ControlPoint::Difficulty { speed_mult, .. } => self.speed_mult = *speed_mult,
+                ControlPoint::Difficulty {
+                    slider_velocity: speed_mult,
+                    ..
+                } => self.speed_mult = *speed_mult,
             }
 
             self.next = self.control_points.next();
