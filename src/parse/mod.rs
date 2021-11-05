@@ -825,6 +825,7 @@ impl Beatmap {
                     let mut curve_points = Vec::with_capacity(4);
                     curve_points.push(pos);
 
+                    // TODO: Rename
                     let curve_point_iter = split.next().next_field("curve points")?.split('|');
                     let mut repeats: usize = split.next().next_field("repeats")?.parse()?;
 
@@ -912,13 +913,10 @@ impl Beatmap {
                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
                 )))]
                 {
-                    let repeats = next_field!(split.nth(1), "repeats").parse::<usize>()?;
-                    let len: f32 = next_field!(split.next(), "pixel len").parse()?;
+                    let repeats: usize = next_field!(split.nth(1), "repeats").parse()?;
+                    let pixel_len: f32 = next_field!(split.next(), "pixel len").parse()?;
 
-                    HitObjectKind::Slider {
-                        repeats,
-                        pixel_len: len,
-                    }
+                    HitObjectKind::Slider { repeats, pixel_len }
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {
                 self.n_spinners += 1;
@@ -1007,11 +1005,13 @@ fn convert_points(
 
     // * Edge-case rules (to match stable).
     if path_kind == PathType::PerfectCurve {
-        if vertices.len() != 3 {
+        if let [a, b, c] = &vertices[..] {
+            if is_linear(a.pos, b.pos, c.pos) {
+                // * osu-stable special-cased colinear perfect curves to a linear path
+                path_kind = PathType::Linear;
+            }
+        } else {
             path_kind = PathType::Bezier;
-        } else if is_linear(vertices[0].pos, vertices[1].pos, vertices[2].pos) {
-            // * osu-stable special-cased colinear perfect curves to a linear path
-            path_kind = PathType::Linear;
         }
     }
 
@@ -1049,6 +1049,7 @@ fn convert_points(
         // * Force a type on the last point, and return
         // * the current control point set as a segment.
         vertices[end_idx - 1].kind = Some(path_kind);
+        // TODO: Vec::split_off?
         segments.push(vertices[start_idx..end_idx].to_owned());
 
         // * Skip the current control point - as it's the same as the one that's just been returned.
@@ -1056,6 +1057,7 @@ fn convert_points(
     }
 
     if end_idx > start_idx {
+        // TODO: Vec::split_off?
         segments.push(vertices[start_idx..end_idx].to_owned());
     }
 
@@ -1114,6 +1116,7 @@ pub struct PathControlPoint {
 }
 
 impl From<Pos2> for PathControlPoint {
+    #[inline]
     fn from(pos: Pos2) -> Self {
         Self { pos, kind: None }
     }
