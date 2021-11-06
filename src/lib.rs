@@ -213,37 +213,7 @@ impl BeatmapExt for Beatmap {
                 panic!("`osu` feature is not enabled");
 
                 #[cfg(feature = "osu")]
-                {
-                    #[cfg(feature = "no_leniency")]
-                    {
-                        StarResult::Osu(osu::no_leniency::stars(self, mods, passed_objects))
-                    }
-
-                    #[cfg(all(not(feature = "no_leniency"), feature = "no_sliders_no_leniency"))]
-                    {
-                        StarResult::Osu(osu::no_sliders_no_leniency::stars(
-                            self,
-                            mods,
-                            passed_objects,
-                        ))
-                    }
-
-                    #[cfg(all(
-                        not(feature = "no_leniency"),
-                        not(feature = "no_sliders_no_leniency"),
-                        feature = "all_included"
-                    ))]
-                    {
-                        StarResult::Osu(osu::all_included::stars(self, mods, passed_objects))
-                    }
-
-                    #[cfg(not(any(
-                        feature = "no_leniency",
-                        feature = "no_sliders_no_leniency",
-                        feature = "all_included"
-                    )))]
-                    panic!("either of the features `no_leniency`, `no_sliders_no_leniency`, or `all_included` must be enabled");
-                }
+                StarResult::Osu(osu::stars(self, mods, passed_objects))
             }
             GameMode::MNA => {
                 #[cfg(not(feature = "mania"))]
@@ -314,33 +284,7 @@ impl BeatmapExt for Beatmap {
                 panic!("`osu` feature is not enabled");
 
                 #[cfg(feature = "osu")]
-                {
-                    #[cfg(feature = "no_leniency")]
-                    {
-                        osu::no_leniency::strains(self, mods)
-                    }
-
-                    #[cfg(all(not(feature = "no_leniency"), feature = "no_sliders_no_leniency"))]
-                    {
-                        osu::no_sliders_no_leniency::strains(self, mods)
-                    }
-
-                    #[cfg(all(
-                        not(feature = "no_leniency"),
-                        not(feature = "no_sliders_no_leniency"),
-                        feature = "all_included"
-                    ))]
-                    {
-                        osu::all_included::strains(self, mods)
-                    }
-
-                    #[cfg(not(any(
-                        feature = "no_leniency",
-                        feature = "no_sliders_no_leniency",
-                        feature = "all_included"
-                    )))]
-                    panic!("either of the features `no_leniency`, `no_sliders_no_leniency`, or `all_included` must be enabled");
-                }
+                osu::strains(self, mods)
             }
             GameMode::MNA => {
                 #[cfg(not(feature = "mania"))]

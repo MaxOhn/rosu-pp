@@ -1,15 +1,6 @@
 use super::{DifficultyAttributes, PerformanceAttributes};
 use crate::{Beatmap, Mods, PpResult, StarResult};
 
-#[cfg(feature = "no_sliders_no_leniency")]
-use super::no_sliders_no_leniency::stars;
-
-#[cfg(feature = "no_leniency")]
-use super::no_leniency::stars;
-
-#[cfg(feature = "all_included")]
-use super::all_included::stars;
-
 /// Calculator for pp on osu!standard maps.
 ///
 /// # Example
@@ -294,7 +285,7 @@ impl<'m> OsuPP<'m> {
         let attributes = self
             .attributes
             .take()
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
+            .unwrap_or_else(|| super::stars(self.map, self.mods, self.passed_objects));
 
         self.assert_hitresults(attributes).calculate()
     }
