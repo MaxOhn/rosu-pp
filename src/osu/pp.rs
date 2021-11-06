@@ -152,7 +152,7 @@ impl<'m> OsuPP<'m> {
             .passed_objects
             .unwrap_or_else(|| self.map.hit_objects.len());
 
-        let acc = acc / 100.0;
+        let mut acc = acc / 100.0;
 
         if self.n100.or(self.n50).is_some() {
             let mut n100 = self.n100.unwrap_or(0);
@@ -176,9 +176,11 @@ impl<'m> OsuPP<'m> {
                 n50 -= 4 * n;
             }
 
-            self.n300.replace(n300);
-            self.n100.replace(n100);
-            self.n50.replace(n50);
+            self.n300 = Some(n300);
+            self.n100 = Some(n100);
+            self.n50 = Some(n50);
+
+            acc = (6 * n300 + 2 * n100 + n50) as f32 / (6 * n_objects) as f32;
         } else {
             let misses = self.n_misses.min(n_objects);
             let target_total = (acc * n_objects as f32 * 6.0).round() as usize;
@@ -194,15 +196,14 @@ impl<'m> OsuPP<'m> {
             n100 += 5 * n;
             n50 -= 4 * n;
 
-            self.n300.replace(n300);
-            self.n100.replace(n100);
-            self.n50.replace(n50);
+            self.n300 = Some(n300);
+            self.n100 = Some(n100);
+            self.n50 = Some(n50);
+
+            acc = (6 * n300 + 2 * n100 + n50) as f32 / (6 * n_objects) as f32;
         }
 
-        let acc = (6 * self.n300.unwrap() + 2 * self.n100.unwrap() + self.n50.unwrap()) as f32
-            / (6 * n_objects) as f32;
-
-        self.acc.replace(acc);
+        self.acc = Some(acc);
 
         self
     }
@@ -249,14 +250,16 @@ impl<'m> OsuPP<'m> {
                 .saturating_sub(self.n_misses);
 
             if remaining > 0 {
-                if n300.is_none() {
-                    n300.replace(remaining);
-                } else if n100.is_none() {
-                    n100.replace(remaining);
-                } else if n50.is_none() {
-                    n50.replace(remaining);
+                if let Some(n300) = n300.as_mut() {
+                    if n100.is_none() {
+                        n100 = Some(remaining);
+                    } else if n50.is_none() {
+                        n50 = Some(remaining);
+                    } else {
+                        *n300 += remaining;
+                    }
                 } else {
-                    *n300.as_mut().unwrap() += remaining;
+                    n300 = Some(remaining);
                 }
             }
 

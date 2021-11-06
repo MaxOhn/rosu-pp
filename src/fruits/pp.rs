@@ -147,11 +147,7 @@ impl<'m> FruitsPP<'m> {
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
     pub fn accuracy(mut self, mut acc: f32) -> Self {
         if self.attributes.is_none() {
-            self.attributes.replace(
-                stars(self.map, self.mods, self.passed_objects)
-                    .attributes()
-                    .unwrap(),
-            );
+            self.attributes = Some(stars(self.map, self.mods, self.passed_objects));
         }
 
         let attributes = self.attributes.as_ref().unwrap();
