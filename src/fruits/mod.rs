@@ -13,7 +13,7 @@ pub use pp::*;
 use slider_state::SliderState;
 
 use crate::{
-    curve::Curve,
+    curve::{Curve, CurveBuffers},
     parse::{HitObjectKind, Pos2},
     Beatmap, Mods, Strains,
 };
@@ -45,7 +45,7 @@ pub fn stars(
     let with_hr = mods.hr();
     let mut ticks = Vec::new(); // using the same buffer for all sliders
     let mut slider_state = SliderState::new(map);
-    let mut curve_buf = Vec::new();
+    let mut curve_bufs = CurveBuffers::default();
 
     let mut fruits = 0;
     let mut droplets = 0;
@@ -94,7 +94,7 @@ pub fn stars(
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(control_points, *pixel_len, &mut curve_buf);
+                let curve = Curve::new(control_points, *pixel_len, &mut curve_bufs);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
@@ -286,7 +286,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let with_hr = mods.hr();
     let mut ticks = Vec::new(); // using the same buffer for all sliders
     let mut slider_state = SliderState::new(map);
-    let mut curve_buf = Vec::new();
+    let mut curve_bufs = CurveBuffers::default();
 
     // BUG: Incorrect object order on 2B maps that have fruits within sliders
     let mut hit_objects = map
@@ -329,7 +329,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(control_points, *pixel_len, &mut curve_buf);
+                let curve = Curve::new(control_points, *pixel_len, &mut curve_bufs);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));

@@ -21,7 +21,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, Mods, Strains};
+use crate::{curve::CurveBuffers, Beatmap, Mods, Strains};
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -68,7 +68,7 @@ pub fn stars(
     }
 
     let mut slider_state = SliderState::new(map);
-    let mut curve_buf = Vec::new();
+    let mut curve_bufs = CurveBuffers::default();
     let mut ticks_buf = Vec::new();
 
     let mut hit_objects = map
@@ -84,7 +84,7 @@ pub fn stars(
                 &mut ticks_buf,
                 &mut diff_attributes,
                 &mut slider_state,
-                &mut curve_buf,
+                &mut curve_bufs,
             )
         })
         .map(|mut h| {
@@ -241,7 +241,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
     let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
-    let mut curve_buf = Vec::new();
+    let mut curve_bufs = CurveBuffers::default();
 
     let mut hit_objects = map.hit_objects.iter().filter_map(|h| {
         OsuObject::new(
@@ -252,7 +252,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
             &mut ticks_buf,
             &mut diff_attributes,
             &mut slider_state,
-            &mut curve_buf,
+            &mut curve_bufs,
         )
     });
 

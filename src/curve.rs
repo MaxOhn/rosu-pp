@@ -11,6 +11,13 @@ const BEZIER_TOLERANCE: f32 = 0.25;
 const CATMULL_DETAIL: usize = 50;
 const CIRCULAR_ARC_TOLERANCE: f32 = 0.1;
 
+#[derive(Default)]
+pub(crate) struct CurveBuffers {
+    vertices: Vec<Pos2>,
+    bezier: BezierBuffers,
+}
+
+#[derive(Default)]
 struct BezierBuffers {
     buf1: Vec<Pos2>,
     buf2: Vec<Pos2>,
@@ -18,12 +25,22 @@ struct BezierBuffers {
 }
 
 impl BezierBuffers {
-    fn new(len: usize) -> Self {
-        Self {
-            buf1: vec![Pos2::zero(); len],
-            buf2: vec![Pos2::zero(); len],
-            buf3: vec![Pos2::zero(); len],
+    /// Fill the buffers with new elements until a
+    /// length of `len` is reached. Does nothing if `len`
+    /// is already smaller than the current buffer size.
+    fn extend_exact(&mut self, len: usize) {
+        if len <= self.buf1.len() {
+            return;
         }
+
+        let additional = len - self.buf1.len();
+
+        self.buf1
+            .extend(iter::repeat(Pos2::zero()).take(additional));
+        self.buf2
+            .extend(iter::repeat(Pos2::zero()).take(additional));
+        self.buf3
+            .extend(iter::repeat(Pos2::zero()).take(additional));
     }
 }
 
@@ -41,8 +58,12 @@ pub(crate) struct Curve {
 }
 
 impl Curve {
-    pub(crate) fn new(points: &[PathControlPoint], expected_len: f32, buf: &mut Vec<Pos2>) -> Self {
-        let mut path = Self::calculate_path(points, buf);
+    pub(crate) fn new(
+        points: &[PathControlPoint],
+        expected_len: f32,
+        bufs: &mut CurveBuffers,
+    ) -> Self {
+        let mut path = Self::calculate_path(points, bufs);
         let lengths = Self::calculate_length(points, &mut path, expected_len);
 
         Self { path, lengths }
@@ -98,10 +119,12 @@ impl Curve {
         p0 + (p1 - p0) * w
     }
 
-    fn calculate_path(points: &[PathControlPoint], vertices: &mut Vec<Pos2>) -> Vec<Pos2> {
+    fn calculate_path(points: &[PathControlPoint], bufs: &mut CurveBuffers) -> Vec<Pos2> {
         if points.is_empty() {
             return Vec::new();
         }
+
+        let CurveBuffers { vertices, bezier } = bufs;
 
         vertices.clear();
         vertices.extend(points.iter().map(|p| p.pos));
@@ -118,7 +141,7 @@ impl Curve {
             let segment_vertices = &vertices[start..i + 1];
             let segment_kind = points[start].kind.unwrap_or(PathType::Linear);
 
-            Self::calculate_subpath(&mut path, segment_vertices, segment_kind);
+            Self::calculate_subpath(&mut path, segment_vertices, segment_kind, bezier);
 
             // * Start the new segment at the current vertex
             start = i;
@@ -194,25 +217,32 @@ impl Curve {
         cumulative_len
     }
 
-    fn calculate_subpath(path: &mut Vec<Pos2>, sub_points: &[Pos2], kind: PathType) {
+    fn calculate_subpath(
+        path: &mut Vec<Pos2>,
+        sub_points: &[Pos2],
+        kind: PathType,
+        bufs: &mut BezierBuffers,
+    ) {
         match kind {
-            PathType::Bezier => Self::approximate_bezier(path, sub_points),
+            PathType::Bezier => Self::approximate_bezier(path, sub_points, bufs),
             PathType::Catmull => Self::approximate_catmull(path, sub_points),
             PathType::Linear => Self::approximate_linear(path, sub_points),
             PathType::PerfectCurve => {
                 if let [a, b, c] = sub_points {
-                    Self::approximate_circular_arc(path, *a, *b, *c)
-                } else {
-                    Self::approximate_bezier(path, sub_points)
+                    if Self::approximate_circular_arc(path, *a, *b, *c) {
+                        return;
+                    }
                 }
+
+                Self::approximate_bezier(path, sub_points, bufs)
             }
         }
     }
 
-    fn approximate_bezier(path: &mut Vec<Pos2>, points: &[Pos2]) {
-        let mut bufs = BezierBuffers::new(points.len()); // TODO: argument?
+    fn approximate_bezier(path: &mut Vec<Pos2>, points: &[Pos2], bufs: &mut BezierBuffers) {
+        bufs.extend_exact(points.len());
 
-        Self::approximate_bspline(path, points, &mut bufs);
+        Self::approximate_bspline(path, points, bufs);
     }
 
     fn approximate_catmull(path: &mut Vec<Pos2>, points: &[Pos2]) {
@@ -239,10 +269,10 @@ impl Curve {
         path.extend(points)
     }
 
-    fn approximate_circular_arc(path: &mut Vec<Pos2>, a: Pos2, b: Pos2, c: Pos2) {
+    fn approximate_circular_arc(path: &mut Vec<Pos2>, a: Pos2, b: Pos2, c: Pos2) -> bool {
         let pr = match Self::circular_arc_properties(a, b, c) {
             Some(pr) => pr,
-            None => return Self::approximate_bezier(path, &[a, b, c]),
+            None => return false,
         };
 
         // * We select the amount of points for the approximation by requiring the discrete curvature
@@ -272,6 +302,8 @@ impl Curve {
         });
 
         path.extend(subpath);
+
+        true
     }
 
     fn approximate_bspline(path: &mut Vec<Pos2>, points: &[Pos2], bufs: &mut BezierBuffers) {

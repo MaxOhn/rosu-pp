@@ -2,7 +2,7 @@ use super::super::super::DifficultyAttributes;
 use super::slider_state::SliderState;
 
 use crate::{
-    curve::Curve,
+    curve::{Curve, CurveBuffers},
     parse::{HitObject, HitObjectKind, Pos2},
     Beatmap,
 };
@@ -35,7 +35,7 @@ impl OsuObject {
         ticks: &mut Vec<f32>,
         attributes: &mut DifficultyAttributes,
         slider_state: &mut SliderState,
-        slider_buf: &mut Vec<Pos2>,
+        curve_bufs: &mut CurveBuffers,
     ) -> Option<Self> {
         attributes.max_combo += 1; // hitcircle, slider head, or spinner
 
@@ -68,7 +68,7 @@ impl OsuObject {
                 }
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(control_points, *pixel_len, slider_buf);
+                let curve = Curve::new(control_points, *pixel_len, curve_bufs);
 
                 let velocity =
                     (BASE_SCORING_DISTANCE * map.slider_mult * slider_state.slider_velocity)
