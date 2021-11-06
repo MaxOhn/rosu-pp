@@ -41,8 +41,8 @@ pub(crate) struct Curve {
 }
 
 impl Curve {
-    pub(crate) fn new(points: &[PathControlPoint], expected_len: f32) -> Self {
-        let mut path = Self::calculate_path(points);
+    pub(crate) fn new(points: &[PathControlPoint], expected_len: f32, buf: &mut Vec<Pos2>) -> Self {
+        let mut path = Self::calculate_path(points, buf);
         let lengths = Self::calculate_length(points, &mut path, expected_len);
 
         Self { path, lengths }
@@ -74,14 +74,15 @@ impl Curve {
             return Pos2::zero();
         }
 
-        if i == 0 {
+        let p1 = if i == 0 {
             return self.path[0];
-        } else if i >= self.path.len() {
+        } else if let Some(p) = self.path.get(i) {
+            *p
+        } else {
             return self.path[self.path.len() - 1];
-        }
+        };
 
         let p0 = self.path[i - 1];
-        let p1 = self.path[i];
 
         let d0 = self.lengths[i - 1];
         let d1 = self.lengths[i];
@@ -97,13 +98,15 @@ impl Curve {
         p0 + (p1 - p0) * w
     }
 
-    fn calculate_path(points: &[PathControlPoint]) -> Vec<Pos2> {
+    fn calculate_path(points: &[PathControlPoint], vertices: &mut Vec<Pos2>) -> Vec<Pos2> {
         if points.is_empty() {
             return Vec::new();
         }
 
+        vertices.clear();
+        vertices.extend(points.iter().map(|p| p.pos));
+
         let mut path = Vec::new();
-        let vertices: Vec<_> = points.iter().map(|p| p.pos).collect();
         let mut start = 0;
 
         for i in 0..points.len() {

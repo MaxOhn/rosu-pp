@@ -35,6 +35,7 @@ impl OsuObject {
         ticks: &mut Vec<f32>,
         attributes: &mut DifficultyAttributes,
         slider_state: &mut SliderState,
+        slider_buf: &mut Vec<Pos2>,
     ) -> Option<Self> {
         attributes.max_combo += 1; // hitcircle, slider head, or spinner
 
@@ -67,7 +68,7 @@ impl OsuObject {
                 }
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *pixel_len);
+                let curve = Curve::new(curve_points, *pixel_len, slider_buf);
 
                 let velocity =
                     (BASE_SCORING_DISTANCE * map.slider_mult * slider_state.slider_velocity)

@@ -68,6 +68,7 @@ pub fn stars(
     }
 
     let mut slider_state = SliderState::new(map);
+    let mut curve_buf = Vec::new();
     let mut ticks_buf = Vec::new();
 
     let mut hit_objects = map
@@ -83,6 +84,7 @@ pub fn stars(
                 &mut ticks_buf,
                 &mut diff_attributes,
                 &mut slider_state,
+                &mut curve_buf,
             )
         })
         .map(|mut h| {
@@ -239,6 +241,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
     let mut slider_state = SliderState::new(map);
     let mut ticks_buf = Vec::new();
+    let mut curve_buf = Vec::new();
 
     let mut hit_objects = map.hit_objects.iter().filter_map(|h| {
         OsuObject::new(
@@ -249,6 +252,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
             &mut ticks_buf,
             &mut diff_attributes,
             &mut slider_state,
+            &mut curve_buf,
         )
     });
 
@@ -367,17 +371,17 @@ fn custom_osu() {
     let start = Instant::now();
     let result = crate::OsuPP::new(&map).mods(0).calculate();
 
-    let iters = 500;
+    let iters = 100;
     let accum = start.elapsed();
 
     // * Tiny benchmark for pp calculation
-    // let mut accum = accum;
+    let mut accum = accum;
 
-    // for _ in 0..iters {
-    //     let start = Instant::now();
-    //     let _result = crate::OsuPP::new(&map).mods(0).calculate();
-    //     accum += start.elapsed();
-    // }
+    for _ in 0..iters {
+        let start = Instant::now();
+        let _result = crate::OsuPP::new(&map).mods(0).calculate();
+        accum += start.elapsed();
+    }
 
     println!("{:#?}", result);
     println!("Calculation average: {:?}", accum / iters);
