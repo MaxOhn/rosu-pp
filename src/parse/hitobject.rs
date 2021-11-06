@@ -61,7 +61,7 @@ pub enum HitObjectKind {
     Slider {
         pixel_len: f32,
         repeats: usize,
-        curve_points: Vec<PathControlPoint>,
+        control_points: Vec<PathControlPoint>,
     },
     #[cfg(not(any(
         feature = "fruits",

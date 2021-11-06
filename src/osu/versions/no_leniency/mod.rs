@@ -357,14 +357,14 @@ fn custom_osu() {
     let accum = start.elapsed();
 
     // * Tiny benchmark for map parsing
-    // let mut accum = accum;
+    let mut accum = accum;
 
-    // for _ in 0..iters {
-    //     let file = File::open(path).unwrap();
-    //     let start = Instant::now();
-    //     let _map = Beatmap::parse(file).unwrap();
-    //     accum += start.elapsed();
-    // }
+    for _ in 0..iters {
+        let file = File::open(path).unwrap();
+        let start = Instant::now();
+        let _map = Beatmap::parse(file).unwrap();
+        accum += start.elapsed();
+    }
 
     println!("Parsing average: {:?}", accum / iters);
 
@@ -375,13 +375,13 @@ fn custom_osu() {
     let accum = start.elapsed();
 
     // * Tiny benchmark for pp calculation
-    let mut accum = accum;
+    // let mut accum = accum;
 
-    for _ in 0..iters {
-        let start = Instant::now();
-        let _result = crate::OsuPP::new(&map).mods(0).calculate();
-        accum += start.elapsed();
-    }
+    // for _ in 0..iters {
+    //     let start = Instant::now();
+    //     let _result = crate::OsuPP::new(&map).mods(0).calculate();
+    //     accum += start.elapsed();
+    // }
 
     println!("{:#?}", result);
     println!("Calculation average: {:?}", accum / iters);

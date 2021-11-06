@@ -48,7 +48,7 @@ impl OsuObject {
             HitObjectKind::Slider {
                 pixel_len,
                 repeats,
-                curve_points,
+                control_points,
             } => {
                 // Key values which are computed here
                 let mut lazy_end_pos = h.pos;
@@ -68,7 +68,7 @@ impl OsuObject {
                 }
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *pixel_len, slider_buf);
+                let curve = Curve::new(control_points, *pixel_len, slider_buf);
 
                 let velocity =
                     (BASE_SCORING_DISTANCE * map.slider_mult * slider_state.slider_velocity)

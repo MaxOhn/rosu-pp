@@ -776,7 +776,6 @@ impl Beatmap {
         let mut point_split_length = 0;
         let mut point_split_capacity = 0;
 
-        let mut segments = Vec::new();
         let mut vertices = Vec::new();
 
         while read_line!(reader, buf)? != 0 {
@@ -822,11 +821,9 @@ impl Beatmap {
                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
                 ))]
                 {
-                    let mut curve_points = Vec::with_capacity(4);
-                    curve_points.push(pos);
+                    let mut control_points = Vec::new();
 
-                    // TODO: Rename
-                    let curve_point_iter = split.next().next_field("curve points")?.split('|');
+                    let control_point_iter = split.next().next_field("control points")?.split('|');
                     let mut repeats: usize = split.next().next_field("repeats")?.parse()?;
 
                     if repeats > 9000 {
@@ -851,7 +848,7 @@ impl Beatmap {
                     };
 
                     point_split.clear();
-                    point_split.extend(curve_point_iter);
+                    point_split.extend(control_point_iter);
 
                     #[allow(clippy::blocks_in_if_conditions)]
                     while {
@@ -871,7 +868,14 @@ impl Beatmap {
                         let end_point = point_split.get(end_idx + 1).copied();
 
                         let slice = &point_split[start_idx..end_idx];
-                        convert_points(slice, end_point, first, pos, &mut segments, &mut vertices)?;
+                        convert_points(
+                            slice,
+                            end_point,
+                            first,
+                            pos,
+                            &mut control_points,
+                            &mut vertices,
+                        )?;
 
                         start_idx = end_idx;
                         first = false;
@@ -879,7 +883,14 @@ impl Beatmap {
 
                     if end_idx > start_idx {
                         let slice = &point_split[start_idx..end_idx];
-                        convert_points(slice, None, first, pos, &mut segments, &mut vertices)?;
+                        convert_points(
+                            slice,
+                            None,
+                            first,
+                            pos,
+                            &mut control_points,
+                            &mut vertices,
+                        )?;
                     }
 
                     point_split_ptr = point_split.as_mut_ptr() as *const u8;
@@ -887,10 +898,7 @@ impl Beatmap {
                     point_split_capacity = point_split.capacity();
                     mem::forget(point_split);
 
-                    // Drains `segments` so it doesn't have to be cleared
-                    let curve_points = merge_points_lists(&mut segments);
-
-                    if curve_points.is_empty() {
+                    if control_points.is_empty() {
                         HitObjectKind::Circle
                     } else {
                         let pixel_len = split
@@ -903,7 +911,7 @@ impl Beatmap {
                         HitObjectKind::Slider {
                             repeats,
                             pixel_len,
-                            curve_points,
+                            control_points,
                         }
                     }
                 }
@@ -940,7 +948,7 @@ impl Beatmap {
                 pos,
                 start_time: time,
                 kind,
-                sound, // TODO: omit if not taiko?
+                sound,
             });
 
             prev_time = time;
@@ -978,7 +986,7 @@ fn convert_points(
     end_point: Option<&str>,
     first: bool,
     offset: Pos2,
-    segments: &mut Vec<Vec<PathControlPoint>>,
+    curve_points: &mut Vec<PathControlPoint>,
     vertices: &mut Vec<PathControlPoint>,
 ) -> Result<(), ParseError> {
     let mut path_kind = PathType::from_str(points[0]);
@@ -1049,16 +1057,14 @@ fn convert_points(
         // * Force a type on the last point, and return
         // * the current control point set as a segment.
         vertices[end_idx - 1].kind = Some(path_kind);
-        // TODO: Vec::split_off?
-        segments.push(vertices[start_idx..end_idx].to_owned());
+        curve_points.extend(&vertices[start_idx..end_idx]);
 
         // * Skip the current control point - as it's the same as the one that's just been returned.
         start_idx = end_idx + 1;
     }
 
     if end_idx > start_idx {
-        // TODO: Vec::split_off?
-        segments.push(vertices[start_idx..end_idx].to_owned());
+        curve_points.extend(&vertices[start_idx..end_idx]);
     }
 
     Ok(())
@@ -1071,17 +1077,6 @@ fn read_point(value: &str, start_pos: Pos2) -> Result<PathControlPoint, ParseErr
         (Some(Ok(x)), Some(Ok(y))) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
         _ => Err(ParseError::InvalidCurvePoints),
     }
-}
-
-fn merge_points_lists(
-    control_point_list: &mut Vec<Vec<PathControlPoint>>,
-) -> Vec<PathControlPoint> {
-    let total_count = control_point_list.iter().map(Vec::len).sum();
-    let mut merged_list = Vec::with_capacity(total_count);
-    let iter = control_point_list.drain(..).map(Vec::into_iter).flatten();
-    merged_list.extend(iter);
-
-    merged_list
 }
 
 #[cfg(feature = "async_tokio")]

@@ -70,11 +70,12 @@ pub fn stars(
             HitObjectKind::Slider {
                 pixel_len,
                 repeats,
-                curve_points,
+                control_points,
             } => {
                 // HR business
                 last_pos.replace(
-                    h.pos.x + curve_points[curve_points.len() - 1].pos.x - curve_points[0].pos.x,
+                    h.pos.x + control_points[control_points.len() - 1].pos.x
+                        - control_points[0].pos.x, // TODO: Remove subtract
                 );
                 *last_time = h.start_time;
 
@@ -93,7 +94,7 @@ pub fn stars(
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *pixel_len, &mut curve_buf);
+                let curve = Curve::new(control_points, *pixel_len, &mut curve_buf);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
@@ -304,11 +305,12 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
             HitObjectKind::Slider {
                 pixel_len,
                 repeats,
-                curve_points,
+                control_points,
             } => {
                 // HR business
                 last_pos.replace(
-                    h.pos.x + curve_points[curve_points.len() - 1].pos.x - curve_points[0].pos.x,
+                    h.pos.x + control_points[control_points.len() - 1].pos.x
+                        - control_points[0].pos.x, // TODO: Remove subtract
                 );
                 *last_time = h.start_time;
 
@@ -327,7 +329,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                     / 100.0;
 
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *pixel_len, &mut curve_buf);
+                let curve = Curve::new(control_points, *pixel_len, &mut curve_buf);
 
                 let mut current_distance = tick_distance;
                 let time_add = duration * (tick_distance / (*pixel_len * *repeats as f32));
