@@ -24,16 +24,13 @@ impl BezierBuffers {
     fn new(len: usize) -> Self {
         Self {
             buf1: vec![Pos2::zero(); len],
-            buf2: vec![Pos2::zero(); (len - 1) * 2 + 1],
+            buf2: vec![Pos2::zero(); len],
             buf3: vec![Pos2::zero(); len],
         }
     }
 }
 
-// TODO: Remove Default when cleaned up
-#[derive(Default)]
 struct CircularArcProperties {
-    is_valid: bool,
     theta_start: f32,
     theta_range: f32,
     direction: f32,
@@ -121,18 +118,13 @@ impl Curve {
             let segment_vertices = &vertices[start..i + 1];
             let segment_kind = points[start].kind.unwrap_or(PathType::Linear);
 
-            // TODO: push onto `path` directly?
-            let sub_path = Self::calculate_subpath(segment_vertices, segment_kind);
-
-            for t in sub_path {
-                if path.last().filter(|&l| l == &t).is_none() {
-                    path.push(t);
-                }
-            }
+            Self::calculate_subpath(&mut path, segment_vertices, segment_kind);
 
             // * Start the new segment at the current vertex
             start = i;
         }
+
+        path.dedup();
 
         path
     }
@@ -203,37 +195,29 @@ impl Curve {
         cumulative_len
     }
 
-    fn calculate_subpath(sub_points: &[Pos2], kind: PathType) -> Vec<Pos2> {
+    fn calculate_subpath(path: &mut Vec<Pos2>, sub_points: &[Pos2], kind: PathType) {
         match kind {
-            PathType::Bezier => Self::approximate_bezier(sub_points),
-            PathType::Catmull => Self::approximate_catmull(sub_points),
-            PathType::Linear => Self::approximate_linear(sub_points),
+            PathType::Bezier => Self::approximate_bezier(path, sub_points),
+            PathType::Catmull => Self::approximate_catmull(path, sub_points),
+            PathType::Linear => Self::approximate_linear(path, sub_points),
             PathType::PerfectCurve => {
                 if let [a, b, c] = sub_points {
-                    let sub_path = Self::approximate_circular_arc(*a, *b, *c);
-
-                    if !sub_path.is_empty() {
-                        return sub_path;
-                    }
+                    Self::approximate_circular_arc(path, *a, *b, *c)
+                } else {
+                    Self::approximate_bezier(path, sub_points)
                 }
-
-                Self::approximate_bezier(sub_points)
             }
         }
     }
 
-    fn approximate_bezier(points: &[Pos2]) -> Vec<Pos2> {
-        let mut path = Vec::new(); // TODO: argument?
+    fn approximate_bezier(path: &mut Vec<Pos2>, points: &[Pos2]) {
         let mut bufs = BezierBuffers::new(points.len()); // TODO: argument?
 
-        Self::approximate_bspline(&mut path, points, &mut bufs);
-
-        path
+        Self::approximate_bspline(path, points, &mut bufs);
     }
 
-    fn approximate_catmull(points: &[Pos2]) -> Vec<Pos2> {
-        // TODO: argument?
-        let mut result = Vec::with_capacity((points.len() - 1) * CATMULL_DETAIL * 2);
+    fn approximate_catmull(path: &mut Vec<Pos2>, points: &[Pos2]) {
+        path.reserve_exact((points.len() - 1) * CATMULL_DETAIL * 2);
 
         let catmull_detail = CATMULL_DETAIL as f32;
 
@@ -252,24 +236,21 @@ impl Curve {
                 let p1 = Self::catmull_find_point(v1, v2, v3, v4, c as f32 / catmull_detail);
                 let p2 = Self::catmull_find_point(v1, v2, v3, v4, (c + 1) as f32 / catmull_detail);
 
-                result.push(p1);
-                result.push(p2);
+                path.push(p1);
+                path.push(p2);
             }
         }
-
-        result
     }
 
-    fn approximate_linear(points: &[Pos2]) -> Vec<Pos2> {
-        points.to_owned()
+    fn approximate_linear(path: &mut Vec<Pos2>, points: &[Pos2]) {
+        path.extend(points)
     }
 
-    fn approximate_circular_arc(a: Pos2, b: Pos2, c: Pos2) -> Vec<Pos2> {
-        let pr = Self::circular_arc_properties(a, b, c);
-
-        if !pr.is_valid {
-            return Self::approximate_bezier(&[a, b, c]);
-        }
+    fn approximate_circular_arc(path: &mut Vec<Pos2>, a: Pos2, b: Pos2, c: Pos2) {
+        let pr = match Self::circular_arc_properties(a, b, c) {
+            Some(pr) => pr,
+            None => return Self::approximate_bezier(path, &[a, b, c]),
+        };
 
         // * We select the amount of points for the approximation by requiring the discrete curvature
         // * to be smaller than the provided tolerance. The exact angle required to meet the tolerance
@@ -284,22 +265,23 @@ impl Curve {
             ((pr.theta_range / divisor).ceil() as usize).max(2)
         };
 
-        // TODO: argument?
-        let mut output = Vec::with_capacity(amount_points);
+        path.reserve_exact(amount_points);
+        let divisor = (amount_points - 1) as f32;
+        let directed_range = pr.direction * pr.theta_range;
 
-        for i in 0..amount_points {
-            let fract = i as f32 / (amount_points - 1) as f32;
-            let theta = pr.theta_start + pr.direction * fract * pr.theta_range;
+        let subpath = (0..amount_points).map(|i| {
+            let fract = i as f32 / divisor;
+            let theta = pr.theta_start + fract * directed_range;
             let (sin, cos) = theta.sin_cos();
             let origin = Pos2 { x: cos, y: sin };
 
-            output.push(pr.centre + origin * pr.radius);
-        }
+            pr.centre + origin * pr.radius
+        });
 
-        output
+        path.extend(subpath);
     }
 
-    fn approximate_bspline(result: &mut Vec<Pos2>, points: &[Pos2], bufs: &mut BezierBuffers) {
+    fn approximate_bspline(path: &mut Vec<Pos2>, points: &[Pos2], bufs: &mut BezierBuffers) {
         let p = points.len();
 
         let mut to_flatten = Vec::new();
@@ -323,7 +305,7 @@ impl Curve {
                 // * an extension to De Casteljau's algorithm to obtain a piecewise-linear approximation
                 // * of the bezier curve represented by our control points, consisting of the same amount
                 // * of points as there are control points.
-                Self::bezier_approximate(&parent, result, bufs);
+                Self::bezier_approximate(&parent, path, bufs);
                 free_bufs.push(parent);
 
                 continue;
@@ -349,7 +331,7 @@ impl Curve {
             to_flatten.push(parent);
         }
 
-        result.push(points[p - 1]);
+        path.push(points[p - 1]);
     }
 
     fn bezier_is_flat_enough(points: &[Pos2]) -> bool {
@@ -362,9 +344,8 @@ impl Curve {
             .any(|((&prev, &curr), &next)| (prev - curr * 2.0 + next).length_squared() > limit)
     }
 
-    fn bezier_subdivide(points: &[Pos2], l: &mut [Pos2], r: &mut [Pos2], buf: &mut [Pos2]) {
+    fn bezier_subdivide(points: &[Pos2], l: &mut [Pos2], r: &mut [Pos2], midpoints: &mut [Pos2]) {
         let count = points.len();
-        let midpoints = buf;
         midpoints[..count].copy_from_slice(&points[..count]);
 
         for i in (1..count).rev() {
@@ -381,25 +362,40 @@ impl Curve {
     }
 
     // * https://en.wikipedia.org/wiki/De_Casteljau%27s_algorithm
-    fn bezier_approximate(points: &[Pos2], output: &mut Vec<Pos2>, bufs: &mut BezierBuffers) {
+    fn bezier_approximate(points: &[Pos2], path: &mut Vec<Pos2>, bufs: &mut BezierBuffers) {
         let count = points.len();
-        let r = &mut bufs.buf1;
-        let l = &mut bufs.buf2;
 
-        Self::bezier_subdivide(points, l, r, &mut bufs.buf3);
-        l[count..2 * count - 1].copy_from_slice(&r[1..count]);
-        output.push(points[0]);
+        let BezierBuffers {
+            buf1: l,
+            buf2: r,
+            buf3: midpoints,
+        } = bufs;
 
-        let new_points = l
+        Self::bezier_subdivide(points, l, r, midpoints);
+        path.push(points[0]);
+
+        let l = &l[..count];
+        let r = &r[1..count];
+
+        let left_iter = l
             .iter()
             .skip(1)
             .zip(l.iter().skip(2))
             .zip(l.iter().skip(3))
-            .step_by(2)
-            .take(count.saturating_sub(2))
+            .step_by(2);
+
+        let right_iter = r
+            .iter()
+            .skip(1)
+            .zip(r.iter().skip(2))
+            .zip(r.iter().skip(3))
+            .step_by(2);
+
+        let subpath = left_iter
+            .chain(right_iter)
             .map(|((&prev, &curr), &next)| (prev + curr * 2.0 + next) * 0.25);
 
-        output.extend(new_points);
+        path.extend(subpath);
     }
 
     fn catmull_find_point(v1: Pos2, v2: Pos2, v3: Pos2, v4: Pos2, t: f32) -> Pos2 {
@@ -421,22 +417,21 @@ impl Curve {
         Pos2 { x, y }
     }
 
-    fn circular_arc_properties(a: Pos2, b: Pos2, c: Pos2) -> CircularArcProperties {
+    fn circular_arc_properties(a: Pos2, b: Pos2, c: Pos2) -> Option<CircularArcProperties> {
         // * If we have a degenerate triangle where a side-length is almost zero,
         // * then give up and fallback to a more numerically stable method.
         if ((b.y - a.y) * (c.x - a.x) - (b.x - a.x) * (c.y - a.y)).abs() <= f32::EPSILON {
-            // * Implicitly sets `is_valid` to false
-            return CircularArcProperties::default();
+            return None;
         }
 
         let d = 2.0 * (a.x * (b - c).y + b.x * (c - a).y + c.x * (a - b).y);
-        let a_s_q = a.length_squared();
-        let b_s_q = b.length_squared();
-        let c_s_q = c.length_squared();
+        let a_sq = a.length_squared();
+        let b_sq = b.length_squared();
+        let c_sq = c.length_squared();
 
         let centre = Pos2 {
-            x: (a_s_q * (b - c).y + b_s_q * (c - a).y + c_s_q * (a - b).y) / d,
-            y: ((c - b).x + b_s_q * (a - c).x + c_s_q * (b - a).x) / d,
+            x: (a_sq * (b - c).y + b_sq * (c - a).y + c_sq * (a - b).y) / d,
+            y: ((c - b).x + b_sq * (a - c).x + c_sq * (b - a).x) / d,
         };
 
         let d_a = a - centre;
@@ -468,14 +463,13 @@ impl Curve {
             theta_range = 2.0 * PI - theta_range;
         }
 
-        CircularArcProperties {
-            is_valid: true,
+        Some(CircularArcProperties {
             theta_start,
             theta_range,
             direction,
             radius,
             centre,
-        }
+        })
     }
 }
 

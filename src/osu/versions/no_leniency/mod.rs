@@ -342,7 +342,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 fn custom_osu() {
     use std::{fs::File, time::Instant};
 
-    let path = "E:Games/osu!/beatmaps/2753127.osu";
+    let path = "./maps/2753127.osu";
     // let path = "E:Games/osu!/beatmaps/2571051.osu";
     let file = File::open(path).unwrap();
 
@@ -352,14 +352,15 @@ fn custom_osu() {
     let iters = 100;
     let accum = start.elapsed();
 
-    let mut accum = accum;
+    // * Tiny benchmark for map parsing
+    // let mut accum = accum;
 
-    for _ in 0..iters {
-        let file = File::open(path).unwrap();
-        let start = Instant::now();
-        let _map = Beatmap::parse(file).unwrap();
-        accum += start.elapsed();
-    }
+    // for _ in 0..iters {
+    //     let file = File::open(path).unwrap();
+    //     let start = Instant::now();
+    //     let _map = Beatmap::parse(file).unwrap();
+    //     accum += start.elapsed();
+    // }
 
     println!("Parsing average: {:?}", accum / iters);
 
@@ -369,7 +370,7 @@ fn custom_osu() {
     let iters = 500;
     let accum = start.elapsed();
 
-    // * Tiny benchmark
+    // * Tiny benchmark for pp calculation
     // let mut accum = accum;
 
     // for _ in 0..iters {
