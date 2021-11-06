@@ -767,15 +767,13 @@ impl Beatmap {
         let mut prev_time = 0.0;
         let mut empty = true;
 
-        // `point_split` elements will have the lifetime of `buf`.
-        // If it wasn't split into parts, the borrow checker would complain.
-        // The ptr is cast to a `*const u8` so its lifetime is not bound to `buf`.
-        // At the end of this scope, the vec will be built one last time
-        // so it can be dropped and thus deallocated.
-        let mut point_split_ptr = Vec::new().as_mut_ptr() as *const u8;
-        let mut point_split_length = 0;
-        let mut point_split_capacity = 0;
+        // `point_split` will be of type `Vec<&str>
+        // with each element having its lifetime bound to `buf`.
+        // To cirvumvent this, `point_split_raw` will contain
+        // the actual `&str` elements transmuted into `usize`.
+        let mut point_split_raw: Vec<usize> = Vec::new();
 
+        // Buffer to re-use for all sliders
         let mut vertices = Vec::new();
 
         while read_line!(reader, buf)? != 0 {
@@ -838,14 +836,9 @@ impl Beatmap {
                     let mut end_idx = 0;
                     let mut first = true;
 
-                    // SAFETY: Parts originate from an actual Vec and are updated each iteration
-                    let mut point_split = unsafe {
-                        Vec::from_raw_parts(
-                            point_split_ptr as *mut &str,
-                            point_split_length,
-                            point_split_capacity,
-                        )
-                    };
+                    // SAFETY: `Vec<usize>` and `Vec<&str>` have the same size and layout.
+                    let point_split: &mut Vec<&str> =
+                        unsafe { mem::transmute(&mut point_split_raw) };
 
                     point_split.clear();
                     point_split.extend(control_point_iter);
@@ -867,9 +860,8 @@ impl Beatmap {
                         // * The start of the next segment is the index after the type descriptor.
                         let end_point = point_split.get(end_idx + 1).copied();
 
-                        let slice = &point_split[start_idx..end_idx];
                         convert_points(
-                            slice,
+                            &point_split[start_idx..end_idx],
                             end_point,
                             first,
                             pos,
@@ -882,9 +874,8 @@ impl Beatmap {
                     }
 
                     if end_idx > start_idx {
-                        let slice = &point_split[start_idx..end_idx];
                         convert_points(
-                            slice,
+                            &point_split[start_idx..end_idx],
                             None,
                             first,
                             pos,
@@ -892,11 +883,6 @@ impl Beatmap {
                             &mut vertices,
                         )?;
                     }
-
-                    point_split_ptr = point_split.as_mut_ptr() as *const u8;
-                    point_split_length = point_split.len();
-                    point_split_capacity = point_split.capacity();
-                    mem::forget(point_split);
 
                     if control_points.is_empty() {
                         HitObjectKind::Circle
@@ -966,16 +952,6 @@ impl Beatmap {
         } else if unsorted {
             sort_unstable(&mut self.hit_objects);
         }
-
-        // Construct vec one last time so it gets deallocated.
-        // SAFETY: Parts originate from an actual Vec and are updated each iteration
-        let _ = unsafe {
-            Vec::from_raw_parts(
-                point_split_ptr as *mut &str,
-                point_split_length,
-                point_split_capacity,
-            )
-        };
 
         Ok(empty)
     }
