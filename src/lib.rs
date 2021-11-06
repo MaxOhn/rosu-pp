@@ -1,5 +1,3 @@
-#![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
-
 //! A standalone crate to calculate star ratings and performance points for all [osu!](https://osu.ppy.sh/home) gamemodes.
 //!
 //! Conversions between gamemodes are generally not supported.
@@ -134,6 +132,8 @@
 //! - \[x\] refactoring
 //! - \[x\] benchmarking
 //! - \[x\] async parsing
+
+#![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
 
 #[cfg(feature = "fruits")]
 #[cfg_attr(docsrs, doc(cfg(feature = "fruits")))]

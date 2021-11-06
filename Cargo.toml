@@ -16,17 +16,20 @@ default = ["osu", "taiko", "fruits", "mania", "no_leniency"]
 # game modes
 osu = []
 taiko = []
-fruits = []
+fruits = ["sliders"]
 mania = []
 
 # osu!standard version
-all_included = []
-no_leniency = []
+all_included = ["sliders"]
+no_leniency = ["sliders"]
 no_sliders_no_leniency = []
 
 # async version
 async_std = ["async-std"]
 async_tokio = ["tokio"]
+
+# auxiliary, no need to set yourself
+sliders = []
 
 [dependencies.async-std]
 version = "1.9"

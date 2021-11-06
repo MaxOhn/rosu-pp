@@ -40,7 +40,7 @@ impl<'p> ControlPointIter<'p> {
 pub(crate) enum ControlPoint {
     Timing {
         time: f32,
-        #[allow(dead_code)]
+        #[allow(dead_code)] // not used in `no_sliders_no_leniency` feature
         beat_len: f32,
     },
     Difficulty {
@@ -51,7 +51,7 @@ pub(crate) enum ControlPoint {
 
 impl ControlPoint {
     #[inline]
-    #[allow(dead_code)]
+    #[cfg(not(feature = "no_sliders_no_leniency"))]
     pub(crate) fn time(&self) -> f32 {
         match self {
             Self::Timing { time, .. } => *time,

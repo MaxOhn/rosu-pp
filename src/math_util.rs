@@ -1,7 +1,4 @@
-#[cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
+#[cfg(feature = "sliders")]
 #[inline]
 pub(crate) fn is_linear(
     p0: crate::parse::Pos2,

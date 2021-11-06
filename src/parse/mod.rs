@@ -25,10 +25,7 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 #[cfg(feature = "async_std")]
 use async_std::io::{prelude::BufReadExt, BufReader as AsyncBufReader, Read as AsyncRead};
 
-#[cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
+#[cfg(feature = "sliders")]
 pub use osu_fruits::*;
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
@@ -761,20 +758,14 @@ impl Beatmap {
         let mut prev_time = 0.0;
         let mut empty = true;
 
-        #[cfg(any(
-            feature = "fruits",
-            all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-        ))]
+        #[cfg(feature = "sliders")]
         // `point_split` will be of type `Vec<&str>
         // with each element having its lifetime bound to `buf`.
         // To cirvumvent this, `point_split_raw` will contain
         // the actual `&str` elements transmuted into `usize`.
         let mut point_split_raw: Vec<usize> = Vec::new();
 
-        #[cfg(any(
-            feature = "fruits",
-            all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-        ))]
+        #[cfg(feature = "sliders")]
         // Buffer to re-use for all sliders
         let mut vertices = Vec::new();
 
@@ -816,10 +807,7 @@ impl Beatmap {
             } else if kind & Self::SLIDER_FLAG > 0 {
                 self.n_sliders += 1;
 
-                #[cfg(any(
-                    feature = "fruits",
-                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-                ))]
+                #[cfg(feature = "sliders")]
                 {
                     let mut control_points = Vec::new();
 
@@ -904,10 +892,7 @@ impl Beatmap {
                     }
                 }
 
-                #[cfg(not(any(
-                    feature = "fruits",
-                    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-                )))]
+                #[cfg(not(feature = "sliders"))]
                 {
                     let repeats = split.nth(1).next_field("repeats")?.parse()?;
                     let pixel_len = split.next().next_field("pixel len")?.parse()?;
@@ -960,11 +945,7 @@ impl Beatmap {
     }
 }
 
-// TODO: Replace with `sliders` auxiliary feature
-#[cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
+#[cfg(feature = "sliders")]
 mod osu_fruits {
     use crate::{math_util::is_linear, ParseError};
 

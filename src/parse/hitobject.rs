@@ -1,11 +1,5 @@
 use super::Pos2;
 
-#[cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
-use super::PathControlPoint;
-
 use std::cmp::Ordering;
 
 /// "Intermediate" hitobject created through parsing.
@@ -56,19 +50,13 @@ impl PartialOrd for HitObject {
 #[derive(Clone, Debug, PartialEq)]
 pub enum HitObjectKind {
     Circle,
-    #[cfg(any(
-        feature = "fruits",
-        all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-    ))]
+    #[cfg(feature = "sliders")]
     Slider {
         pixel_len: f32,
         repeats: usize,
-        control_points: Vec<PathControlPoint>,
+        control_points: Vec<super::PathControlPoint>,
     },
-    #[cfg(not(any(
-        feature = "fruits",
-        all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-    )))]
+    #[cfg(not(feature = "sliders"))]
     Slider {
         pixel_len: f32,
         repeats: usize,

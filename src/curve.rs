@@ -1,7 +1,4 @@
-#![cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
+#![cfg(feature = "sliders")]
 
 use std::{borrow::Cow, cmp::Ordering, convert::identity, f32::consts::PI, iter};
 
