@@ -127,7 +127,7 @@ pub fn stars(
                 if *repeats <= 1 {
                     slider_objects.append(&mut ticks); // automatically empties buffer for next slider
                 } else {
-                    slider_objects.append(&mut ticks.clone());
+                    slider_objects.extend(&ticks);
 
                     for repeat_id in 1..*repeats {
                         let dist = (repeat_id % 2) as f32 * *pixel_len;
@@ -359,7 +359,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 if *repeats <= 1 {
                     slider_objects.append(&mut ticks); // automatically empties buffer for next slider
                 } else {
-                    slider_objects.append(&mut ticks.clone());
+                    slider_objects.extend(&ticks);
 
                     for repeat_id in 1..*repeats {
                         let dist = (repeat_id % 2) as f32 * *pixel_len;

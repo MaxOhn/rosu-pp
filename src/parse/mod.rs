@@ -31,10 +31,6 @@ fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 }
 
-fn sort<T: PartialOrd>(slice: &mut [T]) {
-    slice.sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
-}
-
 trait OptionExt<T> {
     fn next_field(self, field: &'static str) -> Result<T, ParseError>;
 }
@@ -945,7 +941,8 @@ impl Beatmap {
         // won't be set yet so mania objects won't be sorted properly
         if self.mode == GameMode::MNA {
             // First a _stable_ sort by time
-            sort(&mut self.hit_objects);
+            self.hit_objects
+                .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 
             // Then the legacy sort for correct position order
             legacy_sort(&mut self.hit_objects);
