@@ -137,8 +137,8 @@ impl Curve {
         let mut calculated_len = 0.0;
         let mut cumulative_len = vec![0.0];
 
-        for i in 0..path.len() - 1 {
-            let diff = path[i + 1] - path[i];
+        for (&curr, &next) in path.iter().zip(path.iter().skip(1)) {
+            let diff = next - curr;
             calculated_len += diff.length();
             cumulative_len.push(calculated_len);
         }
@@ -160,35 +160,34 @@ impl Curve {
             // * The last length is always incorrect
             cumulative_len.pop();
 
-            let mut path_end_idx = path.len() - 1;
+            let last_valid = cumulative_len
+                .iter()
+                .rev()
+                .position(|l| *l < expected_len)
+                .map_or(0, |idx| cumulative_len.len() - idx);
 
-            if calculated_len > expected_len {
-                // * The path will be shortened further, in which case we should trim
-                // * any more unnecessary lengths and their associated path segments
-                while cumulative_len
-                    .last()
-                    .filter(|&l| *l > expected_len)
-                    .is_some()
-                {
-                    cumulative_len.pop();
-                    path.remove(path_end_idx);
-                    path_end_idx -= 1;
+            // * The path will be shortened further, in which case we should trim
+            // * any more unnecessary lengths and their associated path segments
+            if last_valid < cumulative_len.len() {
+                cumulative_len.truncate(last_valid);
+                path.truncate(last_valid + 1);
+
+                if cumulative_len.is_empty() {
+                    // * The expected distance is negative or zero
+                    // * Perhaps negative path lengths should be disallowed altogether
+                    cumulative_len.push(0.0);
+
+                    return cumulative_len;
                 }
             }
 
-            if path_end_idx == 0 {
-                // * The expected distance is negative or zero
-                // * Perhaps negative path lengths should be disallowed altogether
-                cumulative_len.push(0.0);
-
-                return cumulative_len;
-            }
+            let end_idx = cumulative_len.len();
+            let prev_idx = end_idx - 1;
 
             // * The direction of the segment to shorten or lengthen
-            let dir = (path[path_end_idx] - path[path_end_idx - 1]).normalize();
+            let dir = (path[end_idx] - path[prev_idx]).normalize();
 
-            path[path_end_idx] =
-                path[path_end_idx - 1] + dir * (expected_len - cumulative_len.last().unwrap());
+            path[end_idx] = path[prev_idx] + dir * (expected_len - cumulative_len[prev_idx]);
             cumulative_len.push(expected_len);
         }
 
