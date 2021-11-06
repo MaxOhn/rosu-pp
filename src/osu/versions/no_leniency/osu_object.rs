@@ -161,7 +161,9 @@ impl OsuObject {
 
                 ticks.clear();
 
-                let end_pos = curve.position_at(1.0); // TODO: what if reversing odd amount?
+                // TODO: what if reversing odd amount?
+                // TODO: + h.pos?
+                let end_pos = curve.position_at(1.0);
                 travel_dist *= *scaling_factor;
 
                 Self {

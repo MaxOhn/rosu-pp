@@ -2,12 +2,13 @@ use super::super::super::DifficultyAttributes;
 use super::slider_state::SliderState;
 
 use crate::{
-    curve::Curve,
+    curve::{Curve, CurveBuffers},
     parse::{HitObject, HitObjectKind, Pos2},
     Beatmap,
 };
 
 const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
+const BASE_SCORING_DISTANCE: f32 = 100.0;
 
 pub(crate) struct OsuObject {
     pub(crate) time: f32,
@@ -29,18 +30,29 @@ enum OsuObjectKind {
     },
 }
 
+pub(crate) struct ObjectParameters<'a> {
+    pub(crate) map: &'a Beatmap,
+    pub(crate) radius: f32,
+    pub(crate) scaling_factor: f32,
+    pub(crate) attributes: &'a mut DifficultyAttributes,
+    pub(crate) ticks: Vec<f32>,
+    pub(crate) slider_state: SliderState<'a>,
+    pub(crate) curve_bufs: CurveBuffers,
+}
+
 impl OsuObject {
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        h: &HitObject,
-        map: &Beatmap,
-        radius: f32,
-        scaling_factor: f32,
-        hr: bool,
-        ticks: &mut Vec<f32>,
-        attributes: &mut DifficultyAttributes,
-        slider_state: &mut SliderState,
-    ) -> Option<Self> {
+    pub(crate) fn new(h: &HitObject, hr: bool, params: &mut ObjectParameters) -> Option<Self> {
+        let ObjectParameters {
+            map,
+            radius,
+            scaling_factor,
+            attributes,
+            ticks,
+            slider_state,
+            curve_bufs,
+        } = params;
+
         attributes.max_combo += 1; // hitcircle, slider head, or spinner
         let mut pos = h.pos;
 
@@ -58,8 +70,7 @@ impl OsuObject {
             HitObjectKind::Slider {
                 pixel_len,
                 repeats,
-                curve_points,
-                path_type,
+                control_points,
             } => {
                 // Key values which are computed here
                 let mut lazy_end_pos = pos;
@@ -68,21 +79,26 @@ impl OsuObject {
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
-                let approx_follow_circle_radius = radius * 3.0;
-                let mut tick_distance = 100.0 * map.sv / map.tick_rate;
+                let span_count = (*repeats + 1) as f32;
+
+                let approx_follow_circle_radius = *radius * 3.0;
+                let mut tick_dist = 100.0 * map.slider_mult / map.tick_rate;
 
                 if map.version >= 8 {
-                    tick_distance /=
-                        (100.0 / slider_state.speed_mult).max(10.0).min(1000.0) / 100.0;
+                    tick_dist /=
+                        (100.0 / slider_state.slider_velocity).max(10.0).min(1000.0) / 100.0;
                 }
 
-                let duration = *repeats as f32 * slider_state.beat_len * pixel_len
-                    / (map.sv * slider_state.speed_mult)
-                    / 100.0;
-                let span_duration = duration / *repeats as f32;
-
                 // Build the curve w.r.t. the curve points
-                let curve = Curve::new(curve_points, *path_type);
+                let curve = Curve::new(control_points, *pixel_len, curve_bufs);
+
+                let velocity =
+                    (BASE_SCORING_DISTANCE * map.slider_mult * slider_state.slider_velocity)
+                        / slider_state.beat_len;
+
+                let end_time = h.start_time + span_count * curve.dist() / velocity;
+                let duration = end_time - h.start_time;
+                let span_duration = duration / span_count;
 
                 // Called on each slider object except for the head.
                 // Increases combo and adjusts `end_pos` and `travel_dist`
@@ -98,8 +114,8 @@ impl OsuObject {
                         progress %= 1.0;
                     }
 
-                    let curr_dist = pixel_len * progress;
-                    let mut curr_pos = curve.point_at_distance(curr_dist);
+                    // TODO: Correct addition?
+                    let mut curr_pos = h.pos + curve.position_at(progress);
 
                     if hr {
                         curr_pos.y = 384.0 - curr_pos.y;
@@ -109,17 +125,18 @@ impl OsuObject {
                     let mut dist = diff.length();
 
                     if dist > approx_follow_circle_radius {
+                        // * The cursor would be outside the follow circle, we need to move it
                         dist -= approx_follow_circle_radius;
                         lazy_end_pos += diff.normalize() * dist;
                         travel_dist += dist;
                     }
                 };
 
-                let mut current_distance = tick_distance;
-                let time_add = duration * (tick_distance / (pixel_len * *repeats as f32));
+                let mut current_distance = tick_dist;
+                let time_add = duration * (tick_dist / (pixel_len * span_count));
 
-                let target = pixel_len - tick_distance / 8.0;
-                ticks.reserve((target / tick_distance) as usize);
+                let target = pixel_len - tick_dist / 8.0;
+                ticks.reserve((target / tick_dist) as usize);
 
                 // Tick of the first span
                 if current_distance < target {
@@ -127,7 +144,7 @@ impl OsuObject {
                         let time = h.start_time + time_add * tick_idx as f32;
                         compute_vertex(time);
                         ticks.push(time);
-                        current_distance += tick_distance;
+                        current_distance += tick_dist;
 
                         if current_distance >= target {
                             break;
@@ -161,9 +178,10 @@ impl OsuObject {
 
                 ticks.clear();
 
-                travel_dist *= scaling_factor;
-
-                let mut end_pos = curve.point_at_distance(*pixel_len);
+                // TODO: what if reversing odd amount?
+                // TODO: Correct addition?
+                let mut end_pos = h.pos + curve.position_at(1.0);
+                travel_dist *= *scaling_factor;
 
                 if hr {
                     end_pos.y = 384.0 - end_pos.y;

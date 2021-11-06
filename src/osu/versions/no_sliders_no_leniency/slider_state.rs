@@ -1,3 +1,5 @@
+use std::f32::NEG_INFINITY;
+
 use crate::{Beatmap, ControlPoint, ControlPointIter};
 
 pub(crate) struct SliderState<'p> {
@@ -12,7 +14,7 @@ impl<'p> SliderState<'p> {
     pub(crate) fn new(map: &'p Beatmap) -> Self {
         Self {
             control_points: ControlPointIter::new(map),
-            next_time: std::f32::NEG_INFINITY,
+            next_time: NEG_INFINITY,
             px_per_beat: 1.0,
             prev_sv: 1.0,
         }
@@ -26,16 +28,19 @@ impl<'p> SliderState<'p> {
         map: &Beatmap,
     ) -> usize {
         while time >= self.next_time {
-            self.px_per_beat = map.sv * 100.0 * self.prev_sv;
+            self.px_per_beat = map.slider_mult * 100.0 * self.prev_sv;
 
             match self.control_points.next() {
                 Some(ControlPoint::Timing { time, .. }) => {
                     self.next_time = time;
                     self.prev_sv = 1.0;
                 }
-                Some(ControlPoint::Difficulty { time, speed_mult }) => {
+                Some(ControlPoint::Difficulty {
+                    time,
+                    slider_velocity,
+                }) => {
                     self.next_time = time;
-                    self.prev_sv = speed_mult;
+                    self.prev_sv = slider_velocity;
                 }
                 None => break,
             }

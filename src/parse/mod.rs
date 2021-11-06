@@ -1,5 +1,3 @@
-use crate::math_util::is_linear;
-
 mod attributes;
 mod control_point;
 mod error;
@@ -16,7 +14,7 @@ pub use hitsound::HitSound;
 pub use pos2::Pos2;
 use sort::legacy_sort;
 
-use std::{cmp::Ordering, mem};
+use std::cmp::Ordering;
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::io::{BufRead, BufReader, Read};
@@ -26,6 +24,12 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 
 #[cfg(feature = "async_std")]
 use async_std::io::{prelude::BufReadExt, BufReader as AsyncBufReader, Read as AsyncRead};
+
+#[cfg(any(
+    feature = "fruits",
+    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+))]
+pub use osu_fruits::*;
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
@@ -722,12 +726,6 @@ pub struct Beatmap {
 
 pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
 
-#[cfg(any(
-    feature = "fruits",
-    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
-))]
-const MAX_COORDINATE_VALUE: f32 = 131_072.0;
-
 impl Beatmap {
     const CIRCLE_FLAG: u8 = 1 << 0;
     const SLIDER_FLAG: u8 = 1 << 1;
@@ -763,12 +761,20 @@ impl Beatmap {
         let mut prev_time = 0.0;
         let mut empty = true;
 
+        #[cfg(any(
+            feature = "fruits",
+            all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+        ))]
         // `point_split` will be of type `Vec<&str>
         // with each element having its lifetime bound to `buf`.
         // To cirvumvent this, `point_split_raw` will contain
         // the actual `&str` elements transmuted into `usize`.
         let mut point_split_raw: Vec<usize> = Vec::new();
 
+        #[cfg(any(
+            feature = "fruits",
+            all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+        ))]
         // Buffer to re-use for all sliders
         let mut vertices = Vec::new();
 
@@ -834,7 +840,7 @@ impl Beatmap {
 
                     // SAFETY: `Vec<usize>` and `Vec<&str>` have the same size and layout.
                     let point_split: &mut Vec<&str> =
-                        unsafe { mem::transmute(&mut point_split_raw) };
+                        unsafe { std::mem::transmute(&mut point_split_raw) };
 
                     point_split.clear();
                     point_split.extend(control_point_iter);
@@ -903,8 +909,8 @@ impl Beatmap {
                     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
                 )))]
                 {
-                    let repeats: usize = next_field!(split.nth(1), "repeats").parse()?;
-                    let pixel_len: f32 = next_field!(split.next(), "pixel len").parse()?;
+                    let repeats = split.nth(1).next_field("repeats")?.parse()?;
+                    let pixel_len = split.next().next_field("pixel len")?.parse()?;
 
                     HitObjectKind::Slider { repeats, pixel_len }
                 }
@@ -954,101 +960,149 @@ impl Beatmap {
     }
 }
 
-fn convert_points(
-    points: &[&str],
-    end_point: Option<&str>,
-    first: bool,
-    offset: Pos2,
-    curve_points: &mut Vec<PathControlPoint>,
-    vertices: &mut Vec<PathControlPoint>,
-) -> Result<(), ParseError> {
-    let mut path_kind = PathType::from_str(points[0]);
+// TODO: Replace with `sliders` auxiliary feature
+#[cfg(any(
+    feature = "fruits",
+    all(feature = "osu", not(feature = "no_sliders_no_leniency"))
+))]
+mod osu_fruits {
+    use crate::{math_util::is_linear, ParseError};
 
-    let read_offset = first as usize;
-    let readable_points = points.len() - 1;
-    let end_point_len = end_point.is_some() as usize;
+    use super::Pos2;
 
-    vertices.clear();
-    vertices.reserve(read_offset + readable_points + end_point_len);
+    pub(super) const MAX_COORDINATE_VALUE: f32 = 131_072.0;
 
-    // * Fill any non-read points.
-    vertices.extend((0..read_offset).map(|_| PathControlPoint::default()));
+    pub(super) fn convert_points(
+        points: &[&str],
+        end_point: Option<&str>,
+        first: bool,
+        offset: Pos2,
+        curve_points: &mut Vec<PathControlPoint>,
+        vertices: &mut Vec<PathControlPoint>,
+    ) -> Result<(), ParseError> {
+        let mut path_kind = PathType::from_str(points[0]);
 
-    // * Parse into control points.
-    for &point in points.iter().skip(1) {
-        vertices.push(read_point(point, offset)?);
-    }
+        let read_offset = first as usize;
+        let readable_points = points.len() - 1;
+        let end_point_len = end_point.is_some() as usize;
 
-    // * If an endpoint is given, add it to the end.
-    if let Some(end_point) = end_point {
-        vertices.push(read_point(end_point, offset)?);
-    }
+        vertices.clear();
+        vertices.reserve(read_offset + readable_points + end_point_len);
 
-    // * Edge-case rules (to match stable).
-    if path_kind == PathType::PerfectCurve {
-        if let [a, b, c] = &vertices[..] {
-            if is_linear(a.pos, b.pos, c.pos) {
-                // * osu-stable special-cased colinear perfect curves to a linear path
-                path_kind = PathType::Linear;
+        // * Fill any non-read points.
+        vertices.extend((0..read_offset).map(|_| PathControlPoint::default()));
+
+        // * Parse into control points.
+        for &point in points.iter().skip(1) {
+            vertices.push(read_point(point, offset)?);
+        }
+
+        // * If an endpoint is given, add it to the end.
+        if let Some(end_point) = end_point {
+            vertices.push(read_point(end_point, offset)?);
+        }
+
+        // * Edge-case rules (to match stable).
+        if path_kind == PathType::PerfectCurve {
+            if let [a, b, c] = &vertices[..] {
+                if is_linear(a.pos, b.pos, c.pos) {
+                    // * osu-stable special-cased colinear perfect curves to a linear path
+                    path_kind = PathType::Linear;
+                }
+            } else {
+                path_kind = PathType::Bezier;
             }
-        } else {
-            path_kind = PathType::Bezier;
+        }
+
+        // * The first control point must have a definite type.
+        vertices[0].kind = Some(path_kind);
+
+        // * A path can have multiple implicit segments of the same type if
+        // * there are two sequential control points with the same position.
+        // * To handle such cases, this code may return multiple path segments
+        // * with the final control point in each segment having a non-null type.
+        // * For the point string X|1:1|2:2|2:2|3:3, this code returns the segments:
+        // * X: { (1,1), (2, 2) }
+        // * X: { (3, 3) }
+        // * Note: (2, 2) is not returned in the second segments, as it is implicit in the path.
+        let mut start_idx = 0;
+        let mut end_idx = 0;
+
+        #[allow(clippy::blocks_in_if_conditions)]
+        while {
+            end_idx += 1;
+
+            end_idx < vertices.len() - end_point_len
+        } {
+            // * Keep incrementing while an implicit segment doesn't need to be started
+            if vertices[end_idx].pos != vertices[end_idx - 1].pos {
+                continue;
+            }
+
+            // * The last control point of each segment is not
+            // * allowed to start a new implicit segment.
+            if end_idx == vertices.len() - end_point_len - 1 {
+                continue;
+            }
+
+            // * Force a type on the last point, and return
+            // * the current control point set as a segment.
+            vertices[end_idx - 1].kind = Some(path_kind);
+            curve_points.extend(&vertices[start_idx..end_idx]);
+
+            // * Skip the current control point - as it's the same as the one that's just been returned.
+            start_idx = end_idx + 1;
+        }
+
+        if end_idx > start_idx {
+            curve_points.extend(&vertices[start_idx..end_idx]);
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn read_point(value: &str, start_pos: Pos2) -> Result<PathControlPoint, ParseError> {
+        let mut v = value.split(':').map(str::parse);
+
+        match (v.next(), v.next()) {
+            (Some(Ok(x)), Some(Ok(y))) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
+            _ => Err(ParseError::InvalidCurvePoints),
         }
     }
 
-    // * The first control point must have a definite type.
-    vertices[0].kind = Some(path_kind);
-
-    // * A path can have multiple implicit segments of the same type if
-    // * there are two sequential control points with the same position.
-    // * To handle such cases, this code may return multiple path segments
-    // * with the final control point in each segment having a non-null type.
-    // * For the point string X|1:1|2:2|2:2|3:3, this code returns the segments:
-    // * X: { (1,1), (2, 2) }
-    // * X: { (3, 3) }
-    // * Note: (2, 2) is not returned in the second segments, as it is implicit in the path.
-    let mut start_idx = 0;
-    let mut end_idx = 0;
-
-    #[allow(clippy::blocks_in_if_conditions)]
-    while {
-        end_idx += 1;
-
-        end_idx < vertices.len() - end_point_len
-    } {
-        // * Keep incrementing while an implicit segment doesn't need to be started
-        if vertices[end_idx].pos != vertices[end_idx - 1].pos {
-            continue;
-        }
-
-        // * The last control point of each segment is not
-        // * allowed to start a new implicit segment.
-        if end_idx == vertices.len() - end_point_len - 1 {
-            continue;
-        }
-
-        // * Force a type on the last point, and return
-        // * the current control point set as a segment.
-        vertices[end_idx - 1].kind = Some(path_kind);
-        curve_points.extend(&vertices[start_idx..end_idx]);
-
-        // * Skip the current control point - as it's the same as the one that's just been returned.
-        start_idx = end_idx + 1;
+    /// Control point for slider curve calculation
+    #[derive(Copy, Clone, Debug, Default, PartialEq)]
+    pub struct PathControlPoint {
+        pub pos: Pos2,
+        pub kind: Option<PathType>,
     }
 
-    if end_idx > start_idx {
-        curve_points.extend(&vertices[start_idx..end_idx]);
+    impl From<Pos2> for PathControlPoint {
+        #[inline]
+        fn from(pos: Pos2) -> Self {
+            Self { pos, kind: None }
+        }
     }
 
-    Ok(())
-}
+    /// The type of curve of a slider.
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    pub enum PathType {
+        Catmull = 0,
+        Bezier = 1,
+        Linear = 2,
+        PerfectCurve = 3,
+    }
 
-fn read_point(value: &str, start_pos: Pos2) -> Result<PathControlPoint, ParseError> {
-    let mut v = value.split(':').map(str::parse);
-
-    match (v.next(), v.next()) {
-        (Some(Ok(x)), Some(Ok(y))) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
-        _ => Err(ParseError::InvalidCurvePoints),
+    impl PathType {
+        #[inline]
+        fn from_str(s: &str) -> Self {
+            match s {
+                "L" => Self::Linear,
+                "B" => Self::Bezier,
+                "P" => Self::PerfectCurve,
+                _ => Self::Catmull,
+            }
+        }
     }
 }
 
@@ -1075,40 +1129,6 @@ fn split_colon(line: &str) -> Option<(&str, &str)> {
     let mut split = line.split(':');
 
     Some((split.next()?, split.next()?.trim()))
-}
-
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
-pub struct PathControlPoint {
-    pub pos: Pos2,
-    pub kind: Option<PathType>,
-}
-
-impl From<Pos2> for PathControlPoint {
-    #[inline]
-    fn from(pos: Pos2) -> Self {
-        Self { pos, kind: None }
-    }
-}
-
-/// The type of curve of a slider.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum PathType {
-    Catmull = 0,
-    Bezier = 1,
-    Linear = 2,
-    PerfectCurve = 3,
-}
-
-impl PathType {
-    #[inline]
-    fn from_str(s: &str) -> Self {
-        match s {
-            "L" => Self::Linear,
-            "B" => Self::Bezier,
-            "P" => Self::PerfectCurve,
-            _ => Self::Catmull,
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug)]

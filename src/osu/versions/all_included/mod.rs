@@ -6,8 +6,10 @@
 
 use std::mem;
 
+use self::osu_object::ObjectParameters;
+
 use super::super::DifficultyAttributes;
-use crate::parse::Pos2;
+use crate::{curve::CurveBuffers, parse::Pos2};
 
 mod difficulty_object;
 mod osu_object;
@@ -79,21 +81,21 @@ pub fn stars(
         scaling_factor *= 1.0 + small_circle_bonus;
     }
 
-    let mut slider_state = SliderState::new(map);
-    let mut ticks_buf = Vec::new();
+    let mut params = ObjectParameters {
+        map,
+        radius,
+        scaling_factor,
+        attributes: &mut diff_attributes,
+        slider_state: SliderState::new(map),
+        ticks: Vec::new(),
+        curve_bufs: CurveBuffers::default(),
+    };
 
-    let hit_objects_iter = map.hit_objects.iter().take(take).filter_map(|h| {
-        OsuObject::new(
-            h,
-            map,
-            radius,
-            scaling_factor,
-            hr,
-            &mut ticks_buf,
-            &mut diff_attributes,
-            &mut slider_state,
-        )
-    });
+    let hit_objects_iter = map
+        .hit_objects
+        .iter()
+        .take(take)
+        .filter_map(|h| OsuObject::new(h, hr, &mut params));
 
     let mut hit_objects = Vec::with_capacity(take);
     hit_objects.extend(hit_objects_iter);
@@ -277,21 +279,20 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         scaling_factor *= 1.0 + small_circle_bonus;
     }
 
-    let mut slider_state = SliderState::new(map);
-    let mut ticks_buf = Vec::new();
+    let mut params = ObjectParameters {
+        map,
+        radius,
+        scaling_factor,
+        attributes: &mut diff_attributes,
+        slider_state: SliderState::new(map),
+        ticks: Vec::new(),
+        curve_bufs: CurveBuffers::default(),
+    };
 
-    let hit_objects_iter = map.hit_objects.iter().filter_map(|h| {
-        OsuObject::new(
-            h,
-            map,
-            radius,
-            scaling_factor,
-            hr,
-            &mut ticks_buf,
-            &mut diff_attributes,
-            &mut slider_state,
-        )
-    });
+    let hit_objects_iter = map
+        .hit_objects
+        .iter()
+        .filter_map(|h| OsuObject::new(h, hr, &mut params));
 
     let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
     hit_objects.extend(hit_objects_iter);

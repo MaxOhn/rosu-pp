@@ -1,9 +1,11 @@
-use super::{PathControlPoint, Pos2};
+use super::Pos2;
 
 #[cfg(any(
     feature = "fruits",
     all(feature = "osu", not(feature = "no_sliders_no_leniency"))
 ))]
+use super::PathControlPoint;
+
 use std::cmp::Ordering;
 
 /// "Intermediate" hitobject created through parsing.
