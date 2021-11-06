@@ -55,7 +55,7 @@ impl<T> LimitedQueue<T> {
     }
 
     #[inline]
-    pub(crate) fn iter(&self) -> LimitedQueueIter<T> {
+    pub(crate) fn iter(&self) -> LimitedQueueIter<'_, T> {
         let iter = self
             .queue
             .iter()

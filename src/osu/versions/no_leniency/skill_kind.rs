@@ -45,7 +45,7 @@ pub(crate) struct FlashlightHistoryEntry {
 }
 
 impl From<&DifficultyObject<'_>> for FlashlightHistoryEntry {
-    fn from(h: &DifficultyObject) -> Self {
+    fn from(h: &DifficultyObject<'_>) -> Self {
         Self {
             end_pos: h.base.end_pos(),
             is_spinner: h.base.is_spinner(),
@@ -62,7 +62,7 @@ pub(crate) struct SpeedHistoryEntry {
 }
 
 impl From<&DifficultyObject<'_>> for SpeedHistoryEntry {
-    fn from(h: &DifficultyObject) -> Self {
+    fn from(h: &DifficultyObject<'_>) -> Self {
         Self {
             is_slider: h.base.is_slider(),
             start_time: h.base.time,
@@ -108,7 +108,7 @@ impl SkillKind {
         }
     }
 
-    pub(crate) fn post_process(&mut self, current: &DifficultyObject) {
+    pub(crate) fn post_process(&mut self, current: &DifficultyObject<'_>) {
         match self {
             Self::Aim => {}
             Self::Flashlight { history, .. } => history.push_front(current.into()),
@@ -116,7 +116,7 @@ impl SkillKind {
         }
     }
 
-    pub(crate) fn strain_value_of(&self, curr: &DifficultyObject) -> f32 {
+    pub(crate) fn strain_value_of(&self, curr: &DifficultyObject<'_>) -> f32 {
         match self {
             Self::Aim => {
                 if curr.base.is_spinner() {
@@ -286,7 +286,7 @@ impl SkillKind {
 }
 
 pub(crate) fn calculate_speed_rhythm_bonus(
-    current: &DifficultyObject,
+    current: &DifficultyObject<'_>,
     history: &VecDeque<SpeedHistoryEntry>,
     hit_window: f32,
 ) -> f32 {

@@ -42,7 +42,7 @@ pub(crate) struct ObjectParameters<'a> {
 
 impl OsuObject {
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(h: &HitObject, hr: bool, params: &mut ObjectParameters) -> Option<Self> {
+    pub(crate) fn new(h: &HitObject, hr: bool, params: &mut ObjectParameters<'_>) -> Option<Self> {
         let ObjectParameters {
             map,
             radius,

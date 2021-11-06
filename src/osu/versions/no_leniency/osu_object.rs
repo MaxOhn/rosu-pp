@@ -37,7 +37,7 @@ pub(crate) struct ObjectParameters<'a> {
 }
 
 impl OsuObject {
-    pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters) -> Option<Self> {
+    pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters<'_>) -> Option<Self> {
         let ObjectParameters {
             map,
             radius,

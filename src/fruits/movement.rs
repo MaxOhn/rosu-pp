@@ -55,7 +55,7 @@ impl Movement {
         self.current_section_peak = self.peak_strain(time - self.prev_time.unwrap());
     }
 
-    pub(crate) fn process(&mut self, current: &DifficultyObject) {
+    pub(crate) fn process(&mut self, current: &DifficultyObject<'_>) {
         self.current_strain *= strain_decay(current.delta);
         self.current_strain += self.strain_value_of(current) * SKILL_MULTIPLIER;
         self.current_section_peak = self.current_strain.max(self.current_section_peak);
@@ -77,7 +77,7 @@ impl Movement {
         difficulty
     }
 
-    fn strain_value_of(&mut self, current: &DifficultyObject) -> f32 {
+    fn strain_value_of(&mut self, current: &DifficultyObject<'_>) -> f32 {
         let last_player_pos = self
             .last_player_position
             .unwrap_or(current.last_normalized_pos);

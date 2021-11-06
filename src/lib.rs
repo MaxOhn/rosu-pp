@@ -134,6 +134,7 @@
 //! - \[x\] async parsing
 
 #![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
+#![deny(clippy::all, nonstandard_style, rust_2018_idioms, unused, warnings)]
 
 #[cfg(feature = "fruits")]
 #[cfg_attr(docsrs, doc(cfg(feature = "fruits")))]
@@ -194,7 +195,7 @@ pub trait BeatmapExt {
     /// Returns a builder to calculate pp and difficulty values.
     ///
     /// Convenient method that matches on the map's mode to choose the appropriate calculator.
-    fn pp(&self) -> AnyPP;
+    fn pp(&self) -> AnyPP<'_>;
 
     /// Calculate the strains of a map.
     /// This essentially performs the same calculation as a `stars` function but
@@ -253,7 +254,7 @@ impl BeatmapExt for Beatmap {
             }
             GameMode::TKO => {
                 #[cfg(not(feature = "taiko"))]
-                panic!("`osu` feature is not enabled");
+                panic!("`taiko` feature is not enabled");
 
                 #[cfg(feature = "taiko")]
                 StarResult::Taiko(taiko::stars(self, mods, passed_objects))
@@ -286,7 +287,7 @@ impl BeatmapExt for Beatmap {
             }
             GameMode::TKO => {
                 #[cfg(not(feature = "taiko"))]
-                panic!("`osu` feature is not enabled");
+                panic!("`taiko` feature is not enabled");
 
                 #[cfg(feature = "taiko")]
                 PpResult::Taiko(TaikoPP::new(self).mods(mods).calculate())
@@ -302,7 +303,7 @@ impl BeatmapExt for Beatmap {
     }
 
     #[inline]
-    fn pp(&self) -> AnyPP {
+    fn pp(&self) -> AnyPP<'_> {
         AnyPP::new(self)
     }
 
@@ -350,7 +351,7 @@ impl BeatmapExt for Beatmap {
             }
             GameMode::TKO => {
                 #[cfg(not(feature = "taiko"))]
-                panic!("`osu` feature is not enabled");
+                panic!("`taiko` feature is not enabled");
 
                 #[cfg(feature = "taiko")]
                 taiko::strains(self, mods)

@@ -55,7 +55,11 @@ impl SkillKind {
         }
     }
 
-    pub(crate) fn strain_value_of(&mut self, current: &DifficultyObject, cheese: &[bool]) -> f32 {
+    pub(crate) fn strain_value_of(
+        &mut self,
+        current: &DifficultyObject<'_>,
+        cheese: &[bool],
+    ) -> f32 {
         match self {
             Self::Color {
                 mono_history,

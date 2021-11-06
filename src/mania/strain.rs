@@ -63,14 +63,14 @@ impl Strain {
     }
 
     #[inline]
-    pub(crate) fn process(&mut self, current: &DifficultyHitObject) {
+    pub(crate) fn process(&mut self, current: &DifficultyHitObject<'_>) {
         self.current_strain *= self.strain_decay(current.delta);
         self.current_strain += self.strain_value_of(current) * SKILL_MULTIPLIER;
         self.current_section_peak = self.current_strain.max(self.current_section_peak);
         self.prev_time.replace(current.start_time);
     }
 
-    fn strain_value_of(&mut self, current: &DifficultyHitObject) -> f32 {
+    fn strain_value_of(&mut self, current: &DifficultyHitObject<'_>) -> f32 {
         let end_time = current.base.end_time();
 
         let mut hold_factor = 1.0;

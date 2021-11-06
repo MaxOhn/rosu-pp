@@ -30,7 +30,7 @@ impl Skill {
         }
     }
 
-    pub(crate) fn process(&mut self, curr: &DifficultyObject) {
+    pub(crate) fn process(&mut self, curr: &DifficultyObject<'_>) {
         self.kind.pre_process();
         self.curr_section_peak = self.strain_value_at(curr).max(self.curr_section_peak);
         self.prev_time = Some(curr.base.time);
@@ -88,7 +88,7 @@ impl Skill {
         }
     }
 
-    pub(crate) fn strain_value_at(&mut self, curr: &DifficultyObject) -> f32 {
+    pub(crate) fn strain_value_at(&mut self, curr: &DifficultyObject<'_>) -> f32 {
         self.curr_strain *= self.kind.strain_decay(curr.delta);
         self.curr_strain += self.kind.strain_value_of(curr) * self.kind.skill_multiplier();
 
