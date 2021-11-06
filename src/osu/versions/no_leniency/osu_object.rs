@@ -26,17 +26,28 @@ pub(crate) enum OsuObjectKind {
     Spinner,
 }
 
+pub(crate) struct ObjectParameters<'a> {
+    pub(crate) map: &'a Beatmap,
+    pub(crate) radius: f32,
+    pub(crate) scaling_factor: f32,
+    pub(crate) attributes: &'a mut DifficultyAttributes,
+    pub(crate) ticks: Vec<f32>,
+    pub(crate) slider_state: SliderState<'a>,
+    pub(crate) curve_bufs: CurveBuffers,
+}
+
 impl OsuObject {
-    pub(crate) fn new(
-        h: &HitObject,
-        map: &Beatmap,
-        radius: f32,
-        scaling_factor: f32,
-        ticks: &mut Vec<f32>,
-        attributes: &mut DifficultyAttributes,
-        slider_state: &mut SliderState,
-        curve_bufs: &mut CurveBuffers,
-    ) -> Option<Self> {
+    pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters) -> Option<Self> {
+        let ObjectParameters {
+            map,
+            radius,
+            scaling_factor,
+            attributes,
+            ticks,
+            slider_state,
+            curve_bufs,
+        } = params;
+
         attributes.max_combo += 1; // hitcircle, slider head, or spinner
 
         let obj = match &h.kind {
@@ -59,7 +70,7 @@ impl OsuObject {
 
                 let span_count = (*repeats + 1) as f32;
 
-                let approx_follow_circle_radius = radius * 3.0;
+                let approx_follow_circle_radius = *radius * 3.0;
                 let mut tick_dist = 100.0 * map.slider_mult / map.tick_rate;
 
                 if map.version >= 8 {
@@ -151,7 +162,7 @@ impl OsuObject {
                 ticks.clear();
 
                 let end_pos = curve.position_at(1.0); // TODO: what if reversing odd amount?
-                travel_dist *= scaling_factor;
+                travel_dist *= *scaling_factor;
 
                 Self {
                     time: h.start_time,
