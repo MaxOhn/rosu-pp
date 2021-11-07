@@ -179,7 +179,6 @@ impl OsuObject {
                 ticks.clear();
 
                 // TODO: what if reversing odd amount?
-                // TODO: Correct addition?
                 let mut end_pos = h.pos + curve.position_at(1.0);
                 travel_dist *= *scaling_factor;
 

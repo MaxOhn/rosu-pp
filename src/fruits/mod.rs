@@ -109,7 +109,7 @@ pub fn stars(
                 if curr_dist < target {
                     for tick_idx in 1.. {
                         let progress = curr_dist / *pixel_len;
-                        let pos = curve.position_at(progress);
+                        let pos = h.pos + curve.position_at(progress);
                         let time = h.start_time + time_add * tick_idx as f32;
                         ticks.push((pos, time));
                         curr_dist += tick_dist;
@@ -136,7 +136,7 @@ pub fn stars(
                         let dist = (span_idx % 2) as f32 * *pixel_len;
                         let time_offset = (duration / span_count as f32) * span_idx as f32;
                         let progress = dist / *pixel_len;
-                        let pos = curve.position_at(progress);
+                        let pos = h.pos + curve.position_at(progress);
 
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
@@ -155,7 +155,7 @@ pub fn stars(
                 }
 
                 // Slider tail
-                let pos = curve.position_at(1.0); // TODO: what if reversing odd amount?
+                let pos = h.pos + curve.position_at(1.0); // TODO: what if reversing odd amount?
                 slider_objects.push((pos, h.start_time + duration));
 
                 fruits += span_count; // TODO: +1?
