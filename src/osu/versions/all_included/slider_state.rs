@@ -88,14 +88,14 @@ mod test {
         let mut state = SliderState::new(&map);
 
         state.update(2.0);
-        assert_eq!(state.beat_len, 10.0);
+        assert!((state.beat_len - 10.0).abs() <= f32::EPSILON);
 
         state.update(3.0);
-        assert_eq!(state.beat_len, 20.0);
-        assert_eq!(state.slider_velocity, 1.0);
+        assert!((state.beat_len - 20.0).abs() <= f32::EPSILON);
+        assert!((state.slider_velocity - 1.0).abs() <= f32::EPSILON);
 
         state.update(5.0);
-        assert_eq!(state.beat_len, 30.0);
-        assert_eq!(state.slider_velocity, 45.0);
+        assert!((state.beat_len - 30.0).abs() <= f32::EPSILON);
+        assert!((state.slider_velocity - 45.0).abs() <= f32::EPSILON);
     }
 }
