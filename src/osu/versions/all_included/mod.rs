@@ -47,8 +47,7 @@ pub fn stars(
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
-    let hit_window =
-        super::difficulty_range_od(map_attributes.od).floor() / map_attributes.clock_rate;
+    let hit_window = super::difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
     let od = (80.0 - hit_window) / 6.0;
 
     let mut diff_attributes = DifficultyAttributes {
@@ -245,8 +244,7 @@ pub fn stars(
 /// Suitable to plot the difficulty of a map over time.
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let map_attributes = map.attributes().mods(mods);
-    let hit_window =
-        super::difficulty_range_od(map_attributes.od).floor() / map_attributes.clock_rate;
+    let hit_window = super::difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
     let od = (80.0 - hit_window) / 6.0;
 
     let mut diff_attributes = DifficultyAttributes {

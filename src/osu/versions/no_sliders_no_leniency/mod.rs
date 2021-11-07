@@ -42,7 +42,7 @@ pub fn stars(
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let attributes = map.attributes().mods(mods);
-    let hit_window = super::difficulty_range_od(attributes.od).floor() / attributes.clock_rate;
+    let hit_window = super::difficulty_range_od(attributes.od) / attributes.clock_rate;
     let od = (80.0 - hit_window) / 6.0;
 
     if take < 2 {
@@ -219,7 +219,7 @@ pub fn stars(
 /// Suitable to plot the difficulty of a map over time.
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let attributes = map.attributes().mods(mods);
-    let hit_window = super::difficulty_range_od(attributes.od).floor() / attributes.clock_rate;
+    let hit_window = super::difficulty_range_od(attributes.od) / attributes.clock_rate;
 
     if map.hit_objects.len() < 2 {
         return Strains::default();
