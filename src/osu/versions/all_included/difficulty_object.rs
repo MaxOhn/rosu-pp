@@ -18,6 +18,7 @@ impl<'h> DifficultyObject<'h> {
         prev: &OsuObject,
         prev_vals: Option<(f32, f32)>, // (jump_dist, strain_time)
         prev_prev: Option<OsuObject>,
+        scale_factor: f32,
         scaling_factor: f32,
     ) -> Self {
         let delta = base.time - prev.time;
@@ -27,7 +28,7 @@ impl<'h> DifficultyObject<'h> {
 
         let pos = base.pos; // stacked position
         let travel_dist = prev.travel_dist();
-        let prev_cursor_pos = prev.lazy_end_pos();
+        let prev_cursor_pos = prev.lazy_end_pos(scale_factor);
 
         // We don't need to calculate either angle or distance
         // when one of the last->curr objects is a spinner
@@ -37,7 +38,7 @@ impl<'h> DifficultyObject<'h> {
             let jump_dist = ((pos - prev_cursor_pos) * scaling_factor).length();
 
             let angle = prev_prev.map(|prev_prev| {
-                let prev_prev_cursor_pos = prev_prev.lazy_end_pos();
+                let prev_prev_cursor_pos = prev_prev.lazy_end_pos(scale_factor);
 
                 let v1 = prev_prev_cursor_pos - prev.pos;
                 let v2 = pos - prev_cursor_pos;

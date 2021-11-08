@@ -238,10 +238,14 @@ impl OsuObject {
     }
 
     #[inline]
-    pub(crate) fn lazy_end_pos(&self) -> Pos2 {
+    pub(crate) fn lazy_end_pos(&self, scale_factor: f32) -> Pos2 {
         match &self.kind {
             OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => self.pos,
-            OsuObjectKind::Slider { lazy_end_pos, .. } => *lazy_end_pos,
+            OsuObjectKind::Slider { lazy_end_pos, .. } => {
+                let stack_offset = scale_factor * self.stack_height;
+
+                *lazy_end_pos + Pos2::new(stack_offset)
+            }
         }
     }
 

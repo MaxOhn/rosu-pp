@@ -15,6 +15,11 @@ impl Pos2 {
     }
 
     #[inline]
+    pub fn new(value: f32) -> Self {
+        Self { x: value, y: value }
+    }
+
+    #[inline]
     pub fn length_squared(&self) -> f32 {
         self.dot(*self)
     }

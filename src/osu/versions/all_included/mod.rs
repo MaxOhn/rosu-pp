@@ -113,10 +113,7 @@ pub fn stars(
         let stack_offset = h.stack_height * scale_factor;
 
         h.time /= map_attributes.clock_rate;
-        h.pos += Pos2 {
-            x: stack_offset,
-            y: stack_offset,
-        };
+        h.pos += Pos2::new(stack_offset);
 
         h
     });
@@ -140,7 +137,14 @@ pub fn stars(
 
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
-    let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
+    let h = DifficultyObject::new(
+        &curr,
+        &prev,
+        prev_vals,
+        prev_prev,
+        scale_factor,
+        scaling_factor,
+    );
 
     while h.base.time > current_section_end {
         for skill in skills.iter_mut() {
@@ -160,7 +164,14 @@ pub fn stars(
 
     // Handle all other objects
     for curr in hit_objects {
-        let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
+        let h = DifficultyObject::new(
+            &curr,
+            &prev,
+            prev_vals,
+            prev_prev,
+            scale_factor,
+            scaling_factor,
+        );
 
         while h.base.time > current_section_end {
             for skill in skills.iter_mut() {
@@ -309,10 +320,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         let stack_offset = h.stack_height * scale_factor;
 
         h.time /= map_attributes.clock_rate;
-        h.pos += Pos2 {
-            x: stack_offset,
-            y: stack_offset,
-        };
+        h.pos += Pos2::new(stack_offset);
 
         h
     });
@@ -336,7 +344,14 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
-    let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
+    let h = DifficultyObject::new(
+        &curr,
+        &prev,
+        prev_vals,
+        prev_prev,
+        scale_factor,
+        scaling_factor,
+    );
 
     while h.base.time > current_section_end {
         for skill in skills.iter_mut() {
@@ -356,7 +371,14 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
     // Handle all other objects
     for curr in hit_objects {
-        let h = DifficultyObject::new(&curr, &prev, prev_vals, prev_prev, scaling_factor);
+        let h = DifficultyObject::new(
+            &curr,
+            &prev,
+            prev_vals,
+            prev_prev,
+            scale_factor,
+            scaling_factor,
+        );
 
         while h.base.time > current_section_end {
             for skill in skills.iter_mut() {
