@@ -32,7 +32,7 @@ impl<'h> DifficultyObject<'h> {
 
         // We don't need to calculate either angle or distance
         // when one of the last->curr objects is a spinner
-        let (jump_dist, angle) = if base.is_spinner() {
+        let (jump_dist, angle) = if base.is_spinner() || prev.is_spinner() {
             (0.0, None)
         } else {
             let jump_dist = ((pos - prev_cursor_pos) * scaling_factor).length();

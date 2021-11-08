@@ -167,13 +167,12 @@ impl SkillKind {
                         let jump_dist = (curr.base.pos - prev.end_pos).length();
                         cumulative_strain_time += prev.strain_time;
 
-                        // We want to nerf objects that can be easily seen within the Flashlight circle radius
+                        // * We want to nerf objects that can be easily seen within the Flashlight circle radius
                         small_dist_nerf = (jump_dist / 75.0).min(1.0);
 
-                        // We also want to nerf stacks so that only the first object of the stack is accounted for
+                        // * We also want to nerf stacks so that only the first object of the stack is accounted for
                         // -- since jump distance is 0 on stacked notes in this version, approximate value as 0.2
-                        let stack_nerf =
-                            ((prev.jump_dist / scaling_factor) / 25.0).min(1.0).max(0.2);
+                        let stack_nerf = ((prev.jump_dist / scaling_factor) / 25.0).min(1.0);
 
                         result += stack_nerf * scaling_factor * jump_dist / cumulative_strain_time;
                     }
@@ -184,8 +183,7 @@ impl SkillKind {
                         if !prev.is_spinner {
                             let jump_dist = (curr.base.pos - prev.end_pos).length();
                             cumulative_strain_time += prev.strain_time;
-                            let stack_nerf =
-                                ((prev.jump_dist / scaling_factor) / 25.0).min(1.0).max(0.2);
+                            let stack_nerf = ((prev.jump_dist / scaling_factor) / 25.0).min(1.0);
 
                             result += factor * stack_nerf * scaling_factor * jump_dist
                                 / cumulative_strain_time;
@@ -211,7 +209,7 @@ impl SkillKind {
                 let speed_window_ratio = strain_time / hit_window_full;
                 let prev = history.front();
 
-                // Aim to nerf cheesy rhythms (very fast consecutive doubles with large delta times between)
+                // * Aim to nerf cheesy rhythms (very fast consecutive doubles with large delta times between)
                 if let Some(prev) =
                     prev.filter(|p| strain_time < hit_window_full && p.strain_time > strain_time)
                 {
@@ -219,12 +217,12 @@ impl SkillKind {
                         math_util::lerp(prev.strain_time, strain_time, speed_window_ratio);
                 }
 
-                // Cap delta time to the OD 300 hit window
-                // 0.93 is derived from making sure 260bpm OD8 streams aren't nerfed harshly,
-                // whilst 0.92 limits the effect of the cap
+                // * Cap delta time to the OD 300 hit window
+                // * 0.93 is derived from making sure 260bpm OD8 streams aren't nerfed harshly,
+                // * whilst 0.92 limits the effect of the cap
                 strain_time /= (strain_time / hit_window_full / 0.93).clamp(0.92, 1.0);
 
-                // Derive speed bonus for calculation
+                // * Derive speed bonus for calculation
                 let mut speed_bonus = 1.0;
 
                 if strain_time < MIN_SPEED_BONUS {

@@ -54,7 +54,7 @@ fn custom_osu() {
 
     use crate::{Beatmap, OsuPP};
 
-    let path = "E:Games/osu!/beatmaps/70090.osu";
+    let path = "E:Games/osu!/beatmaps/809469.osu";
     let file = File::open(path).unwrap();
 
     let start = Instant::now();
@@ -76,7 +76,7 @@ fn custom_osu() {
     println!("Parsing average: {:?}", accum / iters);
 
     let start = Instant::now();
-    let result = OsuPP::new(&map).mods(8 + 16 + 64).calculate();
+    let result = OsuPP::new(&map).mods(66).calculate();
 
     let iters = 100;
     let accum = start.elapsed();

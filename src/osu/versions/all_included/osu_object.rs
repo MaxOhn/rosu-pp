@@ -88,7 +88,7 @@ impl OsuObject {
                         (100.0 / slider_state.slider_velocity).max(10.0).min(1000.0) / 100.0;
                 }
 
-                // Build the curve w.r.t. the curve points
+                // Build the curve w.r.t. the control points
                 let curve = Curve::new(control_points, *pixel_len, curve_bufs);
 
                 let velocity =
@@ -182,7 +182,7 @@ impl OsuObject {
 
                 compute_vertex(final_progress);
 
-                let mut end_pos = h.pos + curve.position_at(progress);
+                let mut end_pos = h.pos + curve.position_at(1.0 - progress);
                 travel_dist *= *scaling_factor;
 
                 if hr {
