@@ -1,10 +1,22 @@
 #![cfg(feature = "osu")]
 
 mod pp;
-mod versions;
 
 pub use pp::*;
-pub use versions::*;
+
+#[cfg(feature = "osu_precise")]
+#[cfg_attr(docsrs, doc(cfg(feature = "osu_precise")))]
+mod precise;
+
+#[cfg(feature = "osu_precise")]
+pub use precise::*;
+
+#[cfg(feature = "osu_fast")]
+#[cfg_attr(docsrs, doc(cfg(feature = "osu_fast")))]
+mod fast;
+
+#[cfg(feature = "osu_fast")]
+pub use fast::*;
 
 /// Various data created through the star calculation.
 /// This data is necessary to calculate PP.
@@ -48,7 +60,13 @@ impl PerformanceAttributes {
     }
 }
 
+#[inline]
+fn difficulty_range_od(od: f32) -> f32 {
+    super::difficulty_range(od, 20.0, 50.0, 80.0)
+}
+
 #[test]
+#[ignore]
 fn custom_osu() {
     use std::{fs::File, time::Instant};
 

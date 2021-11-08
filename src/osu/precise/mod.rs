@@ -1,15 +1,10 @@
 //! Every aspect of osu!'s pp calculation is being used.
 //! This should result in the most accurate values but with
-//! drawback of being slower than the other versions.
+//! drawback of being slower than `osu_fast`.
 
-#![cfg(feature = "all_included")]
+#![cfg(feature = "osu_precise")]
 
 use std::mem;
-
-use self::osu_object::ObjectParameters;
-
-use super::super::DifficultyAttributes;
-use crate::{curve::CurveBuffers, parse::Pos2};
 
 mod difficulty_object;
 mod osu_object;
@@ -18,12 +13,14 @@ mod skill_kind;
 mod slider_state;
 
 use difficulty_object::DifficultyObject;
-use osu_object::OsuObject;
+use osu_object::{ObjectParameters, OsuObject};
 use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{Beatmap, Mods, Strains};
+use crate::{curve::CurveBuffers, parse::Pos2, Beatmap, Mods, Strains};
+
+use super::DifficultyAttributes;
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -33,10 +30,8 @@ const STACK_DISTANCE: f32 = 3.0;
 
 /// Star calculation for osu!standard maps.
 ///
-/// Both slider paths and stack leniency are considered.
-/// Since taking stack leniency into account is fairly expensive,
-/// this version is slower than the others but in turn gives the
-/// most precise results.
+/// Slider paths aswell as stack leniency are considered.
+/// Both of these drag the performance down but in turn the values are much more accurate
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 pub fn stars(

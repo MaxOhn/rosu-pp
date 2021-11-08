@@ -40,7 +40,7 @@ impl<'p> ControlPointIter<'p> {
 pub(crate) enum ControlPoint {
     Timing {
         time: f32,
-        #[allow(dead_code)] // not used in `no_sliders_no_leniency` feature
+        #[allow(dead_code)] // not used in `osu_fast` feature
         beat_len: f32,
     },
     Difficulty {
@@ -49,9 +49,9 @@ pub(crate) enum ControlPoint {
     },
 }
 
+#[cfg(any(feature = "osu_precise", feature = "fruits"))]
 impl ControlPoint {
     #[inline]
-    #[cfg(not(feature = "no_sliders_no_leniency"))]
     pub(crate) fn time(&self) -> f32 {
         match self {
             Self::Timing { time, .. } => *time,

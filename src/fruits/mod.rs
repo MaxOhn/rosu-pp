@@ -638,6 +638,7 @@ impl PerformanceAttributes {
 }
 
 #[test]
+#[ignore]
 fn custom_fruits() {
     use std::{fs::File, time::Instant};
 

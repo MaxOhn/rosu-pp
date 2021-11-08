@@ -108,7 +108,7 @@ macro_rules! parse_general_body {
         let mut mode = None;
         let mut empty = true;
 
-        #[cfg(all(feature = "osu", feature = "all_included"))]
+        #[cfg(all(feature = "osu", feature = "osu_precise"))]
         let mut stack_leniency = None;
 
         while read_line!($reader, $buf)? != 0 {
@@ -133,7 +133,7 @@ macro_rules! parse_general_body {
                 };
             }
 
-            #[cfg(all(feature = "osu", feature = "all_included"))]
+            #[cfg(all(feature = "osu", feature = "osu_precise"))]
             if key == "StackLeniency" {
                 stack_leniency = Some(value.parse()?);
             }
@@ -163,7 +163,7 @@ macro_rules! parse_general_body {
             return Err(ParseError::UnincludedMode(GameMode::MNA));
         }
 
-        #[cfg(all(feature = "osu", feature = "all_included"))]
+        #[cfg(all(feature = "osu", feature = "osu_precise"))]
         {
             $self.stack_leniency = stack_leniency.unwrap_or(0.7);
         }
@@ -397,15 +397,15 @@ macro_rules! parse_hitobjects_body {
         let mut prev_time = 0.0;
         let mut empty = true;
 
-        #[cfg(feature = "sliders")]
         // `point_split` will be of type `Vec<&str>
         // with each element having its lifetime bound to `buf`.
-        // To cirvumvent this, `point_split_raw` will contain
+        // To circumvent this, `point_split_raw` will contain
         // the actual `&str` elements transmuted into `usize`.
+        #[cfg(feature = "sliders")]
         let mut point_split_raw: Vec<usize> = Vec::new();
 
-        #[cfg(feature = "sliders")]
         // Buffer to re-use for all sliders
+        #[cfg(feature = "sliders")]
         let mut vertices = Vec::new();
 
         while read_line!($reader, $buf)? != 0 {
@@ -723,7 +723,7 @@ pub struct Beatmap {
     #[cfg(any(feature = "osu", feature = "fruits"))]
     pub difficulty_points: Vec<DifficultyPoint>,
 
-    #[cfg(all(feature = "osu", feature = "all_included"))]
+    #[cfg(all(feature = "osu", feature = "osu_precise"))]
     pub stack_leniency: f32,
 }
 
@@ -1042,7 +1042,7 @@ mod tests {
 
         #[cfg(any(feature = "osu", feature = "fruits"))]
         {
-            #[cfg(feature = "all_included")]
+            #[cfg(feature = "osu_precise")]
             println!("stack_leniency: {}", map.stack_leniency);
 
             println!("timing_points: {}", map.timing_points.len());

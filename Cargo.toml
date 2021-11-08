@@ -11,24 +11,22 @@ description = "osu! difficulty and pp calculation for all modes"
 keywords = ["osu", "pp", "stars", "async"]
 
 [features]
-default = ["osu", "taiko", "fruits", "mania", "no_leniency"]
+# default = ["osu_precise", "taiko", "fruits", "mania"]
+default = ["osu_fast", "taiko", "fruits", "mania"]
 
 # game modes
-osu = []
+osu_fast = ["osu"]
+osu_precise = ["osu", "sliders"]
 taiko = []
 fruits = ["sliders"]
 mania = []
-
-# osu!standard version
-all_included = ["sliders"]
-no_leniency = ["sliders"]
-no_sliders_no_leniency = []
 
 # async version
 async_std = ["async-std"]
 async_tokio = ["tokio"]
 
 # auxiliary, no need to set yourself
+osu = []
 sliders = []
 
 [dependencies.async-std]

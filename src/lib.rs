@@ -93,45 +93,24 @@
 //!
 //! ## osu!standard versions
 //!
-//! - `all_included`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Most precise; Con: Least performant.
-//! - `no_leniency`: The positional offset of notes created by stack leniency is not considered. This means the jump distance inbetween notes might be slightly off, resulting in small inaccuracies. Since calculating these offsets is relatively expensive though, this version is considerably faster than `all_included`.
-//! - `no_slider_no_leniency` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): In addition to not considering the positional offset caused by stack leniency, slider paths are also ignored. This means the travel distance of notes is completely omitted which may cause further inaccuracies. Since the slider paths don't have to be computed though, it is generally faster than `no_leniency`.
+//! - `osu_precise`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Very accurate values; Con: Less performant.
+//! - `osu_fast` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): Fully ignoring sliders aswell as the positional offset caused by stack leniency. This means the stacked position and travel distance of notes is completely omitted which results in notable inaccuracies but is also considerably faster than `osu_precise`.
 //!
-//! **Note**: If the `fruits` feature is enabled, sliders will be parsed regardless, resulting in a reduced performance advantage of `no_sliders_no_leniency`.
+//! **Note**: If the `fruits` feature is enabled, sliders will be parsed regardless, resulting in a reduced performance advantage of `osu_fast`. Hence, it is only recommended to use `osu_fast` if `fruits` is not enabled.
 //!
 //! ## Features
 //!
 //! | Flag | Description |
 //! |-----|-----|
-//! | `default` | Enable all modes and choose the `no_leniency` version for osu!standard. |
+//! | `default` | Enable all modes and choose the `osu_precise` version for osu!standard. |
 //! | `taiko` | Enable osu!taiko. |
 //! | `fruits` | Enable osu!ctb. |
 //! | `mania` | Enable osu!mania. |
-//! | `osu` | Enable osu!standard. Requires to also enable exactly one of the features `no_leniency`, `no_sliders_no_leniency`, or `all_included`. |
-//! | `no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency but consider sliders. Solid middleground between performance and precision, hence the default version. |
-//! | `no_sliders_no_leniency` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Best performance but slightly less precision than `no_leniency`. |
-//! | `all_included` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Best precision but significantly worse performance than `no_leniency`. |
+//! | `osu_fast` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Great performance but less precise values. |
+//! | `osu_precise` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Great precision but significantly worse performance than `osu_fast`. |
 //! | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
 //! | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
 //!
-//! ## Roadmap
-//!
-//! - \[x\] osu sr versions
-//!   - \[x\] all included
-//!   - \[x\] no_leniency
-//!   - \[x\] no_sliders_no_leniency
-//! - \[x\] taiko sr
-//! - \[x\] ctb sr
-//! - \[x\] mania sr
-//! ---
-//! - \[x\] osu pp
-//! - \[x\] taiko pp
-//! - \[x\] ctb pp
-//! - \[x\] mania pp
-//! ---
-//! - \[x\] refactoring
-//! - \[x\] benchmarking
-//! - \[x\] async parsing
 
 #![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
 #![deny(clippy::all, nonstandard_style, rust_2018_idioms, unused, warnings)]
@@ -420,30 +399,14 @@ compile_error!("At least one of the features `osu`, `taiko`, `fruits`, `mania` m
 
 #[cfg(all(
     feature = "osu",
-    not(any(
-        feature = "all_included",
-        feature = "no_leniency",
-        feature = "no_sliders_no_leniency"
-    ))
+    not(any(feature = "osu_precise", feature = "osu_fast"))
 ))]
-compile_error!("Since the `osu` feature is enabled, either `no_leniency`, `no_sliders_no_leniency`, or `all_included` must be enabled aswell");
+compile_error!(
+    "Since the `osu` feature is enabled, either `osu_precise` or `osu_fast` must be enabled aswell"
+);
 
-#[cfg(any(
-    all(feature = "no_leniency", feature = "no_sliders_no_leniency"),
-    all(feature = "no_leniency", feature = "all_included"),
-    all(feature = "all_included", feature = "no_sliders_no_leniency"),
-))]
-compile_error!("Only one of the features `no_leniency`, `no_sliders_no_leniency`, `all_included` can be enabled");
-
-#[cfg(all(
-    not(feature = "osu"),
-    any(
-        feature = "no_leniency",
-        feature = "no_sliders_no_leniency",
-        feature = "all_included"
-    )
-))]
-compile_error!("The features `no_leniency`, `no_sliders_no_leniency`, and `all_included` should only be enabled in combination with the `osu` feature");
+#[cfg(any(all(feature = "osu_precise", feature = "osu_fast"),))]
+compile_error!("Only one of the features `osu_precise` and `osu_fast` should be enabled");
 
 #[cfg(all(feature = "async_tokio", feature = "async_std"))]
 compile_error!("Only one of the features `async_tokio` and `async_std` should be enabled");

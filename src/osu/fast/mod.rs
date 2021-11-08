@@ -1,12 +1,13 @@
 //! In addtion to not considering the positional offset caused by stack leniency, slider paths are also ignored.
-//! This means the travel distance of notes is completely omitted which may cause further inaccuracies.
-//! Since the slider paths don't have to be computed though, it is generally faster than `no_leniency`.
+//! This means stacked positions aswell as the travel distance of notes is completely omitted which
+//! will cause notable inaccuracies.
+//! The advantage is that it's considerably faster than `osu_precise`.
 
-#![cfg(feature = "no_sliders_no_leniency")]
+#![cfg(feature = "osu_fast")]
 
 use std::mem;
 
-use super::super::DifficultyAttributes;
+use super::DifficultyAttributes;
 
 mod difficulty_object;
 mod osu_object;
@@ -30,8 +31,8 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// Star calculation for osu!standard maps.
 ///
 /// Sliders are considered as regular hitcircles and stack leniency is ignored.
-/// Still very good results but the least precise version in general.
-/// However, this is the most efficient one.
+/// Still decently accurate results but definitely less precise than `osu_precise`.
+/// However, this version is considerably faster.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 pub fn stars(
