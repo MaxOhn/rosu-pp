@@ -50,12 +50,6 @@ impl Skill {
     }
 
     pub(crate) fn difficulty_value(&mut self) -> f32 {
-        // println!("---");
-
-        // for (i, strain) in self.strain_peaks.iter().enumerate() {
-        //     println!("[{}] {}", i, strain);
-        // }
-
         let mut difficulty = 0.0;
         let mut weight = 1.0;
         let decay_weight = self.kind.decay_weight();

@@ -54,7 +54,7 @@ fn custom_osu() {
 
     use crate::{Beatmap, OsuPP};
 
-    let path = "E:Games/osu!/beatmaps/809469.osu";
+    let path = "E:Games/osu!/beatmaps/809469_.osu";
     let file = File::open(path).unwrap();
 
     let start = Instant::now();

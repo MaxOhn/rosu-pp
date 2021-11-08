@@ -433,14 +433,28 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
     let mut extended_start_idx = 0;
     let extended_end_idx = hit_objects.len() - 1;
 
-    for mut i in (1..=extended_end_idx).rev() {
-        let mut n = i;
+    // First big `if` in osu!lazer's function can be skipped
 
-        if hit_objects[i].stack_height.abs() > 0.0 || hit_objects[i].is_spinner() {
+    for i in (1..=extended_end_idx).rev() {
+        let mut n = i;
+        let mut obj_i_idx = i;
+        // * We should check every note which has not yet got a stack.
+        // * Consider the case we have two interwound stacks and this will make sense.
+        // *   o <-1      o <-2
+        // *    o <-3      o <-4
+        // * We first process starting from 4 and handle 2,
+        // * then we come backwards on the i loop iteration until we reach 3 and handle 1.
+        // * 2 and 1 will be ignored in the i loop because they already have a stack value.
+
+        if hit_objects[obj_i_idx].stack_height.abs() > 0.0 || hit_objects[obj_i_idx].is_spinner() {
             continue;
         }
 
-        if hit_objects[i].is_circle() {
+        // * If this object is a hitcircle, then we enter this "special" case.
+        // * It either ends with a stack of hitcircles only,
+        // * or a stack of hitcircles that are underneath a slider.
+        // * Any other case is handled by the "is_slider" code below this.
+        if hit_objects[obj_i_idx].is_circle() {
             loop {
                 n = match n.checked_sub(1) {
                     Some(n) => n,
@@ -449,31 +463,58 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
 
                 if hit_objects[n].is_spinner() {
                     continue;
-                } else if hit_objects[i].time - hit_objects[n].end_time() > stack_threshold {
-                    break;
-                } else if n < extended_start_idx {
+                } else if hit_objects[obj_i_idx].time - hit_objects[n].end_time() > stack_threshold
+                {
+                    break; // * We are no longer within stacking range of the previous object.
+                }
+
+                // * HitObjects before the specified update range haven't been reset yet
+                if n < extended_start_idx {
                     hit_objects[n].stack_height = 0.0;
                     extended_start_idx = n;
                 }
 
+                // * This is a special case where hticircles are moved DOWN and RIGHT (negative stacking)
+                // * if they are under the *last* slider in a stacked pattern.
+                // *    o==o <- slider is at original location
+                // *        o <- hitCircle has stack of -1
+                // *         o <- hitCircle has stack of -2
                 if hit_objects[n].is_slider()
-                    && hit_objects[n].end_pos().distance(hit_objects[i].pos) < STACK_DISTANCE
+                    && hit_objects[n]
+                        .end_pos()
+                        .distance(hit_objects[obj_i_idx].pos)
+                        < STACK_DISTANCE
                 {
-                    let offset = hit_objects[i].stack_height - hit_objects[n].stack_height + 1.0;
+                    let offset =
+                        hit_objects[obj_i_idx].stack_height - hit_objects[n].stack_height + 1.0;
 
                     for j in n + 1..=i {
-                        if hit_objects[n].pos.distance(hit_objects[j].pos) < STACK_DISTANCE {
+                        // * For each object which was declared under this slider, we will offset
+                        // * it to appear *below* the slider end (rather than above).
+                        if hit_objects[n].end_pos().distance(hit_objects[j].pos) < STACK_DISTANCE {
                             hit_objects[j].stack_height -= offset;
                         }
                     }
 
+                    // * We have hit a slider. We should restart calculation using this as the new base.
+                    // * Breaking here will mean that the slider still has StackCount of 0,
+                    // * so will be handled in the i-outer-loop.
                     break;
-                } else if hit_objects[n].pos.distance(hit_objects[i].pos) < STACK_DISTANCE {
-                    hit_objects[n].stack_height = hit_objects[i].stack_height + 1.0;
-                    i = n;
+                }
+
+                if hit_objects[n].pos.distance(hit_objects[obj_i_idx].pos) < STACK_DISTANCE {
+                    // * Keep processing as if there are no sliders.
+                    // * If we come across a slider, this gets cancelled out.
+                    // * NOTE: Sliders with start positions stacking
+                    // * are a special case that is also handled here.
+
+                    hit_objects[n].stack_height = hit_objects[obj_i_idx].stack_height + 1.0;
+                    obj_i_idx = n;
                 }
             }
-        } else if hit_objects[i].is_slider() {
+        } else if hit_objects[obj_i_idx].is_slider() {
+            // * We have hit the first slider in a possible stack.
+            // * From this point on, we ALWAYS stack positive regardless.
             loop {
                 n = match n.checked_sub(1) {
                     Some(n) => n,
@@ -482,11 +523,17 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
 
                 if hit_objects[n].is_spinner() {
                     continue;
-                } else if hit_objects[i].time - hit_objects[n].time > stack_threshold {
-                    break;
-                } else if hit_objects[n].end_pos().distance(hit_objects[i].pos) < STACK_DISTANCE {
-                    hit_objects[n].stack_height = hit_objects[i].stack_height + 1.0;
-                    i = n;
+                } else if hit_objects[obj_i_idx].time - hit_objects[n].time > stack_threshold {
+                    break; // * We are no longer within stacking range of the previous object.
+                }
+
+                if hit_objects[n]
+                    .end_pos()
+                    .distance(hit_objects[obj_i_idx].pos)
+                    < STACK_DISTANCE
+                {
+                    hit_objects[n].stack_height = hit_objects[obj_i_idx].stack_height + 1.0;
+                    obj_i_idx = n;
                 }
             }
         }
