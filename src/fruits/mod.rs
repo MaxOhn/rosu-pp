@@ -155,7 +155,8 @@ pub fn stars(
                 }
 
                 // Slider tail
-                let pos = h.pos + curve.position_at(1.0); // TODO: what if reversing odd amount?
+                let progress = (*repeats % 2 == 0) as u8 as f32;
+                let pos = h.pos + curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + duration));
 
                 fruits += span_count; // TODO: +1?
@@ -386,7 +387,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 }
 
                 // Slider tail
-                let pos = curve.position_at(1.0); // TODO: what if reversing odd amount?
+                let progress = (*repeats % 2 == 0) as u8 as f32;
+                let pos = curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + duration));
 
                 let iter = slider_objects.into_iter().map(CatchObject::new);

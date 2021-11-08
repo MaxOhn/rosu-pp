@@ -161,8 +161,8 @@ impl OsuObject {
 
                 ticks.clear();
 
-                // TODO: what if reversing odd amount?
-                let end_pos = h.pos + curve.position_at(1.0);
+                let progress = (*repeats % 2 == 0) as u8 as f32;
+                let end_pos = h.pos + curve.position_at(progress);
                 travel_dist *= *scaling_factor;
 
                 Self {
