@@ -1,4 +1,3 @@
-use super::super::super::DifficultyAttributes;
 use super::slider_state::SliderState;
 
 use crate::{
@@ -34,7 +33,7 @@ pub(crate) struct ObjectParameters<'a> {
     pub(crate) map: &'a Beatmap,
     pub(crate) radius: f32,
     pub(crate) scaling_factor: f32,
-    pub(crate) attributes: &'a mut DifficultyAttributes,
+    pub(crate) max_combo: &'a mut usize,
     pub(crate) ticks: Vec<f32>,
     pub(crate) slider_state: SliderState<'a>,
     pub(crate) curve_bufs: CurveBuffers,
@@ -47,13 +46,13 @@ impl OsuObject {
             map,
             radius,
             scaling_factor,
-            attributes,
+            max_combo,
             ticks,
             slider_state,
             curve_bufs,
         } = params;
 
-        attributes.max_combo += 1; // hitcircle, slider head, or spinner
+        **max_combo += 1; // hitcircle, slider head, or spinner
         let mut pos = h.pos;
 
         if hr {
@@ -103,10 +102,8 @@ impl OsuObject {
                 // Called on each slider object except for the head.
                 // Increases combo and adjusts `end_pos` and `travel_dist`
                 // w.r.t. the object position at the given time on the slider curve.
-                let mut compute_vertex = |time: f32| {
-                    attributes.max_combo += 1;
-
-                    let mut progress = (time - h.start_time) / span_duration;
+                let mut compute_vertex = |mut progress: f32| {
+                    **max_combo += 1;
 
                     if progress % 2.0 >= 1.0 {
                         progress = 1.0 - progress % 1.0;
@@ -114,7 +111,6 @@ impl OsuObject {
                         progress %= 1.0;
                     }
 
-                    // TODO: Correct addition?
                     let mut curr_pos = h.pos + curve.position_at(progress);
 
                     if hr {
@@ -132,53 +128,60 @@ impl OsuObject {
                     }
                 };
 
-                let mut current_distance = tick_dist;
-                let time_add = duration * (tick_dist / (pixel_len * span_count));
+                // * A very lenient maximum length of a slider for ticks to be generated.
+                // * This exists for edge cases such as /b/1573664 where the beatmap has
+                // * been edited by the user, and should never be reached in normal usage.
+                let max_len = 100_000.0;
 
-                let target = pixel_len - tick_dist / 8.0;
-                ticks.reserve((target / tick_dist) as usize);
+                let len = curve.dist().min(max_len);
+                tick_dist = tick_dist.clamp(0.0, len);
+                let min_dist_from_end = velocity * 10.0;
+
+                let mut curr_dist = tick_dist;
+
+                ticks.clear();
+                ticks.reserve((len / tick_dist) as usize);
 
                 // Tick of the first span
-                if current_distance < target {
-                    for tick_idx in 1.. {
-                        let time = h.start_time + time_add * tick_idx as f32;
-                        compute_vertex(time);
-                        ticks.push(time);
-                        current_distance += tick_dist;
+                while curr_dist < len - min_dist_from_end {
+                    let progress = curr_dist / len;
 
-                        if current_distance >= target {
-                            break;
-                        }
-                    }
+                    compute_vertex(progress);
+                    ticks.push(progress);
+
+                    curr_dist += tick_dist;
                 }
 
                 // Other spans
-                if *repeats > 1 {
-                    for repeat_id in 1..*repeats {
-                        let time_offset = (duration / *repeats as f32) * repeat_id as f32;
+                for span_idx in 1..=*repeats {
+                    let progress = (span_idx % 2 == 1) as u8 as f32;
 
-                        // Reverse tick
-                        compute_vertex(h.start_time + time_offset);
+                    // Reverse tick
+                    compute_vertex(progress);
 
-                        // Actual ticks
-                        if repeat_id & 1 == 1 {
-                            ticks.iter().rev().for_each(|&time| compute_vertex(time));
-                        } else {
-                            ticks.iter().for_each(|&time| compute_vertex(time));
-                        }
+                    // Actual ticks
+                    if span_idx & 1 == 1 {
+                        ticks
+                            .iter()
+                            .rev()
+                            .for_each(|&tick_progress| compute_vertex(tick_progress + progress));
+                    } else {
+                        ticks
+                            .iter()
+                            .for_each(|&tick_progress| compute_vertex(tick_progress + progress));
                     }
                 }
 
                 // Slider tail
-                let final_span_idx = repeats.saturating_sub(1);
-                let final_span_start_time = h.start_time + final_span_idx as f32 * span_duration;
+                let final_span_start_time = h.start_time + *repeats as f32 * span_duration;
                 let final_span_end_time = (h.start_time + duration / 2.0)
                     .max(final_span_start_time + span_duration - LEGACY_LAST_TICK_OFFSET);
-                compute_vertex(final_span_end_time);
+                let progress = (*repeats % 2 == 1) as u8 as f32;
+                let final_progress =
+                    (final_span_end_time - final_span_start_time) / span_duration + progress;
 
-                ticks.clear();
+                compute_vertex(final_progress);
 
-                let progress = (*repeats % 2 == 0) as u8 as f32;
                 let mut end_pos = h.pos + curve.position_at(progress);
                 travel_dist *= *scaling_factor;
 

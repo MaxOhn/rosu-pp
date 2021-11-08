@@ -243,6 +243,10 @@ impl Curve {
     }
 
     fn approximate_catmull(path: &mut Vec<Pos2>, points: &[Pos2]) {
+        if points.len() == 1 {
+            return;
+        }
+
         path.reserve_exact((points.len() - 1) * CATMULL_DETAIL * 2);
 
         // Handle first iteration distinctly because of v1
@@ -254,7 +258,7 @@ impl Curve {
         Self::catmull_subpath(path, v1, v2, v3, v4);
 
         // Remaining iterations
-        for (i, (&v1, &v2)) in (2..).zip(points.iter().zip(points.iter().skip(1))) {
+        for (i, (&v1, &v2)) in (2..points.len()).zip(points.iter().zip(points.iter().skip(1))) {
             let v3 = points.get(i).copied().unwrap_or_else(|| v2 * 2.0 - v1);
             let v4 = points.get(i + 1).copied().unwrap_or_else(|| v3 * 2.0 - v2);
 
@@ -421,12 +425,12 @@ impl Curve {
     }
 
     fn catmull_subpath(path: &mut Vec<Pos2>, v1: Pos2, v2: Pos2, v3: Pos2, v4: Pos2) {
-        let x1 = 2.0 * v1.x;
+        let x1 = 2.0 * v2.x;
         let x2 = -v1.x + v3.x;
         let x3 = 2.0 * v1.x - 5.0 * v2.x + 4.0 * v3.x - v4.x;
         let x4 = -v1.x + 3.0 * (v2.x - v3.x) + v4.x;
 
-        let y1 = 2.0 * v1.y;
+        let y1 = 2.0 * v2.y;
         let y2 = -v1.y + v3.y;
         let y3 = 2.0 * v1.y - 5.0 * v2.y + 4.0 * v3.y - v4.y;
         let y4 = -v1.y + 3.0 * (v2.y - v3.y) + v4.y;
