@@ -24,7 +24,7 @@ impl<'p> SliderState<'p> {
         &mut self,
         time: f32,
         pixel_len: f32,
-        repeats: usize,
+        span_count: usize,
         map: &Beatmap,
     ) -> usize {
         while time >= self.next_time {
@@ -46,12 +46,12 @@ impl<'p> SliderState<'p> {
             }
         }
 
-        let spans = repeats as f32;
+        let spans = span_count as f32;
         let beats = pixel_len * spans / self.px_per_beat;
         let ticks = ((beats - 0.1) / spans * map.tick_rate).ceil() as usize;
 
         ticks
             .checked_sub(1)
-            .map_or(0, |ticks| ticks * repeats + repeats + 1)
+            .map_or(0, |ticks| ticks * span_count + span_count + 1)
     }
 }

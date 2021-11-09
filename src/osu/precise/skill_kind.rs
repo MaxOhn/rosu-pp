@@ -171,7 +171,6 @@ impl SkillKind {
                         small_dist_nerf = (jump_dist / 75.0).min(1.0);
 
                         // * We also want to nerf stacks so that only the first object of the stack is accounted for
-                        // -- since jump distance is 0 on stacked notes in this version, approximate value as 0.2
                         let stack_nerf = ((prev.jump_dist / scaling_factor) / 25.0).min(1.0);
 
                         result += stack_nerf * scaling_factor * jump_dist / cumulative_strain_time;
@@ -183,6 +182,8 @@ impl SkillKind {
                         if !prev.is_spinner {
                             let jump_dist = (curr.base.pos - prev.end_pos).length();
                             cumulative_strain_time += prev.strain_time;
+
+                            // * We also want to nerf stacks so that only the first object of the stack is accounted for
                             let stack_nerf = ((prev.jump_dist / scaling_factor) / 25.0).min(1.0);
 
                             result += factor * stack_nerf * scaling_factor * jump_dist
@@ -299,7 +300,7 @@ pub(crate) fn calculate_speed_rhythm_bonus(
     let adjusted_hit_window = hit_window * 0.6;
     let history_len = history.len() as f32;
 
-    // Store the ratio of the current start of an island to buff for tighter rhythms
+    // * Store the ratio of the current start of an island to buff for tighter rhythms
     let mut start_ratio = 0.0;
 
     let currs = history.iter();
@@ -312,14 +313,14 @@ pub(crate) fn calculate_speed_rhythm_bonus(
                 / SPEED_HISTORY_TIME_MAX;
 
         if curr_historical_decay.abs() > f32::EPSILON {
-            // Either we're limited by time or limited by object count
+            // * Either we're limited by time or limited by object count
             curr_historical_decay = curr_historical_decay.min(i as f32 / history_len);
 
             let curr_delta = curr.strain_time;
             let prev_delta = prev.strain_time;
             let last_delta = last.strain_time;
 
-            // Fancy function to calculate rhythm bonuses
+            // * Fancy function to calculate rhythm bonuses
             let base = (PI / (prev_delta.min(curr_delta) / prev_delta.max(curr_delta))).sin();
             let curr_ratio = 1.0 + 6.0 * (base * base).min(0.5);
 
@@ -335,27 +336,27 @@ pub(crate) fn calculate_speed_rhythm_bonus(
                     }
                 } else {
                     if curr.is_slider {
-                        // bpm change is into slider, this is easy acc window
+                        // * bpm change is into slider, this is easy acc window
                         effective_ratio *= 0.125;
                     }
 
                     if prev.is_slider {
-                        // bpm change was from a slider, this is easier typically than circle -> circle
+                        // * bpm change was from a slider, this is easier typically than circle -> circle
                         effective_ratio *= 0.25;
                     }
 
                     if prev_island_size == island_size {
-                        // repeated island size (ex: triplet -> triplet)
+                        // * repeated island size (ex: triplet -> triplet)
                         effective_ratio *= 0.25;
                     }
 
                     if prev_island_size % 2 == island_size % 2 {
-                        // repeated island polarity (2 -> 4, 3 -> 5)
+                        // * repeated island polarity (2 -> 4, 3 -> 5)
                         effective_ratio *= 0.5;
                     }
 
                     if last_delta > prev_delta + 10.0 && prev_delta > curr_delta + 10.0 {
-                        // previous increase happened a note ago, 1/1 -> 1/2-1/4, don't want to buff this
+                        // * previous increase happened a note ago, 1/1 -> 1/2-1/4, don't want to buff this
                         effective_ratio *= 0.125;
                     }
 
@@ -369,15 +370,15 @@ pub(crate) fn calculate_speed_rhythm_bonus(
                     prev_island_size = island_size;
                     island_size = 1;
 
-                    // we're slowing down, stop counting
+                    // * we're slowing down, stop counting
                     if prev_delta * 1.25 < curr_delta {
-                        // if we're speeding up, this stays true and we keep counting island size
+                        // * if we're speeding up, this stays true and we keep counting island size
                         first_delta_switch = false;
                     }
                 }
             } else if prev_delta > 1.25 * curr_delta {
-                // we want to be speeding up
-                // begin counting island until we change speed again
+                // * we want to be speeding up
+                // * begin counting island until we change speed again
                 first_delta_switch = true;
                 start_ratio = effective_ratio;
                 island_size = 1;
@@ -385,7 +386,7 @@ pub(crate) fn calculate_speed_rhythm_bonus(
         }
     }
 
-    // produces multiplier that can be applied to strain. range [1, infinity) (not really though)
+    // * produces multiplier that can be applied to strain. range [1, infinity) (not really though)
     (4.0 + rhythm_complexity_sum * SPEED_RHYTHM_MULTIPLIER).sqrt() / 2.0
 }
 

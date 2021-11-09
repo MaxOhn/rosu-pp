@@ -59,7 +59,8 @@ pub enum HitObjectKind {
     #[cfg(not(feature = "sliders"))]
     Slider {
         pixel_len: f32,
-        repeats: usize,
+        span_count: usize,
+        last_control_point: Pos2,
     },
     Spinner {
         end_time: f32,

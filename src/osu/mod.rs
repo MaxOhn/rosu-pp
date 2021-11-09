@@ -66,13 +66,13 @@ fn difficulty_range_od(od: f32) -> f32 {
 }
 
 #[test]
-#[ignore]
+// #[ignore]
 fn custom_osu() {
     use std::{fs::File, time::Instant};
 
     use crate::{Beatmap, OsuPP};
 
-    let path = "E:Games/osu!/beatmaps/809469_.osu";
+    let path = "E:Games/osu!/beatmaps/1402167_.osu";
     let file = File::open(path).unwrap();
 
     let start = Instant::now();
@@ -94,7 +94,7 @@ fn custom_osu() {
     println!("Parsing average: {:?}", accum / iters);
 
     let start = Instant::now();
-    let result = OsuPP::new(&map).mods(66).calculate();
+    let result = OsuPP::new(&map).mods(1024).calculate();
 
     let iters = 100;
     let accum = start.elapsed();
