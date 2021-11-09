@@ -94,7 +94,7 @@ fn custom_osu() {
     println!("Parsing average: {:?}", accum / iters);
 
     let start = Instant::now();
-    let result = OsuPP::new(&map).mods(1024).calculate();
+    let result = OsuPP::new(&map).mods(0).calculate();
 
     let iters = 100;
     let accum = start.elapsed();

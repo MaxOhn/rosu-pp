@@ -27,16 +27,20 @@ impl OsuObject {
         clock_rate: f32,
         radius: f32,
         repeats: usize,
+        pixel_len: f32,
         control_points: &[crate::parse::PathControlPoint],
     ) -> Self {
         match control_points.last() {
             Some(point) => {
+                let follow_circle_radius = radius * 3.0;
+                let span_count = (repeats + 1) as f32;
+
                 let travel_dist =
-                    Self::approximate_travel_dist(radius, repeats + 1, h.pos, point.pos + h.pos);
+                    Self::approximate_travel_dist(follow_circle_radius, span_count, point.pos);
 
                 let mut end_pos = h.pos;
 
-                if repeats % 2 == 0 {
+                if repeats % 2 == 0 && pixel_len > follow_circle_radius {
                     end_pos += point.pos
                 }
 
@@ -59,11 +63,18 @@ impl OsuObject {
         clock_rate: f32,
         radius: f32,
         span_count: usize,
+        pixel_len: f32,
         last_control_point: Pos2,
     ) -> Self {
-        let travel_dist = Self::approximate_travel_dist(radius, span_count, h.pos, point.pos);
+        let follow_circle_radius = radius * 3.0;
 
-        let end_pos = if span_count % 2 == 1 {
+        let travel_dist = Self::approximate_travel_dist(
+            follow_circle_radius,
+            span_count as f32,
+            point.pos - h.pos,
+        );
+
+        let end_pos = if span_count % 2 == 1 && pixel_len > follow_circle_radius {
             last_control_point
         } else {
             h.pos
@@ -111,15 +122,13 @@ impl OsuObject {
 
     // Approximating lower bound for lazy travel distance
     fn approximate_travel_dist(
-        radius: f32,
-        span_count: usize,
-        pos: Pos2,
+        follow_circle_radius: f32,
+        span_count: f32,
         last_control_point: Pos2,
     ) -> f32 {
-        let approx_follow_circle_radius = radius * 3.0;
-        let lazy_end_point_dist = approx_follow_circle_radius * (span_count + 1) as f32;
-        let dist = (pos - last_control_point).length();
+        let lazy_end_point_dist = follow_circle_radius * span_count;
+        let dist = last_control_point.length();
 
-        (dist * span_count as f32 - lazy_end_point_dist).max(0.0)
+        (dist * span_count - lazy_end_point_dist).max(0.0)
     }
 }

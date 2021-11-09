@@ -91,6 +91,7 @@ pub fn stars(
                     clock_rate,
                     radius,
                     *repeats,
+                    *pixel_len,
                     control_points,
                 ))
             }
@@ -107,6 +108,7 @@ pub fn stars(
                     clock_rate,
                     radius,
                     *span_count,
+                    *pixel_len,
                     *last_control_point,
                 ))
             }
@@ -267,24 +269,26 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         HitObjectKind::Slider {
             repeats,
             control_points,
-            ..
+            pixel_len,
         } => Some(OsuObject::slider(
             h,
             clock_rate,
             radius,
             *repeats,
+            *pixel_len,
             control_points,
         )),
         #[cfg(not(feature = "sliders"))]
         HitObjectKind::Slider {
             span_count,
             last_control_point,
-            ..
+            pixel_len,
         } => Some(OsuObject::slider(
             h,
             clock_rate,
             radius,
             *span_count,
+            *pixel_len,
             *last_control_point,
         )),
         HitObjectKind::Spinner { .. } => Some(OsuObject::spinner(h, clock_rate)),
