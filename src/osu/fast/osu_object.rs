@@ -1,4 +1,9 @@
-use crate::parse::{HitObject, Pos2};
+use crate::{
+    parse::{HitObject, HitObjectKind, Pos2},
+    Beatmap,
+};
+
+use super::slider_state::SliderState;
 
 pub(crate) struct OsuObject {
     pub(crate) pos: Pos2,
@@ -12,89 +17,122 @@ pub(crate) enum OsuObjectKind {
     Spinner,
 }
 
+pub(crate) struct ObjectParameters<'a> {
+    pub(crate) map: &'a Beatmap,
+    pub(crate) radius: f32,
+    pub(crate) clock_rate: f32,
+    pub(crate) max_combo: usize,
+    pub(crate) slider_state: SliderState<'a>,
+}
+
 impl OsuObject {
-    pub(crate) fn circle(h: &HitObject, clock_rate: f32) -> Self {
-        Self {
-            pos: h.pos,
-            time: h.start_time / clock_rate,
-            kind: OsuObjectKind::Circle,
-        }
-    }
+    pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters<'_>) -> Option<Self> {
+        let time = h.start_time / params.clock_rate;
 
-    #[cfg(feature = "sliders")]
-    pub(crate) fn slider(
-        h: &HitObject,
-        clock_rate: f32,
-        radius: f32,
-        repeats: usize,
-        pixel_len: f32,
-        control_points: &[crate::parse::PathControlPoint],
-    ) -> Self {
-        match control_points.last() {
-            Some(point) => {
-                let follow_circle_radius = radius * 3.0;
-                let span_count = (repeats + 1) as f32;
+        let obj = match &h.kind {
+            HitObjectKind::Circle => {
+                params.max_combo += 1;
 
-                let travel_dist =
-                    Self::approximate_travel_dist(follow_circle_radius, span_count, point.pos);
+                Self::circle(h.pos, time)
+            }
+            #[cfg(feature = "sliders")]
+            HitObjectKind::Slider {
+                pixel_len,
+                repeats,
+                control_points,
+            } => {
+                let span_count = *repeats + 1;
 
-                let mut end_pos = h.pos;
+                params.max_combo += params.slider_state.count_ticks(
+                    h.start_time,
+                    *pixel_len,
+                    span_count,
+                    params.map,
+                );
 
-                if repeats % 2 == 0 && pixel_len > follow_circle_radius {
-                    end_pos += point.pos
+                match control_points.last() {
+                    Some(point) => {
+                        let follow_circle_radius = params.radius * 3.0;
+
+                        let travel_dist = Self::approximate_travel_dist(
+                            follow_circle_radius,
+                            span_count as f32,
+                            point.pos,
+                        );
+
+                        let mut end_pos = h.pos;
+
+                        if repeats % 2 == 0 && *pixel_len > follow_circle_radius {
+                            end_pos += point.pos
+                        }
+
+                        Self {
+                            pos: h.pos,
+                            time,
+                            kind: OsuObjectKind::Slider {
+                                end_pos,
+                                travel_dist,
+                            },
+                        }
+                    }
+                    None => Self::circle(h.pos, time),
                 }
+            }
+            #[cfg(not(feature = "sliders"))]
+            HitObjectKind::Slider {
+                pixel_len,
+                span_count,
+                last_control_point,
+            } => {
+                params.max_combo += params.slider_state.count_ticks(
+                    h.start_time,
+                    *pixel_len,
+                    *span_count,
+                    params.map,
+                );
+                let follow_circle_radius = params.radius * 3.0;
+
+                let travel_dist = Self::approximate_travel_dist(
+                    follow_circle_radius,
+                    *span_count as f32,
+                    *last_control_point - h.pos,
+                );
+
+                let end_pos = if span_count % 2 == 1 && *pixel_len > follow_circle_radius {
+                    *last_control_point
+                } else {
+                    h.pos
+                };
 
                 Self {
                     pos: h.pos,
-                    time: h.start_time / clock_rate,
+                    time,
                     kind: OsuObjectKind::Slider {
                         end_pos,
                         travel_dist,
                     },
                 }
             }
-            None => Self::circle(h, clock_rate),
-        }
-    }
+            HitObjectKind::Spinner { .. } => {
+                params.max_combo += 1;
 
-    #[cfg(not(feature = "sliders"))]
-    pub(crate) fn slider(
-        h: &HitObject,
-        clock_rate: f32,
-        radius: f32,
-        span_count: usize,
-        pixel_len: f32,
-        last_control_point: Pos2,
-    ) -> Self {
-        let follow_circle_radius = radius * 3.0;
-
-        let travel_dist = Self::approximate_travel_dist(
-            follow_circle_radius,
-            span_count as f32,
-            point.pos - h.pos,
-        );
-
-        let end_pos = if span_count % 2 == 1 && pixel_len > follow_circle_radius {
-            last_control_point
-        } else {
-            h.pos
+                Self {
+                    pos: h.pos,
+                    time,
+                    kind: OsuObjectKind::Spinner,
+                }
+            }
+            HitObjectKind::Hold { .. } => return None,
         };
 
-        Self {
-            pos: h.pos,
-            time: h.start_time / clock_rate,
-            kind: OsuObjectKind::Slider {
-                end_pos,
-                travel_dist,
-            },
-        }
+        Some(obj)
     }
 
-    pub(crate) fn spinner(h: &HitObject, clock_rate: f32) -> Self {
+    fn circle(pos: Pos2, time: f32) -> Self {
         Self {
-            pos: h.pos,
-            time: h.start_time / clock_rate,
-            kind: OsuObjectKind::Spinner,
+            pos,
+            time,
+            kind: OsuObjectKind::Circle,
         }
     }
 

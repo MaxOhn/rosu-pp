@@ -7,6 +7,8 @@
 
 use std::mem;
 
+use self::osu_object::ObjectParameters;
+
 use super::DifficultyAttributes;
 
 mod difficulty_object;
@@ -21,7 +23,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{parse::HitObjectKind, Beatmap, Mods, Strains};
+use crate::{Beatmap, Mods, Strains};
 
 const OBJECT_RADIUS: f32 = 64.0;
 const SECTION_LEN: f32 = 400.0;
@@ -63,62 +65,19 @@ pub fn stars(
         scaling_factor *= 1.0 + small_circle_bonus;
     }
 
-    let clock_rate = attributes.clock_rate;
-
-    let mut max_combo = 0;
-    let mut state = SliderState::new(map);
+    let mut params = ObjectParameters {
+        map,
+        radius,
+        clock_rate: attributes.clock_rate,
+        max_combo: 0,
+        slider_state: SliderState::new(map),
+    };
 
     let mut hit_objects = map
         .hit_objects
         .iter()
         .take(take)
-        .filter_map(|h| match &h.kind {
-            HitObjectKind::Circle => {
-                max_combo += 1;
-
-                Some(OsuObject::circle(h, clock_rate))
-            }
-            #[cfg(feature = "sliders")]
-            HitObjectKind::Slider {
-                pixel_len,
-                repeats,
-                control_points,
-            } => {
-                max_combo += state.count_ticks(h.start_time, *pixel_len, *repeats, map);
-
-                Some(OsuObject::slider(
-                    h,
-                    clock_rate,
-                    radius,
-                    *repeats,
-                    *pixel_len,
-                    control_points,
-                ))
-            }
-            #[cfg(not(feature = "sliders"))]
-            HitObjectKind::Slider {
-                pixel_len,
-                span_count,
-                last_control_point,
-            } => {
-                max_combo += state.count_ticks(h.start_time, *pixel_len, *span_count, map);
-
-                Some(OsuObject::slider(
-                    h,
-                    clock_rate,
-                    radius,
-                    *span_count,
-                    *pixel_len,
-                    *last_control_point,
-                ))
-            }
-            HitObjectKind::Spinner { .. } => {
-                max_combo += 1;
-
-                Some(OsuObject::spinner(h, clock_rate))
-            }
-            HitObjectKind::Hold { .. } => None,
-        });
+        .filter_map(|h| OsuObject::new(h, &mut params));
 
     let fl = mods.fl();
     let mut skills = Vec::with_capacity(2 + fl as usize);
@@ -234,7 +193,7 @@ pub fn stars(
         speed_strain: speed_rating,
         aim_strain: aim_rating,
         flashlight_rating,
-        max_combo,
+        max_combo: params.max_combo,
         n_circles: map.n_circles as usize,
         n_spinners: map.n_spinners as usize,
         n_sliders: map.n_sliders as usize,
@@ -261,39 +220,18 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         scaling_factor *= 1.0 + small_circle_bonus;
     }
 
-    let clock_rate = attributes.clock_rate;
+    let mut params = ObjectParameters {
+        map,
+        radius,
+        clock_rate: attributes.clock_rate,
+        max_combo: 0,
+        slider_state: SliderState::new(map),
+    };
 
-    let mut hit_objects = map.hit_objects.iter().filter_map(|h| match &h.kind {
-        HitObjectKind::Circle => Some(OsuObject::circle(h, clock_rate)),
-        #[cfg(feature = "sliders")]
-        HitObjectKind::Slider {
-            repeats,
-            control_points,
-            pixel_len,
-        } => Some(OsuObject::slider(
-            h,
-            clock_rate,
-            radius,
-            *repeats,
-            *pixel_len,
-            control_points,
-        )),
-        #[cfg(not(feature = "sliders"))]
-        HitObjectKind::Slider {
-            span_count,
-            last_control_point,
-            pixel_len,
-        } => Some(OsuObject::slider(
-            h,
-            clock_rate,
-            radius,
-            *span_count,
-            *pixel_len,
-            *last_control_point,
-        )),
-        HitObjectKind::Spinner { .. } => Some(OsuObject::spinner(h, clock_rate)),
-        HitObjectKind::Hold { .. } => None,
-    });
+    let mut hit_objects = map
+        .hit_objects
+        .iter()
+        .filter_map(|h| OsuObject::new(h, &mut params));
 
     let fl = mods.fl();
     let mut skills = Vec::with_capacity(2 + fl as usize);
