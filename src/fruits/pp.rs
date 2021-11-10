@@ -292,6 +292,7 @@ impl FruitsPPInner {
         let len_bonus = 0.95
             + 0.3 * (combo_hits as f32 / 2500.0).min(1.0)
             + (combo_hits > 2500) as u8 as f32 * (combo_hits as f32 / 2500.0).log10() * 0.475;
+
         pp *= len_bonus;
 
         // Penalize misses exponentially

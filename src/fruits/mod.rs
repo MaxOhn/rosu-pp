@@ -30,7 +30,6 @@ const BASE_SCORING_DISTANCE: f32 = 100.0;
 /// Star calculation for osu!ctb maps
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-// Slider parsing based on https://github.com/osufx/catch-the-pp
 pub fn stars(
     map: &Beatmap,
     mods: impl Mods,
@@ -80,7 +79,7 @@ pub fn stars(
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
-                let span_count = *repeats + 1;
+                let span_count = (*repeats + 1) as f32;
 
                 let mut tick_dist = 100.0 * map.slider_mult / map.tick_rate;
 
@@ -96,58 +95,70 @@ pub fn stars(
                     (BASE_SCORING_DISTANCE * map.slider_mult * slider_state.slider_velocity)
                         / slider_state.beat_len;
 
-                let end_time = h.start_time + span_count as f32 * curve.dist() / velocity;
+                let end_time = h.start_time + span_count * curve.dist() / velocity;
                 let duration = end_time - h.start_time;
+                let span_duration = duration / span_count;
+
+                // * A very lenient maximum length of a slider for ticks to be generated.
+                // * This exists for edge cases such as /b/1573664 where the beatmap has
+                // * been edited by the user, and should never be reached in normal usage.
+                let max_len = 100_000.0;
+
+                let len = curve.dist().min(max_len);
+                tick_dist = tick_dist.clamp(0.0, len);
+                let min_dist_from_end = velocity * 10.0;
 
                 let mut curr_dist = tick_dist;
-                let time_add = duration * (tick_dist / (*pixel_len * span_count as f32));
+                let time_add = duration * tick_dist / (*pixel_len * span_count);
 
                 let target = *pixel_len - tick_dist / 8.0;
+
                 ticks.reserve((target / tick_dist) as usize);
 
                 // Tick of the first span
-                if curr_dist < target {
-                    for tick_idx in 1.. {
-                        let progress = curr_dist / *pixel_len;
-                        let pos = h.pos + curve.position_at(progress);
-                        let time = h.start_time + time_add * tick_idx as f32;
-                        ticks.push((pos, time));
-                        curr_dist += tick_dist;
-
-                        if curr_dist >= target {
-                            break;
-                        }
-                    }
+                while curr_dist < len - min_dist_from_end {
+                    let progress = curr_dist / len;
+                    let pos = h.pos + curve.position_at(progress);
+                    let time = h.start_time + progress * span_duration;
+                    ticks.push((pos, time));
+                    curr_dist += tick_dist;
                 }
 
-                tiny_droplets +=
-                    tiny_droplet_count(h.start_time, time_add, duration, span_count, &ticks);
+                tiny_droplets += tiny_droplet_count(
+                    h.start_time,
+                    time_add,
+                    duration,
+                    span_count as usize,
+                    &ticks,
+                );
 
-                let mut slider_objects = Vec::with_capacity(span_count * (ticks.len() + 1));
+                let mut slider_objects =
+                    Vec::with_capacity(span_count as usize * (ticks.len() + 1));
                 slider_objects.push((h.pos, h.start_time));
 
                 // Other spans
-                if span_count <= 1 {
+                if *repeats == 0 {
                     slider_objects.append(&mut ticks); // automatically empties buffer for next slider
                 } else {
                     slider_objects.extend(&ticks);
 
-                    for span_idx in 1..span_count {
-                        let dist = (span_idx % 2) as f32 * *pixel_len;
-                        let time_offset = (duration / span_count as f32) * span_idx as f32;
-                        let progress = dist / *pixel_len;
+                    for span_idx in 1..=*repeats {
+                        let progress = (span_idx % 2 == 1) as u8 as f32;
                         let pos = h.pos + curve.position_at(progress);
+                        let time_offset = span_duration * span_idx as f32;
 
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
 
+                        let new_ticks = ticks.iter().enumerate().map(|(i, (pos, time))| {
+                            (*pos, *time + time_offset + time_add * i as f32)
+                        });
+
                         // Actual ticks
                         if span_idx & 1 == 1 {
-                            slider_objects.extend(ticks.iter().rev().enumerate().map(
-                                |(i, (pos, time))| (*pos, *time + time_add * 2.0 * (i + 1) as f32),
-                            ));
+                            slider_objects.extend(new_ticks.rev());
                         } else {
-                            slider_objects.extend(ticks.iter().copied());
+                            slider_objects.extend(new_ticks);
                         }
                     }
 
@@ -159,8 +170,9 @@ pub fn stars(
                 let pos = h.pos + curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + duration));
 
-                fruits += span_count; // TODO: +1?
-                droplets += slider_objects.len() - 1 - span_count; // TODO: -1?
+                let new_fruits = *repeats + 2;
+                fruits += new_fruits;
+                droplets += slider_objects.len() - new_fruits;
 
                 let iter = slider_objects.into_iter().map(CatchObject::new);
 
@@ -317,7 +329,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
-                let span_count = *repeats + 1;
+                let span_count = (*repeats + 1) as f32;
 
                 let mut tick_dist = 100.0 * map.slider_mult / map.tick_rate;
 
@@ -333,53 +345,62 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                     (BASE_SCORING_DISTANCE * map.slider_mult * slider_state.slider_velocity)
                         / slider_state.beat_len;
 
-                let end_time = h.start_time + span_count as f32 * curve.dist() / velocity;
+                let end_time = h.start_time + span_count * curve.dist() / velocity;
                 let duration = end_time - h.start_time;
+                let span_duration = duration / span_count;
+
+                // * A very lenient maximum length of a slider for ticks to be generated.
+                // * This exists for edge cases such as /b/1573664 where the beatmap has
+                // * been edited by the user, and should never be reached in normal usage.
+                let max_len = 100_000.0;
+
+                let len = curve.dist().min(max_len);
+                tick_dist = tick_dist.clamp(0.0, len);
+                let min_dist_from_end = velocity * 10.0;
 
                 let mut curr_dist = tick_dist;
-                let time_add = duration * (tick_dist / (*pixel_len * span_count as f32));
+                let time_add = duration * tick_dist / (*pixel_len * span_count);
 
                 let target = *pixel_len - tick_dist / 8.0;
+
                 ticks.reserve((target / tick_dist) as usize);
 
                 // Tick of the first span
-                if curr_dist < target {
-                    for tick_idx in 1.. {
-                        let progress = curr_dist / *pixel_len;
-                        let pos = curve.position_at(progress);
-                        let time = h.start_time + time_add * tick_idx as f32;
-                        ticks.push((pos, time));
-                        curr_dist += tick_dist;
-
-                        if curr_dist >= target {
-                            break;
-                        }
-                    }
+                while curr_dist < len - min_dist_from_end {
+                    let progress = curr_dist / len;
+                    let pos = h.pos + curve.position_at(progress);
+                    let time = h.start_time + progress * span_duration;
+                    ticks.push((pos, time));
+                    curr_dist += tick_dist;
                 }
 
-                let mut slider_objects = Vec::with_capacity(span_count * (ticks.len() + 1));
+                let mut slider_objects =
+                    Vec::with_capacity(span_count as usize * (ticks.len() + 1));
                 slider_objects.push((h.pos, h.start_time));
 
                 // Other spans
-                if span_count <= 1 {
+                if *repeats == 0 {
                     slider_objects.append(&mut ticks); // automatically empties buffer for next slider
                 } else {
                     slider_objects.extend(&ticks);
 
-                    for span_idx in 1..span_count {
-                        let dist = (span_idx % 2) as f32 * *pixel_len;
-                        let time_offset = (duration / span_count as f32) * span_idx as f32;
-                        let progress = dist / *pixel_len;
-                        let pos = curve.position_at(progress);
+                    for span_idx in 1..=*repeats {
+                        let progress = (span_idx % 2 == 1) as u8 as f32;
+                        let pos = h.pos + curve.position_at(progress);
+                        let time_offset = span_duration * span_idx as f32;
 
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
 
+                        let new_ticks = ticks.iter().enumerate().map(|(i, (pos, time))| {
+                            (*pos, *time + time_offset + time_add * i as f32)
+                        });
+
                         // Actual ticks
                         if span_idx & 1 == 1 {
-                            slider_objects.extend(ticks.iter().copied().rev());
+                            slider_objects.extend(new_ticks.rev());
                         } else {
-                            slider_objects.extend(ticks.iter().copied());
+                            slider_objects.extend(new_ticks);
                         }
                     }
 
@@ -388,7 +409,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 
                 // Slider tail
                 let progress = (*repeats % 2 == 0) as u8 as f32;
-                let pos = curve.position_at(progress);
+                let pos = h.pos + curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + duration));
 
                 let iter = slider_objects.into_iter().map(CatchObject::new);
@@ -504,7 +525,7 @@ fn tiny_droplet_count(
     start_time: f32,
     time_between_ticks: f32,
     duration: f32,
-    spans: usize,
+    span_count: usize,
     ticks: &[(Pos2, f32)],
 ) -> usize {
     // tiny droplets preceeding a _tick_
@@ -521,7 +542,7 @@ fn tiny_droplet_count(
 
     // tiny droplets preceeding a _reverse_
     let last = ticks.last().map_or(start_time, |(_, last)| *last);
-    let repeat_time = start_time + duration / spans as f32;
+    let repeat_time = start_time + duration / span_count as f32;
     let since_last_tick = repeat_time - last;
 
     let span_last_section = if since_last_tick > 80.0 {
@@ -535,7 +556,7 @@ fn tiny_droplet_count(
     // tiny droplets preceeding the slider tail
     // necessary to handle distinctly because of the legacy last tick
     let last = ticks.last().map_or(start_time, |(_, last)| *last);
-    let end_time = start_time + duration / spans as f32 - LEGACY_LAST_TICK_OFFSET;
+    let end_time = start_time + duration / span_count as f32 - LEGACY_LAST_TICK_OFFSET;
     let since_last_tick = end_time - last;
 
     let last_section = if since_last_tick > 80.0 {
@@ -547,7 +568,9 @@ fn tiny_droplet_count(
     };
 
     // Combine tiny droplets counts
-    per_tick * ticks.len() * spans + span_last_section * (spans.saturating_sub(1)) + last_section
+    per_tick * ticks.len() * span_count
+        + span_last_section * (span_count.saturating_sub(1))
+        + last_section
 }
 
 #[inline]
@@ -638,18 +661,18 @@ impl PerformanceAttributes {
 }
 
 #[test]
-#[ignore]
+// #[ignore]
 fn custom_fruits() {
     use std::{fs::File, time::Instant};
 
     use crate::{Beatmap, FruitsPP};
 
-    let path = "./maps/2753127.osu";
+    let path = "E:Games/osu!/beatmaps/2919116_.osu";
     let file = File::open(path).unwrap();
     let map = Beatmap::parse(file).unwrap();
 
     let start = Instant::now();
-    let result = FruitsPP::new(&map).mods(0).calculate();
+    let result = FruitsPP::new(&map).mods(256).calculate();
 
     let iters = 100;
     let accum = start.elapsed();

@@ -11,8 +11,7 @@ description = "osu! difficulty and pp calculation for all modes"
 keywords = ["osu", "pp", "stars", "async"]
 
 [features]
-# default = ["osu_precise", "taiko", "fruits", "mania"]
-default = ["osu_fast", "taiko", "fruits", "mania"]
+default = ["osu_precise", "taiko", "fruits", "mania"]
 
 # game modes
 osu_fast = ["osu"]
