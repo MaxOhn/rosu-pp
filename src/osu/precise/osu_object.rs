@@ -33,7 +33,7 @@ pub(crate) struct ObjectParameters<'a> {
     pub(crate) map: &'a Beatmap,
     pub(crate) radius: f32,
     pub(crate) scaling_factor: f32,
-    pub(crate) max_combo: &'a mut usize,
+    pub(crate) max_combo: usize,
     pub(crate) ticks: Vec<f32>,
     pub(crate) slider_state: SliderState<'a>,
     pub(crate) curve_bufs: CurveBuffers,
@@ -52,7 +52,7 @@ impl OsuObject {
             curve_bufs,
         } = params;
 
-        **max_combo += 1; // hitcircle, slider head, or spinner
+        *max_combo += 1; // hitcircle, slider head, or spinner
         let mut pos = h.pos;
 
         if hr {
@@ -100,10 +100,10 @@ impl OsuObject {
                 let span_duration = duration / span_count;
 
                 // Called on each slider object except for the head.
-                // Increases combo and adjusts `end_pos` and `travel_dist`
+                // Increases combo and adjusts `lazy_end_pos` and `travel_dist`
                 // w.r.t. the object position at the given time on the slider curve.
                 let mut compute_vertex = |mut progress: f32| {
-                    **max_combo += 1;
+                    *max_combo += 1;
 
                     if progress % 2.0 >= 1.0 {
                         progress = 1.0 - progress % 1.0;

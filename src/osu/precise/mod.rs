@@ -45,15 +45,13 @@ pub fn stars(
     let hit_window = super::difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
     let od = (80.0 - hit_window) / 6.0;
 
-    let mut diff_attributes = DifficultyAttributes {
-        ar: map_attributes.ar,
-        hp: map_attributes.hp,
-        od,
-        ..Default::default()
-    };
-
     if take < 2 {
-        return diff_attributes;
+        return DifficultyAttributes {
+            ar: map_attributes.ar,
+            hp: map_attributes.hp,
+            od,
+            ..Default::default()
+        };
     }
 
     let mut raw_ar = map.ar;
@@ -79,7 +77,7 @@ pub fn stars(
         map,
         radius,
         scaling_factor,
-        max_combo: &mut diff_attributes.max_combo,
+        max_combo: 0,
         slider_state: SliderState::new(map),
         ticks: Vec::new(),
         curve_bufs: CurveBuffers::default(),
@@ -233,15 +231,19 @@ pub fn stars(
         0.0
     };
 
-    diff_attributes.n_circles = map.n_circles as usize;
-    diff_attributes.n_spinners = map.n_spinners as usize;
-    diff_attributes.n_sliders = map.n_sliders as usize;
-    diff_attributes.stars = star_rating;
-    diff_attributes.speed_strain = speed_rating;
-    diff_attributes.aim_strain = aim_rating;
-    diff_attributes.flashlight_rating = flashlight_rating;
-
-    diff_attributes
+    DifficultyAttributes {
+        ar: map_attributes.ar,
+        hp: map_attributes.hp,
+        od,
+        aim_strain: aim_rating,
+        speed_strain: speed_rating,
+        flashlight_rating,
+        n_circles: map.n_circles as usize,
+        n_sliders: map.n_sliders as usize,
+        n_spinners: map.n_spinners as usize,
+        stars: star_rating,
+        max_combo: params.max_combo,
+    }
 }
 
 /// Essentially the same as the `stars` function but instead of
@@ -251,14 +253,6 @@ pub fn stars(
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let map_attributes = map.attributes().mods(mods);
     let hit_window = super::difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
-    let od = (80.0 - hit_window) / 6.0;
-
-    let mut diff_attributes = DifficultyAttributes {
-        ar: map_attributes.ar,
-        hp: map_attributes.hp,
-        od,
-        ..Default::default()
-    };
 
     if map.hit_objects.len() < 2 {
         return Strains::default();
@@ -287,7 +281,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         map,
         radius,
         scaling_factor,
-        max_combo: &mut diff_attributes.max_combo,
+        max_combo: 0,
         slider_state: SliderState::new(map),
         ticks: Vec::new(),
         curve_bufs: CurveBuffers::default(),
