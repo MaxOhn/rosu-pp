@@ -1,5 +1,5 @@
 use crate::{
-    osu::precise::osu_object::{NestedObjectKind, OsuObjectKind},
+    osu::osu_object::{NestedObjectKind, OsuObjectKind},
     parse::Pos2,
 };
 

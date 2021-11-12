@@ -108,7 +108,7 @@ macro_rules! parse_general_body {
         let mut mode = None;
         let mut empty = true;
 
-        #[cfg(all(feature = "osu", feature = "osu_precise"))]
+        #[cfg(feature = "osu")]
         let mut stack_leniency = None;
 
         while read_line!($reader, $buf)? != 0 {
@@ -133,7 +133,7 @@ macro_rules! parse_general_body {
                 };
             }
 
-            #[cfg(all(feature = "osu", feature = "osu_precise"))]
+            #[cfg(feature = "osu")]
             if key == "StackLeniency" {
                 stack_leniency = Some(value.parse()?);
             }
@@ -163,7 +163,7 @@ macro_rules! parse_general_body {
             return Err(ParseError::UnincludedMode(GameMode::MNA));
         }
 
-        #[cfg(all(feature = "osu", feature = "osu_precise"))]
+        #[cfg(feature = "osu")]
         {
             $self.stack_leniency = stack_leniency.unwrap_or(0.7);
         }
@@ -743,7 +743,7 @@ pub struct Beatmap {
     #[cfg(any(feature = "osu", feature = "fruits"))]
     pub difficulty_points: Vec<DifficultyPoint>,
 
-    #[cfg(all(feature = "osu", feature = "osu_precise"))]
+    #[cfg(feature = "osu")]
     pub stack_leniency: f32,
 }
 
@@ -1062,7 +1062,7 @@ mod tests {
 
         #[cfg(any(feature = "osu", feature = "fruits"))]
         {
-            #[cfg(feature = "osu_precise")]
+            #[cfg(feature = "osu")]
             println!("stack_leniency: {}", map.stack_leniency);
 
             println!("timing_points: {}", map.timing_points.len());

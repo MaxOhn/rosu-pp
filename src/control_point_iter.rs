@@ -38,18 +38,11 @@ impl<'p> ControlPointIter<'p> {
 }
 
 pub(crate) enum ControlPoint {
-    Timing {
-        time: f64,
-        #[allow(dead_code)] // not used in `osu_fast` feature
-        beat_len: f64,
-    },
-    Difficulty {
-        time: f64,
-        slider_velocity: f64,
-    },
+    Timing { time: f64, beat_len: f64 },
+    Difficulty { time: f64, slider_velocity: f64 },
 }
 
-#[cfg(any(feature = "osu_precise", feature = "fruits"))]
+#[cfg(any(feature = "osu", feature = "fruits"))]
 impl ControlPoint {
     #[inline]
     pub(crate) fn time(&self) -> f64 {

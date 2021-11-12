@@ -91,23 +91,15 @@
 //! println!("PP: {}", result.pp());
 //! ```
 //!
-//! ## osu!standard versions
-//!
-//! - `osu_precise`: Both stack leniency & slider paths are considered so that the difficulty and pp calculation immitates osu! as close as possible. Pro: Very accurate values; Con: Less performant.
-//! - `osu_fast` (i.e. [oppai](https://github.com/Francesco149/oppai-ng)): Fully ignoring sliders aswell as the positional offset caused by stack leniency. This means the stacked position and travel distance of notes is completely omitted which results in notable inaccuracies but is also considerably faster than `osu_precise`.
-//!
-//! **Note**: If the `fruits` feature is enabled, sliders will be parsed regardless, resulting in a reduced performance advantage of `osu_fast`. Hence, it is only recommended to use `osu_fast` if `fruits` is not enabled.
-//!
 //! ## Features
 //!
 //! | Flag | Description |
 //! |-----|-----|
-//! | `default` | Enable all modes and choose the `osu_precise` version for osu!standard. |
+//! | `default` | Enable all modes. |
+//! | `osu` | Enable osu!standard. |
 //! | `taiko` | Enable osu!taiko. |
 //! | `fruits` | Enable osu!ctb. |
 //! | `mania` | Enable osu!mania. |
-//! | `osu_fast` | When calculating difficulty attributes in osu!standard, ignore stack leniency and sliders. Great performance but less precise values. |
-//! | `osu_precise` | When calculating difficulty attributes in osu!standard, consider both stack leniency and sliders. Great precision but significantly worse performance than `osu_fast`. |
 //! | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
 //! | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
 //!
@@ -396,17 +388,6 @@ fn difficulty_range(val: f64, max: f64, avg: f64, min: f64) -> f64 {
     feature = "mania"
 )))]
 compile_error!("At least one of the features `osu`, `taiko`, `fruits`, `mania` must be enabled");
-
-#[cfg(all(
-    feature = "osu",
-    not(any(feature = "osu_precise", feature = "osu_fast"))
-))]
-compile_error!(
-    "Since the `osu` feature is enabled, either `osu_precise` or `osu_fast` must be enabled aswell"
-);
-
-#[cfg(any(all(feature = "osu_precise", feature = "osu_fast"),))]
-compile_error!("Only one of the features `osu_precise` and `osu_fast` should be enabled");
 
 #[cfg(all(feature = "async_tokio", feature = "async_std"))]
 compile_error!("Only one of the features `async_tokio` and `async_std` should be enabled");
