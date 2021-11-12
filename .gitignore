@@ -4,5 +4,4 @@ Cargo.lock
 output
 /pp-gen/.env
 /pp-gen/target
-/pp-gen/input/*
-/pp-gen/output/*
+/pp-gen/output.json

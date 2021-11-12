@@ -1,20 +1,23 @@
-use std::{env, fs::File as StdFile};
+use std::{
+    env, fmt,
+    fs::File as StdFile,
+    io,
+    path::PathBuf,
+    pin::Pin,
+    sync::Mutex,
+    task::{Context, Poll},
+    time::Instant,
+};
 
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::{future, stream::FuturesUnordered, Stream, StreamExt, TryStreamExt};
+use pbr::ProgressBar;
+use rosu_pp::{Beatmap, GameMode};
 use serde::{Deserialize, Serialize};
-use tokio::{fs::File, io::AsyncReadExt, process::Command, runtime::Runtime};
-
-macro_rules! info {
-    ($($args:tt)*) => {
-        println!("[INFO] {}", format_args!($($args)*))
-    }
-}
-
-macro_rules! error {
-    ($($args:tt)*) => {
-        eprintln!("[ERROR] {}", format_args!($($args)*))
-    }
-}
+use tokio::{
+    fs::{self, DirEntry, File, ReadDir},
+    process::Command,
+    runtime::Runtime,
+};
 
 const OSU_MODS: &[&[&str]] = &[
     &[""],
@@ -67,144 +70,224 @@ const MANIA: &str = "mania";
 
 fn main() {
     dotenv::dotenv().expect("failed to read .env file");
-    let runtime = Runtime::new().expect("failed to create runtiem");
 
-    for mode in [OSU, TAIKO, CATCH, MANIA] {
-        runtime.block_on(handle_mode(mode));
-    }
+    Runtime::new()
+        .expect("failed to create runtiem")
+        .block_on(async_main());
 }
 
-async fn handle_mode(mode: &'static str) {
+async fn async_main() {
+    let start = Instant::now();
+    let map_path = env::var("MAP_PATH").expect("missing `MAP_PATH` environment variable");
+
     let perf_calc_path_ =
         env::var("PERF_CALC_PATH").expect("missing `PERF_CALC_PATH` environment variable");
     let perf_calc_path = perf_calc_path_.as_str();
 
-    let map_path_ = env::var("MAP_PATH").expect("missing `MAP_PATH` environment variable");
-    let map_path = map_path_.as_str();
+    let mut output = StdFile::create("./output_.json").expect("failed to create output file");
 
-    let input_filename = format!("./input/{}.csv", mode);
+    let take = 50;
 
-    let mut file = match File::open(&input_filename).await {
-        Ok(file) => file,
-        Err(err) => {
-            return error!(
-                "skipping file `{}` because it failed to open: {}",
-                input_filename, err
-            )
-        }
-    };
+    let pbr = Mutex::new(ProgressBar::new(take));
+    println!("[INFO] Calculating...");
 
-    let mut csv_data = String::new();
+    let result = fs::read_dir(map_path)
+        .await
+        .map(ReadDirStream::new)
+        .expect("failed to open directory at `MAP_PATH`")
+        .scan(0, |idx, entry| {
+            *idx += 1;
 
-    if let Err(err) = file.read_to_string(&mut csv_data).await {
-        return error!(
-            "skipping file `{}` because it could not be read: {}",
-            input_filename, err
-        );
-    }
-
-    let output_filename = format!("./output/{}.json", mode);
-
-    let mut output = match StdFile::create(&output_filename) {
-        Ok(file) => file,
-        Err(err) => {
-            return error!(
-                "skipping file `{}` because its output file `{}` could not be created: {}",
-                input_filename, output_filename, err
-            )
-        }
-    };
-
-    let (mods, mode_int) = match mode {
-        OSU => (OSU_MODS, 0),
-        TAIKO => (TAIKO_MODS, 1),
-        CATCH => (CATCH_MODS, 2),
-        MANIA => (MANIA_MODS, 3),
-        _ => unreachable!(),
-    };
-
-    info!(
-        "Starting to calculate {} data, each map with {} different mod combinations...",
-        mode,
-        mods.len()
-    );
-
-    let data: Vec<Data> = csv_data
-        .split(|c: char| c == ',' || c.is_whitespace())
-        .filter(|id| !id.is_empty())
-        .filter_map(|id| match id.parse::<u32>() {
-            Ok(id) => Some(id),
-            Err(_) => {
-                error!("could not parse `{}` as u32", id);
-
-                return None;
-            }
+            future::ready(Some((*idx % 75 == 0).then(|| entry)))
         })
-        .map(|id| mods.iter().map(move |m| (m, id)))
-        .flatten()
-        .map(|(mods, map_id)| async move {
-            let map_path = format!("{}/{}.osu", map_path, map_id);
-            let mut command = Command::new("dotnet");
+        .filter_map(|opt| future::ready(opt))
+        .take(take as usize)
+        .map(|dir_entry| async {
+            let dir_entry = dir_entry?;
+            let file_name = dir_entry.file_name();
+            let file_path = dir_entry.path();
 
-            command
-                .arg(perf_calc_path)
-                .arg("simulate")
-                .arg(mode)
-                .arg(map_path)
-                .arg("--json");
-
-            if !mods[0].is_empty() {
-                for &m in mods.iter() {
-                    command.arg("-m").arg(m);
-                }
-            }
-
-            let output = match command.output().await {
-                Ok(output) => output,
-                Err(err) => {
-                    error!(
-                        "failed to calculate values for map {} on {:?}: {}",
-                        map_id, mods, err
-                    );
-
-                    return None;
-                }
+            let map_id = match file_name
+                .to_string_lossy()
+                .split('.')
+                .next()
+                .map(str::parse)
+                .transpose()
+                .map_err(|_| Error::ParseId)?
+            {
+                Some(id) => id,
+                None => return Err(Error::EmptyFileName),
             };
 
-            match serde_json::from_slice(&output.stdout) {
-                Ok(data) => Some(Data::new(mode_int, map_id, data)),
-                Err(err) => {
-                    error!(
-                        "failed to deserialize output for map {} on {:?}: {}\n \
-                        >stdout: {}\n >stderr: {}",
-                        map_id,
-                        mods,
-                        err,
-                        String::from_utf8_lossy(&output.stdout),
-                        String::from_utf8_lossy(&output.stderr),
-                    );
+            let file = File::open(&file_path).await?;
+            let mode = Beatmap::parse(file).await?.mode;
 
-                    None
-                }
+            let result = handle_map(mode, map_id, file_path, perf_calc_path).await;
+
+            if let Ok(mut progress) = pbr.lock() {
+                progress.inc();
             }
+
+            result
         })
         .collect::<FuturesUnordered<_>>()
-        .filter_map(|data| async { data })
-        .collect::<Vec<Data>>()
+        .await
+        .try_collect::<Vec<Vec<Data>>>()
         .await;
 
-    info!(
-        "Calculated data for {} map-mod pairs, storing in file `{}`...",
-        data.len(),
-        output_filename
+    pbr.lock().unwrap().finish_println(&format!(
+        "[INFO] [{:?}] Finished calculating, now flattening...\n",
+        start.elapsed(),
+    ));
+
+    let mut mode_counts = [0; 4];
+
+    let data: Vec<Data> = match result {
+        Ok(data) => data
+            .into_iter()
+            .map(|d| {
+                if let Some(data) = d.get(0) {
+                    mode_counts[data.mode as usize] += 1;
+                }
+
+                d.into_iter()
+            })
+            .flatten()
+            .collect(),
+        Err(err) => return print_err(err.into()),
+    };
+
+    println!(
+        "[INFO] [{:?}] Flattened {} calculations, now writing to file...",
+        start.elapsed(),
+        data.len()
     );
 
     match serde_json::to_writer(&mut output, &data) {
-        Ok(_) => info!("Finished calculating {} data", mode),
-        Err(err) => error!(
-            "failed to serialize data into file `{}`: {}",
-            output_filename, err
+        Ok(_) => println!(
+            "[INFO] [{:?}] Finished writing data into `output.json`\n\
+            Maps:\n  - osu: {}\n  - taiko: {}\n  - catch: {}\n  - mania: {}",
+            start.elapsed(),
+            mode_counts[0],
+            mode_counts[1],
+            mode_counts[2],
+            mode_counts[3]
         ),
+        Err(err) => print_err(err.into()),
+    }
+}
+
+fn print_err(err: Error) {
+    let mut e: &dyn std::error::Error = &err;
+    eprintln!("[ERROR] {}", err);
+
+    while let Some(src) = e.source() {
+        eprintln!("[ERROR]  - caused by: {}", src);
+        e = src;
+    }
+}
+
+async fn handle_map(
+    mode: GameMode,
+    map_id: u32,
+    path: PathBuf,
+    perf_calc_path: &str,
+) -> Result<Vec<Data>, Error> {
+    let (mods, mode_str) = match mode {
+        GameMode::STD => (OSU_MODS, OSU),
+        GameMode::TKO => (TAIKO_MODS, TAIKO),
+        GameMode::CTB => (CATCH_MODS, CATCH),
+        GameMode::MNA => (MANIA_MODS, MANIA),
+    };
+
+    let mut result = Vec::with_capacity(mods.len());
+
+    for mods_ in mods {
+        let mut command = Command::new("dotnet");
+
+        command
+            .arg(perf_calc_path)
+            .arg("simulate")
+            .arg(mode_str)
+            .arg(&path)
+            .arg("--json");
+
+        if !mods_[0].is_empty() {
+            for &m in mods_.iter() {
+                command.arg("-m").arg(m);
+            }
+        }
+
+        let output = command.output().await?;
+
+        let data = match serde_json::from_slice(&output.stdout) {
+            Ok(data) => data,
+            Err(_) => {
+                let content = String::from_utf8_lossy(&output.stderr);
+                eprintln!(
+                    "[ERROR] mods={:?} | mode={:?} | map={}\n{}",
+                    mods_, mode, map_id, content
+                );
+
+                continue;
+            }
+        };
+
+        let data = Data::new(mode as u32, map_id, data);
+        result.push(data);
+    }
+
+    Ok(result)
+}
+
+#[derive(Debug)]
+enum Error {
+    EmptyFileName,
+    Io(std::io::Error),
+    ParseId,
+    ParseMap(rosu_pp::ParseError),
+    Serde(serde_json::Error),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::EmptyFileName => f.write_str("empty file name"),
+            Error::Io(_) => f.write_str("io error"),
+            Error::ParseId => f.write_str("failed to parse map id"),
+            Error::ParseMap(_) => f.write_str("failed to parse map"),
+            Error::Serde(_) => f.write_str("failed to deserialize"),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::EmptyFileName => None,
+            Self::Io(src) => Some(src),
+            Self::ParseId => None,
+            Self::ParseMap(src) => Some(src),
+            Self::Serde(src) => Some(src),
+        }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
+    }
+}
+
+impl From<rosu_pp::ParseError> for Error {
+    fn from(e: rosu_pp::ParseError) -> Self {
+        Self::ParseMap(e)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Self::Serde(e)
     }
 }
 
@@ -247,4 +330,22 @@ struct GenericData {
     #[serde(alias = "Stars")]
     stars: f64,
     pp: f64,
+}
+
+struct ReadDirStream {
+    inner: ReadDir,
+}
+
+impl ReadDirStream {
+    fn new(read_dir: ReadDir) -> Self {
+        Self { inner: read_dir }
+    }
+}
+
+impl Stream for ReadDirStream {
+    type Item = io::Result<DirEntry>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.inner.poll_next_entry(cx).map(Result::transpose)
+    }
 }
