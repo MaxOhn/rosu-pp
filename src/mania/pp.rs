@@ -30,9 +30,9 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 #[allow(clippy::upper_case_acronyms)]
 pub struct ManiaPP<'m> {
     map: &'m Beatmap,
-    stars: Option<f32>,
+    stars: Option<f64>,
     mods: u32,
-    score: Option<f32>,
+    score: Option<f64>,
     passed_objects: Option<usize>,
 }
 
@@ -56,7 +56,7 @@ impl<'m> ManiaPP<'m> {
     #[inline]
     pub fn attributes(mut self, attributes: impl ManiaAttributeProvider) -> Self {
         if let Some(stars) = attributes.attributes() {
-            self.stars.replace(stars);
+            self.stars = Some(stars);
         }
 
         self
@@ -76,7 +76,7 @@ impl<'m> ManiaPP<'m> {
     /// On `NoMod` its between 0 and 1,000,000, on `Easy` between 0 and 500,000, etc.
     #[inline]
     pub fn score(mut self, score: u32) -> Self {
-        self.score.replace(score as f32);
+        self.score = Some(score as f64);
 
         self
     }
@@ -100,17 +100,17 @@ impl<'m> ManiaPP<'m> {
         let ht = self.mods.ht();
 
         let mut scaled_score = self.score.map_or(1_000_000.0, |score| {
-            score / 0.5_f32.powi(ez as i32 + nf as i32 + ht as i32)
+            score / 0.5_f64.powi(ez as i32 + nf as i32 + ht as i32)
         });
 
         if let Some(passed_objects) = self.passed_objects {
             let percent_passed =
-                passed_objects as f32 / (self.map.n_circles + self.map.n_sliders) as f32;
+                passed_objects as f64 / (self.map.n_circles + self.map.n_sliders) as f64;
 
             scaled_score /= percent_passed;
         }
 
-        let mut od = 34.0 + 3.0 * (10.0 - self.map.od).max(0.0).min(10.0);
+        let mut od = 34.0 + 3.0 * (10.0 - self.map.od as f64).max(0.0).min(10.0);
         let clock_rate = self.mods.speed();
 
         let mut multiplier = 0.8;
@@ -139,10 +139,10 @@ impl<'m> ManiaPP<'m> {
         }
     }
 
-    fn compute_strain(&self, score: f32, stars: f32) -> f32 {
+    fn compute_strain(&self, score: f64, stars: f64) -> f64 {
         let mut strain_value = (5.0 * (stars / 0.2).max(1.0) - 4.0).powf(2.2) / 135.0;
 
-        strain_value *= 1.0 + 0.1 * (self.map.hit_objects.len() as f32 / 1500.0).min(1.0);
+        strain_value *= 1.0 + 0.1 * (self.map.hit_objects.len() as f64 / 1500.0).min(1.0);
 
         if score <= 500_000.0 {
             strain_value = 0.0;
@@ -162,7 +162,7 @@ impl<'m> ManiaPP<'m> {
     }
 
     #[inline]
-    fn compute_accuracy_value(&self, score: f32, strain: f32, hit_window: f32) -> f32 {
+    fn compute_accuracy_value(&self, score: f64, strain: f64, hit_window: f64) -> f64 {
         (0.2 - (hit_window - 34.0) * 0.006667).max(0.0)
             * strain
             * ((score - 960_000.0).max(0.0) / 40_000.0).powf(1.1)
@@ -170,33 +170,33 @@ impl<'m> ManiaPP<'m> {
 }
 
 pub trait ManiaAttributeProvider {
-    fn attributes(self) -> Option<f32>;
+    fn attributes(self) -> Option<f64>;
 }
 
-impl ManiaAttributeProvider for f32 {
+impl ManiaAttributeProvider for f64 {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         Some(self)
     }
 }
 
 impl ManiaAttributeProvider for DifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         Some(self.stars)
     }
 }
 
 impl ManiaAttributeProvider for PerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         Some(self.attributes.stars)
     }
 }
 
 impl ManiaAttributeProvider for StarResult {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Mania(attributes) = self {
             Some(attributes.stars)
@@ -208,7 +208,7 @@ impl ManiaAttributeProvider for StarResult {
 
 impl ManiaAttributeProvider for PpResult {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Mania(attributes) = self {
             Some(attributes.attributes.stars)

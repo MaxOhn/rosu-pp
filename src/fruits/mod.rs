@@ -18,14 +18,14 @@ use crate::{
     Beatmap, Mods, Strains,
 };
 
-const SECTION_LENGTH: f32 = 750.0;
-const STAR_SCALING_FACTOR: f32 = 0.153;
+const SECTION_LENGTH: f64 = 750.0;
+const STAR_SCALING_FACTOR: f64 = 0.153;
 
 const ALLOWED_CATCH_RANGE: f32 = 0.8;
 const CATCHER_SIZE: f32 = 106.75;
 
-const LEGACY_LAST_TICK_OFFSET: f32 = 36.0;
-const BASE_SCORING_DISTANCE: f32 = 100.0;
+const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
+const BASE_SCORING_DISTANCE: f64 = 100.0;
 
 /// Star calculation for osu!ctb maps
 ///
@@ -79,7 +79,7 @@ pub fn stars(
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
-                let span_count = (*repeats + 1) as f32;
+                let span_count = (*repeats + 1) as f64;
 
                 let mut tick_dist = 100.0 * map.slider_mult / map.tick_rate;
 
@@ -143,15 +143,15 @@ pub fn stars(
                     slider_objects.extend(&ticks);
 
                     for span_idx in 1..=*repeats {
-                        let progress = (span_idx % 2 == 1) as u8 as f32;
+                        let progress = (span_idx % 2 == 1) as u8 as f64;
                         let pos = h.pos + curve.position_at(progress);
-                        let time_offset = span_duration * span_idx as f32;
+                        let time_offset = span_duration * span_idx as f64;
 
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
 
                         let new_ticks = ticks.iter().enumerate().map(|(i, (pos, time))| {
-                            (*pos, *time + time_offset + time_add * i as f32)
+                            (*pos, *time + time_offset + time_add * i as f64)
                         });
 
                         // Actual ticks
@@ -166,7 +166,7 @@ pub fn stars(
                 }
 
                 // Slider tail
-                let progress = (*repeats % 2 == 0) as u8 as f32;
+                let progress = (*repeats % 2 == 0) as u8 as f64;
                 let pos = h.pos + curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + duration));
 
@@ -185,12 +185,13 @@ pub fn stars(
         .take(take);
 
     // Hyper dash business
-    let half_catcher_width = calculate_catch_width(attributes.cs) / 2.0 / ALLOWED_CATCH_RANGE;
+    let half_catcher_width =
+        (calculate_catch_width(attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
     let mut last_direction = 0;
     let mut last_excess = half_catcher_width;
 
     // Strain business
-    let mut movement = Movement::new(attributes.cs);
+    let mut movement = Movement::new(attributes.cs as f32);
     let section_len = SECTION_LENGTH * attributes.clock_rate;
     let mut current_section_end =
         (map.hit_objects[0].start_time / section_len).ceil() * section_len;
@@ -329,7 +330,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
-                let span_count = (*repeats + 1) as f32;
+                let span_count = (*repeats + 1) as f64;
 
                 let mut tick_dist = 100.0 * map.slider_mult / map.tick_rate;
 
@@ -385,15 +386,15 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                     slider_objects.extend(&ticks);
 
                     for span_idx in 1..=*repeats {
-                        let progress = (span_idx % 2 == 1) as u8 as f32;
+                        let progress = (span_idx % 2 == 1) as u8 as f64;
                         let pos = h.pos + curve.position_at(progress);
-                        let time_offset = span_duration * span_idx as f32;
+                        let time_offset = span_duration * span_idx as f64;
 
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
 
                         let new_ticks = ticks.iter().enumerate().map(|(i, (pos, time))| {
-                            (*pos, *time + time_offset + time_add * i as f32)
+                            (*pos, *time + time_offset + time_add * i as f64)
                         });
 
                         // Actual ticks
@@ -408,7 +409,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
                 }
 
                 // Slider tail
-                let progress = (*repeats % 2 == 0) as u8 as f32;
+                let progress = (*repeats % 2 == 0) as u8 as f64;
                 let pos = h.pos + curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + duration));
 
@@ -422,12 +423,13 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         .flatten();
 
     // Hyper dash business
-    let half_catcher_width = calculate_catch_width(attributes.cs) / 2.0 / ALLOWED_CATCH_RANGE;
+    let half_catcher_width =
+        (calculate_catch_width(attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
     let mut last_direction = 0;
     let mut last_excess = half_catcher_width;
 
     // Strain business
-    let mut movement = Movement::new(attributes.cs);
+    let mut movement = Movement::new(attributes.cs as f32);
     let section_len = SECTION_LENGTH * attributes.clock_rate;
     let mut current_section_end =
         (map.hit_objects[0].start_time / section_len).ceil() * section_len;
@@ -522,11 +524,11 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 // BUG: Sometimes there are off-by-one errors,
 // presumably caused by floating point inaccuracies
 fn tiny_droplet_count(
-    start_time: f32,
-    time_between_ticks: f32,
-    duration: f32,
+    start_time: f64,
+    time_between_ticks: f64,
+    duration: f64,
     span_count: usize,
-    ticks: &[(Pos2, f32)],
+    ticks: &[(Pos2, f64)],
 ) -> usize {
     // tiny droplets preceeding a _tick_
     let per_tick = if !ticks.is_empty() && time_between_ticks > 80.0 {
@@ -542,7 +544,7 @@ fn tiny_droplet_count(
 
     // tiny droplets preceeding a _reverse_
     let last = ticks.last().map_or(start_time, |(_, last)| *last);
-    let repeat_time = start_time + duration / span_count as f32;
+    let repeat_time = start_time + duration / span_count as f64;
     let since_last_tick = repeat_time - last;
 
     let span_last_section = if since_last_tick > 80.0 {
@@ -556,7 +558,7 @@ fn tiny_droplet_count(
     // tiny droplets preceeding the slider tail
     // necessary to handle distinctly because of the legacy last tick
     let last = ticks.last().map_or(start_time, |(_, last)| *last);
-    let end_time = start_time + duration / span_count as f32 - LEGACY_LAST_TICK_OFFSET;
+    let end_time = start_time + duration / span_count as f64 - LEGACY_LAST_TICK_OFFSET;
     let since_last_tick = end_time - last;
 
     let last_section = if since_last_tick > 80.0 {
@@ -574,7 +576,7 @@ fn tiny_droplet_count(
 }
 
 #[inline]
-fn shrink_down(mut val: f32) -> f32 {
+fn shrink_down(mut val: f64) -> f64 {
     while val > 100.0 {
         val /= 2.0;
     }
@@ -583,7 +585,7 @@ fn shrink_down(mut val: f32) -> f32 {
 }
 
 #[inline]
-fn count_iterations(mut start: f32, step: f32, end: f32) -> usize {
+fn count_iterations(mut start: f64, step: f64, end: f64) -> usize {
     let mut count = 0;
 
     while start < end {
@@ -631,9 +633,9 @@ impl<I: Iterator<Item = CatchObject>> Iterator for FruitOrJuice<I> {
 /// This data is necessary to calculate PP.
 #[derive(Clone, Debug, Default)]
 pub struct DifficultyAttributes {
-    pub stars: f32,
+    pub stars: f64,
     pub max_combo: usize,
-    pub ar: f32,
+    pub ar: f64,
     pub n_fruits: usize,
     pub n_droplets: usize,
     pub n_tiny_droplets: usize,
@@ -643,19 +645,19 @@ pub struct DifficultyAttributes {
 #[derive(Clone, Debug, Default)]
 pub struct PerformanceAttributes {
     pub attributes: DifficultyAttributes,
-    pub pp: f32,
+    pub pp: f64,
 }
 
 impl PerformanceAttributes {
     /// Return the star value.
     #[inline]
-    pub fn stars(&self) -> f32 {
+    pub fn stars(&self) -> f64 {
         self.attributes.stars
     }
 
     /// Return the performance point value.
     #[inline]
-    pub fn pp(&self) -> f32 {
+    pub fn pp(&self) -> f64 {
         self.pp
     }
 }

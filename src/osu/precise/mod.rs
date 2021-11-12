@@ -8,24 +8,25 @@ use std::mem;
 
 mod difficulty_object;
 mod osu_object;
+mod scaling_factor;
 mod skill;
 mod skill_kind;
 mod slider_state;
 
 use difficulty_object::DifficultyObject;
 use osu_object::{ObjectParameters, OsuObject};
+use scaling_factor::ScalingFactor;
 use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{curve::CurveBuffers, parse::Pos2, Beatmap, Mods, Strains};
+use crate::{curve::CurveBuffers, Beatmap, Mods, Strains};
 
 use super::DifficultyAttributes;
 
-const OBJECT_RADIUS: f32 = 64.0;
-const SECTION_LEN: f32 = 400.0;
-const DIFFICULTY_MULTIPLIER: f32 = 0.0675;
-const NORMALIZED_RADIUS: f32 = 52.0;
+const SECTION_LEN: f64 = 400.0;
+const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
+const NORMALIZED_RADIUS: f32 = 50.0; // * diameter of 100; easier mental maths.
 const STACK_DISTANCE: f32 = 3.0;
 
 /// Star calculation for osu!standard maps.
@@ -54,7 +55,7 @@ pub fn stars(
         };
     }
 
-    let mut raw_ar = map.ar;
+    let mut raw_ar = map.ar as f64;
     let hr = mods.hr();
 
     if hr {
@@ -64,19 +65,10 @@ pub fn stars(
     }
 
     let time_preempt = difficulty_range_ar(raw_ar);
-    let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
-    let radius = OBJECT_RADIUS * scale;
-    let mut scaling_factor = NORMALIZED_RADIUS / radius;
-
-    if radius < 30.0 {
-        let small_circle_bonus = (30.0 - radius).min(5.0) / 50.0;
-        scaling_factor *= 1.0 + small_circle_bonus;
-    }
+    let scaling_factor = ScalingFactor::new(map_attributes.cs);
 
     let mut params = ObjectParameters {
         map,
-        radius,
-        scaling_factor,
         max_combo: 0,
         slider_state: SliderState::new(map),
         ticks: Vec::new(),
@@ -92,7 +84,7 @@ pub fn stars(
     let mut hit_objects = Vec::with_capacity(take);
     hit_objects.extend(hit_objects_iter);
 
-    let stack_threshold = time_preempt * map.stack_leniency;
+    let stack_threshold = time_preempt * map.stack_leniency as f64;
 
     if map.version >= 6 {
         stacking(&mut hit_objects, stack_threshold);
@@ -100,13 +92,13 @@ pub fn stars(
         old_stacking(&mut hit_objects, stack_threshold);
     }
 
-    let scale_factor = scale * -6.4;
+    // let scale_factor = (scaling_factor.scale * -6.4) as f32;
 
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
-        let stack_offset = h.stack_height * scale_factor;
-
+        // let stack_offset = Pos2::new(h.stack_height * scale_factor);
+        let stack_offset = scaling_factor.stack_offset(h.stack_height);
+        h.pos += stack_offset;
         h.time /= map_attributes.clock_rate;
-        h.pos += Pos2::new(stack_offset);
 
         h
     });
@@ -114,16 +106,16 @@ pub fn stars(
     let fl = mods.fl();
     let mut skills = Vec::with_capacity(2 + fl as usize);
 
-    skills.push(Skill::new(SkillKind::Aim));
-    skills.push(Skill::new(SkillKind::speed(hit_window)));
+    skills.push(Skill::aim());
+    skills.push(Skill::speed(hit_window));
 
     if fl {
-        skills.push(Skill::new(SkillKind::flashlight(scaling_factor)));
+        // NOTE: Instead of having `NORMALIZED_RADIUS` as dividend, it still uses 52.0.
+        skills.push(Skill::flashlight(52.0 / scaling_factor.radius() as f64));
     }
 
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
-    let mut prev_vals = None;
 
     // First object has no predecessor and thus no strain, handle distinctly
     let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
@@ -132,11 +124,10 @@ pub fn stars(
     let curr = hit_objects.next().unwrap();
     let h = DifficultyObject::new(
         &curr,
-        &prev,
-        prev_vals,
-        prev_prev,
-        scale_factor,
-        scaling_factor,
+        &mut prev,
+        prev_prev.as_ref(),
+        &scaling_factor,
+        map_attributes.clock_rate,
     );
 
     while h.base.time > current_section_end {
@@ -152,18 +143,16 @@ pub fn stars(
     }
 
     prev_prev = Some(prev);
-    prev_vals = Some((h.jump_dist, h.strain_time));
     prev = curr;
 
     // Handle all other objects
     for curr in hit_objects {
         let h = DifficultyObject::new(
             &curr,
-            &prev,
-            prev_vals,
-            prev_prev,
-            scale_factor,
-            scaling_factor,
+            &mut prev,
+            prev_prev.as_ref(),
+            &scaling_factor,
+            map_attributes.clock_rate,
         );
 
         while h.base.time > current_section_end {
@@ -180,7 +169,6 @@ pub fn stars(
         }
 
         prev_prev = Some(prev);
-        prev_vals = Some((h.jump_dist, h.strain_time));
         prev = curr;
     }
 
@@ -224,9 +212,9 @@ pub fn stars(
     .powf(1.0 / 1.1);
 
     let star_rating = if base_performance > 0.00001 {
-        1.12_f32.cbrt()
+        1.12_f64.cbrt()
             * 0.027
-            * ((100_000.0 / (1.0_f32 / 1.1).exp2() * base_performance).cbrt() + 4.0)
+            * ((100_000.0 / (1.0_f64 / 1.1).exp2() * base_performance).cbrt() + 4.0)
     } else {
         0.0
     };
@@ -258,7 +246,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         return Strains::default();
     }
 
-    let mut raw_ar = map.ar;
+    let mut raw_ar = map.ar as f64;
     let hr = mods.hr();
 
     if hr {
@@ -268,19 +256,10 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     }
 
     let time_preempt = difficulty_range_ar(raw_ar);
-    let scale = (1.0 - 0.7 * (map_attributes.cs - 5.0) / 5.0) / 2.0;
-    let radius = OBJECT_RADIUS * scale;
-    let mut scaling_factor = NORMALIZED_RADIUS / radius;
-
-    if radius < 30.0 {
-        let small_circle_bonus = (30.0 - radius).min(5.0) / 50.0;
-        scaling_factor *= 1.0 + small_circle_bonus;
-    }
+    let scaling_factor = ScalingFactor::new(map_attributes.cs);
 
     let mut params = ObjectParameters {
         map,
-        radius,
-        scaling_factor,
         max_combo: 0,
         slider_state: SliderState::new(map),
         ticks: Vec::new(),
@@ -295,7 +274,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
     hit_objects.extend(hit_objects_iter);
 
-    let stack_threshold = time_preempt * map.stack_leniency;
+    let stack_threshold = time_preempt * map.stack_leniency as f64;
 
     if map.version >= 6 {
         stacking(&mut hit_objects, stack_threshold);
@@ -303,13 +282,13 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         old_stacking(&mut hit_objects, stack_threshold);
     }
 
-    let scale_factor = scale * -6.4;
+    // let scale_factor = (scaling_factor.scale * -6.4) as f32;
 
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
-        let stack_offset = h.stack_height * scale_factor;
-
+        // let stack_offset = Pos2::new(h.stack_height * scale_factor);
+        let stack_offset = scaling_factor.stack_offset(h.stack_height);
+        h.pos += stack_offset;
         h.time /= map_attributes.clock_rate;
-        h.pos += Pos2::new(stack_offset);
 
         h
     });
@@ -317,16 +296,16 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let fl = mods.fl();
     let mut skills = Vec::with_capacity(2 + fl as usize);
 
-    skills.push(Skill::new(SkillKind::Aim));
-    skills.push(Skill::new(SkillKind::speed(hit_window)));
+    skills.push(Skill::aim());
+    skills.push(Skill::speed(hit_window));
 
     if fl {
-        skills.push(Skill::new(SkillKind::flashlight(scaling_factor)));
+        // NOTE: Instead of having `NORMALIZED_RADIUS` as dividend, it still uses 52.0.
+        skills.push(Skill::flashlight(52.0 / scaling_factor.radius() as f64));
     }
 
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
-    let mut prev_vals = None;
 
     // First object has no predecessor and thus no strain, handle distinctly
     let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
@@ -335,11 +314,10 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let curr = hit_objects.next().unwrap();
     let h = DifficultyObject::new(
         &curr,
-        &prev,
-        prev_vals,
-        prev_prev,
-        scale_factor,
-        scaling_factor,
+        &mut prev,
+        prev_prev.as_ref(),
+        &scaling_factor,
+        map_attributes.clock_rate,
     );
 
     while h.base.time > current_section_end {
@@ -355,18 +333,16 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     }
 
     prev_prev = Some(prev);
-    prev_vals = Some((h.jump_dist, h.strain_time));
     prev = curr;
 
     // Handle all other objects
     for curr in hit_objects {
         let h = DifficultyObject::new(
             &curr,
-            &prev,
-            prev_vals,
-            prev_prev,
-            scale_factor,
-            scaling_factor,
+            &mut prev,
+            prev_prev.as_ref(),
+            &scaling_factor,
+            map_attributes.clock_rate,
         );
 
         while h.base.time > current_section_end {
@@ -383,7 +359,6 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         }
 
         prev_prev = Some(prev);
-        prev_vals = Some((h.jump_dist, h.strain_time));
         prev = curr;
     }
 
@@ -418,7 +393,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     }
 }
 
-fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
+fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
     let mut extended_start_idx = 0;
     let extended_end_idx = hit_objects.len() - 1;
 
@@ -529,7 +504,7 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
     }
 }
 
-fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
+fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
     for i in 0..hit_objects.len() {
         if hit_objects[i].stack_height != 0.0 && !hit_objects[i].is_slider() {
             continue;
@@ -557,11 +532,7 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f32) {
     }
 }
 
-const OSU_AR_MAX: f32 = 450.0;
-const OSU_AR_AVG: f32 = 1200.0;
-const OSU_AR_MIN: f32 = 1800.0;
-
 #[inline]
-fn difficulty_range_ar(ar: f32) -> f32 {
-    crate::difficulty_range(ar, OSU_AR_MAX, OSU_AR_AVG, OSU_AR_MIN)
+fn difficulty_range_ar(ar: f64) -> f64 {
+    crate::difficulty_range(ar, 450.0, 1200.0, 1800.0)
 }

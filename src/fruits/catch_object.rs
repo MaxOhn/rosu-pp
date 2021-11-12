@@ -1,12 +1,12 @@
 use crate::parse::Pos2;
 
 const PLAYFIELD_WIDTH: f32 = 512.0;
-const BASE_SPEED: f32 = 1.0;
+const BASE_SPEED: f64 = 1.0;
 
 #[derive(Clone)]
 pub struct CatchObject {
     pub(crate) pos: f32,
-    pub(crate) time: f32,
+    pub(crate) time: f64,
 
     pub(crate) hyper_dash: bool,
     pub(crate) hyper_dist: f32,
@@ -14,7 +14,7 @@ pub struct CatchObject {
 
 impl CatchObject {
     #[inline]
-    pub(crate) fn new((pos, time): (Pos2, f32)) -> Self {
+    pub(crate) fn new((pos, time): (Pos2, f64)) -> Self {
         Self {
             pos: pos.x,
             time,
@@ -23,7 +23,7 @@ impl CatchObject {
         }
     }
 
-    pub(crate) fn with_hr(mut self, last_pos: &mut Option<f32>, last_time: &mut f32) -> Self {
+    pub(crate) fn with_hr(mut self, last_pos: &mut Option<f32>, last_time: &mut f64) -> Self {
         let mut offset_pos = self.pos;
         let time_diff = self.time - *last_time;
 
@@ -31,7 +31,7 @@ impl CatchObject {
             let pos_diff = offset_pos - last_pos_ref;
 
             if pos_diff.abs() > f32::EPSILON {
-                if pos_diff.abs() < (time_diff / 3.0).floor() {
+                if pos_diff.abs() < (time_diff as f32 / 3.0).floor() {
                     if pos_diff > 0.0 {
                         if offset_pos + pos_diff < PLAYFIELD_WIDTH {
                             offset_pos += pos_diff;
@@ -56,10 +56,10 @@ impl CatchObject {
 
     pub(crate) fn init_hyper_dash(
         &mut self,
-        half_catcher_width: f32,
+        half_catcher_width: f64,
         next: &CatchObject,
         last_direction: &mut i8,
-        last_excess: &mut f32,
+        last_excess: &mut f64,
     ) {
         let next_x = next.pos;
         let curr_x = self.pos;
@@ -73,15 +73,15 @@ impl CatchObject {
             half_catcher_width
         };
 
-        let dist_to_next = (next_x - curr_x).abs() - sub;
-        let hyper_dist = time_to_next * BASE_SPEED - dist_to_next;
+        let dist_to_next = (next_x - curr_x).abs() as f64 - sub;
+        let hyper_dist = (time_to_next * BASE_SPEED - dist_to_next) as f32;
 
         if hyper_dist < 0.0 {
             self.hyper_dash = true;
             *last_excess = half_catcher_width;
         } else {
             self.hyper_dist = hyper_dist;
-            *last_excess = hyper_dist.max(0.0).min(half_catcher_width);
+            *last_excess = (hyper_dist as f64).max(0.0).min(half_catcher_width);
         }
 
         *last_direction = this_direction;

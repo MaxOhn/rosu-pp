@@ -22,16 +22,16 @@ pub use fast::*;
 /// This data is necessary to calculate PP.
 #[derive(Clone, Debug, Default)]
 pub struct DifficultyAttributes {
-    pub aim_strain: f32,
-    pub speed_strain: f32,
-    pub flashlight_rating: f32,
-    pub ar: f32,
-    pub od: f32,
-    pub hp: f32,
+    pub aim_strain: f64,
+    pub speed_strain: f64,
+    pub flashlight_rating: f64,
+    pub ar: f64,
+    pub od: f64,
+    pub hp: f64,
     pub n_circles: usize,
     pub n_sliders: usize,
     pub n_spinners: usize,
-    pub stars: f32,
+    pub stars: f64,
     pub max_combo: usize,
 }
 
@@ -39,29 +39,29 @@ pub struct DifficultyAttributes {
 #[derive(Clone, Debug, Default)]
 pub struct PerformanceAttributes {
     pub attributes: DifficultyAttributes,
-    pub pp_acc: f32,
-    pub pp_aim: f32,
-    pub pp_flashlight: f32,
-    pub pp_speed: f32,
-    pub pp: f32,
+    pub pp_acc: f64,
+    pub pp_aim: f64,
+    pub pp_flashlight: f64,
+    pub pp_speed: f64,
+    pub pp: f64,
 }
 
 impl PerformanceAttributes {
     /// Return the star value.
     #[inline]
-    pub fn stars(&self) -> f32 {
+    pub fn stars(&self) -> f64 {
         self.attributes.stars
     }
 
     /// Return the performance point value.
     #[inline]
-    pub fn pp(&self) -> f32 {
+    pub fn pp(&self) -> f64 {
         self.pp
     }
 }
 
 #[inline]
-fn difficulty_range_od(od: f32) -> f32 {
+fn difficulty_range_od(od: f64) -> f64 {
     super::difficulty_range(od, 20.0, 50.0, 80.0)
 }
 
@@ -72,7 +72,7 @@ fn custom_osu() {
 
     use crate::{Beatmap, OsuPP};
 
-    let path = "E:Games/osu!/beatmaps/1402167_.osu";
+    let path = "E:Games/osu!/beatmaps/70090_.osu";
     let file = File::open(path).unwrap();
 
     let start = Instant::now();
@@ -94,7 +94,7 @@ fn custom_osu() {
     println!("Parsing average: {:?}", accum / iters);
 
     let start = Instant::now();
-    let result = OsuPP::new(&map).mods(0).calculate();
+    let result = OsuPP::new(&map).mods(16 + 64).calculate();
 
     let iters = 100;
     let accum = start.elapsed();

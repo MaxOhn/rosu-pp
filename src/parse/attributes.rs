@@ -3,27 +3,27 @@ use crate::Mods;
 /// Summary struct for a [`Beatmap`](crate::Beatmap)'s attributes.
 #[derive(Clone, Debug)]
 pub struct BeatmapAttributes {
-    pub ar: f32,
-    pub od: f32,
-    pub cs: f32,
-    pub hp: f32,
-    pub clock_rate: f32,
+    pub ar: f64,
+    pub od: f64,
+    pub cs: f64,
+    pub hp: f64,
+    pub clock_rate: f64,
 }
 
 impl BeatmapAttributes {
-    const AR0_MS: f32 = 1800.0;
-    const AR5_MS: f32 = 1200.0;
-    const AR10_MS: f32 = 450.0;
-    const AR_MS_STEP_1: f32 = (Self::AR0_MS - Self::AR5_MS) / 5.0;
-    const AR_MS_STEP_2: f32 = (Self::AR5_MS - Self::AR10_MS) / 5.0;
+    const AR0_MS: f64 = 1800.0;
+    const AR5_MS: f64 = 1200.0;
+    const AR10_MS: f64 = 450.0;
+    const AR_MS_STEP_1: f64 = (Self::AR0_MS - Self::AR5_MS) / 5.0;
+    const AR_MS_STEP_2: f64 = (Self::AR5_MS - Self::AR10_MS) / 5.0;
 
     #[inline]
     pub(crate) fn new(ar: f32, od: f32, cs: f32, hp: f32) -> Self {
         Self {
-            ar,
-            od,
-            cs,
-            hp,
+            ar: ar as f64,
+            od: od as f64,
+            cs: cs as f64,
+            hp: hp as f64,
             clock_rate: 1.0,
         }
     }
@@ -40,7 +40,7 @@ impl BeatmapAttributes {
         let multiplier = mods.od_ar_hp_multiplier();
 
         // AR
-        let mut ar = self.ar * multiplier;
+        let mut ar = (self.ar * multiplier) as f64;
         let mut ar_ms = if ar <= 5.0 {
             Self::AR0_MS - Self::AR_MS_STEP_1 * ar
         } else {

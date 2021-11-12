@@ -7,8 +7,9 @@
   Additionally, instead of importing through `rosu_pp::osu::{version}`, you now have to import through `rosu_pp::osu`
 - [BREAKING] Instead of returning `PpResult`, performance calculations now return `PerformanceAttributes` depending on the mode.
 - [BREAKING] Instead of returning `StarResult`, difficulty calculations now return `DifficultyAttributes` depending on the mode.
+- [BREAKING] Various fields and methods now include `f64` instead of `f32` to stay true to osu!'s original code
 - added internal binary crate `pp-gen` to calculate difficulty & pp values via `PerformanceCalculator.dll`
-- osu: Updated up to commit [6944151486e677bfd11f2390163aca9161defbbf](https://github.com/ppy/osu/commit/6944151486e677bfd11f2390163aca9161defbbf) (2021-10-27)
+- osu: Updated up to commit [baa5285b59911efa1433a298f365133254a96874](https://github.com/ppy/osu/commit/baa5285b59911efa1433a298f365133254a96874) (2021-11-09)
 
 # v0.2.3
 

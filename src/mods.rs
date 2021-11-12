@@ -21,8 +21,8 @@ pub trait Mods: Copy {
 
     fn change_speed(self) -> bool;
     fn change_map(self) -> bool;
-    fn speed(self) -> f32;
-    fn od_ar_hp_multiplier(self) -> f32;
+    fn speed(self) -> f64;
+    fn od_ar_hp_multiplier(self) -> f64;
     fn nf(self) -> bool;
     fn ez(self) -> bool;
     fn td(self) -> bool;
@@ -47,7 +47,7 @@ impl Mods for u32 {
     }
 
     #[inline]
-    fn speed(self) -> f32 {
+    fn speed(self) -> f64 {
         if self & Self::DT > 0 {
             1.5
         } else if self & Self::HT > 0 {
@@ -58,7 +58,7 @@ impl Mods for u32 {
     }
 
     #[inline]
-    fn od_ar_hp_multiplier(self) -> f32 {
+    fn od_ar_hp_multiplier(self) -> f64 {
         if self & Self::HR > 0 {
             1.4
         } else if self & Self::EZ > 0 {

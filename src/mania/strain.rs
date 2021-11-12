@@ -3,25 +3,25 @@ use super::DifficultyHitObject;
 use std::cmp::Ordering;
 
 pub(crate) struct Strain {
-    current_strain: f32,
-    current_section_peak: f32,
+    current_strain: f64,
+    current_section_peak: f64,
 
-    individual_strain: f32,
-    overall_strain: f32,
+    individual_strain: f64,
+    overall_strain: f64,
 
-    hold_end_times: Vec<f32>,
-    individual_strains: Vec<f32>,
-    pub(crate) strain_peaks: Vec<f32>,
+    hold_end_times: Vec<f64>,
+    individual_strains: Vec<f64>,
+    pub(crate) strain_peaks: Vec<f64>,
 
-    prev_time: Option<f32>,
+    prev_time: Option<f64>,
 }
 
-const INDIVISUAL_DECAY_BASE: f32 = 0.125;
-const OVERALL_DECAY_BASE: f32 = 0.3;
-const STRAIN_DECAY_BASE: f32 = 1.0;
+const INDIVISUAL_DECAY_BASE: f64 = 0.125;
+const OVERALL_DECAY_BASE: f64 = 0.3;
+const STRAIN_DECAY_BASE: f64 = 1.0;
 
-const SKILL_MULTIPLIER: f32 = 1.0;
-const DECAY_WEIGHT: f32 = 0.9;
+const SKILL_MULTIPLIER: f64 = 1.0;
+const DECAY_WEIGHT: f64 = 0.9;
 
 impl Strain {
     #[inline]
@@ -47,18 +47,18 @@ impl Strain {
     }
 
     #[inline]
-    pub(crate) fn start_new_section_from(&mut self, time: f32) {
+    pub(crate) fn start_new_section_from(&mut self, time: f64) {
         self.current_section_peak = self.peak_strain(time - self.prev_time.unwrap());
     }
 
     #[inline]
-    fn peak_strain(&self, delta_time: f32) -> f32 {
+    fn peak_strain(&self, delta_time: f64) -> f64 {
         apply_decay(self.individual_strain, delta_time, INDIVISUAL_DECAY_BASE)
             + apply_decay(self.overall_strain, delta_time, OVERALL_DECAY_BASE)
     }
 
     #[inline]
-    fn strain_decay(&self, ms: f32) -> f32 {
+    fn strain_decay(&self, ms: f64) -> f64 {
         STRAIN_DECAY_BASE.powf(ms / 1000.0)
     }
 
@@ -70,7 +70,7 @@ impl Strain {
         self.prev_time.replace(current.start_time);
     }
 
-    fn strain_value_of(&mut self, current: &DifficultyHitObject<'_>) -> f32 {
+    fn strain_value_of(&mut self, current: &DifficultyHitObject<'_>) -> f64 {
         let end_time = current.base.end_time();
 
         let mut hold_factor = 1.0;
@@ -107,7 +107,7 @@ impl Strain {
     }
 
     #[inline]
-    pub(crate) fn difficulty_value(&mut self) -> f32 {
+    pub(crate) fn difficulty_value(&mut self) -> f64 {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
@@ -124,6 +124,6 @@ impl Strain {
 }
 
 #[inline]
-fn apply_decay(value: f32, delta_time: f32, decay_base: f32) -> f32 {
+fn apply_decay(value: f64, delta_time: f64, decay_base: f64) -> f64 {
     value * decay_base.powf(delta_time / 1000.0)
 }

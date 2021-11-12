@@ -229,22 +229,22 @@ impl Data {
 #[derive(Debug, Deserialize, Serialize)]
 struct GenericData {
     #[serde(default, alias = "Aim", skip_serializing_if = "Option::is_none")]
-    aim: Option<f32>,
+    aim: Option<f64>,
     #[serde(default, alias = "Speed", skip_serializing_if = "Option::is_none")]
-    speed: Option<f32>,
+    speed: Option<f64>,
     #[serde(default, alias = "Accuracy", skip_serializing_if = "Option::is_none")]
-    accuracy: Option<f32>,
+    accuracy: Option<f64>,
     #[serde(default, alias = "Flashlight", skip_serializing_if = "Option::is_none")]
-    flashlight: Option<f32>,
+    flashlight: Option<f64>,
     #[serde(default, alias = "Strain", skip_serializing_if = "Option::is_none")]
-    strain: Option<f32>,
+    strain: Option<f64>,
     #[serde(default, alias = "OD", skip_serializing_if = "Option::is_none")]
-    od: Option<f32>,
+    od: Option<f64>,
     #[serde(default, alias = "AR", skip_serializing_if = "Option::is_none")]
-    ar: Option<f32>,
+    ar: Option<f64>,
     #[serde(alias = "Mods")]
     mods: String,
     #[serde(alias = "Stars")]
-    stars: f32,
-    pp: f32,
+    stars: f64,
+    pp: f64,
 }

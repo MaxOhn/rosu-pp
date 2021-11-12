@@ -8,8 +8,8 @@ use strain::Strain;
 
 use crate::{parse::HitObject, Beatmap, GameMode, Mods, Strains};
 
-const SECTION_LEN: f32 = 400.0;
-const STAR_SCALING_FACTOR: f32 = 0.018;
+const SECTION_LEN: f64 = 400.0;
+const STAR_SCALING_FACTOR: f64 = 0.018;
 
 /// Star calculation for osu!mania maps
 ///
@@ -150,13 +150,13 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 pub(crate) struct DifficultyHitObject<'o> {
     base: &'o HitObject,
     column: usize,
-    delta: f32,
-    start_time: f32,
+    delta: f64,
+    start_time: f64,
 }
 
 impl<'o> DifficultyHitObject<'o> {
     #[inline]
-    fn new(base: &'o HitObject, prev: &'o HitObject, columns: f32, clock_rate: f32) -> Self {
+    fn new(base: &'o HitObject, prev: &'o HitObject, columns: f32, clock_rate: f64) -> Self {
         let x_divisor = 512.0 / columns;
         let column = (base.pos.x / x_divisor).floor().min(columns - 1.0) as usize;
 
@@ -173,28 +173,28 @@ impl<'o> DifficultyHitObject<'o> {
 /// This data is necessary to calculate PP.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct DifficultyAttributes {
-    pub stars: f32,
+    pub stars: f64,
 }
 
 /// Various data created through the pp calculation.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct PerformanceAttributes {
     pub attributes: DifficultyAttributes,
-    pub pp_acc: f32,
-    pub pp_strain: f32,
-    pub pp: f32,
+    pub pp_acc: f64,
+    pub pp_strain: f64,
+    pub pp: f64,
 }
 
 impl PerformanceAttributes {
     /// Return the star value.
     #[inline]
-    pub fn stars(&self) -> f32 {
+    pub fn stars(&self) -> f64 {
         self.attributes.stars
     }
 
     /// Return the performance point value.
     #[inline]
-    pub fn pp(&self) -> f32 {
+    pub fn pp(&self) -> f64 {
         self.pp
     }
 }

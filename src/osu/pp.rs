@@ -35,7 +35,7 @@ pub struct OsuPP<'m> {
     attributes: Option<DifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
-    acc: Option<f32>,
+    acc: Option<f64>,
 
     n300: Option<usize>,
     n100: Option<usize>,
@@ -138,7 +138,7 @@ impl<'m> OsuPP<'m> {
     ///
     /// Be sure to set `misses` beforehand!
     /// In case of a partial play, be also sure to set `passed_objects` beforehand!
-    pub fn accuracy(mut self, acc: f32) -> Self {
+    pub fn accuracy(mut self, acc: f64) -> Self {
         let n_objects = self
             .passed_objects
             .unwrap_or_else(|| self.map.hit_objects.len());
@@ -152,7 +152,7 @@ impl<'m> OsuPP<'m> {
             let placed_points = 2 * n100 + n50 + self.n_misses;
             let missing_objects = n_objects - n100 - n50 - self.n_misses;
             let missing_points =
-                ((6.0 * acc * n_objects as f32).round() as usize).saturating_sub(placed_points);
+                ((6.0 * acc * n_objects as f64).round() as usize).saturating_sub(placed_points);
 
             let mut n300 = missing_objects.min(missing_points / 6);
             n50 += missing_objects - n300;
@@ -171,10 +171,10 @@ impl<'m> OsuPP<'m> {
             self.n100 = Some(n100);
             self.n50 = Some(n50);
 
-            acc = (6 * n300 + 2 * n100 + n50) as f32 / (6 * n_objects) as f32;
+            acc = (6 * n300 + 2 * n100 + n50) as f64 / (6 * n_objects) as f64;
         } else {
             let misses = self.n_misses.min(n_objects);
-            let target_total = (acc * n_objects as f32 * 6.0).round() as usize;
+            let target_total = (acc * n_objects as f64 * 6.0).round() as usize;
             let delta = target_total - (n_objects - misses);
 
             let mut n300 = delta / 5;
@@ -191,7 +191,7 @@ impl<'m> OsuPP<'m> {
             self.n100 = Some(n100);
             self.n50 = Some(n50);
 
-            acc = (6 * n300 + 2 * n100 + n50) as f32 / (6 * n_objects) as f32;
+            acc = (6 * n300 + 2 * n100 + n50) as f64 / (6 * n_objects) as f64;
         }
 
         self.acc = Some(acc);
@@ -213,7 +213,7 @@ impl<'m> OsuPP<'m> {
             let n100 = n100.unwrap_or(0);
             let n50 = n50.unwrap_or(0);
 
-            let total_hits = (n300 + n100 + n50 + self.n_misses).min(n_objects) as f32;
+            let total_hits = (n300 + n100 + n50 + self.n_misses).min(n_objects) as f64;
 
             let effective_misses =
                 calculate_effective_misses(&attributes, self.combo, self.n_misses, total_hits);
@@ -259,9 +259,9 @@ impl<'m> OsuPP<'m> {
             let n50 = n50.unwrap_or(0);
 
             let numerator = n300 * 6 + n100 * 2 + n50;
-            let acc = numerator as f32 / n_objects as f32 / 6.0;
+            let acc = numerator as f64 / n_objects as f64 / 6.0;
 
-            let total_hits = (n300 + n100 + n50 + self.n_misses).min(n_objects) as f32;
+            let total_hits = (n300 + n100 + n50 + self.n_misses).min(n_objects) as f64;
 
             let effective_misses =
                 calculate_effective_misses(&attributes, self.combo, self.n_misses, total_hits);
@@ -295,13 +295,13 @@ struct OsuPPInner {
     attributes: DifficultyAttributes,
     mods: u32,
     combo: Option<usize>,
-    acc: f32,
+    acc: f64,
 
     n300: usize,
     n100: usize,
     n50: usize,
 
-    total_hits: f32,
+    total_hits: f64,
     effective_misses: usize,
 }
 
@@ -311,18 +311,23 @@ impl OsuPPInner {
 
         // NF penalty
         if self.mods.nf() {
-            multiplier *= (1.0 - 0.02 * (self.effective_misses as f32)).max(0.9);
+            multiplier *= (1.0 - 0.02 * (self.effective_misses as f64)).max(0.9);
         }
 
         // SO penalty
         if self.mods.so() {
             let n_spinners = self.attributes.n_spinners;
-            multiplier *= 1.0 - (n_spinners as f32 / self.total_hits).powf(0.85);
+            multiplier *= 1.0 - (n_spinners as f64 / self.total_hits).powf(0.85);
         }
 
         // Relax penalty
         if self.mods.rx() {
-            self.effective_misses += self.n100 + self.n50;
+            // * As we're adding 100s and 50s to an approximated number of combo breaks\
+            // * the result can be higher than total hits in specific scenarios
+            // * (which breaks some calculations) so we need to clamp it.
+            self.effective_misses =
+                (self.effective_misses + self.n100 + self.n50).min(self.total_hits as usize);
+
             multiplier *= 0.6;
         }
 
@@ -348,7 +353,7 @@ impl OsuPPInner {
         }
     }
 
-    fn compute_aim_value(&self) -> f32 {
+    fn compute_aim_value(&self) -> f64 {
         let attributes = &self.attributes;
         let total_hits = self.total_hits;
 
@@ -364,48 +369,44 @@ impl OsuPPInner {
         // Longer maps are worth more
         let len_bonus = 0.95
             + 0.4 * (total_hits / 2000.0).min(1.0)
-            + (total_hits > 2000.0) as u8 as f32 * 0.5 * (total_hits / 2000.0).log10();
+            + (total_hits > 2000.0) as u8 as f64 * 0.5 * (total_hits / 2000.0).log10();
         aim_value *= len_bonus;
 
         // Penalize misses
         let effective_misses = self.effective_misses as i32;
         if effective_misses > 0 {
             aim_value *= 0.97
-                * (1.0 - (effective_misses as f32 / total_hits).powf(0.775)).powi(effective_misses);
+                * (1.0 - (effective_misses as f64 / total_hits).powf(0.775)).powi(effective_misses);
         }
 
         // Combo scaling
         if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
-            aim_value *= ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
+            aim_value *= ((combo as f64 / attributes.max_combo as f64).powf(0.8)).min(1.0);
         }
 
         // AR bonus
         let ar_factor = if attributes.ar > 10.33 {
-            attributes.ar - 10.33
+            0.3 * (attributes.ar - 10.33)
         } else if attributes.ar < 8.0 {
-            0.025 * (8.0 - attributes.ar)
+            0.1 * (8.0 - attributes.ar)
         } else {
             0.0
         };
 
-        let ar_total_hits_factor = (1.0 + (-(0.007 * (total_hits - 400.0))).exp()).recip();
-        let ar_bonus = 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
+        aim_value *= 1.0 + ar_factor * len_bonus; // * Buff for longer maps with high AR.
 
         // HD bonus (this would include the Blinds mod but it's currently not representable)
         if self.mods.hd() {
             aim_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
         }
 
-        aim_value *= ar_bonus;
-
-        // Scale with accuracy
-        aim_value *= 0.5 + self.acc / 2.0;
+        aim_value *= self.acc;
         aim_value *= 0.98 + attributes.od * attributes.od / 2500.0;
 
         aim_value
     }
 
-    fn compute_speed_value(&self) -> f32 {
+    fn compute_speed_value(&self) -> f64 {
         let attributes = &self.attributes;
         let total_hits = self.total_hits;
 
@@ -415,11 +416,11 @@ impl OsuPPInner {
         // Longer maps are worth more
         let len_bonus = 0.95
             + 0.4 * (total_hits / 2000.0).min(1.0)
-            + (total_hits > 2000.0) as u8 as f32 * 0.5 * (total_hits / 2000.0).log10();
+            + (total_hits > 2000.0) as u8 as f64 * 0.5 * (total_hits / 2000.0).log10();
         speed_value *= len_bonus;
 
         // Penalize misses
-        let effective_misses = self.effective_misses as f32;
+        let effective_misses = self.effective_misses as f64;
         if effective_misses > 0.0 {
             speed_value *= 0.97
                 * (1.0 - (effective_misses / total_hits).powf(0.775))
@@ -428,19 +429,17 @@ impl OsuPPInner {
 
         // Combo scaling
         if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
-            speed_value *= ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
+            speed_value *= ((combo as f64 / attributes.max_combo as f64).powf(0.8)).min(1.0);
         }
 
         // AR bonus
         let ar_factor = if attributes.ar > 10.33 {
-            attributes.ar - 10.33
+            0.3 * (attributes.ar - 10.33)
         } else {
             0.0
         };
 
-        let ar_total_hits_factor = (1.0 + (-(0.007 * (total_hits - 400.0))).exp()).recip();
-
-        speed_value *= 1.0 + (0.03 + 0.37 * ar_total_hits_factor) * ar_factor;
+        speed_value *= 1.0 + ar_factor * len_bonus; // * Buff for longer maps with high AR.
 
         // HD bonus (this would include the Blinds mod but it's currently not representable)
         if self.mods.hd() {
@@ -453,34 +452,34 @@ impl OsuPPInner {
         speed_value *= od_factor * acc_factor;
 
         // Penalize n50s
-        speed_value *= 0.98_f32.powf(
-            (self.n50 as f32 >= total_hits / 500.0) as u8 as f32
-                * (self.n50 as f32 - total_hits / 500.0),
+        speed_value *= 0.98_f64.powf(
+            (self.n50 as f64 >= total_hits / 500.0) as u8 as f64
+                * (self.n50 as f64 - total_hits / 500.0),
         );
 
         speed_value
     }
 
-    fn compute_accuracy_value(&self) -> f32 {
+    fn compute_accuracy_value(&self) -> f64 {
         if self.mods.rx() {
             return 0.0;
         }
 
         let attributes = &self.attributes;
         let total_hits = self.total_hits;
-        let n_circles = attributes.n_circles as f32;
-        let n300 = self.n300 as f32;
-        let n100 = self.n100 as f32;
-        let n50 = self.n50 as f32;
+        let n_circles = attributes.n_circles as f64;
+        let n300 = self.n300 as f64;
+        let n100 = self.n100 as f64;
+        let n50 = self.n50 as f64;
 
-        let better_acc_percentage = (n_circles > 0.0) as u8 as f32
+        let better_acc_percentage = (n_circles > 0.0) as u8 as f64
             * (((n300 - (total_hits - n_circles)) * 6.0 + n100 * 2.0 + n50) / (n_circles * 6.0))
                 .max(0.0);
 
-        let mut acc_value = 1.52163_f32.powf(attributes.od) * better_acc_percentage.powi(24) * 2.83;
+        let mut acc_value = 1.52163_f64.powf(attributes.od) * better_acc_percentage.powi(24) * 2.83;
 
         // Bonus for many hitcircles
-        acc_value *= ((n_circles as f32 / 1000.0).powf(0.3)).min(1.15);
+        acc_value *= ((n_circles as f64 / 1000.0).powf(0.3)).min(1.15);
 
         // HD bonus (this would include the Blinds mod but it's currently not representable)
         if self.mods.hd() {
@@ -495,7 +494,7 @@ impl OsuPPInner {
         acc_value
     }
 
-    fn compute_flashlight_value(&self) -> f32 {
+    fn compute_flashlight_value(&self) -> f64 {
         if !self.mods.fl() {
             return 0.0;
         }
@@ -519,7 +518,7 @@ impl OsuPPInner {
 
         // Penalize misses by assessing # of misses relative to the total # of objects.
         // Default a 3% reduction for any # of misses
-        let effective_misses = self.effective_misses as f32;
+        let effective_misses = self.effective_misses as f64;
         if effective_misses > 0.0 {
             flashlight_value *= 0.97
                 * (1.0 - (effective_misses / total_hits).powf(0.775))
@@ -528,13 +527,13 @@ impl OsuPPInner {
 
         // Combo scaling
         if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
-            flashlight_value *= ((combo as f32 / attributes.max_combo as f32).powf(0.8)).min(1.0);
+            flashlight_value *= ((combo as f64 / attributes.max_combo as f64).powf(0.8)).min(1.0);
         }
 
         // Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius
         flashlight_value *= 0.7
             + 0.1 * (total_hits / 200.0).min(1.0)
-            + (total_hits > 200.0) as u8 as f32 * (0.2 * ((total_hits - 200.0) / 200.0).min(1.0));
+            + (total_hits > 200.0) as u8 as f64 * (0.2 * ((total_hits - 200.0) / 200.0).min(1.0));
 
         // Scale the aim value with accuracy _slightly_
         flashlight_value *= 0.5 + self.acc / 2.0;
@@ -550,23 +549,23 @@ fn calculate_effective_misses(
     attributes: &DifficultyAttributes,
     combo: Option<usize>,
     n_misses: usize,
-    total_hits: f32,
+    total_hits: f64,
 ) -> usize {
-    // Guess the number of misses + slider breaks from combo
-    let mut combo_based_misses: f32 = 0.0;
+    // * Guess the number of misses + slider breaks from combo
+    let mut combo_based_misses: f64 = 0.0;
 
     if attributes.n_sliders > 0 {
-        let full_combo_threshold = attributes.max_combo as f32 - 0.1 * attributes.n_sliders as f32;
+        let full_combo_threshold = attributes.max_combo as f64 - 0.1 * attributes.n_sliders as f64;
 
-        let f32_combo = combo.map(|c| c as f32);
+        let f64_combo = combo.map(|c| c as f64);
 
-        if let Some(combo) = f32_combo.filter(|&c| c < full_combo_threshold) {
+        if let Some(combo) = f64_combo.filter(|&c| c < full_combo_threshold) {
             combo_based_misses = full_combo_threshold / combo.max(1.0);
         }
     }
 
-    // We're clamping misses because since it's derived from combo it
-    // can be higher than total hits and that breaks some calculations
+    // * Clamp misscount since it's derived from combo and can be
+    // * higher than total hits and that breaks some calculations
     combo_based_misses = combo_based_misses.min(total_hits);
 
     n_misses.max(combo_based_misses.floor() as usize)
@@ -634,7 +633,7 @@ mod test {
             + 2 * calculator.n100.unwrap_or(0)
             + calculator.n50.unwrap_or(0);
         let denominator = 6 * total_objects;
-        let acc = 100.0 * numerator as f32 / denominator as f32;
+        let acc = 100.0 * numerator as f64 / denominator as f64;
 
         assert!(
             (target_acc - acc).abs() < 1.0,
@@ -668,7 +667,7 @@ mod test {
             + 2 * calculator.n100.unwrap_or(0)
             + calculator.n50.unwrap_or(0);
         let denominator = 6 * total_objects;
-        let acc = 100.0 * numerator as f32 / denominator as f32;
+        let acc = 100.0 * numerator as f64 / denominator as f64;
 
         assert!(
             (target_acc - acc).abs() < 1.0,

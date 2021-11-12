@@ -145,7 +145,7 @@ impl<'m> FruitsPP<'m> {
     /// Generate the hit results with respect to the given accuracy between `0` and `100`.
     ///
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
-    pub fn accuracy(mut self, mut acc: f32) -> Self {
+    pub fn accuracy(mut self, mut acc: f64) -> Self {
         if self.attributes.is_none() {
             self.attributes = Some(stars(self.map, self.mods, self.passed_objects));
         }
@@ -167,7 +167,7 @@ impl<'m> FruitsPP<'m> {
         acc /= 100.0;
 
         let n_tiny_droplets = self.n_tiny_droplets.unwrap_or_else(|| {
-            ((acc * (attributes.max_combo + max_tiny_droplets) as f32).round() as usize)
+            ((acc * (attributes.max_combo + max_tiny_droplets) as f64).round() as usize)
                 .saturating_sub(n_fruits)
                 .saturating_sub(n_droplets)
         });
@@ -290,17 +290,17 @@ impl FruitsPPInner {
 
         // Longer maps are worth more
         let len_bonus = 0.95
-            + 0.3 * (combo_hits as f32 / 2500.0).min(1.0)
-            + (combo_hits > 2500) as u8 as f32 * (combo_hits as f32 / 2500.0).log10() * 0.475;
+            + 0.3 * (combo_hits as f64 / 2500.0).min(1.0)
+            + (combo_hits > 2500) as u8 as f64 * (combo_hits as f64 / 2500.0).log10() * 0.475;
 
         pp *= len_bonus;
 
         // Penalize misses exponentially
-        pp *= 0.97_f32.powi(self.n_misses as i32);
+        pp *= 0.97_f64.powi(self.n_misses as i32);
 
         // Combo scaling
         if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
-            pp *= (combo as f32 / attributes.max_combo as f32)
+            pp *= (combo as f64 / attributes.max_combo as f64)
                 .powf(0.8)
                 .min(1.0);
         }
@@ -309,7 +309,7 @@ impl FruitsPPInner {
         let ar = attributes.ar;
         let mut ar_factor = 1.0;
         if ar > 9.0 {
-            ar_factor += 0.1 * (ar - 9.0) + (ar > 10.0) as u8 as f32 * 0.1 * (ar - 10.0);
+            ar_factor += 0.1 * (ar - 9.0) + (ar > 10.0) as u8 as f64 * 0.1 * (ar - 10.0);
         } else if ar < 8.0 {
             ar_factor += 0.025 * (8.0 - ar);
         }
@@ -359,13 +359,13 @@ impl FruitsPPInner {
     }
 
     #[inline]
-    fn acc(&self) -> f32 {
+    fn acc(&self) -> f64 {
         let total_hits = self.total_hits();
 
         if total_hits == 0 {
             1.0
         } else {
-            (self.successful_hits() as f32 / total_hits as f32)
+            (self.successful_hits() as f64 / total_hits as f64)
                 .max(0.0)
                 .min(1.0)
         }
@@ -447,7 +447,7 @@ mod test {
             + calculator.n_tiny_droplets.unwrap_or(0);
         let denominator =
             numerator + calculator.n_tiny_droplet_misses.unwrap_or(0) + calculator.n_misses;
-        let acc = 100.0 * numerator as f32 / denominator as f32;
+        let acc = 100.0 * numerator as f64 / denominator as f64;
 
         assert!(
             (target_acc - acc).abs() < 1.0,
@@ -487,7 +487,7 @@ mod test {
             + calculator.n_tiny_droplets.unwrap_or(0);
         let denominator =
             numerator + calculator.n_tiny_droplet_misses.unwrap_or(0) + calculator.n_misses;
-        let acc = 100.0 * numerator as f32 / denominator as f32;
+        let acc = 100.0 * numerator as f64 / denominator as f64;
 
         assert!(
             (target_acc - acc).abs() < 1.0,

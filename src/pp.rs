@@ -115,7 +115,7 @@ impl<'m> AnyPP<'m> {
     /// Irrelevant for osu!mania.
     #[allow(unused_variables)]
     #[inline]
-    pub fn accuracy(self, acc: f32) -> Self {
+    pub fn accuracy(self, acc: f64) -> Self {
         match self {
             #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.accuracy(acc)),

@@ -42,11 +42,11 @@ impl<T> OptionExt<T> for Option<T> {
     }
 }
 
-trait F32Ext: Sized {
+trait FloatExt: Sized {
     fn validate(self) -> Result<Self, ParseError>;
 }
 
-impl F32Ext for f32 {
+impl FloatExt for f64 {
     fn validate(self) -> Result<Self, ParseError> {
         self.is_finite()
             .then(|| self)
@@ -312,10 +312,10 @@ macro_rules! parse_timingpoints_body {
                 .next()
                 .next_field("timing point time")?
                 .trim()
-                .parse::<f32>()?
+                .parse::<f64>()?
                 .validate()?;
 
-            let beat_len: f32 = split.next().next_field("beat len")?.trim().parse()?;
+            let beat_len: f64 = split.next().next_field("beat len")?.trim().parse()?;
 
             if beat_len < 0.0 {
                 let point = DifficultyPoint {
@@ -429,7 +429,7 @@ macro_rules! parse_hitobjects_body {
                 .next()
                 .next_field("hitobject time")?
                 .trim()
-                .parse::<f32>()?
+                .parse::<f64>()?
                 .validate()?;
 
             if !$self.hit_objects.is_empty() && time < prev_time {
@@ -519,7 +519,7 @@ macro_rules! parse_hitobjects_body {
                         let pixel_len = split
                             .next()
                             .next_field("pixel len")?
-                            .parse::<f32>()?
+                            .parse::<f64>()?
                             .max(0.0)
                             .min(MAX_COORDINATE_VALUE);
 
@@ -733,8 +733,8 @@ pub struct Beatmap {
     pub od: f32,
     pub cs: f32,
     pub hp: f32,
-    pub slider_mult: f32,
-    pub tick_rate: f32,
+    pub slider_mult: f64,
+    pub tick_rate: f64,
     pub hit_objects: Vec<HitObject>,
 
     #[cfg(any(feature = "osu", feature = "fruits"))]
@@ -769,7 +769,7 @@ mod osu_fruits {
 
     use super::Pos2;
 
-    pub(super) const MAX_COORDINATE_VALUE: f32 = 131_072.0;
+    pub(super) const MAX_COORDINATE_VALUE: f64 = 131_072.0;
 
     pub(super) fn convert_points(
         points: &[&str],

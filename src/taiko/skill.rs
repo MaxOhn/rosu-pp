@@ -2,25 +2,25 @@ use super::{DifficultyObject, SkillKind};
 
 use std::cmp::Ordering;
 
-const DECAY_WEIGHT: f32 = 0.9;
+const DECAY_WEIGHT: f64 = 0.9;
 
-const COLOR_SKILL_MULTIPLIER: f32 = 1.0;
-const COLOR_STRAIN_DECAY_BASE: f32 = 0.4;
+const COLOR_SKILL_MULTIPLIER: f64 = 1.0;
+const COLOR_STRAIN_DECAY_BASE: f64 = 0.4;
 
-const RHYTHM_SKILL_MULTIPLIER: f32 = 10.0;
-const RHYTHM_STRAIN_DECAY_BASE: f32 = 0.0;
+const RHYTHM_SKILL_MULTIPLIER: f64 = 10.0;
+const RHYTHM_STRAIN_DECAY_BASE: f64 = 0.0;
 
-const STAMINA_SKILL_MULTIPLIER: f32 = 1.0;
-const STAMINA_STRAIN_DECAY_BASE: f32 = 0.4;
+const STAMINA_SKILL_MULTIPLIER: f64 = 1.0;
+const STAMINA_STRAIN_DECAY_BASE: f64 = 0.4;
 
 pub(crate) struct Skill {
-    pub current_strain: f32,
-    current_section_peak: f32,
+    pub current_strain: f64,
+    current_section_peak: f64,
 
     kind: SkillKind,
-    pub(crate) strain_peaks: Vec<f32>,
+    pub(crate) strain_peaks: Vec<f64>,
 
-    prev_time: Option<f32>,
+    prev_time: Option<f64>,
 }
 
 impl Skill {
@@ -43,7 +43,7 @@ impl Skill {
     }
 
     #[inline]
-    pub(crate) fn start_new_section_from(&mut self, time: f32) {
+    pub(crate) fn start_new_section_from(&mut self, time: f64) {
         self.current_section_peak = self.peak_strain(time - self.prev_time.unwrap());
     }
 
@@ -56,7 +56,7 @@ impl Skill {
     }
 
     #[inline]
-    pub(crate) fn difficulty_value(&self, buf: &mut [f32]) -> f32 {
+    pub(crate) fn difficulty_value(&self, buf: &mut [f64]) -> f64 {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
@@ -72,7 +72,7 @@ impl Skill {
     }
 
     #[inline]
-    fn skill_multiplier(&self) -> f32 {
+    fn skill_multiplier(&self) -> f64 {
         match self.kind {
             SkillKind::Color { .. } => COLOR_SKILL_MULTIPLIER,
             SkillKind::Rhythm { .. } => RHYTHM_SKILL_MULTIPLIER,
@@ -81,7 +81,7 @@ impl Skill {
     }
 
     #[inline]
-    fn strain_decay_base(&self) -> f32 {
+    fn strain_decay_base(&self) -> f64 {
         match self.kind {
             SkillKind::Color { .. } => COLOR_STRAIN_DECAY_BASE,
             SkillKind::Rhythm { .. } => RHYTHM_STRAIN_DECAY_BASE,
@@ -90,12 +90,12 @@ impl Skill {
     }
 
     #[inline]
-    fn peak_strain(&self, delta_time: f32) -> f32 {
+    fn peak_strain(&self, delta_time: f64) -> f64 {
         self.current_strain * self.strain_decay(delta_time)
     }
 
     #[inline]
-    fn strain_decay(&self, ms: f32) -> f32 {
+    fn strain_decay(&self, ms: f64) -> f64 {
         self.strain_decay_base().powf(ms / 1000.0)
     }
 }

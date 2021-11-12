@@ -32,11 +32,11 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 #[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'m> {
     map: &'m Beatmap,
-    stars: Option<f32>,
+    stars: Option<f64>,
     mods: u32,
     max_combo: usize,
     combo: Option<usize>,
-    acc: f32,
+    acc: f64,
     n_misses: usize,
     passed_objects: Option<usize>,
 
@@ -69,7 +69,7 @@ impl<'m> TaikoPP<'m> {
     #[inline]
     pub fn attributes(mut self, attributes: impl TaikoAttributeProvider) -> Self {
         if let Some(stars) = attributes.attributes() {
-            self.stars.replace(stars);
+            self.stars = Some(stars);
         }
 
         self
@@ -119,7 +119,7 @@ impl<'m> TaikoPP<'m> {
 
     /// Set the accuracy between 0.0 and 100.0.
     #[inline]
-    pub fn accuracy(mut self, acc: f32) -> Self {
+    pub fn accuracy(mut self, acc: f64) -> Self {
         self.acc = acc / 100.0;
         self.n300.take();
         self.n100.take();
@@ -158,7 +158,7 @@ impl<'m> TaikoPP<'m> {
                 (None, None) => unreachable!(),
             };
 
-            self.acc = (2 * n300 + n100) as f32 / (2 * (n300 + n100 + misses)) as f32;
+            self.acc = (2 * n300 + n100) as f64 / (2 * (n300 + n100 + misses)) as f64;
         }
 
         let inner = TaikoPPInner {
@@ -176,10 +176,10 @@ impl<'m> TaikoPP<'m> {
 
 struct TaikoPPInner<'m> {
     map: &'m Beatmap,
-    stars: f32,
+    stars: f64,
     mods: u32,
     max_combo: usize,
-    acc: f32,
+    acc: f64,
     n_misses: usize,
 }
 
@@ -208,16 +208,16 @@ impl<'m> TaikoPPInner<'m> {
         }
     }
 
-    fn compute_strain_value(&self, stars: f32) -> f32 {
+    fn compute_strain_value(&self, stars: f64) -> f64 {
         let exp_base = 5.0 * (stars / 0.0075).max(1.0) - 4.0;
         let mut strain = exp_base * exp_base / 100_000.0;
 
         // Longer maps are worth more
-        let len_bonus = 1.0 + 0.1 * (self.max_combo as f32 / 1500.0).min(1.0);
+        let len_bonus = 1.0 + 0.1 * (self.max_combo as f64 / 1500.0).min(1.0);
         strain *= len_bonus;
 
         // Penalize misses exponentially
-        strain *= 0.985_f32.powi(self.n_misses as i32);
+        strain *= 0.985_f64.powi(self.n_misses as i32);
 
         // HD bonus
         if self.mods.hd() {
@@ -234,8 +234,8 @@ impl<'m> TaikoPPInner<'m> {
     }
 
     #[inline]
-    fn compute_accuracy_value(&self) -> f32 {
-        let mut od = self.map.od;
+    fn compute_accuracy_value(&self) -> f64 {
+        let mut od = self.map.od as f64;
 
         if self.mods.hr() {
             od *= 1.4;
@@ -248,47 +248,43 @@ impl<'m> TaikoPPInner<'m> {
         (150.0 / hit_window).powf(1.1)
             * self.acc.powi(15)
             * 22.0
-            * (self.max_combo as f32 / 1500.0).powf(0.3).min(1.15)
+            * (self.max_combo as f64 / 1500.0).powf(0.3).min(1.15)
     }
 }
 
-const HITWINDOW_MIN: f32 = 50.0;
-const HITWINDOW_AVG: f32 = 35.0;
-const HITWINDOW_MAX: f32 = 20.0;
-
 #[inline]
-fn difficulty_range_od(od: f32) -> f32 {
-    crate::difficulty_range(od, HITWINDOW_MAX, HITWINDOW_AVG, HITWINDOW_MIN)
+fn difficulty_range_od(od: f64) -> f64 {
+    crate::difficulty_range(od, 20.0, 35.0, 50.0)
 }
 
 pub trait TaikoAttributeProvider {
-    fn attributes(self) -> Option<f32>;
+    fn attributes(self) -> Option<f64>;
 }
 
-impl TaikoAttributeProvider for f32 {
+impl TaikoAttributeProvider for f64 {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         Some(self)
     }
 }
 
 impl TaikoAttributeProvider for DifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         Some(self.stars)
     }
 }
 
 impl TaikoAttributeProvider for PerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         Some(self.attributes.stars)
     }
 }
 
 impl TaikoAttributeProvider for StarResult {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
             Some(attributes.stars)
@@ -300,7 +296,7 @@ impl TaikoAttributeProvider for StarResult {
 
 impl TaikoAttributeProvider for PpResult {
     #[inline]
-    fn attributes(self) -> Option<f32> {
+    fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
             Some(attributes.attributes.stars)

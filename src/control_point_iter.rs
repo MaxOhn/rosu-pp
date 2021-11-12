@@ -17,8 +17,8 @@ pub(crate) struct ControlPointIter<'p> {
     timing_points: Iter<'p, TimingPoint>,
     difficulty_points: Iter<'p, DifficultyPoint>,
 
-    next_timing: Option<(f32, f32)>,
-    next_difficulty: Option<(f32, f32)>,
+    next_timing: Option<(f64, f64)>,
+    next_difficulty: Option<(f64, f64)>,
 }
 
 impl<'p> ControlPointIter<'p> {
@@ -39,20 +39,20 @@ impl<'p> ControlPointIter<'p> {
 
 pub(crate) enum ControlPoint {
     Timing {
-        time: f32,
+        time: f64,
         #[allow(dead_code)] // not used in `osu_fast` feature
-        beat_len: f32,
+        beat_len: f64,
     },
     Difficulty {
-        time: f32,
-        slider_velocity: f32,
+        time: f64,
+        slider_velocity: f64,
     },
 }
 
 #[cfg(any(feature = "osu_precise", feature = "fruits"))]
 impl ControlPoint {
     #[inline]
-    pub(crate) fn time(&self) -> f32 {
+    pub(crate) fn time(&self) -> f64 {
         match self {
             Self::Timing { time, .. } => *time,
             Self::Difficulty { time, .. } => *time,
@@ -70,13 +70,13 @@ impl<'p> Iterator for ControlPointIter<'p> {
 
                 Some(ControlPoint::Timing { time, beat_len })
             }
-            (_, Some((time, speed_mult))) => {
+            (_, Some((time, slider_velocity))) => {
                 self.next_difficulty =
                     next_tuple!(self.difficulty_points, (time, speed_multiplier));
 
                 Some(ControlPoint::Difficulty {
                     time,
-                    slider_velocity: speed_mult,
+                    slider_velocity,
                 })
             }
             (Some((time, beat_len)), None) => {

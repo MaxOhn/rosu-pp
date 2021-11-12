@@ -298,8 +298,8 @@ impl BeatmapExt for Beatmap {
 /// `section_length` is the time in ms inbetween two strains.
 #[derive(Clone, Debug, Default)]
 pub struct Strains {
-    pub section_length: f32,
-    pub strains: Vec<f32>,
+    pub section_length: f64,
+    pub strains: Vec<f64>,
 }
 
 /// Basic enum containing the result of a star calculation based on the mode.
@@ -318,7 +318,7 @@ pub enum StarResult {
 impl StarResult {
     /// The final star value.
     #[inline]
-    pub fn stars(&self) -> f32 {
+    pub fn stars(&self) -> f64 {
         match self {
             #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => attributes.stars,
@@ -348,7 +348,7 @@ pub enum PpResult {
 impl PpResult {
     /// The final pp value.
     #[inline]
-    pub fn pp(&self) -> f32 {
+    pub fn pp(&self) -> f64 {
         match self {
             #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => attributes.pp,
@@ -363,7 +363,7 @@ impl PpResult {
 
     /// The final star value.
     #[inline]
-    pub fn stars(&self) -> f32 {
+    pub fn stars(&self) -> f64 {
         match self {
             #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => attributes.stars(),
@@ -379,7 +379,7 @@ impl PpResult {
 
 #[cfg(any(feature = "osu", feature = "taiko"))]
 #[inline]
-fn difficulty_range(val: f32, max: f32, avg: f32, min: f32) -> f32 {
+fn difficulty_range(val: f64, max: f64, avg: f64, min: f64) -> f64 {
     if val > 5.0 {
         avg + (max - avg) * (val - 5.0) / 5.0
     } else if val < 5.0 {

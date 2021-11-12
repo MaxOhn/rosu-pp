@@ -2,7 +2,7 @@ use super::{DifficultyObject, HitObjectRhythm, LimitedQueue, Rim};
 
 use std::ops::Index;
 
-const RHYTHM_STRAIN_DECAY: f32 = 0.96;
+const RHYTHM_STRAIN_DECAY: f64 = 0.96;
 const MOST_RECENT_PATTERNS_TO_COMPARE: usize = 2;
 
 const MONO_HISTORY_MAX_LEN: usize = 5;
@@ -18,12 +18,12 @@ pub(crate) enum SkillKind {
     Rhythm {
         rhythm_history: LimitedQueue<(usize, HitObjectRhythm)>, // (idx, rhythm)
         notes_since_rhythm_change: usize,
-        current_strain: f32,
+        current_strain: f64,
     },
     Stamina {
-        note_pair_duration_history: LimitedQueue<f32>,
+        note_pair_duration_history: LimitedQueue<f64>,
         hand: u8,
-        off_hand_object_duration: f32,
+        off_hand_object_duration: f64,
     },
 }
 
@@ -51,7 +51,7 @@ impl SkillKind {
         Self::Stamina {
             note_pair_duration_history: LimitedQueue::new(STAMINA_HISTORY_MAX_LEN),
             hand: right_hand as u8,
-            off_hand_object_duration: f32::MAX,
+            off_hand_object_duration: f64::MAX,
         }
     }
 
@@ -59,7 +59,7 @@ impl SkillKind {
         &mut self,
         current: &DifficultyObject<'_>,
         cheese: &[bool],
-    ) -> f32 {
+    ) -> f64 {
         match self {
             Self::Color {
                 mono_history,
@@ -157,7 +157,7 @@ impl SkillKind {
                 *current_strain *= RHYTHM_STRAIN_DECAY;
                 *notes_since_rhythm_change += 1;
 
-                if current.rhythm.difficulty.abs() <= f32::EPSILON {
+                if current.rhythm.difficulty.abs() <= f64::EPSILON {
                     return 0.0;
                 }
 
@@ -250,15 +250,16 @@ impl SkillKind {
 }
 
 #[inline]
-fn pattern_len_penalty(pattern_len: usize) -> f32 {
-    let short_pattern_penalty = (0.15 * pattern_len as f32).min(1.0);
-    let long_pattern_penalty = (2.5 - 0.15 * pattern_len as f32).max(0.0).min(1.0);
+fn pattern_len_penalty(pattern_len: usize) -> f64 {
+    let pattern_len = pattern_len as f64;
+    let short_pattern_penalty = (0.15 * pattern_len).min(1.0);
+    let long_pattern_penalty = (2.5 - 0.15 * pattern_len).max(0.0).min(1.0);
 
     short_pattern_penalty.min(long_pattern_penalty)
 }
 
 #[inline]
-fn cheese_penalty(note_pair_duration: f32) -> f32 {
+fn cheese_penalty(note_pair_duration: f64) -> f64 {
     if note_pair_duration > 125.0 {
         1.0
     } else if note_pair_duration < 100.0 {
@@ -269,7 +270,7 @@ fn cheese_penalty(note_pair_duration: f32) -> f32 {
 }
 
 #[inline]
-fn speed_bonus(note_pair_duration: f32) -> f32 {
+fn speed_bonus(note_pair_duration: f64) -> f64 {
     if note_pair_duration > 200.0 {
         return 0.0;
     }
@@ -281,6 +282,6 @@ fn speed_bonus(note_pair_duration: f32) -> f32 {
 }
 
 #[inline]
-fn repetition_penalty(notes_since: usize) -> f32 {
-    (0.032 * notes_since as f32).min(1.0)
+fn repetition_penalty(notes_since: usize) -> f64 {
+    (0.032 * notes_since as f64).min(1.0)
 }

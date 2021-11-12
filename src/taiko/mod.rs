@@ -21,13 +21,13 @@ use stamina_cheese::StaminaCheeseDetector;
 use crate::{Beatmap, Mods, Strains};
 
 use std::cmp::Ordering;
-use std::f32::consts::PI;
+use std::f64::consts::PI;
 
-const SECTION_LEN: f32 = 400.0;
+const SECTION_LEN: f64 = 400.0;
 
-const COLOR_SKILL_MULTIPLIER: f32 = 0.01;
-const RHYTHM_SKILL_MULTIPLIER: f32 = 0.014;
-const STAMINA_SKILL_MULTIPLIER: f32 = 0.02;
+const COLOR_SKILL_MULTIPLIER: f64 = 0.01;
+const RHYTHM_SKILL_MULTIPLIER: f64 = 0.014;
+const STAMINA_SKILL_MULTIPLIER: f64 = 0.02;
 
 /// Star calculation for osu!taiko maps.
 ///
@@ -209,7 +209,7 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
 }
 
 #[inline]
-fn rescale(stars: f32) -> f32 {
+fn rescale(stars: f64) -> f64 {
     if stars < 0.0 {
         stars
     } else {
@@ -218,7 +218,7 @@ fn rescale(stars: f32) -> f32 {
 }
 
 #[inline]
-fn simple_color_penalty(stamina: f32, color: f32) -> f32 {
+fn simple_color_penalty(stamina: f64, color: f64) -> f64 {
     if color <= 0.0 {
         0.79 - 0.25
     } else {
@@ -226,7 +226,7 @@ fn simple_color_penalty(stamina: f32, color: f32) -> f32 {
     }
 }
 
-fn locally_combined_difficulty(skills: &[Skill], stamina_penalty: f32) -> f32 {
+fn locally_combined_difficulty(skills: &[Skill], stamina_penalty: f64) -> f64 {
     let mut peaks = Vec::with_capacity(skills[0].strain_peaks.len());
 
     let iter = skills[0]
@@ -259,7 +259,7 @@ fn locally_combined_difficulty(skills: &[Skill], stamina_penalty: f32) -> f32 {
 }
 
 #[inline]
-fn norm(p: f32, a: f32, b: f32, c: f32) -> f32 {
+fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
     (a.powf(p) + b.powf(p) + c.powf(p)).powf(p.recip())
 }
 
@@ -267,28 +267,28 @@ fn norm(p: f32, a: f32, b: f32, c: f32) -> f32 {
 /// This data is necessary to calculate PP.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct DifficultyAttributes {
-    pub stars: f32,
+    pub stars: f64,
 }
 
 /// Various data created through the pp calculation.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct PerformanceAttributes {
     pub attributes: DifficultyAttributes,
-    pub pp: f32,
-    pub pp_acc: f32,
-    pub pp_strain: f32,
+    pub pp: f64,
+    pub pp_acc: f64,
+    pub pp_strain: f64,
 }
 
 impl PerformanceAttributes {
     /// Return the star value.
     #[inline]
-    pub fn stars(&self) -> f32 {
+    pub fn stars(&self) -> f64 {
         self.attributes.stars
     }
 
     /// Return the performance point value.
     #[inline]
-    pub fn pp(&self) -> f32 {
+    pub fn pp(&self) -> f64 {
         self.pp
     }
 }

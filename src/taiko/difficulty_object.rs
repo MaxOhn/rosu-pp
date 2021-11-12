@@ -6,9 +6,9 @@ pub(crate) struct DifficultyObject<'o> {
     pub(crate) idx: usize,
     pub(crate) base: &'o HitObject,
     pub(crate) prev: &'o HitObject,
-    pub(crate) delta: f32,
+    pub(crate) delta: f64,
     pub(crate) rhythm: &'static HitObjectRhythm,
-    pub(crate) start_time: f32,
+    pub(crate) start_time: f64,
 }
 
 impl<'o> DifficultyObject<'o> {
@@ -18,7 +18,7 @@ impl<'o> DifficultyObject<'o> {
         base: &'o HitObject,
         prev: &'o HitObject,
         prev_prev: &HitObject,
-        clock_rate: f32,
+        clock_rate: f64,
     ) -> Self {
         let delta = (base.start_time - prev.start_time) / clock_rate;
         let rhythm = closest_rhythm(delta, prev, prev_prev, clock_rate);

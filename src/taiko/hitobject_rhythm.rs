@@ -53,8 +53,8 @@ static COMMON_RHYTHMS: [HitObjectRhythm; 9] = [
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct HitObjectRhythm {
     id: u8,
-    ratio: f32,
-    pub(crate) difficulty: f32,
+    ratio: f64,
+    pub(crate) difficulty: f64,
 }
 
 impl PartialEq for HitObjectRhythm {
@@ -68,10 +68,10 @@ impl Eq for HitObjectRhythm {}
 
 #[inline]
 pub(crate) fn closest_rhythm(
-    delta_time: f32,
+    delta_time: f64,
     last: &HitObject,
     last_last: &HitObject,
-    clock_rate: f32,
+    clock_rate: f64,
 ) -> &'static HitObjectRhythm {
     let prev_len = (last.start_time - last_last.start_time) / clock_rate;
     let ratio = delta_time / prev_len;

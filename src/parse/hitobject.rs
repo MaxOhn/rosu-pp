@@ -7,14 +7,14 @@ use std::cmp::Ordering;
 #[derive(Clone, Debug, PartialEq)]
 pub struct HitObject {
     pub pos: Pos2,
-    pub start_time: f32,
+    pub start_time: f64,
     pub kind: HitObjectKind,
     pub sound: u8,
 }
 
 impl HitObject {
     #[inline]
-    pub fn end_time(&self) -> f32 {
+    pub fn end_time(&self) -> f64 {
         match &self.kind {
             HitObjectKind::Circle { .. } => self.start_time,
             // incorrect, only called in mania which has no sliders though
@@ -52,20 +52,20 @@ pub enum HitObjectKind {
     Circle,
     #[cfg(feature = "sliders")]
     Slider {
-        pixel_len: f32,
+        pixel_len: f64,
         repeats: usize,
         control_points: Vec<super::PathControlPoint>,
     },
     #[cfg(not(feature = "sliders"))]
     Slider {
-        pixel_len: f32,
+        pixel_len: f64,
         span_count: usize,
         last_control_point: Pos2,
     },
     Spinner {
-        end_time: f32,
+        end_time: f64,
     },
     Hold {
-        end_time: f32,
+        end_time: f64,
     },
 }

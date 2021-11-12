@@ -3,8 +3,8 @@ use crate::{Beatmap, ControlPoint, ControlPointIter};
 pub(crate) struct SliderState<'p> {
     control_points: ControlPointIter<'p>,
     next: Option<ControlPoint>,
-    pub(crate) beat_len: f32,
-    pub(crate) slider_velocity: f32,
+    pub(crate) beat_len: f64,
+    pub(crate) slider_velocity: f64,
 }
 
 impl<'p> SliderState<'p> {
@@ -29,7 +29,7 @@ impl<'p> SliderState<'p> {
     }
 
     #[inline]
-    pub(crate) fn update(&mut self, time: f32) {
+    pub(crate) fn update(&mut self, time: f64) {
         while let Some(next) = self.next.as_ref().filter(|n| time >= n.time()) {
             match next {
                 ControlPoint::Timing { beat_len, .. } => {
@@ -88,14 +88,14 @@ mod test {
         let mut state = SliderState::new(&map);
 
         state.update(2.0);
-        assert!((state.beat_len - 10.0).abs() <= f32::EPSILON);
+        assert!((state.beat_len - 10.0).abs() <= f64::EPSILON);
 
         state.update(3.0);
-        assert!((state.beat_len - 20.0).abs() <= f32::EPSILON);
-        assert!((state.slider_velocity - 1.0).abs() <= f32::EPSILON);
+        assert!((state.beat_len - 20.0).abs() <= f64::EPSILON);
+        assert!((state.slider_velocity - 1.0).abs() <= f64::EPSILON);
 
         state.update(5.0);
-        assert!((state.beat_len - 30.0).abs() <= f32::EPSILON);
-        assert!((state.slider_velocity - 45.0).abs() <= f32::EPSILON);
+        assert!((state.beat_len - 30.0).abs() <= f64::EPSILON);
+        assert!((state.slider_velocity - 45.0).abs() <= f64::EPSILON);
     }
 }

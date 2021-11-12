@@ -10,6 +10,6 @@ pub(crate) fn is_linear(
 
 #[cfg(feature = "osu")]
 #[inline]
-pub(crate) fn lerp(start: f32, end: f32, percent: f32) -> f32 {
+pub(crate) fn lerp(start: f64, end: f64, percent: f64) -> f64 {
     start + (end - start) * percent
 }
