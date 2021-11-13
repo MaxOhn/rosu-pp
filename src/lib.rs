@@ -321,6 +321,34 @@ impl DifficultyAttributes {
     }
 }
 
+#[cfg(feature = "fruits")]
+impl From<fruits::FruitsDifficultyAttributes> for DifficultyAttributes {
+    fn from(attributes: fruits::FruitsDifficultyAttributes) -> Self {
+        Self::Fruits(attributes)
+    }
+}
+
+#[cfg(feature = "mania")]
+impl From<mania::ManiaDifficultyAttributes> for DifficultyAttributes {
+    fn from(attributes: mania::ManiaDifficultyAttributes) -> Self {
+        Self::Mania(attributes)
+    }
+}
+
+#[cfg(feature = "osu")]
+impl From<osu::OsuDifficultyAttributes> for DifficultyAttributes {
+    fn from(attributes: osu::OsuDifficultyAttributes) -> Self {
+        Self::Osu(attributes)
+    }
+}
+
+#[cfg(feature = "taiko")]
+impl From<taiko::TaikoDifficultyAttributes> for DifficultyAttributes {
+    fn from(attributes: taiko::TaikoDifficultyAttributes) -> Self {
+        Self::Taiko(attributes)
+    }
+}
+
 /// The result of a performance calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum PerformanceAttributes {
@@ -377,6 +405,49 @@ impl PerformanceAttributes {
             #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes),
         }
+    }
+}
+
+impl From<PerformanceAttributes> for DifficultyAttributes {
+    fn from(attributes: PerformanceAttributes) -> Self {
+        match attributes {
+            #[cfg(feature = "fruits")]
+            PerformanceAttributes::Fruits(attributes) => Self::Fruits(attributes.attributes),
+            #[cfg(feature = "mania")]
+            PerformanceAttributes::Mania(attributes) => Self::Mania(attributes.attributes),
+            #[cfg(feature = "osu")]
+            PerformanceAttributes::Osu(attributes) => Self::Osu(attributes.attributes),
+            #[cfg(feature = "taiko")]
+            PerformanceAttributes::Taiko(attributes) => Self::Taiko(attributes.attributes),
+        }
+    }
+}
+
+#[cfg(feature = "fruits")]
+impl From<fruits::FruitsPerformanceAttributes> for PerformanceAttributes {
+    fn from(attributes: fruits::FruitsPerformanceAttributes) -> Self {
+        Self::Fruits(attributes)
+    }
+}
+
+#[cfg(feature = "mania")]
+impl From<mania::ManiaPerformanceAttributes> for PerformanceAttributes {
+    fn from(attributes: mania::ManiaPerformanceAttributes) -> Self {
+        Self::Mania(attributes)
+    }
+}
+
+#[cfg(feature = "osu")]
+impl From<osu::OsuPerformanceAttributes> for PerformanceAttributes {
+    fn from(attributes: osu::OsuPerformanceAttributes) -> Self {
+        Self::Osu(attributes)
+    }
+}
+
+#[cfg(feature = "taiko")]
+impl From<taiko::TaikoPerformanceAttributes> for PerformanceAttributes {
+    fn from(attributes: taiko::TaikoPerformanceAttributes) -> Self {
+        Self::Taiko(attributes)
     }
 }
 

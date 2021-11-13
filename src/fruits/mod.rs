@@ -661,6 +661,12 @@ impl FruitsPerformanceAttributes {
     }
 }
 
+impl From<FruitsPerformanceAttributes> for FruitsDifficultyAttributes {
+    fn from(attributes: FruitsPerformanceAttributes) -> Self {
+        attributes.attributes
+    }
+}
+
 #[test]
 // #[ignore]
 fn custom_fruits() {

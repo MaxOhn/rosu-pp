@@ -161,11 +161,13 @@ impl Curve {
         let mut cumulative_len = Vec::with_capacity(path.len());
         cumulative_len.push(0.0);
 
-        for (&curr, &next) in path.iter().zip(path.iter().skip(1)) {
-            let diff = next - curr;
-            calculated_len += diff.length() as f64;
-            cumulative_len.push(calculated_len);
-        }
+        let length_iter = path.iter().zip(path.iter().skip(1)).map(|(&curr, &next)| {
+            calculated_len += (next - curr).length() as f64;
+
+            calculated_len
+        });
+
+        cumulative_len.extend(length_iter);
 
         if (expected_len - calculated_len).abs() > f64::EPSILON {
             // * In osu-stable, if the last two control points of a slider are equal, extension is not performed
@@ -319,7 +321,7 @@ impl Curve {
         let p = points.len();
 
         let mut to_flatten = Vec::new();
-        let mut free_bufs = Vec::with_capacity(1);
+        let mut free_bufs = Vec::new();
 
         // In osu!lazer's code, `p` is always 0 so the first big `if` can be omitted
 

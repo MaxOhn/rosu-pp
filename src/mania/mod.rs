@@ -197,3 +197,9 @@ impl ManiaPerformanceAttributes {
         self.pp
     }
 }
+
+impl From<ManiaPerformanceAttributes> for ManiaDifficultyAttributes {
+    fn from(attributes: ManiaPerformanceAttributes) -> Self {
+        attributes.attributes
+    }
+}

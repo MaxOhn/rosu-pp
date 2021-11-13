@@ -291,3 +291,9 @@ impl TaikoPerformanceAttributes {
         self.pp
     }
 }
+
+impl From<TaikoPerformanceAttributes> for TaikoDifficultyAttributes {
+    fn from(attributes: TaikoPerformanceAttributes) -> Self {
+        attributes.attributes
+    }
+}

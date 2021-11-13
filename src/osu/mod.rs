@@ -587,6 +587,12 @@ impl OsuPerformanceAttributes {
     }
 }
 
+impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {
+    fn from(attributes: OsuPerformanceAttributes) -> Self {
+        attributes.attributes
+    }
+}
+
 #[inline]
 fn difficulty_range_od(od: f64) -> f64 {
     super::difficulty_range(od, 20.0, 50.0, 80.0)
