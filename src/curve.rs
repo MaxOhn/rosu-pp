@@ -158,7 +158,8 @@ impl Curve {
         expected_len: f64,
     ) -> Vec<f64> {
         let mut calculated_len = 0.0;
-        let mut cumulative_len = vec![0.0];
+        let mut cumulative_len = Vec::with_capacity(path.len());
+        cumulative_len.push(0.0);
 
         for (&curr, &next) in path.iter().zip(path.iter().skip(1)) {
             let diff = next - curr;

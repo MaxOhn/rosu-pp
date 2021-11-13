@@ -174,10 +174,8 @@ impl<'h> DifficultyObject<'h> {
                         // * this finds the positional delta from the required
                         // * radius and the current position, and updates the
                         // * currCursorPosition accordingly, as well as rewarding distance.
-                        curr_cursor_pos = curr_cursor_pos
-                            + curr_movement
-                                * ((curr_movement_len - required_movement) / curr_movement_len)
-                                    as f32;
+                        curr_cursor_pos += curr_movement
+                            * ((curr_movement_len - required_movement) / curr_movement_len) as f32;
 
                         curr_movement_len *=
                             (curr_movement_len - required_movement) / curr_movement_len;
