@@ -27,16 +27,16 @@ const CATCHER_SIZE: f32 = 106.75;
 const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
 const BASE_SCORING_DISTANCE: f64 = 100.0;
 
-/// Star calculation for osu!ctb maps
+/// Difficulty calculation for osu!ctb maps.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 pub fn stars(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+) -> FruitsDifficultyAttributes {
     if map.hit_objects.len() < 2 {
-        return DifficultyAttributes::default();
+        return FruitsDifficultyAttributes::default();
     }
 
     let take = passed_objects.unwrap_or(usize::MAX);
@@ -279,7 +279,7 @@ pub fn stars(
 
     let stars = movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR;
 
-    DifficultyAttributes {
+    FruitsDifficultyAttributes {
         stars,
         ar: attributes.ar,
         n_fruits: fruits,
@@ -289,7 +289,7 @@ pub fn stars(
     }
 }
 
-/// Essentially the same as the `stars` function but instead of
+/// Essentially the same as the [`stars`] function but instead of
 /// evaluating the final strains, it just returns them as is.
 ///
 /// Suitable to plot the difficulty of a map over time.
@@ -629,10 +629,9 @@ impl<I: Iterator<Item = CatchObject>> Iterator for FruitOrJuice<I> {
     }
 }
 
-/// Various data created through the star calculation.
-/// This data is necessary to calculate PP.
+/// The result of a difficulty calculation on an osu!ctb map.
 #[derive(Clone, Debug, Default)]
-pub struct DifficultyAttributes {
+pub struct FruitsDifficultyAttributes {
     pub stars: f64,
     pub max_combo: usize,
     pub ar: f64,
@@ -641,14 +640,14 @@ pub struct DifficultyAttributes {
     pub n_tiny_droplets: usize,
 }
 
-/// Various data created through the pp calculation.
+/// The result of a performance calculation on an osu!ctb map.
 #[derive(Clone, Debug, Default)]
-pub struct PerformanceAttributes {
-    pub attributes: DifficultyAttributes,
+pub struct FruitsPerformanceAttributes {
+    pub attributes: FruitsDifficultyAttributes,
     pub pp: f64,
 }
 
-impl PerformanceAttributes {
+impl FruitsPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {

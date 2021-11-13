@@ -1,7 +1,7 @@
-use super::{stars, DifficultyAttributes, PerformanceAttributes};
-use crate::{Beatmap, Mods, PpResult, StarResult};
+use super::{stars, ManiaDifficultyAttributes, ManiaPerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
-/// Calculator for pp on osu!mania maps.
+/// Performance calculator on osu!mania maps.
 ///
 /// # Example
 ///
@@ -48,9 +48,7 @@ impl<'m> ManiaPP<'m> {
         }
     }
 
-    /// [`ManiaAttributeProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
-    /// and by [`PpResult`](crate::PpResult) meaning you can give the star rating,
-    /// the result of a star calculation, or the result of a pp calculation.
+    /// Provide the result of previous a difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
@@ -90,7 +88,7 @@ impl<'m> ManiaPP<'m> {
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(self) -> PerformanceAttributes {
+    pub fn calculate(self) -> ManiaPerformanceAttributes {
         let stars = self
             .stars
             .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars);
@@ -131,8 +129,8 @@ impl<'m> ManiaPP<'m> {
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
-        PerformanceAttributes {
-            attributes: DifficultyAttributes { stars },
+        ManiaPerformanceAttributes {
+            attributes: ManiaDifficultyAttributes { stars },
             pp_acc: acc_value,
             pp_strain: strain_value,
             pp,
@@ -169,6 +167,7 @@ impl<'m> ManiaPP<'m> {
     }
 }
 
+/// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait ManiaAttributeProvider {
     fn attributes(self) -> Option<f64>;
 }
@@ -180,21 +179,21 @@ impl ManiaAttributeProvider for f64 {
     }
 }
 
-impl ManiaAttributeProvider for DifficultyAttributes {
+impl ManiaAttributeProvider for ManiaDifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         Some(self.stars)
     }
 }
 
-impl ManiaAttributeProvider for PerformanceAttributes {
+impl ManiaAttributeProvider for ManiaPerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         Some(self.attributes.stars)
     }
 }
 
-impl ManiaAttributeProvider for StarResult {
+impl ManiaAttributeProvider for DifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]
@@ -206,7 +205,7 @@ impl ManiaAttributeProvider for StarResult {
     }
 }
 
-impl ManiaAttributeProvider for PpResult {
+impl ManiaAttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]

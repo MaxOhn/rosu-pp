@@ -27,8 +27,6 @@ let map = match Beatmap::parse(file) {
 
 // If `BeatmapExt` is included, you can make use of
 // some methods on `Beatmap` to make your life simpler.
-// If the mode is known, it is recommended to use the
-// mode's pp calculator, e.g. `TaikoPP`, manually.
 let result = map.pp()
     .mods(24) // HDHR
     .combo(1234)

@@ -25,8 +25,6 @@
 //!
 //! // If `BeatmapExt` is included, you can make use of
 //! // some methods on `Beatmap` to make your life simpler.
-//! // If the mode is known, it is recommended to use the
-//! // mode's pp calculator, e.g. `TaikoPP`, manually.
 //! let result = map.pp()
 //!     .mods(24) // HDHR
 //!     .combo(1234)
@@ -153,17 +151,17 @@ pub use taiko::TaikoPP;
 pub use mods::Mods;
 pub use parse::{Beatmap, BeatmapAttributes, GameMode, ParseError, ParseResult};
 
+/// Provides some additional methods on [`Beatmap`](crate::Beatmap).
 pub trait BeatmapExt {
     /// Calculate the stars and other attributes of a beatmap which are required for pp calculation.
-    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> StarResult;
+    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> DifficultyAttributes;
 
     /// Calculate the max pp of a beatmap.
     ///
-    /// If you seek more fine-tuning and options you need to match on the map's
-    /// mode and use the mode's corresponding calculator, e.g. [`TaikoPP`](crate::TaikoPP) for taiko.
-    fn max_pp(&self, mods: u32) -> PpResult;
+    /// If you seek more fine-tuning you can use the [`pp`](BeatmapExt::pp) method.
+    fn max_pp(&self, mods: u32) -> PerformanceAttributes;
 
-    /// Returns a builder to calculate pp and difficulty values.
+    /// Returns a builder for performance calculation.
     ///
     /// Convenient method that matches on the map's mode to choose the appropriate calculator.
     fn pp(&self) -> AnyPP<'_>;
@@ -177,68 +175,68 @@ pub trait BeatmapExt {
 }
 
 impl BeatmapExt for Beatmap {
-    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> StarResult {
+    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> DifficultyAttributes {
         match self.mode {
             GameMode::STD => {
                 #[cfg(not(feature = "osu"))]
                 panic!("`osu` feature is not enabled");
 
                 #[cfg(feature = "osu")]
-                StarResult::Osu(osu::stars(self, mods, passed_objects))
+                DifficultyAttributes::Osu(osu::stars(self, mods, passed_objects))
             }
             GameMode::MNA => {
                 #[cfg(not(feature = "mania"))]
                 panic!("`mania` feature is not enabled");
 
                 #[cfg(feature = "mania")]
-                StarResult::Mania(mania::stars(self, mods, passed_objects))
+                DifficultyAttributes::Mania(mania::stars(self, mods, passed_objects))
             }
             GameMode::TKO => {
                 #[cfg(not(feature = "taiko"))]
                 panic!("`taiko` feature is not enabled");
 
                 #[cfg(feature = "taiko")]
-                StarResult::Taiko(taiko::stars(self, mods, passed_objects))
+                DifficultyAttributes::Taiko(taiko::stars(self, mods, passed_objects))
             }
             GameMode::CTB => {
                 #[cfg(not(feature = "fruits"))]
                 panic!("`fruits` feature is not enabled");
 
                 #[cfg(feature = "fruits")]
-                StarResult::Fruits(fruits::stars(self, mods, passed_objects))
+                DifficultyAttributes::Fruits(fruits::stars(self, mods, passed_objects))
             }
         }
     }
 
-    fn max_pp(&self, mods: u32) -> PpResult {
+    fn max_pp(&self, mods: u32) -> PerformanceAttributes {
         match self.mode {
             GameMode::STD => {
                 #[cfg(not(feature = "osu"))]
                 panic!("`osu` feature is not enabled");
 
                 #[cfg(feature = "osu")]
-                PpResult::Osu(OsuPP::new(self).mods(mods).calculate())
+                PerformanceAttributes::Osu(OsuPP::new(self).mods(mods).calculate())
             }
             GameMode::MNA => {
                 #[cfg(not(feature = "mania"))]
                 panic!("`mania` feature is not enabled");
 
                 #[cfg(feature = "mania")]
-                PpResult::Mania(ManiaPP::new(self).mods(mods).calculate())
+                PerformanceAttributes::Mania(ManiaPP::new(self).mods(mods).calculate())
             }
             GameMode::TKO => {
                 #[cfg(not(feature = "taiko"))]
                 panic!("`taiko` feature is not enabled");
 
                 #[cfg(feature = "taiko")]
-                PpResult::Taiko(TaikoPP::new(self).mods(mods).calculate())
+                PerformanceAttributes::Taiko(TaikoPP::new(self).mods(mods).calculate())
             }
             GameMode::CTB => {
                 #[cfg(not(feature = "fruits"))]
                 panic!("`fruits` feature is not enabled");
 
                 #[cfg(feature = "fruits")]
-                PpResult::Fruits(FruitsPP::new(self).mods(mods).calculate())
+                PerformanceAttributes::Fruits(FruitsPP::new(self).mods(mods).calculate())
             }
         }
     }
@@ -294,21 +292,21 @@ pub struct Strains {
     pub strains: Vec<f64>,
 }
 
-/// Basic enum containing the result of a star calculation based on the mode.
+/// The result of a difficulty calculation based on the mode.
 #[derive(Clone, Debug)]
-pub enum StarResult {
+pub enum DifficultyAttributes {
     #[cfg(feature = "fruits")]
-    Fruits(fruits::DifficultyAttributes),
+    Fruits(fruits::FruitsDifficultyAttributes),
     #[cfg(feature = "mania")]
-    Mania(mania::DifficultyAttributes),
+    Mania(mania::ManiaDifficultyAttributes),
     #[cfg(feature = "osu")]
-    Osu(osu::DifficultyAttributes),
+    Osu(osu::OsuDifficultyAttributes),
     #[cfg(feature = "taiko")]
-    Taiko(taiko::DifficultyAttributes),
+    Taiko(taiko::TaikoDifficultyAttributes),
 }
 
-impl StarResult {
-    /// The final star value.
+impl DifficultyAttributes {
+    /// The star value.
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
@@ -324,21 +322,21 @@ impl StarResult {
     }
 }
 
-/// Basic struct containing the result of a PP calculation.
+/// The result of a performance calculation based on the mode.
 #[derive(Clone, Debug)]
-pub enum PpResult {
+pub enum PerformanceAttributes {
     #[cfg(feature = "fruits")]
-    Fruits(fruits::PerformanceAttributes),
+    Fruits(fruits::FruitsPerformanceAttributes),
     #[cfg(feature = "mania")]
-    Mania(mania::PerformanceAttributes),
+    Mania(mania::ManiaPerformanceAttributes),
     #[cfg(feature = "osu")]
-    Osu(osu::PerformanceAttributes),
+    Osu(osu::OsuPerformanceAttributes),
     #[cfg(feature = "taiko")]
-    Taiko(taiko::PerformanceAttributes),
+    Taiko(taiko::TaikoPerformanceAttributes),
 }
 
-impl PpResult {
-    /// The final pp value.
+impl PerformanceAttributes {
+    /// The pp value.
     #[inline]
     pub fn pp(&self) -> f64 {
         match self {
@@ -353,7 +351,7 @@ impl PpResult {
         }
     }
 
-    /// The final star value.
+    /// The star value.
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
@@ -365,6 +363,20 @@ impl PpResult {
             Self::Osu(attributes) => attributes.stars(),
             #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => attributes.stars(),
+        }
+    }
+
+    #[inline]
+    pub fn difficulty_attributes(&self) -> DifficultyAttributes {
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(attributes) => DifficultyAttributes::Fruits(attributes.attributes.clone()),
+            #[cfg(feature = "mania")]
+            Self::Mania(attributes) => DifficultyAttributes::Mania(attributes.attributes),
+            #[cfg(feature = "osu")]
+            Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.attributes.clone()),
+            #[cfg(feature = "taiko")]
+            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes),
         }
     }
 }

@@ -11,18 +11,18 @@ use crate::{parse::HitObject, Beatmap, GameMode, Mods, Strains};
 const SECTION_LEN: f64 = 400.0;
 const STAR_SCALING_FACTOR: f64 = 0.018;
 
-/// Star calculation for osu!mania maps
+/// Difficulty calculation for osu!mania maps.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 pub fn stars(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+) -> ManiaDifficultyAttributes {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return DifficultyAttributes::default();
+        return ManiaDifficultyAttributes::default();
     }
 
     let rounded_cs = map.cs.round();
@@ -90,10 +90,10 @@ pub fn stars(
 
     let stars = strain.difficulty_value() * STAR_SCALING_FACTOR;
 
-    DifficultyAttributes { stars }
+    ManiaDifficultyAttributes { stars }
 }
 
-/// Essentially the same as the `stars` function but instead of
+/// Essentially the same as the [`stars`] function but instead of
 /// evaluating the final strains, it just returns them as is.
 ///
 /// Suitable to plot the difficulty of a map over time.
@@ -169,23 +169,22 @@ impl<'o> DifficultyHitObject<'o> {
     }
 }
 
-/// Various data created through the star calculation.
-/// This data is necessary to calculate PP.
+/// The result of a difficulty calculation on an osu!mania map.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct DifficultyAttributes {
+pub struct ManiaDifficultyAttributes {
     pub stars: f64,
 }
 
-/// Various data created through the pp calculation.
+/// The result of a performance calculation on an osu!mania map.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct PerformanceAttributes {
-    pub attributes: DifficultyAttributes,
+pub struct ManiaPerformanceAttributes {
+    pub attributes: ManiaDifficultyAttributes,
     pub pp_acc: f64,
     pub pp_strain: f64,
     pub pp: f64,
 }
 
-impl PerformanceAttributes {
+impl ManiaPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {

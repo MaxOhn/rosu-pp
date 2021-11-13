@@ -7,6 +7,7 @@ macro_rules! impl_mods {
     };
 }
 
+/// Abstract type to define mods.
 pub trait Mods: Copy {
     const NF: u32 = 1 << 0;
     const EZ: u32 = 1 << 1;

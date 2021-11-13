@@ -1,7 +1,7 @@
-use super::{stars, DifficultyAttributes, PerformanceAttributes};
-use crate::{Beatmap, Mods, PpResult, StarResult};
+use super::{stars, TaikoDifficultyAttributes, TaikoPerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
-/// Calculator for pp on osu!taiko maps.
+/// Performance calculator on osu!taiko maps.
 ///
 /// # Example
 ///
@@ -61,10 +61,8 @@ impl<'m> TaikoPP<'m> {
         }
     }
 
-    /// [`TaikoAttributeProvider`] is implemented by `f32`, [`StarResult`](crate::StarResult),
-    /// and by [`PpResult`](crate::PpResult) meaning you can give the star rating,
-    /// the result of a star calculation, or the result of a pp calculation.
-    /// If you already calculated the stars for the current map-mod combination,
+    /// Provide the result of previous a difficulty or performance calculation.
+    /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
     pub fn attributes(mut self, attributes: impl TaikoAttributeProvider) -> Self {
@@ -136,7 +134,7 @@ impl<'m> TaikoPP<'m> {
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(mut self) -> PerformanceAttributes {
+    pub fn calculate(mut self) -> TaikoPerformanceAttributes {
         let stars = self
             .stars
             .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars);
@@ -184,7 +182,7 @@ struct TaikoPPInner<'m> {
 }
 
 impl<'m> TaikoPPInner<'m> {
-    fn calculate(self) -> PerformanceAttributes {
+    fn calculate(self) -> TaikoPerformanceAttributes {
         let mut multiplier = 1.1;
 
         if self.mods.nf() {
@@ -200,8 +198,8 @@ impl<'m> TaikoPPInner<'m> {
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
-        PerformanceAttributes {
-            attributes: DifficultyAttributes { stars: self.stars },
+        TaikoPerformanceAttributes {
+            attributes: TaikoDifficultyAttributes { stars: self.stars },
             pp,
             pp_acc: acc_value,
             pp_strain: strain_value,
@@ -257,6 +255,7 @@ fn difficulty_range_od(od: f64) -> f64 {
     crate::difficulty_range(od, 20.0, 35.0, 50.0)
 }
 
+/// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait TaikoAttributeProvider {
     fn attributes(self) -> Option<f64>;
 }
@@ -268,21 +267,21 @@ impl TaikoAttributeProvider for f64 {
     }
 }
 
-impl TaikoAttributeProvider for DifficultyAttributes {
+impl TaikoAttributeProvider for TaikoDifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         Some(self.stars)
     }
 }
 
-impl TaikoAttributeProvider for PerformanceAttributes {
+impl TaikoAttributeProvider for TaikoPerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         Some(self.attributes.stars)
     }
 }
 
-impl TaikoAttributeProvider for StarResult {
+impl TaikoAttributeProvider for DifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]
@@ -294,7 +293,7 @@ impl TaikoAttributeProvider for StarResult {
     }
 }
 
-impl TaikoAttributeProvider for PpResult {
+impl TaikoAttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]

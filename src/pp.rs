@@ -1,4 +1,8 @@
-use crate::{Beatmap, GameMode, PpResult, StarResult};
+use crate::{
+    fruits::FruitsDifficultyAttributes, mania::ManiaDifficultyAttributes,
+    osu::OsuDifficultyAttributes, taiko::TaikoDifficultyAttributes, Beatmap, DifficultyAttributes,
+    GameMode, PerformanceAttributes,
+};
 
 #[cfg(feature = "fruits")]
 use crate::FruitsPP;
@@ -12,7 +16,7 @@ use crate::OsuPP;
 #[cfg(feature = "taiko")]
 use crate::TaikoPP;
 
-/// Calculator for pp on maps of any mode.
+/// Performance calculator on maps of any mode.
 #[allow(clippy::upper_case_acronyms)]
 pub enum AnyPP<'m> {
     #[cfg(feature = "fruits")]
@@ -43,23 +47,21 @@ impl<'m> AnyPP<'m> {
     }
 
     #[inline]
-    pub fn calculate(self) -> PpResult {
+    pub fn calculate(self) -> PerformanceAttributes {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(f) => PpResult::Fruits(f.calculate()),
+            Self::Fruits(f) => PerformanceAttributes::Fruits(f.calculate()),
             #[cfg(feature = "mania")]
-            Self::Mania(m) => PpResult::Mania(m.calculate()),
+            Self::Mania(m) => PerformanceAttributes::Mania(m.calculate()),
             #[cfg(feature = "osu")]
-            Self::Osu(o) => PpResult::Osu(o.calculate()),
+            Self::Osu(o) => PerformanceAttributes::Osu(o.calculate()),
             #[cfg(feature = "taiko")]
-            Self::Taiko(t) => PpResult::Taiko(t.calculate()),
+            Self::Taiko(t) => PerformanceAttributes::Taiko(t.calculate()),
         }
     }
 
-    /// [`AttributeProvider`] is implemented by [`StarResult`](crate::StarResult)
-    /// and [`PpResult`](crate::PpResult) meaning you can give the result of a \
-    /// star calculation or the result of a pp calculation.
-    /// If you already calculated the stars for the current map-mod combination,
+    /// Provide the result of previous a difficulty or performance calculation.
+    /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
     pub fn attributes(self, attributes: impl AttributeProvider) -> Self {
@@ -258,29 +260,58 @@ impl<'m> AnyPP<'m> {
     }
 }
 
+/// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait AttributeProvider {
-    fn attributes(self) -> StarResult;
+    fn attributes(self) -> DifficultyAttributes;
 }
 
-impl AttributeProvider for StarResult {
+impl AttributeProvider for DifficultyAttributes {
     #[inline]
-    fn attributes(self) -> StarResult {
+    fn attributes(self) -> DifficultyAttributes {
         self
     }
 }
 
-impl AttributeProvider for PpResult {
+impl AttributeProvider for PerformanceAttributes {
     #[inline]
-    fn attributes(self) -> StarResult {
+    fn attributes(self) -> DifficultyAttributes {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(f) => StarResult::Fruits(f.attributes),
+            Self::Fruits(f) => DifficultyAttributes::Fruits(f.attributes),
             #[cfg(feature = "mania")]
-            Self::Mania(m) => StarResult::Mania(m.attributes),
+            Self::Mania(m) => DifficultyAttributes::Mania(m.attributes),
             #[cfg(feature = "osu")]
-            Self::Osu(o) => StarResult::Osu(o.attributes),
+            Self::Osu(o) => DifficultyAttributes::Osu(o.attributes),
             #[cfg(feature = "taiko")]
-            Self::Taiko(t) => StarResult::Taiko(t.attributes),
+            Self::Taiko(t) => DifficultyAttributes::Taiko(t.attributes),
         }
+    }
+}
+
+#[cfg(feature = "fruits")]
+impl AttributeProvider for FruitsDifficultyAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Fruits(self)
+    }
+}
+
+#[cfg(feature = "mania")]
+impl AttributeProvider for ManiaDifficultyAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Mania(self)
+    }
+}
+
+#[cfg(feature = "osu")]
+impl AttributeProvider for OsuDifficultyAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Osu(self)
+    }
+}
+
+#[cfg(feature = "taiko")]
+impl AttributeProvider for TaikoDifficultyAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Taiko(self)
     }
 }

@@ -1,7 +1,7 @@
-use super::{DifficultyAttributes, PerformanceAttributes};
-use crate::{Beatmap, Mods, PpResult, StarResult};
+use super::{OsuDifficultyAttributes, OsuPerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
-/// Calculator for pp on osu!standard maps.
+/// Performance calculator on osu!standard maps.
 ///
 /// # Example
 ///
@@ -32,7 +32,7 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 #[allow(clippy::upper_case_acronyms)]
 pub struct OsuPP<'m> {
     map: &'m Beatmap,
-    attributes: Option<DifficultyAttributes>,
+    attributes: Option<OsuDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
     acc: Option<f64>,
@@ -62,9 +62,7 @@ impl<'m> OsuPP<'m> {
         }
     }
 
-    /// [`OsuAttributeProvider`] is implemented by [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
-    /// and by [`PpResult`](crate::PpResult) meaning you can give the
-    /// result of a star calculation or a pp calculation.
+    /// Provide the result of previous a difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
@@ -199,7 +197,7 @@ impl<'m> OsuPP<'m> {
         self
     }
 
-    fn assert_hitresults(self, attributes: DifficultyAttributes) -> OsuPPInner {
+    fn assert_hitresults(self, attributes: OsuDifficultyAttributes) -> OsuPPInner {
         let mut n300 = self.n300;
         let mut n100 = self.n100;
         let mut n50 = self.n50;
@@ -281,7 +279,7 @@ impl<'m> OsuPP<'m> {
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(mut self) -> PerformanceAttributes {
+    pub fn calculate(mut self) -> OsuPerformanceAttributes {
         let attributes = self
             .attributes
             .take()
@@ -292,7 +290,7 @@ impl<'m> OsuPP<'m> {
 }
 
 struct OsuPPInner {
-    attributes: DifficultyAttributes,
+    attributes: OsuDifficultyAttributes,
     mods: u32,
     combo: Option<usize>,
     acc: f64,
@@ -306,7 +304,7 @@ struct OsuPPInner {
 }
 
 impl OsuPPInner {
-    fn calculate(mut self) -> PerformanceAttributes {
+    fn calculate(mut self) -> OsuPerformanceAttributes {
         let mut multiplier = 1.12;
 
         // NF penalty
@@ -343,7 +341,7 @@ impl OsuPPInner {
         .powf(1.0 / 1.1)
             * multiplier;
 
-        PerformanceAttributes {
+        OsuPerformanceAttributes {
             attributes: self.attributes,
             pp_acc: acc_value,
             pp_aim: aim_value,
@@ -565,7 +563,7 @@ impl OsuPPInner {
 }
 
 fn calculate_effective_misses(
-    attributes: &DifficultyAttributes,
+    attributes: &OsuDifficultyAttributes,
     combo: Option<usize>,
     n_misses: usize,
     total_hits: f64,
@@ -590,27 +588,28 @@ fn calculate_effective_misses(
     n_misses.max(combo_based_misses.floor() as usize)
 }
 
+/// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait OsuAttributeProvider {
-    fn attributes(self) -> Option<DifficultyAttributes>;
+    fn attributes(self) -> Option<OsuDifficultyAttributes>;
 }
 
-impl OsuAttributeProvider for DifficultyAttributes {
+impl OsuAttributeProvider for OsuDifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<OsuDifficultyAttributes> {
         Some(self)
     }
 }
 
-impl OsuAttributeProvider for PerformanceAttributes {
+impl OsuAttributeProvider for OsuPerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<OsuDifficultyAttributes> {
         Some(self.attributes)
     }
 }
 
-impl OsuAttributeProvider for StarResult {
+impl OsuAttributeProvider for DifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<OsuDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Osu(attributes) = self {
             Some(attributes)
@@ -620,9 +619,9 @@ impl OsuAttributeProvider for StarResult {
     }
 }
 
-impl OsuAttributeProvider for PpResult {
+impl OsuAttributeProvider for PerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<OsuDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Osu(attributes) = self {
             Some(attributes.attributes)
@@ -699,7 +698,7 @@ mod test {
     #[test]
     fn osu_missing_objects() {
         let map = Beatmap::default();
-        let attributes = DifficultyAttributes::default();
+        let attributes = OsuDifficultyAttributes::default();
 
         let total_objects = 1234;
         let n300 = 1000;

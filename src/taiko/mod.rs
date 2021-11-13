@@ -29,18 +29,18 @@ const COLOR_SKILL_MULTIPLIER: f64 = 0.01;
 const RHYTHM_SKILL_MULTIPLIER: f64 = 0.014;
 const STAMINA_SKILL_MULTIPLIER: f64 = 0.02;
 
-/// Star calculation for osu!taiko maps.
+/// Difficulty calculation for osu!taiko maps.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 pub fn stars(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+) -> TaikoDifficultyAttributes {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return DifficultyAttributes { stars: 0.0 };
+        return TaikoDifficultyAttributes { stars: 0.0 };
     }
 
     // True if the object at that index is stamina cheese
@@ -120,10 +120,10 @@ pub fn stars(
 
     let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
 
-    DifficultyAttributes { stars }
+    TaikoDifficultyAttributes { stars }
 }
 
-/// Essentially the same as the `stars` function but instead of
+/// Essentially the same as the [`stars`] function but instead of
 /// evaluating the final strains, it just returns them as is.
 ///
 /// Suitable to plot the difficulty of a map over time.
@@ -263,23 +263,22 @@ fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
     (a.powf(p) + b.powf(p) + c.powf(p)).powf(p.recip())
 }
 
-/// Various data created through the star calculation.
-/// This data is necessary to calculate PP.
+/// The result of a difficulty calculation on an osu!taiko map.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct DifficultyAttributes {
+pub struct TaikoDifficultyAttributes {
     pub stars: f64,
 }
 
-/// Various data created through the pp calculation.
+/// The result of a performance calculation on an osu!taiko map.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct PerformanceAttributes {
-    pub attributes: DifficultyAttributes,
+pub struct TaikoPerformanceAttributes {
+    pub attributes: TaikoDifficultyAttributes,
     pub pp: f64,
     pub pp_acc: f64,
     pub pp_strain: f64,
 }
 
-impl PerformanceAttributes {
+impl TaikoPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {

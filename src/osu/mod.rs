@@ -23,17 +23,14 @@ const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
 const NORMALIZED_RADIUS: f32 = 50.0; // * diameter of 100; easier mental maths.
 const STACK_DISTANCE: f32 = 3.0;
 
-/// Star calculation for osu!standard maps.
-///
-/// Slider paths aswell as stack leniency are considered.
-/// Both of these drag the performance down but in turn the values are much more accurate
+/// Difficulty calculation for osu!standard maps.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
 pub fn stars(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> DifficultyAttributes {
+) -> OsuDifficultyAttributes {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
@@ -41,7 +38,7 @@ pub fn stars(
     let od = (80.0 - hit_window) / 6.0;
 
     if take < 2 {
-        return DifficultyAttributes {
+        return OsuDifficultyAttributes {
             ar: map_attributes.ar,
             hp: map_attributes.hp,
             od,
@@ -223,7 +220,7 @@ pub fn stars(
         0.0
     };
 
-    DifficultyAttributes {
+    OsuDifficultyAttributes {
         ar: map_attributes.ar,
         hp: map_attributes.hp,
         od,
@@ -239,7 +236,7 @@ pub fn stars(
     }
 }
 
-/// Essentially the same as the `stars` function but instead of
+/// Essentially the same as the [`stars`] function but instead of
 /// evaluating the final strains, it just returns them as is.
 ///
 /// Suitable to plot the difficulty of a map over time.
@@ -544,10 +541,9 @@ fn difficulty_range_ar(ar: f64) -> f64 {
     crate::difficulty_range(ar, 450.0, 1200.0, 1800.0)
 }
 
-/// Various data created through the star calculation.
-/// This data is necessary to calculate PP.
+/// The result of a difficulty calculation on an osu!standard map.
 #[derive(Clone, Debug, Default)]
-pub struct DifficultyAttributes {
+pub struct OsuDifficultyAttributes {
     pub aim_strain: f64,
     pub speed_strain: f64,
     pub flashlight_rating: f64,
@@ -562,10 +558,10 @@ pub struct DifficultyAttributes {
     pub max_combo: usize,
 }
 
-/// Various data created through the pp calculation.
+/// The result of a performance calculation on an osu!standard map.
 #[derive(Clone, Debug, Default)]
-pub struct PerformanceAttributes {
-    pub attributes: DifficultyAttributes,
+pub struct OsuPerformanceAttributes {
+    pub attributes: OsuDifficultyAttributes,
     pub pp_acc: f64,
     pub pp_aim: f64,
     pub pp_flashlight: f64,
@@ -573,7 +569,7 @@ pub struct PerformanceAttributes {
     pub pp: f64,
 }
 
-impl PerformanceAttributes {
+impl OsuPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {

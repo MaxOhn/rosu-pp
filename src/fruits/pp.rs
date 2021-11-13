@@ -1,7 +1,7 @@
-use super::{stars, DifficultyAttributes, PerformanceAttributes};
-use crate::{Beatmap, Mods, PpResult, StarResult};
+use super::{stars, FruitsDifficultyAttributes, FruitsPerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
-/// Calculator for pp on osu!ctb maps.
+/// Performance calculator on osu!ctb maps.
 ///
 /// # Example
 ///
@@ -32,7 +32,7 @@ use crate::{Beatmap, Mods, PpResult, StarResult};
 #[allow(clippy::upper_case_acronyms)]
 pub struct FruitsPP<'m> {
     map: &'m Beatmap,
-    attributes: Option<DifficultyAttributes>,
+    attributes: Option<FruitsDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
 
@@ -62,9 +62,7 @@ impl<'m> FruitsPP<'m> {
         }
     }
 
-    /// [`FruitsAttributeProvider`] is implemented by [`DifficultyAttributes`](crate::fruits::DifficultyAttributes),
-    /// [`StarResult`](crate::StarResult), and by [`PpResult`](crate::PpResult) meaning you can give the
-    /// result of a star calculation or a pp calculation.
+    /// Provide the result of previous a difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
@@ -182,7 +180,7 @@ impl<'m> FruitsPP<'m> {
         self
     }
 
-    fn assert_hitresults(self, attributes: DifficultyAttributes) -> FruitsPPInner {
+    fn assert_hitresults(self, attributes: FruitsDifficultyAttributes) -> FruitsPPInner {
         let correct_combo_hits = self
             .n_fruits
             .and_then(|f| self.n_droplets.map(|d| f + d + self.n_misses))
@@ -253,7 +251,7 @@ impl<'m> FruitsPP<'m> {
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(mut self) -> PerformanceAttributes {
+    pub fn calculate(mut self) -> FruitsPerformanceAttributes {
         let attributes = self
             .attributes
             .take()
@@ -264,7 +262,7 @@ impl<'m> FruitsPP<'m> {
 }
 
 struct FruitsPPInner {
-    attributes: DifficultyAttributes,
+    attributes: FruitsDifficultyAttributes,
     mods: u32,
     combo: Option<usize>,
     n_fruits: usize,
@@ -275,7 +273,7 @@ struct FruitsPPInner {
 }
 
 impl FruitsPPInner {
-    fn calculate(self) -> PerformanceAttributes {
+    fn calculate(self) -> FruitsPerformanceAttributes {
         let attributes = &self.attributes;
         let stars = attributes.stars;
 
@@ -337,7 +335,7 @@ impl FruitsPPInner {
             pp *= 0.9;
         }
 
-        PerformanceAttributes {
+        FruitsPerformanceAttributes {
             attributes: self.attributes,
             pp,
         }
@@ -372,27 +370,28 @@ impl FruitsPPInner {
     }
 }
 
+/// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait FruitsAttributeProvider {
-    fn attributes(self) -> Option<DifficultyAttributes>;
+    fn attributes(self) -> Option<FruitsDifficultyAttributes>;
 }
 
-impl FruitsAttributeProvider for DifficultyAttributes {
+impl FruitsAttributeProvider for FruitsDifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
         Some(self)
     }
 }
 
-impl FruitsAttributeProvider for PerformanceAttributes {
+impl FruitsAttributeProvider for FruitsPerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
         Some(self.attributes)
     }
 }
 
-impl FruitsAttributeProvider for StarResult {
+impl FruitsAttributeProvider for DifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Fruits(attributes) = self {
             Some(attributes)
@@ -402,9 +401,9 @@ impl FruitsAttributeProvider for StarResult {
     }
 }
 
-impl FruitsAttributeProvider for PpResult {
+impl FruitsAttributeProvider for PerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<DifficultyAttributes> {
+    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Fruits(attributes) = self {
             Some(attributes.attributes)
@@ -419,8 +418,8 @@ mod test {
     use super::*;
     use crate::Beatmap;
 
-    fn attributes() -> DifficultyAttributes {
-        DifficultyAttributes {
+    fn attributes() -> FruitsDifficultyAttributes {
+        FruitsDifficultyAttributes {
             n_fruits: 1234,
             n_droplets: 567,
             n_tiny_droplets: 2345,

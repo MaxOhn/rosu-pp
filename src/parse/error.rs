@@ -13,8 +13,10 @@ use std::fmt;
 use std::io::Error as IOError;
 use std::num::{ParseFloatError, ParseIntError};
 
+/// `Result<_, ParseError>`
 pub type ParseResult<T> = Result<T, ParseError>;
 
+/// Anything that could go wrong while parsing a [`Beatmap`](crate::Beatmap).
 #[derive(Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum ParseError {
