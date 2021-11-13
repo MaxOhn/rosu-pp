@@ -541,6 +541,10 @@ fn difficulty_range_ar(ar: f64) -> f64 {
     crate::difficulty_range(ar, 450.0, 1200.0, 1800.0)
 }
 
+fn lerp(start: f64, end: f64, percent: f64) -> f64 {
+    start + (end - start) * percent
+}
+
 /// The result of a difficulty calculation on an osu!standard map.
 #[derive(Clone, Debug, Default)]
 pub struct OsuDifficultyAttributes {

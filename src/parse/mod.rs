@@ -765,7 +765,7 @@ impl Beatmap {
 
 #[cfg(feature = "sliders")]
 mod osu_fruits {
-    use crate::{math_util::is_linear, ParseError};
+    use crate::ParseError;
 
     use super::Pos2;
 
@@ -867,6 +867,10 @@ mod osu_fruits {
             (Some(Ok(x)), Some(Ok(y))) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
             _ => Err(ParseError::InvalidCurvePoints),
         }
+    }
+
+    fn is_linear(p0: Pos2, p1: Pos2, p2: Pos2) -> bool {
+        ((p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x)).abs() <= f32::EPSILON
     }
 
     /// Control point for slider curve calculation

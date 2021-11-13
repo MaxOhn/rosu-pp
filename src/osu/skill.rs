@@ -1,6 +1,4 @@
-use crate::math_util;
-
-use super::{skill_kind::calculate_speed_rhythm_bonus, DifficultyObject, SkillKind};
+use super::{lerp, skill_kind::calculate_speed_rhythm_bonus, DifficultyObject, SkillKind};
 
 use std::cmp::Ordering;
 
@@ -86,8 +84,8 @@ impl Skill {
 
         for (i, strain) in peaks.take(reduced_section_count).enumerate() {
             let clamped = (i as f64 / reduced_section_count_f64).clamp(0.0, 1.0);
-            let scale = (math_util::lerp(1.0, 10.0, clamped)).log10();
-            *strain *= math_util::lerp(REDUCED_STRAIN_BASELINE, 1.0, scale);
+            let scale = (lerp(1.0, 10.0, clamped)).log10();
+            *strain *= lerp(REDUCED_STRAIN_BASELINE, 1.0, scale);
         }
 
         self.strain_peaks

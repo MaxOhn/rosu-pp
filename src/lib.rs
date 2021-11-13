@@ -127,7 +127,6 @@ mod pp;
 pub use pp::{AnyPP, AttributeProvider};
 
 mod curve;
-mod math_util;
 mod mods;
 
 #[cfg(any(feature = "osu", feature = "fruits"))]

@@ -4,9 +4,9 @@ use std::{
     iter,
 };
 
-use crate::{math_util, parse::Pos2};
+use crate::parse::Pos2;
 
-use super::DifficultyObject;
+use super::{lerp, DifficultyObject};
 
 const SINGLE_SPACING_TRESHOLD: f64 = 125.0;
 
@@ -380,8 +380,7 @@ impl SkillKind {
                 if let Some(prev) =
                     prev.filter(|p| strain_time < hit_window_full && p.strain_time > strain_time)
                 {
-                    strain_time =
-                        math_util::lerp(prev.strain_time, strain_time, speed_window_ratio);
+                    strain_time = lerp(prev.strain_time, strain_time, speed_window_ratio);
                 }
 
                 // * Cap delta time to the OD 300 hit window
