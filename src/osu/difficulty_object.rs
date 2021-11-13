@@ -7,10 +7,11 @@ use super::{OsuObject, ScalingFactor, NORMALIZED_RADIUS};
 
 const MIN_DELTA_TIME: f64 = 25.0;
 const MAXIMUM_SLIDER_RADIUS: f32 = NORMALIZED_RADIUS * 2.4;
-const ASSUMED_SLIDER_RADIUS: f32 = NORMALIZED_RADIUS * 1.65;
+const ASSUMED_SLIDER_RADIUS: f32 = NORMALIZED_RADIUS * 1.8;
 
 pub(crate) struct DifficultyObject<'h> {
     pub(crate) base: &'h OsuObject,
+    pub(crate) clock_rate: f64,
 
     pub(crate) delta: f64,
     pub(crate) strain_time: f64,
@@ -33,7 +34,7 @@ impl<'h> DifficultyObject<'h> {
         scaling_factor: &ScalingFactor,
         clock_rate: f64,
     ) -> Self {
-        let delta = base.time - prev.time;
+        let delta = (base.time - prev.time) / clock_rate;
 
         // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects
         let strain_time = delta.max(MIN_DELTA_TIME);
@@ -95,8 +96,21 @@ impl<'h> DifficultyObject<'h> {
                 )
             };
 
+        // ? Common values to debug
+        // println!("travel_dist={} | travel_time={}", travel_dist, travel_time);
+        // println!(
+        //     "movement_dist={} | movement_time={}",
+        //     movement_dist, movement_time
+        // );
+        // println!(
+        //     "jump_dist={} | strain_time={} | angle={:?}",
+        //     jump_dist, strain_time, angle
+        // );
+        // println!("--");
+
         Self {
             base,
+            clock_rate,
             delta,
             strain_time,
             jump_dist,
@@ -188,9 +202,9 @@ impl<'h> DifficultyObject<'h> {
 
                 let lazy_travel_time = nested_objects
                     .last()
-                    .map_or(0.0, |nested| nested.time / clock_rate - prev_time);
+                    .map_or(0.0, |nested| nested.time - prev_time);
 
-                let travel_time = MIN_DELTA_TIME.max(lazy_travel_time);
+                let travel_time = MIN_DELTA_TIME.max(lazy_travel_time / clock_rate);
 
                 (travel_dist, travel_time)
             }

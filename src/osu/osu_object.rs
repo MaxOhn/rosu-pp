@@ -1,3 +1,5 @@
+use std::{cmp::Ordering, convert::identity};
+
 use super::slider_state::SliderState;
 
 use crate::{
@@ -16,6 +18,7 @@ pub(crate) struct OsuObject {
     pub(crate) kind: OsuObjectKind,
 }
 
+#[derive(Debug)]
 pub(crate) enum OsuObjectKind {
     Circle,
     Slider {
@@ -226,7 +229,24 @@ impl OsuObject {
                     kind: NestedObjectKind::Tail,
                 };
 
-                nested_objects.push(legacy_last_tick);
+                // On very short buzz sliders it can happen that the
+                // legacy last tick is not the last object time-wise
+                match nested_objects.last() {
+                    Some(last) if last.time > final_span_end_time => {
+                        let idx = nested_objects
+                            .binary_search_by(|nested| {
+                                nested
+                                    .time
+                                    .partial_cmp(&final_span_end_time)
+                                    .unwrap_or(Ordering::Equal)
+                            })
+                            .map_or_else(identity, identity);
+
+                        nested_objects.insert(idx, legacy_last_tick);
+                    }
+                    _ => nested_objects.push(legacy_last_tick),
+                };
+
                 *max_combo += nested_objects.len();
 
                 let lazy_travel_time = final_span_end_time - h.start_time;
@@ -250,7 +270,7 @@ impl OsuObject {
                     pos,
                     stack_height: 0.0,
                     kind: OsuObjectKind::Slider {
-                        end_time: final_span_end_time,
+                        end_time,
                         end_pos,
                         lazy_end_pos,
                         nested_objects,

@@ -400,6 +400,25 @@ impl OsuPPInner {
             aim_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
         }
 
+        if attributes.n_sliders > 0 {
+            // * We assume 15% of sliders in a map are difficult since
+            // * there's no way to tell from the performance calculator.
+            let estimate_difficult_sliders = attributes.n_sliders as f64 * 0.15;
+
+            let non_300s = self.total_hits - self.n300 as f64;
+            let missing_combo = attributes.max_combo - self.combo.unwrap_or(attributes.max_combo);
+
+            let estimate_slider_ends_dropped = non_300s
+                .min(missing_combo as f64)
+                .clamp(0.0, estimate_difficult_sliders);
+
+            let base = 1.0 - estimate_slider_ends_dropped / estimate_difficult_sliders;
+            let slider_nerf_factor =
+                (1.0 - attributes.slider_factor) * base * base * base + attributes.slider_factor;
+
+            aim_value *= slider_nerf_factor;
+        }
+
         aim_value *= self.acc;
         aim_value *= 0.98 + attributes.od * attributes.od / 2500.0;
 

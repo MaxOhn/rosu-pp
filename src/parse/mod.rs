@@ -320,7 +320,7 @@ macro_rules! parse_timingpoints_body {
             if beat_len < 0.0 {
                 let point = DifficultyPoint {
                     time,
-                    speed_multiplier: -100.0 / beat_len,
+                    speed_multiplier: (-100.0 / beat_len).max(0.1).min(10.0),
                 };
 
                 $self.difficulty_points.push(point);

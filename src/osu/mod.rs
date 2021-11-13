@@ -16,8 +16,6 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use std::mem;
-
 use crate::{curve::CurveBuffers, Beatmap, Mods, Strains};
 
 const SECTION_LEN: f64 = 400.0;
@@ -88,13 +86,9 @@ pub fn stars(
         old_stacking(&mut hit_objects, stack_threshold);
     }
 
-    // let scale_factor = (scaling_factor.scale * -6.4) as f32;
-
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
-        // let stack_offset = Pos2::new(h.stack_height * scale_factor);
         let stack_offset = scaling_factor.stack_offset(h.stack_height);
         h.pos += stack_offset;
-        h.time /= map_attributes.clock_rate;
 
         h
     });
@@ -102,7 +96,8 @@ pub fn stars(
     let fl = mods.fl();
     let mut skills = Vec::with_capacity(2 + fl as usize);
 
-    skills.push(Skill::aim());
+    skills.push(Skill::aim(true));
+    skills.push(Skill::aim(false));
     skills.push(Skill::speed(hit_window));
 
     if fl {
@@ -114,7 +109,8 @@ pub fn stars(
     let mut prev = hit_objects.next().unwrap();
 
     // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
+    let mut current_section_end =
+        (prev.time / map_attributes.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
 
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
@@ -126,7 +122,9 @@ pub fn stars(
         map_attributes.clock_rate,
     );
 
-    while h.base.time > current_section_end {
+    let base_time = h.base.time / map_attributes.clock_rate;
+
+    while base_time > current_section_end {
         for skill in skills.iter_mut() {
             skill.start_new_section_from(current_section_end);
         }
@@ -151,7 +149,9 @@ pub fn stars(
             map_attributes.clock_rate,
         );
 
-        while h.base.time > current_section_end {
+        let base_time = h.base.time / map_attributes.clock_rate;
+
+        while base_time > current_section_end {
             for skill in skills.iter_mut() {
                 skill.save_current_peak();
                 skill.start_new_section_from(current_section_end);
@@ -174,13 +174,21 @@ pub fn stars(
 
     let aim_rating = skills[0].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
+    let slider_factor = if aim_rating > 0.0 {
+        let aim_rating_no_sliders = skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+
+        aim_rating_no_sliders / aim_rating
+    } else {
+        1.0
+    };
+
     let speed_rating = if mods.rx() {
         0.0
     } else {
-        skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
+        skills[2].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
     };
 
-    let flashlight_rating = skills.get_mut(2).map_or(0.0, |skill| {
+    let flashlight_rating = skills.get_mut(3).map_or(0.0, |skill| {
         skill.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
     });
 
@@ -222,6 +230,7 @@ pub fn stars(
         aim_strain: aim_rating,
         speed_strain: speed_rating,
         flashlight_rating,
+        slider_factor,
         n_circles: map.n_circles as usize,
         n_sliders: map.n_sliders as usize,
         n_spinners: map.n_spinners as usize,
@@ -278,13 +287,9 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         old_stacking(&mut hit_objects, stack_threshold);
     }
 
-    // let scale_factor = (scaling_factor.scale * -6.4) as f32;
-
     let mut hit_objects = hit_objects.into_iter().map(|mut h| {
-        // let stack_offset = Pos2::new(h.stack_height * scale_factor);
         let stack_offset = scaling_factor.stack_offset(h.stack_height);
         h.pos += stack_offset;
-        h.time /= map_attributes.clock_rate;
 
         h
     });
@@ -292,7 +297,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let fl = mods.fl();
     let mut skills = Vec::with_capacity(2 + fl as usize);
 
-    skills.push(Skill::aim());
+    skills.push(Skill::aim(true));
+    skills.push(Skill::aim(false));
     skills.push(Skill::speed(hit_window));
 
     if fl {
@@ -304,7 +310,8 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let mut prev = hit_objects.next().unwrap();
 
     // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end = (prev.time / SECTION_LEN).ceil() * SECTION_LEN;
+    let mut current_section_end =
+        (prev.time / map_attributes.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
 
     // Handle second object separately to remove later if-branching
     let curr = hit_objects.next().unwrap();
@@ -316,7 +323,9 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         map_attributes.clock_rate,
     );
 
-    while h.base.time > current_section_end {
+    let base_time = h.base.time / map_attributes.clock_rate;
+
+    while base_time > current_section_end {
         for skill in skills.iter_mut() {
             skill.start_new_section_from(current_section_end);
         }
@@ -341,7 +350,9 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
             map_attributes.clock_rate,
         );
 
-        while h.base.time > current_section_end {
+        let base_time = h.base.time / map_attributes.clock_rate;
+
+        while base_time > current_section_end {
             for skill in skills.iter_mut() {
                 skill.save_current_peak();
                 skill.start_new_section_from(current_section_end);
@@ -362,13 +373,13 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         skill.save_current_peak();
     }
 
-    let mut speed_strains = skills.pop().unwrap().strain_peaks;
-    let mut aim_strains = skills.pop().unwrap().strain_peaks;
+    skills.reverse();
 
-    let strains = if let Some(mut flashlight_strains) = skills.pop().map(|s| s.strain_peaks) {
-        mem::swap(&mut speed_strains, &mut aim_strains);
-        mem::swap(&mut aim_strains, &mut flashlight_strains);
+    let _ = skills.pop();
+    let aim_strains = skills.pop().unwrap().strain_peaks; // no sliders
+    let speed_strains = skills.pop().unwrap().strain_peaks;
 
+    let strains = if let Some(flashlight_strains) = skills.pop().map(|s| s.strain_peaks) {
         aim_strains
             .into_iter()
             .zip(speed_strains)
@@ -540,6 +551,7 @@ pub struct DifficultyAttributes {
     pub aim_strain: f64,
     pub speed_strain: f64,
     pub flashlight_rating: f64,
+    pub slider_factor: f64,
     pub ar: f64,
     pub od: f64,
     pub hp: f64,
@@ -587,7 +599,7 @@ fn custom_osu() {
 
     use crate::{Beatmap, OsuPP};
 
-    let path = "E:Games/osu!/beatmaps/70090_.osu";
+    let path = "E:Games/osu!/beatmaps/116169_.osu";
     let file = File::open(path).unwrap();
 
     let start = Instant::now();
@@ -609,7 +621,7 @@ fn custom_osu() {
     println!("Parsing average: {:?}", accum / iters);
 
     let start = Instant::now();
-    let result = OsuPP::new(&map).mods(16 + 64).calculate();
+    let result = OsuPP::new(&map).mods(2 + 64).calculate();
 
     let iters = 100;
     let accum = start.elapsed();

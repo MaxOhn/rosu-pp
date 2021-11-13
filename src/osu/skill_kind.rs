@@ -89,6 +89,7 @@ impl From<&DifficultyObject<'_>> for FlashlightHistoryEntry {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct SpeedHistoryEntry {
     is_slider: bool,
     start_time: f64,
@@ -99,7 +100,7 @@ impl From<&DifficultyObject<'_>> for SpeedHistoryEntry {
     fn from(h: &DifficultyObject<'_>) -> Self {
         Self {
             is_slider: h.base.is_slider(),
-            start_time: h.base.time,
+            start_time: h.base.time / h.clock_rate,
             strain_time: h.strain_time,
         }
     }
@@ -108,6 +109,7 @@ impl From<&DifficultyObject<'_>> for SpeedHistoryEntry {
 pub(crate) enum SkillKind {
     Aim {
         history: VecDeque<AimHistoryEntry>,
+        with_sliders: bool,
     },
     Flashlight {
         history: VecDeque<FlashlightHistoryEntry>,
@@ -121,9 +123,10 @@ pub(crate) enum SkillKind {
 }
 
 impl SkillKind {
-    pub(crate) fn aim() -> Self {
+    pub(crate) fn aim(with_sliders: bool) -> Self {
         Self::Aim {
             history: VecDeque::with_capacity(AIM_HISTORY_LENGTH + 1),
+            with_sliders,
         }
     }
 
@@ -144,7 +147,7 @@ impl SkillKind {
 
     pub(crate) fn pre_process(&mut self) {
         match self {
-            Self::Aim { history } => history.truncate(AIM_HISTORY_LENGTH),
+            Self::Aim { history, .. } => history.truncate(AIM_HISTORY_LENGTH),
             Self::Flashlight { history, .. } => history.truncate(FLASHLIGHT_HISTORY_LENGTH),
             Self::Speed { history, .. } => history.truncate(SPEED_HISTORY_LENGTH),
         }
@@ -152,7 +155,7 @@ impl SkillKind {
 
     pub(crate) fn post_process(&mut self, current: &DifficultyObject<'_>) {
         match self {
-            Self::Aim { history } => history.push_front(current.into()),
+            Self::Aim { history, .. } => history.push_front(current.into()),
             Self::Flashlight { history, .. } => history.push_front(current.into()),
             Self::Speed { history, .. } => history.push_front(current.into()),
         }
@@ -160,7 +163,10 @@ impl SkillKind {
 
     pub(crate) fn strain_value_of(&self, curr: &DifficultyObject<'_>) -> f64 {
         match self {
-            Self::Aim { history } => {
+            Self::Aim {
+                history,
+                with_sliders,
+            } => {
                 if curr.base.is_spinner() || history.len() < 2 || history[0].is_spinner {
                     return 0.0;
                 }
@@ -174,7 +180,7 @@ impl SkillKind {
 
                 // * But if the last object is a slider, then we extend the
                 // * travel velocity through the slider into the current object.
-                if prev.is_slider {
+                if prev.is_slider && *with_sliders {
                     // * calculate the movement velocity from slider end to current object
                     let movement_velocity = curr.movement_dist / curr.movement_time;
 
@@ -188,7 +194,7 @@ impl SkillKind {
                 // * As above, do the same for the previous hitobject.
                 let mut prev_velocity = prev.jump_dist / prev.strain_time;
 
-                if prev_prev.is_slider {
+                if prev_prev.is_slider && *with_sliders {
                     let movement_velocity = prev.movement_dist / prev.movement_time;
                     let travel_velocity = prev.travel_dist / prev.travel_time;
                     prev_velocity = prev_velocity.max(movement_velocity + travel_velocity);
@@ -302,7 +308,9 @@ impl SkillKind {
                 );
 
                 // * Add in additional slider velocity bonus.
-                aim_strain += slider_bonus * AIM_SLIDER_MULTIPLIER;
+                if *with_sliders {
+                    aim_strain += slider_bonus * AIM_SLIDER_MULTIPLIER;
+                }
 
                 aim_strain
             }
@@ -466,9 +474,10 @@ pub(crate) fn calculate_speed_rhythm_bonus(
     let lasts = history.iter().skip(2);
 
     for (((prev, curr), last), i) in prevs.zip(currs).zip(lasts).rev().zip(2..) {
-        let mut curr_historical_decay =
-            (SPEED_HISTORY_TIME_MAX - (current.base.time - curr.start_time)).max(0.0)
-                / SPEED_HISTORY_TIME_MAX;
+        let mut curr_historical_decay = (SPEED_HISTORY_TIME_MAX
+            - (current.base.time / current.clock_rate - curr.start_time))
+            .max(0.0)
+            / SPEED_HISTORY_TIME_MAX;
 
         if curr_historical_decay.abs() > f64::EPSILON {
             // * Either we're limited by time or limited by object count

@@ -18,8 +18,8 @@ pub(crate) struct Skill {
 
 impl Skill {
     #[inline]
-    pub(crate) fn aim() -> Self {
-        Self::new(SkillKind::aim())
+    pub(crate) fn aim(with_sliders: bool) -> Self {
+        Self::new(SkillKind::aim(with_sliders))
     }
 
     #[inline]
@@ -49,7 +49,7 @@ impl Skill {
     pub(crate) fn process(&mut self, curr: &DifficultyObject<'_>) {
         self.kind.pre_process();
         self.curr_section_peak = self.strain_value_at(curr).max(self.curr_section_peak);
-        self.prev_time = Some(curr.base.time);
+        self.prev_time = Some(curr.base.time / curr.clock_rate);
         self.kind.post_process(curr);
     }
 
@@ -65,6 +65,13 @@ impl Skill {
     }
 
     pub(crate) fn difficulty_value(&mut self) -> f64 {
+        // ? Common values to debug
+        // println!("---");
+
+        // for (i, strain) in self.strain_peaks.iter().enumerate() {
+        //     println!("[{}] {}", i, strain);
+        // }
+
         let mut difficulty = 0.0;
         let mut weight = 1.0;
         let decay_weight = self.kind.decay_weight();
