@@ -84,9 +84,9 @@ async fn async_main() {
         env::var("PERF_CALC_PATH").expect("missing `PERF_CALC_PATH` environment variable");
     let perf_calc_path = perf_calc_path_.as_str();
 
-    let mut output = StdFile::create("./output_.json").expect("failed to create output file");
+    let mut output = StdFile::create("./output.json").expect("failed to create output file");
 
-    let take = 50;
+    let take = 250;
 
     let pbr = Mutex::new(ProgressBar::new(take));
     println!("[INFO] Calculating...");
@@ -98,24 +98,21 @@ async fn async_main() {
         .scan(0, |idx, entry| {
             *idx += 1;
 
-            future::ready(Some((*idx % 75 == 0).then(|| entry)))
+            future::ready(Some((*idx % 76 == 0).then(|| entry)))
         })
         .filter_map(|opt| future::ready(opt))
         .take(take as usize)
         .map(|dir_entry| async {
             let dir_entry = dir_entry?;
             let file_name = dir_entry.file_name();
+            let file_name_lossy = file_name.to_string_lossy();
             let file_path = dir_entry.path();
 
-            let map_id = match file_name
-                .to_string_lossy()
-                .split('.')
-                .next()
-                .map(str::parse)
-                .transpose()
-                .map_err(|_| Error::ParseId)?
-            {
-                Some(id) => id,
+            let map_id_str = file_name_lossy.split('.').next();
+
+            let map_id = match map_id_str.map(str::parse) {
+                Some(Ok(id)) => id,
+                Some(Err(_)) => return Err(Error::ParseId(map_id_str.unwrap().to_owned())),
                 None => return Err(Error::EmptyFileName),
             };
 
@@ -244,7 +241,7 @@ async fn handle_map(
 enum Error {
     EmptyFileName,
     Io(std::io::Error),
-    ParseId,
+    ParseId(String),
     ParseMap(rosu_pp::ParseError),
     Serde(serde_json::Error),
 }
@@ -254,7 +251,7 @@ impl fmt::Display for Error {
         match self {
             Error::EmptyFileName => f.write_str("empty file name"),
             Error::Io(_) => f.write_str("io error"),
-            Error::ParseId => f.write_str("failed to parse map id"),
+            Error::ParseId(s) => write!(f, "failed to parse map id from `{}`", s),
             Error::ParseMap(_) => f.write_str("failed to parse map"),
             Error::Serde(_) => f.write_str("failed to deserialize"),
         }
@@ -266,7 +263,7 @@ impl std::error::Error for Error {
         match self {
             Self::EmptyFileName => None,
             Self::Io(src) => Some(src),
-            Self::ParseId => None,
+            Self::ParseId(_) => None,
             Self::ParseMap(src) => Some(src),
             Self::Serde(src) => Some(src),
         }
