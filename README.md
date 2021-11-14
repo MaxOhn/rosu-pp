@@ -98,20 +98,20 @@ println!("PP: {}", result.pp());
 | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
 | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
 
-### Benchmarks (TODO, update w.r.t removed feature flags)
+### Accuracy
 
-Comparing the PP calculation speed between [osu-perf](https://gitlab.com/JackRedstonia/osu-perf/) (alternative rust pp calculculation crate), an [oppai-ng](https://github.com/Francesco149/oppai-ng) rust binding, and rosu-pp's `no_sliders_no_leniency`:
+Here are some plots showing the differences of `rosu-pp`'s values and osu!'s official [osu-tools](https://github.com/ppy/osu-tools).
 
-<img src="./benchmark_results/crates_pp_calc.svg">
+Note that osu-tools was used on [this commit](https://github.com/ppy/osu/commit/9fb2402781ad91c197d51aeec716b0000f52c4d1) which is currently (2021-11-14) accurate for osu!standard but for other modes it might include changes that were not applied into stable and thus not implemented in rosu-pp.
 
-Comparing the PP calculation speed between rosu-pp's `all_included`, `no_leniency`, and `no_sliders_no_leniency` versions:
+osu!standard: (very accurate, flashlight has the highest average but is still very small)
+<img src="./pp-plot/osu_accuracy.svg">
 
-<img src="./benchmark_results/rosu_pp_calc.svg">
+osu!mania: (close to perfect values)
+<img src="./pp-plot/mania_accuracy.svg">
 
-Comparing the PP (in)accuracy between rosu-pp's `all_included`, `no_leniency`, and `no_sliders_no_leniency` versions:
+osu!catch: (pretty accurate)
+<img src="./pp-plot/fruits_accuracy.svg">
 
-<img src="./benchmark_results/pp_inaccuracy.svg">
-
-Comparing the stars (in)accuracy between rosu-pp's `all_included`, `no_leniency`, and `no_sliders_no_leniency` versions:
-
-<img src="./benchmark_results/stars_inaccuracy.svg">
+osu!taiko: (decently accurate, potentially more imprecise due to non-live changes in osu-tools)
+<img src="./pp-plot/taiko_accuracy.svg">
