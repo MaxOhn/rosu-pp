@@ -1,5 +1,9 @@
 ## Upcoming
 
+- Nothing as of now
+
+# v0.3.0
+
 - [BREAKING] With the importance of sliders for osu!standard, the `no_sliders_no_leniency` feature became too inaccurate. Additionally, since considering sliders now inherently drags performance down a little more, the difference between `no_leniency` and `all_included` became too small. Hence, the three osu features `no_sliders_no_leniency`, `no_leniency`, and `all_included` were removed. When the `osu` feature is enabled, it will now essentially use `all_included` under the hood.
   Additionally, instead of importing through `rosu_pp::osu::{version}`, you now have to import through `rosu_pp::osu`.
 - [BREAKING] Instead of returning `PpResult`, performance calculations now return `{Mode}PerformanceAttributes` and `PpResult` has been renamed to `PerformanceAttributes`.
@@ -9,7 +13,7 @@
 - added internal binary crate `pp-plot` to plot out differences between `pp-gen`'s output and `rosu-pp` values
 - osu: Updated up to commit [9fb2402781ad91c197d51aeec716b0000f52c4d1](https://github.com/ppy/osu/commit/9fb2402781ad91c197d51aeec716b0000f52c4d1) (2021-11-12)
 
-# v0.2.3
+## v0.2.3
 
 - Reduced amount of required features of `async_std` and `async_tokio`
 - Fixed a panic for some mania difficulty calculations on converts
