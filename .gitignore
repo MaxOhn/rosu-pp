@@ -2,6 +2,10 @@
 Cargo.lock
 /maps
 output
+
 /pp-gen/.env
 /pp-gen/target
 /pp-gen/output.json
+
+/pp-plot/.env
+/pp-plot/target

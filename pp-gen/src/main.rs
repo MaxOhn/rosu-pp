@@ -72,7 +72,7 @@ fn main() {
     dotenv::dotenv().expect("failed to read .env file");
 
     Runtime::new()
-        .expect("failed to create runtiem")
+        .expect("failed to create runtime")
         .block_on(async_main());
 }
 
@@ -249,11 +249,11 @@ enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::EmptyFileName => f.write_str("empty file name"),
-            Error::Io(_) => f.write_str("io error"),
-            Error::ParseId(s) => write!(f, "failed to parse map id from `{}`", s),
-            Error::ParseMap(_) => f.write_str("failed to parse map"),
-            Error::Serde(_) => f.write_str("failed to deserialize"),
+            Self::EmptyFileName => f.write_str("empty file name"),
+            Self::Io(_) => f.write_str("io error"),
+            Self::ParseId(s) => write!(f, "failed to parse map id from `{}`", s),
+            Self::ParseMap(_) => f.write_str("failed to parse map"),
+            Self::Serde(_) => f.write_str("failed to deserialize"),
         }
     }
 }
