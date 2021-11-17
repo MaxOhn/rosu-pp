@@ -546,29 +546,12 @@ macro_rules! parse_hitobjects_body {
 
                 #[cfg(not(feature = "sliders"))]
                 {
-                    let last_control_point = split
-                        .next()
-                        .next_field("control points")?
-                        .split('|')
-                        .next_back();
+                    let span_count = split.nth(1).next_field("repeats")?.parse()?;
+                    let pixel_len = split.next().next_field("pixel len")?.parse()?;
 
-                    match last_control_point.map(|v| v.split(':').map(str::parse)) {
-                        Some(mut coords) => {
-                            let last_control_point = match (coords.next(), coords.next()) {
-                                (Some(Ok(x)), Some(Ok(y))) => Pos2 { x, y },
-                                _ => return Err(ParseError::InvalidCurvePoints),
-                            };
-
-                            let span_count = split.next().next_field("repeats")?.parse()?;
-                            let pixel_len = split.next().next_field("pixel len")?.parse()?;
-
-                            HitObjectKind::Slider {
-                                span_count,
-                                pixel_len,
-                                last_control_point,
-                            }
-                        }
-                        None => HitObjectKind::Circle,
+                    HitObjectKind::Slider {
+                        span_count,
+                        pixel_len,
                     }
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {

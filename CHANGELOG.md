@@ -1,7 +1,9 @@
 ## Upcoming
 
 - Added method `Beatmap::from_path` so the file does not have to be created manually for `Beatmap::parse`.
+- Added a bunch of documentation.
 - [BREAKING] Removed the `ParseError` variants `InvalidPathType` and `InvalidTimingSignature` and renamed `InvalidFloatingPoint` to `InvalidDecimalNumber`.
+- [BREAKING] Removed the `last_control_point` field of `HitObjectKind::Slider` when neither the `osu` nor the `fruits` feature is enabled.
 
 # v0.3.0
 

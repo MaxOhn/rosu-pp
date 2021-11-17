@@ -77,8 +77,6 @@ pub enum HitObjectKind {
         pixel_len: f64,
         /// The amount of spans of the slider.
         span_count: usize,
-        /// The position of the last control point.
-        last_control_point: Pos2,
     },
     /// A spinner object.
     Spinner {

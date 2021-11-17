@@ -1,20 +1,16 @@
-use crate::{
-    fruits::FruitsDifficultyAttributes, mania::ManiaDifficultyAttributes,
-    osu::OsuDifficultyAttributes, taiko::TaikoDifficultyAttributes, Beatmap, DifficultyAttributes,
-    GameMode, PerformanceAttributes,
-};
+use crate::{Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes};
 
 #[cfg(feature = "fruits")]
-use crate::FruitsPP;
+use crate::fruits::{FruitsDifficultyAttributes, FruitsPP};
 
 #[cfg(feature = "mania")]
-use crate::ManiaPP;
+use crate::mania::{ManiaDifficultyAttributes, ManiaPP};
 
 #[cfg(feature = "osu")]
-use crate::OsuPP;
+use crate::osu::{OsuDifficultyAttributes, OsuPP};
 
 #[cfg(feature = "taiko")]
-use crate::TaikoPP;
+use crate::taiko::{TaikoDifficultyAttributes, TaikoPP};
 
 /// Performance calculator on maps of any mode.
 ///
