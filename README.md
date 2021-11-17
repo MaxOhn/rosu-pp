@@ -11,16 +11,10 @@ Async is supported through features, see below.
 ### Usage
 
 ```rust
-use std::fs::File;
 use rosu_pp::{Beatmap, BeatmapExt};
 
-let file = match File::open("/path/to/file.osu") {
-    Ok(file) => file,
-    Err(why) => panic!("Could not open file: {}", why),
-};
-
 // Parse the map yourself
-let map = match Beatmap::parse(file) {
+let map = match Beatmap::from_path("/path/to/file.osu") {
     Ok(map) => map,
     Err(why) => panic!("Error while parsing map: {}", why),
 };
@@ -45,7 +39,6 @@ let next_result = map.pp()
     .combo(543)
     .misses(5)
     .n50(3)
-    .passed_objects(600)
     .accuracy(96.5)
     .calculate();
 
@@ -61,16 +54,8 @@ println!("Stars: {} | Max PP: {}", stars, max_pp);
 If either the `async_tokio` or `async_std` feature is enabled, beatmap parsing will be async.
 
 ```rust
-use async_std::fs::File;
-// use tokio::fs::File;
-
-let file = match File::open("/path/to/file.osu").await {
-    Ok(file) => file,
-    Err(why) => panic!("Could not open file: {}", why),
-};
-
 // Parse the map asynchronously
-let map = match Beatmap::parse(file).await {
+let map = match Beatmap::from_path("/path/to/file.osu").await {
     Ok(map) => map,
     Err(why) => panic!("Error while parsing map: {}", why),
 };

@@ -670,13 +670,12 @@ impl From<FruitsPerformanceAttributes> for FruitsDifficultyAttributes {
 #[test]
 // #[ignore]
 fn custom_fruits() {
-    use std::{fs::File, time::Instant};
+    use std::time::Instant;
 
     use crate::{Beatmap, FruitsPP};
 
     let path = "E:Games/osu!/beatmaps/2919116_.osu";
-    let file = File::open(path).unwrap();
-    let map = Beatmap::parse(file).unwrap();
+    let map = Beatmap::from_path(path).unwrap();
 
     let start = Instant::now();
     let result = FruitsPP::new(&map).mods(256).calculate();

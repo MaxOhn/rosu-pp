@@ -601,15 +601,14 @@ fn difficulty_range_od(od: f64) -> f64 {
 #[test]
 // #[ignore]
 fn custom_osu() {
-    use std::{fs::File, time::Instant};
+    use std::time::Instant;
 
     use crate::{Beatmap, OsuPP};
 
     let path = "E:Games/osu!/beatmaps/116169_.osu";
-    let file = File::open(path).unwrap();
 
     let start = Instant::now();
-    let map = Beatmap::parse(file).unwrap();
+    let map = Beatmap::from_path(path).unwrap();
 
     let iters = 100;
     let accum = start.elapsed();

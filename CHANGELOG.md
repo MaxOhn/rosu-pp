@@ -1,6 +1,6 @@
 ## Upcoming
 
-- Nothing as of now
+- Added method `Beatmap::from_path` so the file does not have to be created manually for `Beatmap::parse`
 
 # v0.3.0
 
@@ -9,8 +9,8 @@
 - [BREAKING] Instead of returning `PpResult`, performance calculations now return `{Mode}PerformanceAttributes` and `PpResult` has been renamed to `PerformanceAttributes`.
 - [BREAKING] Instead of returning `StarResult`, difficulty calculations now return `{Mode}DifficultyAttributes` and `StarResult` has been renamed to `DifficultyAttributes`.
 - [BREAKING] Various fields and methods now include `f64` instead of `f32` to stay true to osu!'s original code
-- added internal binary crate `pp-gen` to calculate difficulty & pp values via `PerformanceCalculator.dll`
-- added internal binary crate `pp-plot` to plot out differences between `pp-gen`'s output and `rosu-pp` values
+- Added internal binary crate `pp-gen` to calculate difficulty & pp values via `PerformanceCalculator.dll`
+- Added internal binary crate `pp-plot` to plot out differences between `pp-gen`'s output and `rosu-pp` values
 - osu: Updated up to commit [9fb2402781ad91c197d51aeec716b0000f52c4d1](https://github.com/ppy/osu/commit/9fb2402781ad91c197d51aeec716b0000f52c4d1) (2021-11-12)
 
 ## v0.2.3

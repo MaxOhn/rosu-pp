@@ -7,17 +7,11 @@
 //! ## Usage
 //!
 //! ```no_run
-//! use std::fs::File;
 //! use rosu_pp::{Beatmap, BeatmapExt};
 //!
 //! # /*
-//! let file = match File::open("/path/to/file.osu") {
-//!     Ok(file) => file,
-//!     Err(why) => panic!("Could not open file: {}", why),
-//! };
-//!
 //! // Parse the map yourself
-//! let map = match Beatmap::parse(file) {
+//! let map = match Beatmap::from_path("/path/to/file.osu") {
 //!     Ok(map) => map,
 //!     Err(why) => panic!("Error while parsing map: {}", why),
 //! };
@@ -43,7 +37,6 @@
 //!     .combo(543)
 //!     .misses(5)
 //!     .n50(3)
-//!     .passed_objects(600)
 //!     .accuracy(96.5)
 //!     .calculate();
 //!
@@ -60,19 +53,10 @@
 //!
 //! ```no_run
 //! use rosu_pp::{Beatmap, BeatmapExt};
-//! # /*
-//! use async_std::fs::File;
-//! # */
-//! // use tokio::fs::File;
 //!
 //! # /*
-//! let file = match File::open("/path/to/file.osu").await {
-//!     Ok(file) => file,
-//!     Err(why) => panic!("Could not open file: {}", why),
-//! };
-//!
 //! // Parse the map asynchronously
-//! let map = match Beatmap::parse(file).await {
+//! let map = match Beatmap::from_path("/path/to/file.osu").await {
 //!     Ok(map) => map,
 //!     Err(why) => panic!("Error while parsing map: {}", why),
 //! };
