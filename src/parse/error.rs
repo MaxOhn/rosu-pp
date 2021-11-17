@@ -28,16 +28,12 @@ pub enum ParseError {
     BadLine,
     /// Line in `.osu` that contains a slider was not in the proper format.
     InvalidCurvePoints,
+    /// Expected a decimal number, got something else.
+    InvalidDecimalNumber,
     /// Expected an integer, got something else.
     InvalidInteger,
-    /// Expected a decimal number, got something else.
-    InvalidFloatingPoint,
     /// Failed to parse game mode.
     InvalidMode,
-    /// Failed to parse the path type of a slider.
-    InvalidPathType,
-    /// Failed to parse timing point.
-    InvalidTimingSignature,
     /// Expected an additional field.
     MissingField(&'static str),
     /// Reject maps with too many repeat points.
@@ -65,10 +61,8 @@ impl fmt::Display for ParseError {
             Self::BadLine => f.write_str("line not in `Key:Value` pattern"),
             Self::InvalidCurvePoints => f.write_str("invalid curve point"),
             Self::InvalidInteger => f.write_str("invalid integer"),
-            Self::InvalidFloatingPoint => f.write_str("invalid float number"),
+            Self::InvalidDecimalNumber => f.write_str("invalid float number"),
             Self::InvalidMode => f.write_str("invalid mode"),
-            Self::InvalidPathType => f.write_str("invalid path type"),
-            Self::InvalidTimingSignature => f.write_str("invalid timing signature"),
             Self::MissingField(field) => write!(f, "missing field `{}`", field),
             Self::TooManyRepeats => f.write_str("repeat count is way too high"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
@@ -96,10 +90,8 @@ impl StdError for ParseError {
             Self::BadLine => None,
             Self::InvalidCurvePoints => None,
             Self::InvalidInteger => None,
-            Self::InvalidFloatingPoint => None,
+            Self::InvalidDecimalNumber => None,
             Self::InvalidMode => None,
-            Self::InvalidPathType => None,
-            Self::InvalidTimingSignature => None,
             Self::MissingField(_) => None,
             Self::TooManyRepeats => None,
             Self::UnknownHitObjectKind => None,
@@ -129,6 +121,6 @@ impl From<ParseIntError> for ParseError {
 
 impl From<ParseFloatError> for ParseError {
     fn from(_: ParseFloatError) -> Self {
-        Self::InvalidFloatingPoint
+        Self::InvalidDecimalNumber
     }
 }

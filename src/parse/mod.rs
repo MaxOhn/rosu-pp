@@ -63,7 +63,7 @@ impl FloatExt for f64 {
     fn validate(self) -> Result<Self, ParseError> {
         self.is_finite()
             .then(|| self)
-            .ok_or(ParseError::InvalidFloatingPoint)
+            .ok_or(ParseError::InvalidDecimalNumber)
     }
 }
 

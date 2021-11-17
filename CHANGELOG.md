@@ -1,6 +1,7 @@
 ## Upcoming
 
-- Added method `Beatmap::from_path` so the file does not have to be created manually for `Beatmap::parse`
+- Added method `Beatmap::from_path` so the file does not have to be created manually for `Beatmap::parse`.
+- [BREAKING] Removed the `ParseError` variants `InvalidPathType` and `InvalidTimingSignature` and renamed `InvalidFloatingPoint` to `InvalidDecimalNumber`.
 
 # v0.3.0
 
