@@ -8,6 +8,7 @@ macro_rules! impl_mods {
 }
 
 /// Abstract type to define mods.
+#[allow(missing_docs)]
 pub trait Mods: Copy {
     const NF: u32 = 1 << 0;
     const EZ: u32 = 1 << 1;
@@ -20,9 +21,13 @@ pub trait Mods: Copy {
     const FL: u32 = 1 << 10;
     const SO: u32 = 1 << 12;
 
+    /// If the clock rate is affected by the mods.
     fn change_speed(self) -> bool;
+    /// If object time's or positions are affected by the mods.
     fn change_map(self) -> bool;
+    /// The clock rate with the mods.
     fn speed(self) -> f64;
+    /// Multiplier for beatmap attributes with respect to the mods.
     fn od_ar_hp_multiplier(self) -> f64;
     fn nf(self) -> bool;
     fn ez(self) -> bool;

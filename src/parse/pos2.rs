@@ -4,41 +4,50 @@ use std::ops;
 /// Simple (x, y) coordinate / vector
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct Pos2 {
+    /// Position on the x-axis.
     pub x: f32,
+    /// Position on the y-axis.
     pub y: f32,
 }
 
 impl Pos2 {
+    /// Return the null vector.
     #[inline]
     pub fn zero() -> Self {
         Self::default()
     }
 
+    /// Return a position with both coordinates on the given value.
     #[inline]
     pub fn new(value: f32) -> Self {
         Self { x: value, y: value }
     }
 
+    /// Return the position's length squared.
     #[inline]
     pub fn length_squared(&self) -> f32 {
         self.dot(*self)
     }
 
+    /// Return the position's length.
     #[inline]
     pub fn length(&self) -> f32 {
         self.x.hypot(self.y)
     }
 
+    /// Return the dot product.
     #[inline]
     pub fn dot(&self, other: Self) -> f32 {
         self.x.mul_add(other.x, self.y * other.y)
     }
 
+    /// Return the distance to another position.
     #[inline]
     pub fn distance(&self, other: Self) -> f32 {
         (*self - other).length()
     }
 
+    /// Normalize the coordinates with respect to the vector's length.
     #[inline]
     pub fn normalize(self) -> Pos2 {
         self / self.length()

@@ -632,18 +632,26 @@ impl<I: Iterator<Item = CatchObject>> Iterator for FruitOrJuice<I> {
 /// The result of a difficulty calculation on an osu!ctb map.
 #[derive(Clone, Debug, Default)]
 pub struct FruitsDifficultyAttributes {
+    /// The final star rating
     pub stars: f64,
+    /// The maximum combo.
     pub max_combo: usize,
+    /// The approach rate.
     pub ar: f64,
+    /// The amount of fruits.
     pub n_fruits: usize,
+    /// The amount of droplets.
     pub n_droplets: usize,
+    /// The amount of tiny droplets.
     pub n_tiny_droplets: usize,
 }
 
 /// The result of a performance calculation on an osu!ctb map.
 #[derive(Clone, Debug, Default)]
 pub struct FruitsPerformanceAttributes {
+    /// The difficulty attributes that were used for the performance calculation
     pub attributes: FruitsDifficultyAttributes,
+    /// The final performance points.
     pub pp: f64,
 }
 

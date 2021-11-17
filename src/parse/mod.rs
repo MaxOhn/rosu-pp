@@ -751,9 +751,13 @@ macro_rules! from_path {
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum GameMode {
+    /// osu!standard
     STD = 0,
+    /// osu!taiko
     TKO = 1,
+    /// osu!ctb
     CTB = 2,
+    /// osu!mania
     MNA = 3,
 }
 
@@ -768,28 +772,44 @@ impl Default for GameMode {
 /// for difficulty and pp calculation
 #[derive(Clone, Default, Debug)]
 pub struct Beatmap {
+    /// The game mode.
     pub mode: GameMode,
+    /// The version of the .osu file.
     pub version: u8,
 
+    /// The amount of circles.
     pub n_circles: u32,
+    /// The amount of sliders.
     pub n_sliders: u32,
+    /// The amount of spinners.
     pub n_spinners: u32,
 
+    /// The approach rate.
     pub ar: f32,
+    /// The overall difficulty.
     pub od: f32,
+    /// The circle size.
     pub cs: f32,
+    /// The health drain rate.
     pub hp: f32,
+    /// Base slider velocity in pixels per beat
     pub slider_mult: f64,
+    /// Amount of slider ticks per beat.
     pub tick_rate: f64,
+    /// All hitobjects of the beatmap.
     pub hit_objects: Vec<HitObject>,
 
     #[cfg(any(feature = "osu", feature = "fruits"))]
+    /// Timing points that indicate a new timing section.
     pub timing_points: Vec<TimingPoint>,
 
     #[cfg(any(feature = "osu", feature = "fruits"))]
+    /// Timing point for the current timing section.
     pub difficulty_points: Vec<DifficultyPoint>,
 
     #[cfg(feature = "osu")]
+    /// The stack leniency that is used to calculate
+    /// the stack offset for stacked positions.
     pub stack_leniency: f32,
 }
 
@@ -803,6 +823,7 @@ impl Beatmap {
     // const COMBO_OFFSET_FLAG: u8 = (1 << 4) | (1 << 5) | (1 << 6);
     const HOLD_FLAG: u8 = 1 << 7;
 
+    /// Extract a beatmap's attributes into their own type.
     #[inline]
     pub fn attributes(&self) -> BeatmapAttributes {
         BeatmapAttributes::new(self.ar, self.od, self.cs, self.hp)
@@ -922,7 +943,10 @@ mod osu_fruits {
     /// Control point for slider curve calculation
     #[derive(Copy, Clone, Debug, Default, PartialEq)]
     pub struct PathControlPoint {
+        /// Control point position.
         pub pos: Pos2,
+        /// Path type of the control point.
+        /// Only present for the first element of each segment.
         pub kind: Option<PathType>,
     }
 
@@ -934,6 +958,7 @@ mod osu_fruits {
     }
 
     /// The type of curve of a slider.
+    #[allow(missing_docs)]
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     pub enum PathType {
         Catmull = 0,

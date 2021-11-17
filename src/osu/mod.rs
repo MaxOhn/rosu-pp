@@ -548,29 +548,47 @@ fn lerp(start: f64, end: f64, percent: f64) -> f64 {
 /// The result of a difficulty calculation on an osu!standard map.
 #[derive(Clone, Debug, Default)]
 pub struct OsuDifficultyAttributes {
+    /// The aim portion of the total strain.
     pub aim_strain: f64,
+    /// The speed portion of the total strain.
     pub speed_strain: f64,
+    /// The flashlight portion of the total strain.
     pub flashlight_rating: f64,
+    /// The ratio of the aim strain with and without considering sliders
     pub slider_factor: f64,
+    /// The approach rate.
     pub ar: f64,
+    /// The overall difficulty
     pub od: f64,
+    /// The health drain rate.
     pub hp: f64,
+    /// The amount of circles.
     pub n_circles: usize,
+    /// The amount of sliders.
     pub n_sliders: usize,
+    /// The amount of spinners.
     pub n_spinners: usize,
+    /// The final star rating
     pub stars: f64,
+    /// The maximum combo.
     pub max_combo: usize,
 }
 
 /// The result of a performance calculation on an osu!standard map.
 #[derive(Clone, Debug, Default)]
 pub struct OsuPerformanceAttributes {
+    /// The difficulty attributes that were used for the performance calculation
     pub attributes: OsuDifficultyAttributes,
-    pub pp_acc: f64,
-    pub pp_aim: f64,
-    pub pp_flashlight: f64,
-    pub pp_speed: f64,
+    /// The final performance points.
     pub pp: f64,
+    /// The accuracy portion of the final pp.
+    pub pp_acc: f64,
+    /// The aim portion of the final pp.
+    pub pp_aim: f64,
+    /// The flashlight portion of the final pp.
+    pub pp_flashlight: f64,
+    /// The speed portion of the final pp.
+    pub pp_speed: f64,
 }
 
 impl OsuPerformanceAttributes {

@@ -20,17 +20,29 @@ pub type ParseResult<T> = Result<T, ParseError>;
 #[derive(Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum ParseError {
+    /// Some IO operation failed.
     IOError(IOError),
+    /// The initial data of an `.osu` file was incorrect.
     IncorrectFileHeader,
+    /// Line in `.osu` was unexpectedly not of the form `key:value`.
     BadLine,
+    /// Line in `.osu` that contains a slider was not in the proper format.
     InvalidCurvePoints,
+    /// Expected an integer, got something else.
     InvalidInteger,
+    /// Expected a decimal number, got something else.
     InvalidFloatingPoint,
+    /// Failed to parse game mode.
     InvalidMode,
+    /// Failed to parse the path type of a slider.
     InvalidPathType,
+    /// Failed to parse timing point.
     InvalidTimingSignature,
+    /// Expected an additional field.
     MissingField(&'static str),
+    /// Reject maps with too many repeat points.
     TooManyRepeats,
+    /// Failed to recognized specified type for hitobjects.
     UnknownHitObjectKind,
 
     #[cfg(not(all(
@@ -39,6 +51,7 @@ pub enum ParseError {
         feature = "fruits",
         feature = "mania"
     )))]
+    /// Tried to parse a map with a game mode who's feature was not enabled
     UnincludedMode(GameMode),
 }
 

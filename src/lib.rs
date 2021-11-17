@@ -87,24 +87,37 @@
 //!
 
 #![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
-#![deny(clippy::all, nonstandard_style, rust_2018_idioms, unused, warnings)]
+#![deny(
+    clippy::all,
+    nonstandard_style,
+    rust_2018_idioms,
+    unused,
+    warnings,
+    missing_debug_implementations,
+    missing_docs
+)]
 
 #[cfg(feature = "fruits")]
 #[cfg_attr(docsrs, doc(cfg(feature = "fruits")))]
+/// Everything about osu!ctb.
 pub mod fruits;
 
 #[cfg(feature = "mania")]
 #[cfg_attr(docsrs, doc(cfg(feature = "mania")))]
+/// Everything about osu!mania.
 pub mod mania;
 
 #[cfg(feature = "osu")]
 #[cfg_attr(docsrs, doc(cfg(feature = "osu")))]
+/// Everything about osu!standard.
 pub mod osu;
 
 #[cfg(feature = "taiko")]
 #[cfg_attr(docsrs, doc(cfg(feature = "taiko")))]
+/// Everything about osu!taiko.
 pub mod taiko;
 
+/// Beatmap parsing and the contained types.
 pub mod parse;
 
 mod pp;
@@ -265,13 +278,11 @@ impl BeatmapExt for Beatmap {
 
 /// The result of calculating the strains on a map.
 /// Suitable to plot the difficulty of a map over time.
-///
-/// `strains` will be the summed strains for each skill of the map's mode.
-///
-/// `section_length` is the time in ms inbetween two strains.
 #[derive(Clone, Debug, Default)]
 pub struct Strains {
+    /// Time in ms inbetween two strains.
     pub section_length: f64,
+    /// Summed strains for each skill of the map's mode.
     pub strains: Vec<f64>,
 }
 
@@ -279,12 +290,16 @@ pub struct Strains {
 #[derive(Clone, Debug)]
 pub enum DifficultyAttributes {
     #[cfg(feature = "fruits")]
+    /// osu!ctb difficulty calculation reseult.
     Fruits(fruits::FruitsDifficultyAttributes),
     #[cfg(feature = "mania")]
+    /// osu!mania difficulty calculation reseult.
     Mania(mania::ManiaDifficultyAttributes),
     #[cfg(feature = "osu")]
+    /// osu!standard difficulty calculation reseult.
     Osu(osu::OsuDifficultyAttributes),
     #[cfg(feature = "taiko")]
+    /// osu!taiko difficulty calculation reseult.
     Taiko(taiko::TaikoDifficultyAttributes),
 }
 
@@ -337,12 +352,16 @@ impl From<taiko::TaikoDifficultyAttributes> for DifficultyAttributes {
 #[derive(Clone, Debug)]
 pub enum PerformanceAttributes {
     #[cfg(feature = "fruits")]
+    /// osu!ctb performance calculation result.
     Fruits(fruits::FruitsPerformanceAttributes),
     #[cfg(feature = "mania")]
+    /// osu!mania performance calculation result.
     Mania(mania::ManiaPerformanceAttributes),
     #[cfg(feature = "osu")]
+    /// osu!standard performance calculation result.
     Osu(osu::OsuPerformanceAttributes),
     #[cfg(feature = "taiko")]
+    /// osu!taiko performance calculation result.
     Taiko(taiko::TaikoPerformanceAttributes),
 }
 
@@ -377,6 +396,7 @@ impl PerformanceAttributes {
         }
     }
 
+    /// Difficulty attributes that were used for the performance calculation.
     #[inline]
     pub fn difficulty_attributes(&self) -> DifficultyAttributes {
         match self {

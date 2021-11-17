@@ -3,10 +3,15 @@ use crate::Mods;
 /// Summary struct for a [`Beatmap`](crate::Beatmap)'s attributes.
 #[derive(Clone, Debug)]
 pub struct BeatmapAttributes {
+    /// The approach rate.
     pub ar: f64,
+    /// The overall difficulty.
     pub od: f64,
+    /// The circle size.
     pub cs: f64,
+    /// The health drain rate
     pub hp: f64,
+    /// The clock rate with respect to mods.
     pub clock_rate: f64,
 }
 

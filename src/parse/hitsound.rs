@@ -1,3 +1,5 @@
+/// Abstract type to define hitsounds.
+#[allow(missing_docs)]
 pub trait HitSound {
     const HITSOUND_WHISTLE: u8 = 1 << 1;
     const HITSOUND_FINISH: u8 = 1 << 2;

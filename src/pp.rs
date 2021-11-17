@@ -17,21 +17,55 @@ use crate::OsuPP;
 use crate::TaikoPP;
 
 /// Performance calculator on maps of any mode.
+///
+/// # Example
+///
+/// ```
+/// use rosu_pp::{AnyPP, Beatmap};
+///
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+///
+/// # let map = Beatmap::default();
+/// let pp_result = AnyPP::new(&map)
+///     .mods(8 + 64) // HDDT
+///     .combo(1234)
+///     .misses(1)
+///     .accuracy(98.5) // should be set last
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
+///
+/// let next_result = AnyPP::new(&map)
+///     .attributes(pp_result)  // reusing previous results for performance
+///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .accuracy(99.5)
+///     .calculate();
+///
+/// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
+/// ```
 #[allow(clippy::upper_case_acronyms)]
-pub enum AnyPP<'m> {
+#[derive(Clone, Debug)]
+pub enum AnyPP<'map> {
     #[cfg(feature = "fruits")]
-    Fruits(FruitsPP<'m>),
+    /// osu!ctb performance calculator
+    Fruits(FruitsPP<'map>),
     #[cfg(feature = "mania")]
-    Mania(ManiaPP<'m>),
+    /// osu!mania performance calculator
+    Mania(ManiaPP<'map>),
     #[cfg(feature = "osu")]
-    Osu(OsuPP<'m>),
+    /// osu!standard performance calculator
+    Osu(OsuPP<'map>),
     #[cfg(feature = "taiko")]
-    Taiko(TaikoPP<'m>),
+    /// osu!taiko performance calculator
+    Taiko(TaikoPP<'map>),
 }
 
-impl<'m> AnyPP<'m> {
+impl<'map> AnyPP<'map> {
+    /// Create a new performance calculator for maps of any mode.
     #[inline]
-    pub fn new(map: &'m Beatmap) -> Self {
+    pub fn new(map: &'map Beatmap) -> Self {
         match map.mode {
             #[cfg(feature = "fruits")]
             GameMode::CTB => Self::Fruits(FruitsPP::new(map)),
@@ -46,6 +80,8 @@ impl<'m> AnyPP<'m> {
         }
     }
 
+    /// Consume the performance calculator and calculate
+    /// performance attributes for the given parameters.
     #[inline]
     pub fn calculate(self) -> PerformanceAttributes {
         match self {
@@ -60,7 +96,7 @@ impl<'m> AnyPP<'m> {
         }
     }
 
-    /// Provide the result of previous a difficulty or performance calculation.
+    /// Provide the result of previous difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
@@ -262,6 +298,7 @@ impl<'m> AnyPP<'m> {
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait AttributeProvider {
+    /// Provide the actual difficulty attributes.
     fn attributes(self) -> DifficultyAttributes;
 }
 

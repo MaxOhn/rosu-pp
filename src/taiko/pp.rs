@@ -6,11 +6,13 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// # Example
 ///
 /// ```
-/// # use rosu_pp::{TaikoPP, PpResult, Beatmap};
+/// use rosu_pp::{TaikoPP, Beatmap};
+///
 /// # /*
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
+///
 /// let pp_result = TaikoPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
@@ -30,8 +32,8 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct TaikoPP<'m> {
-    map: &'m Beatmap,
+pub struct TaikoPP<'map> {
+    map: &'map Beatmap,
     stars: Option<f64>,
     mods: u32,
     max_combo: usize,
@@ -44,9 +46,10 @@ pub struct TaikoPP<'m> {
     n100: Option<usize>,
 }
 
-impl<'m> TaikoPP<'m> {
+impl<'map> TaikoPP<'map> {
+    /// Create a new performance calculator for osu!taiko maps.
     #[inline]
-    pub fn new(map: &'m Beatmap) -> Self {
+    pub fn new(map: &'map Beatmap) -> Self {
         Self {
             map,
             stars: None,
@@ -172,8 +175,8 @@ impl<'m> TaikoPP<'m> {
     }
 }
 
-struct TaikoPPInner<'m> {
-    map: &'m Beatmap,
+struct TaikoPPInner<'map> {
+    map: &'map Beatmap,
     stars: f64,
     mods: u32,
     max_combo: usize,
@@ -181,7 +184,7 @@ struct TaikoPPInner<'m> {
     n_misses: usize,
 }
 
-impl<'m> TaikoPPInner<'m> {
+impl<'map> TaikoPPInner<'map> {
     fn calculate(self) -> TaikoPerformanceAttributes {
         let mut multiplier = 1.1;
 
@@ -257,6 +260,7 @@ fn difficulty_range_od(od: f64) -> f64 {
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait TaikoAttributeProvider {
+    /// Provide the star rating (only difficulty attribute for osu!taiko).
     fn attributes(self) -> Option<f64>;
 }
 

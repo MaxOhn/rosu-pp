@@ -172,16 +172,21 @@ impl<'o> DifficultyHitObject<'o> {
 /// The result of a difficulty calculation on an osu!mania map.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct ManiaDifficultyAttributes {
+    /// The final star rating.
     pub stars: f64,
 }
 
 /// The result of a performance calculation on an osu!mania map.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct ManiaPerformanceAttributes {
+    /// The difficulty attributes that were used for the performance calculation
     pub attributes: ManiaDifficultyAttributes,
-    pub pp_acc: f64,
-    pub pp_strain: f64,
+    /// The final performance points.
     pub pp: f64,
+    /// The accuracy portion of the final pp.
+    pub pp_acc: f64,
+    /// The strain portion of the final pp.
+    pub pp_strain: f64,
 }
 
 impl ManiaPerformanceAttributes {

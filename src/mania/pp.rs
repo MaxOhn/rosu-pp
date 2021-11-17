@@ -6,11 +6,13 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// # Example
 ///
 /// ```
-/// # use rosu_pp::{ManiaPP, PpResult, Beatmap};
+/// use rosu_pp::{ManiaPP, Beatmap};
+///
 /// # /*
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
+///
 /// let pp_result = ManiaPP::new(&map)
 ///     .mods(64) // DT
 ///     .score(765_432)
@@ -28,17 +30,18 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct ManiaPP<'m> {
-    map: &'m Beatmap,
+pub struct ManiaPP<'map> {
+    map: &'map Beatmap,
     stars: Option<f64>,
     mods: u32,
     score: Option<f64>,
     passed_objects: Option<usize>,
 }
 
-impl<'m> ManiaPP<'m> {
+impl<'map> ManiaPP<'map> {
+    /// Create a new performance calculator for osu!mania maps.
     #[inline]
-    pub fn new(map: &'m Beatmap) -> Self {
+    pub fn new(map: &'map Beatmap) -> Self {
         Self {
             map,
             stars: None,
@@ -48,7 +51,7 @@ impl<'m> ManiaPP<'m> {
         }
     }
 
-    /// Provide the result of previous a difficulty or performance calculation.
+    /// Provide the result of previous difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
@@ -169,6 +172,7 @@ impl<'m> ManiaPP<'m> {
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait ManiaAttributeProvider {
+    /// Provide the star rating (only difficulty attribute for osu!mania).
     fn attributes(self) -> Option<f64>;
 }
 

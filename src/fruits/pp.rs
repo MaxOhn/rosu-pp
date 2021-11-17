@@ -6,11 +6,13 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// # Example
 ///
 /// ```
-/// # use rosu_pp::{FruitsPP, PpResult, Beatmap};
+/// use rosu_pp::{FruitsPP, Beatmap};
+///
 /// # /*
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
+///
 /// let pp_result = FruitsPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
@@ -30,8 +32,8 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct FruitsPP<'m> {
-    map: &'m Beatmap,
+pub struct FruitsPP<'map> {
+    map: &'map Beatmap,
     attributes: Option<FruitsDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
@@ -44,9 +46,10 @@ pub struct FruitsPP<'m> {
     passed_objects: Option<usize>,
 }
 
-impl<'m> FruitsPP<'m> {
+impl<'map> FruitsPP<'map> {
+    /// Create a new performance calculator for osu!ctb maps.
     #[inline]
-    pub fn new(map: &'m Beatmap) -> Self {
+    pub fn new(map: &'map Beatmap) -> Self {
         Self {
             map,
             attributes: None,
@@ -372,6 +375,7 @@ impl FruitsPPInner {
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait FruitsAttributeProvider {
+    /// Provide the actual difficulty attributes.
     fn attributes(self) -> Option<FruitsDifficultyAttributes>;
 }
 

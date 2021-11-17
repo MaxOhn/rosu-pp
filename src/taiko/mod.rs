@@ -266,15 +266,20 @@ fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
 /// The result of a difficulty calculation on an osu!taiko map.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct TaikoDifficultyAttributes {
+    /// The final star rating.
     pub stars: f64,
 }
 
 /// The result of a performance calculation on an osu!taiko map.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct TaikoPerformanceAttributes {
+    /// The difficulty attributes that were used for the performance calculation
     pub attributes: TaikoDifficultyAttributes,
+    /// The final performance points.
     pub pp: f64,
+    /// The accuracy portion of the final pp.
     pub pp_acc: f64,
+    /// The strain portion of the final pp.
     pub pp_strain: f64,
 }
 

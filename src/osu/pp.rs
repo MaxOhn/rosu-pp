@@ -6,11 +6,13 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// # Example
 ///
 /// ```
-/// # use rosu_pp::{OsuPP, PpResult, Beatmap};
+/// use rosu_pp::{OsuPP, Beatmap};
+///
 /// # /*
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
+///
 /// let pp_result = OsuPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
@@ -30,8 +32,8 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct OsuPP<'m> {
-    map: &'m Beatmap,
+pub struct OsuPP<'map> {
+    map: &'map Beatmap,
     attributes: Option<OsuDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
@@ -44,9 +46,10 @@ pub struct OsuPP<'m> {
     passed_objects: Option<usize>,
 }
 
-impl<'m> OsuPP<'m> {
+impl<'map> OsuPP<'map> {
+    /// Create a new performance calculator for osu!standard maps.
     #[inline]
-    pub fn new(map: &'m Beatmap) -> Self {
+    pub fn new(map: &'map Beatmap) -> Self {
         Self {
             map,
             attributes: None,
@@ -62,7 +65,7 @@ impl<'m> OsuPP<'m> {
         }
     }
 
-    /// Provide the result of previous a difficulty or performance calculation.
+    /// Provide the result of previous difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
@@ -590,6 +593,7 @@ fn calculate_effective_misses(
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait OsuAttributeProvider {
+    /// Provide the actual difficulty attributes.
     fn attributes(self) -> Option<OsuDifficultyAttributes>;
 }
 
