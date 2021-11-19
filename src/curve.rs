@@ -183,6 +183,11 @@ impl Curve {
                 return cumulative_len;
             }
 
+            // Shortcut when it's just (0,0) since there's nothing to do anyway
+            if cumulative_len.len() == 1 {
+                return cumulative_len;
+            }
+
             // * The last length is always incorrect
             cumulative_len.pop();
 

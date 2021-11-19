@@ -4,6 +4,7 @@
 - Added a bunch of documentation.
 - [BREAKING] Removed the `ParseError` variants `InvalidPathType` and `InvalidTimingSignature` and renamed `InvalidFloatingPoint` to `InvalidDecimalNumber`.
 - [BREAKING] Removed the `last_control_point` field of `HitObjectKind::Slider` when neither the `osu` nor the `fruits` feature is enabled.
+- Fixed out of bounds panic on maps with single-control-point linear sliders
 
 # v0.3.0
 
