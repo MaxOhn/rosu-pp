@@ -38,9 +38,10 @@ pub fn stars(
     passed_objects: Option<usize>,
 ) -> TaikoDifficultyAttributes {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+    let max_combo = map.n_circles as usize;
 
     if take < 2 {
-        return TaikoDifficultyAttributes { stars: 0.0 };
+        return TaikoDifficultyAttributes { stars: 0.0, max_combo };
     }
 
     // True if the object at that index is stamina cheese
@@ -120,7 +121,7 @@ pub fn stars(
 
     let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
 
-    TaikoDifficultyAttributes { stars }
+    TaikoDifficultyAttributes { stars, max_combo }
 }
 
 /// Essentially the same as the [`stars`] function but instead of
@@ -264,13 +265,14 @@ fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
 }
 
 /// The result of a difficulty calculation on an osu!taiko map.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TaikoDifficultyAttributes {
     pub stars: f64,
+    pub max_combo: usize,
 }
 
 /// The result of a performance calculation on an osu!taiko map.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TaikoPerformanceAttributes {
     pub attributes: TaikoDifficultyAttributes,
     pub pp: f64,
