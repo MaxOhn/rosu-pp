@@ -31,6 +31,124 @@ pub fn stars(
     mods: impl Mods,
     passed_objects: Option<usize>,
 ) -> OsuDifficultyAttributes {
+    let (mut skills, mut attributes) = match calculate_skills(map, mods, passed_objects) {
+        Some(tuple) => tuple,
+        None => {
+            let map_attributes = map.attributes().mods(mods);
+            let hit_window = difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
+            let od = (80.0 - hit_window) / 6.0;
+
+            return OsuDifficultyAttributes {
+                ar: map_attributes.ar,
+                hp: map_attributes.hp,
+                od,
+                ..Default::default()
+            };
+        }
+    };
+
+    let aim_rating = skills[0].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+
+    let slider_factor = if aim_rating > 0.0 {
+        let aim_rating_no_sliders = skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+
+        aim_rating_no_sliders / aim_rating
+    } else {
+        1.0
+    };
+
+    let speed_rating = if mods.rx() {
+        0.0
+    } else {
+        skills[2].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
+    };
+
+    let flashlight_rating = skills.get_mut(3).map_or(0.0, |skill| {
+        skill.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
+    });
+
+    let base_aim_performance = {
+        let base = 5.0 * (aim_rating / 0.0675).max(1.0) - 4.0;
+
+        base * base * base / 100_000.0
+    };
+
+    let base_speed_performance = {
+        let base = 5.0 * (speed_rating / 0.0675).max(1.0) - 4.0;
+
+        base * base * base / 100_000.0
+    };
+
+    let base_flashlight_performance = if mods.fl() {
+        flashlight_rating * flashlight_rating * 25.0
+    } else {
+        0.0
+    };
+
+    let base_performance = (base_aim_performance.powf(1.1)
+        + base_speed_performance.powf(1.1)
+        + base_flashlight_performance.powf(1.1))
+    .powf(1.0 / 1.1);
+
+    let star_rating = if base_performance > 0.00001 {
+        1.12_f64.cbrt()
+            * 0.027
+            * ((100_000.0 / (1.0_f64 / 1.1).exp2() * base_performance).cbrt() + 4.0)
+    } else {
+        0.0
+    };
+
+    attributes.aim_strain = aim_rating;
+    attributes.speed_strain = speed_rating;
+    attributes.flashlight_rating = flashlight_rating;
+    attributes.slider_factor = slider_factor;
+    attributes.stars = star_rating;
+
+    attributes
+}
+
+/// Essentially the same as the [`stars`] function but instead of
+/// evaluating the final strains, it just returns them as is.
+///
+/// Suitable to plot the difficulty of a map over time.
+pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
+    let mut skills = match calculate_skills(map, mods, None) {
+        Some((skills, _)) => skills,
+        None => return Strains::default(),
+    };
+
+    skills.reverse();
+
+    let _ = skills.pop();
+    let aim_strains = skills.pop().unwrap().strain_peaks; // no sliders
+    let speed_strains = skills.pop().unwrap().strain_peaks;
+
+    let strains = if let Some(flashlight_strains) = skills.pop().map(|s| s.strain_peaks) {
+        aim_strains
+            .into_iter()
+            .zip(speed_strains)
+            .zip(flashlight_strains)
+            .map(|((aim, speed), flashlight)| aim + speed + flashlight)
+            .collect()
+    } else {
+        aim_strains
+            .into_iter()
+            .zip(speed_strains)
+            .map(|(aim, speed)| aim + speed)
+            .collect()
+    };
+
+    Strains {
+        section_length: SECTION_LEN * mods.speed(),
+        strains,
+    }
+}
+
+fn calculate_skills(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> Option<(Vec<Skill>, OsuDifficultyAttributes)> {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
@@ -38,12 +156,7 @@ pub fn stars(
     let od = (80.0 - hit_window) / 6.0;
 
     if take < 2 {
-        return OsuDifficultyAttributes {
-            ar: map_attributes.ar,
-            hp: map_attributes.hp,
-            od,
-            ..Default::default()
-        };
+        return None;
     }
 
     let mut raw_ar = map.ar as f64;
@@ -169,232 +282,18 @@ pub fn stars(
         skill.save_current_peak();
     }
 
-    let aim_rating = skills[0].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-
-    let slider_factor = if aim_rating > 0.0 {
-        let aim_rating_no_sliders = skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-
-        aim_rating_no_sliders / aim_rating
-    } else {
-        1.0
-    };
-
-    let speed_rating = if mods.rx() {
-        0.0
-    } else {
-        skills[2].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
-    };
-
-    let flashlight_rating = skills.get_mut(3).map_or(0.0, |skill| {
-        skill.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
-    });
-
-    let base_aim_performance = {
-        let base = 5.0 * (aim_rating / 0.0675).max(1.0) - 4.0;
-
-        base * base * base / 100_000.0
-    };
-
-    let base_speed_performance = {
-        let base = 5.0 * (speed_rating / 0.0675).max(1.0) - 4.0;
-
-        base * base * base / 100_000.0
-    };
-
-    let base_flashlight_performance = if fl {
-        flashlight_rating * flashlight_rating * 25.0
-    } else {
-        0.0
-    };
-
-    let base_performance = (base_aim_performance.powf(1.1)
-        + base_speed_performance.powf(1.1)
-        + base_flashlight_performance.powf(1.1))
-    .powf(1.0 / 1.1);
-
-    let star_rating = if base_performance > 0.00001 {
-        1.12_f64.cbrt()
-            * 0.027
-            * ((100_000.0 / (1.0_f64 / 1.1).exp2() * base_performance).cbrt() + 4.0)
-    } else {
-        0.0
-    };
-
-    OsuDifficultyAttributes {
+    let attributes = OsuDifficultyAttributes {
         ar: map_attributes.ar,
         hp: map_attributes.hp,
         od,
-        aim_strain: aim_rating,
-        speed_strain: speed_rating,
-        flashlight_rating,
-        slider_factor,
         n_circles: map.n_circles as usize,
         n_sliders: map.n_sliders as usize,
         n_spinners: map.n_spinners as usize,
-        stars: star_rating,
         max_combo: params.max_combo,
-    }
-}
-
-/// Essentially the same as the [`stars`] function but instead of
-/// evaluating the final strains, it just returns them as is.
-///
-/// Suitable to plot the difficulty of a map over time.
-pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    let map_attributes = map.attributes().mods(mods);
-    let hit_window = difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
-
-    if map.hit_objects.len() < 2 {
-        return Strains::default();
-    }
-
-    let mut raw_ar = map.ar as f64;
-    let hr = mods.hr();
-
-    if hr {
-        raw_ar *= 1.4;
-    } else if mods.ez() {
-        raw_ar *= 0.5;
-    }
-
-    let time_preempt = difficulty_range_ar(raw_ar);
-    let scaling_factor = ScalingFactor::new(map_attributes.cs);
-
-    let mut params = ObjectParameters {
-        map,
-        max_combo: 0,
-        slider_state: SliderState::new(map),
-        ticks: Vec::new(),
-        curve_bufs: CurveBuffers::default(),
+        ..Default::default()
     };
 
-    let hit_objects_iter = map
-        .hit_objects
-        .iter()
-        .filter_map(|h| OsuObject::new(h, hr, &mut params));
-
-    let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
-    hit_objects.extend(hit_objects_iter);
-
-    let stack_threshold = time_preempt * map.stack_leniency as f64;
-
-    if map.version >= 6 {
-        stacking(&mut hit_objects, stack_threshold);
-    } else {
-        old_stacking(&mut hit_objects, stack_threshold);
-    }
-
-    let mut hit_objects = hit_objects.into_iter().map(|mut h| {
-        let stack_offset = scaling_factor.stack_offset(h.stack_height);
-        h.pos += stack_offset;
-
-        h
-    });
-
-    let fl = mods.fl();
-    let mut skills = Vec::with_capacity(2 + fl as usize);
-
-    skills.push(Skill::aim(true));
-    skills.push(Skill::aim(false));
-    skills.push(Skill::speed(hit_window));
-
-    if fl {
-        // NOTE: Instead of having `NORMALIZED_RADIUS` as dividend, it still uses 52.0.
-        skills.push(Skill::flashlight(52.0 / scaling_factor.radius() as f64));
-    }
-
-    let mut prev_prev = None;
-    let mut prev = hit_objects.next().unwrap();
-
-    // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end =
-        (prev.time / map_attributes.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
-
-    // Handle second object separately to remove later if-branching
-    let curr = hit_objects.next().unwrap();
-    let h = DifficultyObject::new(
-        &curr,
-        &mut prev,
-        prev_prev.as_ref(),
-        &scaling_factor,
-        map_attributes.clock_rate,
-    );
-
-    let base_time = h.base.time / map_attributes.clock_rate;
-
-    while base_time > current_section_end {
-        for skill in skills.iter_mut() {
-            skill.start_new_section_from(current_section_end);
-        }
-
-        current_section_end += SECTION_LEN;
-    }
-
-    for skill in skills.iter_mut() {
-        skill.process(&h);
-    }
-
-    prev_prev = Some(prev);
-    prev = curr;
-
-    // Handle all other objects
-    for curr in hit_objects {
-        let h = DifficultyObject::new(
-            &curr,
-            &mut prev,
-            prev_prev.as_ref(),
-            &scaling_factor,
-            map_attributes.clock_rate,
-        );
-
-        let base_time = h.base.time / map_attributes.clock_rate;
-
-        while base_time > current_section_end {
-            for skill in skills.iter_mut() {
-                skill.save_current_peak();
-                skill.start_new_section_from(current_section_end);
-            }
-
-            current_section_end += SECTION_LEN;
-        }
-
-        for skill in skills.iter_mut() {
-            skill.process(&h);
-        }
-
-        prev_prev = Some(prev);
-        prev = curr;
-    }
-
-    for skill in skills.iter_mut() {
-        skill.save_current_peak();
-    }
-
-    skills.reverse();
-
-    let _ = skills.pop();
-    let aim_strains = skills.pop().unwrap().strain_peaks; // no sliders
-    let speed_strains = skills.pop().unwrap().strain_peaks;
-
-    let strains = if let Some(flashlight_strains) = skills.pop().map(|s| s.strain_peaks) {
-        aim_strains
-            .into_iter()
-            .zip(speed_strains)
-            .zip(flashlight_strains)
-            .map(|((aim, speed), flashlight)| aim + speed + flashlight)
-            .collect()
-    } else {
-        aim_strains
-            .into_iter()
-            .zip(speed_strains)
-            .map(|(aim, speed)| aim + speed)
-            .collect()
-    };
-
-    Strains {
-        section_length: SECTION_LEN,
-        strains,
-    }
+    Some((skills, attributes))
 }
 
 fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {

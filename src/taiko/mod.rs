@@ -37,10 +37,67 @@ pub fn stars(
     mods: impl Mods,
     passed_objects: Option<usize>,
 ) -> TaikoDifficultyAttributes {
+    let skills = match calculate_skills(map, mods, passed_objects) {
+        Some(skills) => skills,
+        None => return TaikoDifficultyAttributes { stars: 0.0 },
+    };
+
+    let mut buf = vec![0.0; skills[0].strain_peaks.len()];
+
+    let color_rating = skills[0].difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
+    let rhythm_rating = skills[1].difficulty_value(&mut buf) * RHYTHM_SKILL_MULTIPLIER;
+
+    let mut stamina_rating = (skills[2].difficulty_value(&mut buf)
+        + skills[3].difficulty_value(&mut buf))
+        * STAMINA_SKILL_MULTIPLIER;
+
+    let stamina_penalty = simple_color_penalty(stamina_rating, color_rating);
+    stamina_rating *= stamina_penalty;
+
+    let combined_rating = locally_combined_difficulty(&skills, stamina_penalty);
+    let separate_rating = norm(1.5, color_rating, rhythm_rating, stamina_rating);
+
+    let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
+
+    TaikoDifficultyAttributes { stars }
+}
+
+/// Essentially the same as the [`stars`] function but instead of
+/// evaluating the final strains, it just returns them as is.
+///
+/// Suitable to plot the difficulty of a map over time.
+pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
+    let skills = match calculate_skills(map, mods, None) {
+        Some(skills) => skills,
+        None => return Strains::default(),
+    };
+
+    let strains = skills[0]
+        .strain_peaks
+        .iter()
+        .zip(skills[1].strain_peaks.iter())
+        .zip(skills[2].strain_peaks.iter())
+        .zip(skills[3].strain_peaks.iter())
+        .map(|(((color, rhythm), stamina_right), stamina_left)| {
+            color + rhythm + stamina_right + stamina_left
+        })
+        .collect();
+
+    Strains {
+        section_length: SECTION_LEN * mods.speed(),
+        strains,
+    }
+}
+
+fn calculate_skills(
+    map: &Beatmap,
+    mods: impl Mods,
+    passed_objects: Option<usize>,
+) -> Option<Vec<Skill>> {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     if take < 2 {
-        return TaikoDifficultyAttributes { stars: 0.0 };
+        return None;
     }
 
     // True if the object at that index is stamina cheese
@@ -103,109 +160,7 @@ pub fn stars(
         skill.save_current_peak();
     }
 
-    let mut buf = vec![0.0; skills[0].strain_peaks.len()];
-
-    let color_rating = skills[0].difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
-    let rhythm_rating = skills[1].difficulty_value(&mut buf) * RHYTHM_SKILL_MULTIPLIER;
-
-    let mut stamina_rating = (skills[2].difficulty_value(&mut buf)
-        + skills[3].difficulty_value(&mut buf))
-        * STAMINA_SKILL_MULTIPLIER;
-
-    let stamina_penalty = simple_color_penalty(stamina_rating, color_rating);
-    stamina_rating *= stamina_penalty;
-
-    let combined_rating = locally_combined_difficulty(&skills, stamina_penalty);
-    let separate_rating = norm(1.5, color_rating, rhythm_rating, stamina_rating);
-
-    let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
-
-    TaikoDifficultyAttributes { stars }
-}
-
-/// Essentially the same as the [`stars`] function but instead of
-/// evaluating the final strains, it just returns them as is.
-///
-/// Suitable to plot the difficulty of a map over time.
-pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    if map.hit_objects.len() < 2 {
-        return Strains::default();
-    }
-
-    // True if the object at that index is stamina cheese
-    let cheese = map.find_cheese();
-
-    let mut skills = vec![
-        Skill::new(SkillKind::color()),
-        Skill::new(SkillKind::rhythm()),
-        Skill::new(SkillKind::stamina(true)),
-        Skill::new(SkillKind::stamina(false)),
-    ];
-
-    let clock_rate = mods.speed();
-    let section_len = SECTION_LEN * clock_rate;
-
-    // No strain for first object
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
-
-    let mut hit_objects = map
-        .hit_objects
-        .iter()
-        .enumerate()
-        .skip(2)
-        .zip(map.hit_objects.iter().skip(1))
-        .zip(map.hit_objects.iter())
-        .map(|(((idx, base), prev), prev_prev)| {
-            DifficultyObject::new(idx, base, prev, prev_prev, clock_rate)
-        });
-
-    // Handle second object separately to remove later if-branching
-    let h = hit_objects.next().unwrap();
-
-    while h.base.start_time > current_section_end {
-        current_section_end += section_len;
-    }
-
-    for skill in skills.iter_mut() {
-        skill.process(&h, &cheese);
-    }
-
-    // Handle all other objects
-    for h in hit_objects {
-        while h.base.start_time > current_section_end {
-            for skill in skills.iter_mut() {
-                skill.save_current_peak();
-                skill.start_new_section_from(current_section_end / clock_rate);
-            }
-
-            current_section_end += section_len;
-        }
-
-        for skill in skills.iter_mut() {
-            skill.process(&h, &cheese);
-        }
-    }
-
-    for skill in skills.iter_mut() {
-        skill.save_current_peak();
-    }
-
-    let strains = skills[0]
-        .strain_peaks
-        .iter()
-        .zip(skills[1].strain_peaks.iter())
-        .zip(skills[2].strain_peaks.iter())
-        .zip(skills[3].strain_peaks.iter())
-        .map(|(((color, rhythm), stamina_right), stamina_left)| {
-            color + rhythm + stamina_right + stamina_left
-        })
-        .collect();
-
-    Strains {
-        section_length: section_len,
-        strains,
-    }
+    Some(skills)
 }
 
 #[inline]
