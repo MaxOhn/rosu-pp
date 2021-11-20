@@ -403,7 +403,7 @@ impl PerformanceAttributes {
             #[cfg(feature = "osu")]
             Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.attributes.clone()),
             #[cfg(feature = "taiko")]
-            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes),
+            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes.clone()),
         }
     }
 }
