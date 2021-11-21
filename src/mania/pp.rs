@@ -51,7 +51,7 @@ impl<'map> ManiaPP<'map> {
         }
     }
 
-    /// Provide the result of previous difficulty or performance calculation.
+    /// Provide the result of a previous difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]

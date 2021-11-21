@@ -92,7 +92,7 @@ impl<'map> AnyPP<'map> {
         }
     }
 
-    /// Provide the result of previous difficulty or performance calculation.
+    /// Provide the result of a previous difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
@@ -143,8 +143,8 @@ impl<'map> AnyPP<'map> {
 
     /// Set the accuracy between 0.0 and 100.0.
     ///
-    /// For some modes this method depends on previously set values
-    /// be sure to call this last before calling `calculate`.
+    /// For some modes this method depends on previously set values.
+    /// Be sure to call this last before calling `calculate`.
     ///
     /// Irrelevant for osu!mania.
     #[allow(unused_variables)]
@@ -254,7 +254,7 @@ impl<'map> AnyPP<'map> {
 
     /// Specify the amount of katus of a play.
     ///
-    /// This value is only relevant for osu!ctb for which it represent
+    /// This value is only relevant for osu!ctb for which it represents
     /// the amount of tiny droplet misses.
     #[allow(unused_variables)]
     #[inline]

@@ -25,7 +25,7 @@ let result = map.pp()
     .mods(24) // HDHR
     .combo(1234)
     .misses(2)
-    .accuracy(99.2)
+    .accuracy(99.2) // should be called last
     .calculate();
 
 println!("PP: {}", result.pp());
