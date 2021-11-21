@@ -1,5 +1,6 @@
 #![cfg(feature = "osu")]
 
+mod difficulty_iter;
 mod difficulty_object;
 mod osu_object;
 mod pp;
@@ -8,6 +9,9 @@ mod skill;
 mod skill_kind;
 mod slider_state;
 
+use std::mem;
+
+pub use difficulty_iter::OsuDifficultyAttributesIter;
 use difficulty_object::DifficultyObject;
 use osu_object::{ObjectParameters, OsuObject};
 pub use pp::*;
@@ -17,6 +21,8 @@ use skill_kind::SkillKind;
 use slider_state::SliderState;
 
 use crate::{curve::CurveBuffers, Beatmap, Mods, Strains};
+
+use self::skill::Skills;
 
 const SECTION_LEN: f64 = 400.0;
 const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
@@ -47,26 +53,56 @@ pub fn stars(
         }
     };
 
-    let aim_rating = skills[0].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+    let aim_rating = {
+        let aim = skills.aim();
+        let mut aim_strains = mem::take(&mut aim.strain_peaks);
+
+        Skill::difficulty_value(&mut aim_strains, aim).sqrt() * DIFFICULTY_MULTIPLIER
+    };
 
     let slider_factor = if aim_rating > 0.0 {
-        let aim_rating_no_sliders = skills[1].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+        let aim_no_sliders = skills.aim_no_sliders();
+
+        let mut aim_strains_no_sliders = mem::take(&mut aim_no_sliders.strain_peaks);
+        let aim_rating_no_sliders =
+            Skill::difficulty_value(&mut aim_strains_no_sliders, aim_no_sliders).sqrt()
+                * DIFFICULTY_MULTIPLIER;
 
         aim_rating_no_sliders / aim_rating
     } else {
         1.0
     };
 
-    let speed_rating = if mods.rx() {
-        0.0
+    let (speed, flashlight) = skills.speed_flashlight();
+
+    let speed_rating = if let Some(speed) = speed {
+        let mut speed_strains = mem::take(&mut speed.strain_peaks);
+
+        Skill::difficulty_value(&mut speed_strains, speed).sqrt() * DIFFICULTY_MULTIPLIER
     } else {
-        skills[2].difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
+        0.0
     };
 
-    let flashlight_rating = skills.get_mut(3).map_or(0.0, |skill| {
-        skill.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER
-    });
+    let flashlight_rating = if let Some(flashlight) = flashlight {
+        let mut flashlight_strains = mem::take(&mut flashlight.strain_peaks);
 
+        Skill::difficulty_value(&mut flashlight_strains, flashlight).sqrt() * DIFFICULTY_MULTIPLIER
+    } else {
+        0.0
+    };
+
+    let star_rating = calculate_star_rating(aim_rating, speed_rating, flashlight_rating);
+
+    attributes.aim_strain = aim_rating;
+    attributes.speed_strain = speed_rating;
+    attributes.flashlight_rating = flashlight_rating;
+    attributes.slider_factor = slider_factor;
+    attributes.stars = star_rating;
+
+    attributes
+}
+
+fn calculate_star_rating(aim_rating: f64, speed_rating: f64, flashlight_rating: f64) -> f64 {
     let base_aim_performance = {
         let base = 5.0 * (aim_rating / 0.0675).max(1.0) - 4.0;
 
@@ -79,32 +115,20 @@ pub fn stars(
         base * base * base / 100_000.0
     };
 
-    let base_flashlight_performance = if mods.fl() {
-        flashlight_rating * flashlight_rating * 25.0
-    } else {
-        0.0
-    };
+    let base_flashlight_performance = flashlight_rating * flashlight_rating * 25.0;
 
     let base_performance = (base_aim_performance.powf(1.1)
         + base_speed_performance.powf(1.1)
         + base_flashlight_performance.powf(1.1))
     .powf(1.0 / 1.1);
 
-    let star_rating = if base_performance > 0.00001 {
+    if base_performance > 0.00001 {
         1.12_f64.cbrt()
             * 0.027
             * ((100_000.0 / (1.0_f64 / 1.1).exp2() * base_performance).cbrt() + 4.0)
     } else {
         0.0
-    };
-
-    attributes.aim_strain = aim_rating;
-    attributes.speed_strain = speed_rating;
-    attributes.flashlight_rating = flashlight_rating;
-    attributes.slider_factor = slider_factor;
-    attributes.stars = star_rating;
-
-    attributes
+    }
 }
 
 /// Essentially the same as the [`stars`] function but instead of
@@ -117,25 +141,29 @@ pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
         None => return Strains::default(),
     };
 
-    skills.reverse();
+    let mut aim = mem::take(&mut skills.aim().strain_peaks);
+    let tuple = skills.speed_flashlight();
 
-    let _ = skills.pop();
-    let aim_strains = skills.pop().unwrap().strain_peaks; // no sliders
-    let speed_strains = skills.pop().unwrap().strain_peaks;
+    let strains = match tuple {
+        (Some(speed), Some(flashlight)) => {
+            for ((aim, speed), flashlight) in aim
+                .iter_mut()
+                .zip(&speed.strain_peaks)
+                .zip(&flashlight.strain_peaks)
+            {
+                *aim += speed + flashlight;
+            }
 
-    let strains = if let Some(flashlight_strains) = skills.pop().map(|s| s.strain_peaks) {
-        aim_strains
-            .into_iter()
-            .zip(speed_strains)
-            .zip(flashlight_strains)
-            .map(|((aim, speed), flashlight)| aim + speed + flashlight)
-            .collect()
-    } else {
-        aim_strains
-            .into_iter()
-            .zip(speed_strains)
-            .map(|(aim, speed)| aim + speed)
-            .collect()
+            aim
+        }
+        (Some(strains), None) | (None, Some(strains)) => {
+            for (aim, strain) in aim.iter_mut().zip(&strains.strain_peaks) {
+                *aim += strain;
+            }
+
+            aim
+        }
+        (None, None) => aim,
     };
 
     Strains {
@@ -148,7 +176,7 @@ fn calculate_skills(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> Option<(Vec<Skill>, OsuDifficultyAttributes)> {
+) -> Option<(Skills, OsuDifficultyAttributes)> {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
@@ -203,23 +231,13 @@ fn calculate_skills(
         h
     });
 
-    let fl = mods.fl();
-    let mut skills = Vec::with_capacity(2 + fl as usize);
-
-    skills.push(Skill::aim(true));
-    skills.push(Skill::aim(false));
-    skills.push(Skill::speed(hit_window));
-
-    if fl {
-        // NOTE: Instead of having `NORMALIZED_RADIUS` as dividend, it still uses 52.0.
-        skills.push(Skill::flashlight(52.0 / scaling_factor.radius() as f64));
-    }
+    let mut skills = Skills::new(hit_window, mods.rx(), scaling_factor.radius(), mods.fl());
 
     let mut prev_prev = None;
     let mut prev = hit_objects.next().unwrap();
 
     // First object has no predecessor and thus no strain, handle distinctly
-    let mut current_section_end =
+    let mut curr_section_end =
         (prev.time / map_attributes.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
 
     // Handle second object separately to remove later if-branching
@@ -234,20 +252,13 @@ fn calculate_skills(
 
     let base_time = h.base.time / map_attributes.clock_rate;
 
-    while base_time > current_section_end {
-        for skill in skills.iter_mut() {
-            skill.start_new_section_from(current_section_end);
-        }
-
-        current_section_end += SECTION_LEN;
+    while base_time > curr_section_end {
+        skills.start_new_section_from(curr_section_end);
+        curr_section_end += SECTION_LEN;
     }
 
-    for skill in skills.iter_mut() {
-        skill.process(&h);
-    }
-
-    prev_prev = Some(prev);
-    prev = curr;
+    skills.process(&h);
+    prev_prev = Some(mem::replace(&mut prev, curr));
 
     // Handle all other objects
     for curr in hit_objects {
@@ -261,26 +272,16 @@ fn calculate_skills(
 
         let base_time = h.base.time / map_attributes.clock_rate;
 
-        while base_time > current_section_end {
-            for skill in skills.iter_mut() {
-                skill.save_current_peak();
-                skill.start_new_section_from(current_section_end);
-            }
-
-            current_section_end += SECTION_LEN;
+        while base_time > curr_section_end {
+            skills.save_peak_and_start_new_section(curr_section_end);
+            curr_section_end += SECTION_LEN;
         }
 
-        for skill in skills.iter_mut() {
-            skill.process(&h);
-        }
-
-        prev_prev = Some(prev);
-        prev = curr;
+        skills.process(&h);
+        prev_prev = Some(mem::replace(&mut prev, curr));
     }
 
-    for skill in skills.iter_mut() {
-        skill.save_current_peak();
-    }
+    skills.save_current_peak();
 
     let attributes = OsuDifficultyAttributes {
         ar: map_attributes.ar,
@@ -445,7 +446,7 @@ fn lerp(start: f64, end: f64, percent: f64) -> f64 {
 }
 
 /// The result of a difficulty calculation on an osu!standard map.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct OsuDifficultyAttributes {
     /// The aim portion of the total strain.
     pub aim_strain: f64,
@@ -519,51 +520,4 @@ impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {
 #[inline]
 fn difficulty_range_od(od: f64) -> f64 {
     super::difficulty_range(od, 20.0, 50.0, 80.0)
-}
-
-#[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-#[test]
-// #[ignore]
-fn custom_osu() {
-    use std::time::Instant;
-
-    use crate::{Beatmap, OsuPP};
-
-    let path = "E:Games/osu!/beatmaps/116169_.osu";
-
-    let start = Instant::now();
-    let map = Beatmap::from_path(path).unwrap();
-
-    let iters = 100;
-    let accum = start.elapsed();
-
-    // * Tiny benchmark for map parsing
-    // let mut accum = accum;
-
-    // for _ in 0..iters {
-    //     let file = File::open(path).unwrap();
-    //     let start = Instant::now();
-    //     let _map = Beatmap::parse(file).unwrap();
-    //     accum += start.elapsed();
-    // }
-
-    println!("Parsing average: {:?}", accum / iters);
-
-    let start = Instant::now();
-    let result = OsuPP::new(&map).mods(2 + 64).calculate();
-
-    let iters = 100;
-    let accum = start.elapsed();
-
-    // * Tiny benchmark for pp calculation
-    // let mut accum = accum;
-
-    // for _ in 0..iters {
-    //     let start = Instant::now();
-    //     let _result = OsuPP::new(&map).mods(0).calculate();
-    //     accum += start.elapsed();
-    // }
-
-    println!("{:#?}", result);
-    println!("Calculation average: {:?}", accum / iters);
 }

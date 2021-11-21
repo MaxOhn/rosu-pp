@@ -470,33 +470,3 @@ impl From<FruitsPerformanceAttributes> for FruitsDifficultyAttributes {
         attributes.difficulty
     }
 }
-
-#[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-#[test]
-// #[ignore]
-fn custom_fruits() {
-    use std::time::Instant;
-
-    use crate::{Beatmap, FruitsPP};
-
-    let path = "E:Games/osu!/beatmaps/2919116_.osu";
-    let map = Beatmap::from_path(path).unwrap();
-
-    let start = Instant::now();
-    let result = FruitsPP::new(&map).mods(256).calculate();
-
-    let iters = 100;
-    let accum = start.elapsed();
-
-    // * Tiny benchmark for pp calculation
-    // let mut accum = accum;
-
-    // for _ in 0..iters {
-    //     let start = Instant::now();
-    //     let _result = OsuPP::new(&map).mods(0).calculate();
-    //     accum += start.elapsed();
-    // }
-
-    println!("{:#?}", result);
-    println!("Calculation average: {:?}", accum / iters);
-}

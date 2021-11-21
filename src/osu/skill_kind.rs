@@ -1,7 +1,7 @@
 use std::{
     collections::VecDeque,
     f64::consts::{FRAC_PI_2, PI},
-    iter,
+    fmt, iter,
 };
 
 use crate::parse::Pos2;
@@ -564,4 +564,14 @@ fn calculate_wide_angle_bonus(angle: f64) -> f64 {
 
 fn calculate_acute_angle_bonus(angle: f64) -> f64 {
     1.0 - calculate_wide_angle_bonus(angle)
+}
+
+impl fmt::Debug for SkillKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Aim { .. } => f.debug_struct("Aim").finish(),
+            Self::Flashlight { .. } => f.debug_struct("Flashlight").finish(),
+            Self::Speed { .. } => f.debug_struct("Speed").finish(),
+        }
+    }
 }

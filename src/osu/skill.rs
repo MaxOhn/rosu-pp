@@ -1,8 +1,91 @@
 use super::{lerp, skill_kind::calculate_speed_rhythm_bonus, DifficultyObject, SkillKind};
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 const REDUCED_STRAIN_BASELINE: f64 = 0.75;
+
+#[derive(Debug)]
+pub(crate) struct Skills {
+    skills: Box<[Skill]>,
+    mask: u8,
+}
+
+impl Skills {
+    const RX: u8 = 1 << 0;
+    const FL: u8 = 1 << 1;
+
+    pub(crate) fn new(hit_window: f64, rx: bool, radius: f32, fl: bool) -> Self {
+        let mut skills = Vec::with_capacity(2 + !rx as usize + fl as usize);
+
+        skills.push(Skill::aim(true));
+        skills.push(Skill::aim(false));
+
+        if !rx {
+            skills.push(Skill::speed(hit_window));
+        }
+
+        if fl {
+            // NOTE: Instead of having `NORMALIZED_RADIUS` as dividend, it still uses 52.0.
+            let scaling_factor = 52.0 / radius as f64;
+            skills.push(Skill::flashlight(scaling_factor));
+        }
+
+        let mask = rx as u8 * Self::RX + fl as u8 * Self::FL;
+        let skills = skills.into_boxed_slice();
+
+        Self { skills, mask }
+    }
+
+    pub(crate) fn start_new_section_from(&mut self, curr_section_end: f64) {
+        for skill in self.skills.iter_mut() {
+            skill.start_new_section_from(curr_section_end);
+        }
+    }
+
+    pub(crate) fn save_peak_and_start_new_section(&mut self, curr_section_end: f64) {
+        for skill in self.skills.iter_mut() {
+            skill.save_current_peak();
+            skill.start_new_section_from(curr_section_end);
+        }
+    }
+
+    pub(crate) fn save_current_peak(&mut self) {
+        for skill in self.skills.iter_mut() {
+            skill.save_current_peak();
+        }
+    }
+
+    pub(crate) fn process(&mut self, h: &DifficultyObject<'_>) {
+        for skill in self.skills.iter_mut() {
+            skill.process(h);
+        }
+    }
+
+    pub(crate) fn aim(&mut self) -> &mut Skill {
+        &mut self.skills[0]
+    }
+
+    pub(crate) fn aim_no_sliders(&mut self) -> &mut Skill {
+        &mut self.skills[1]
+    }
+
+    pub(crate) fn speed_flashlight(&mut self) -> (Option<&mut Skill>, Option<&mut Skill>) {
+        match (self.mask & Self::RX, self.mask & Self::FL) {
+            // only speed
+            (0, 0) => (Some(&mut self.skills[2]), None),
+            // both speed and flashlight
+            (0, _) => {
+                let (left, right) = self.skills.split_at_mut(3);
+
+                (Some(&mut left[2]), Some(&mut right[0]))
+            }
+            // neither
+            (_, 0) => (None, None),
+            // only flashlight
+            (_, _) => (None, Some(&mut self.skills[2])),
+        }
+    }
+}
 
 pub(crate) struct Skill {
     curr_strain: f64,
@@ -62,7 +145,7 @@ impl Skill {
         self.curr_section_peak = self.calculate_initial_strain(time);
     }
 
-    pub(crate) fn difficulty_value(&mut self) -> f64 {
+    pub(crate) fn difficulty_value(strain_peaks: &mut [f64], this: &Self) -> f64 {
         // ? Common values to debug
         // println!("---");
 
@@ -72,15 +155,14 @@ impl Skill {
 
         let mut difficulty = 0.0;
         let mut weight = 1.0;
-        let decay_weight = self.kind.decay_weight();
+        let decay_weight = this.kind.decay_weight();
 
-        let (reduced_section_count, difficulty_multiplier) = self.kind.difficulty_values();
+        let (reduced_section_count, difficulty_multiplier) = this.kind.difficulty_values();
         let reduced_section_count_f64 = reduced_section_count as f64;
 
-        self.strain_peaks
-            .sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
+        strain_peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
-        let peaks = self.strain_peaks.iter_mut();
+        let peaks = strain_peaks.iter_mut();
 
         for (i, strain) in peaks.take(reduced_section_count).enumerate() {
             let clamped = (i as f64 / reduced_section_count_f64).clamp(0.0, 1.0);
@@ -88,10 +170,9 @@ impl Skill {
             *strain *= lerp(REDUCED_STRAIN_BASELINE, 1.0, scale);
         }
 
-        self.strain_peaks
-            .sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
+        strain_peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
-        for &strain in self.strain_peaks.iter() {
+        for &strain in strain_peaks.iter() {
             difficulty += strain * weight;
             weight *= decay_weight;
         }
@@ -125,5 +206,17 @@ impl Skill {
                 self.curr_strain * *curr_rhythm
             }
         }
+    }
+}
+
+impl fmt::Debug for Skill {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Skill")
+            .field("curr_strain", &self.curr_strain)
+            .field("curr_section_peak", &self.curr_section_peak)
+            .field("kind", &self.kind)
+            .field("strain_peaks_len", &self.strain_peaks.len())
+            .field("prev_time", &self.prev_time)
+            .finish()
     }
 }

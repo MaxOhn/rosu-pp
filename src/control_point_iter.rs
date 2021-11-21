@@ -37,6 +37,7 @@ impl<'p> ControlPointIter<'p> {
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum ControlPoint {
     Timing { time: f64, beat_len: f64 },
     Difficulty { time: f64, slider_velocity: f64 },

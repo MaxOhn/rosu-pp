@@ -9,6 +9,7 @@
 - Added method `Beatmap::bpm`
 - Added method `max_combo` for `DifficultyAttributes`, `PerformanceAttributes`, and all `{Mode}PerformanceAttributes`
 - [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
+- Added `OsuDifficultyAttributesIter`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 
 # v0.3.0
 

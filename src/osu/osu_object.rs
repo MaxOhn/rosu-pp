@@ -11,6 +11,7 @@ use crate::{
 const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
 const BASE_SCORING_DISTANCE: f64 = 100.0;
 
+#[derive(Debug)]
 pub(crate) struct OsuObject {
     pub(crate) time: f64,
     pub(crate) pos: Pos2,
