@@ -4,7 +4,7 @@
 
 A standalone crate to calculate star ratings and performance points for all [osu!](https://osu.ppy.sh/home) gamemodes.
 
-Conversions between gamemodes are generally not supported.
+Conversions between game modes (i.e. "converts") are generally not supported.
 
 Async is supported through features, see below.
 
@@ -54,6 +54,8 @@ println!("Stars: {} | Max PP: {}", stars, max_pp);
 If either the `async_tokio` or `async_std` feature is enabled, beatmap parsing will be async.
 
 ```rust
+use rosu_pp::{Beatmap, BeatmapExt};
+
 // Parse the map asynchronously
 let map = match Beatmap::from_path("/path/to/file.osu").await {
     Ok(map) => map,
