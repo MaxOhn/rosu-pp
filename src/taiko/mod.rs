@@ -226,7 +226,7 @@ fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
 }
 
 /// The result of a difficulty calculation on an osu!taiko map.
-#[derive(Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct TaikoDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,

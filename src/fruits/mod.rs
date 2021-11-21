@@ -42,7 +42,7 @@ pub fn stars(
 
             attributes
         }
-        None => return FruitsDifficultyAttributes::default(),
+        None => FruitsDifficultyAttributes::default(),
     }
 }
 
