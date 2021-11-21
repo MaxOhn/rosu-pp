@@ -34,9 +34,8 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 #[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'map> {
     map: &'map Beatmap,
-    stars: Option<f64>,
+    attributes: Option<TaikoDifficultyAttributes>,
     mods: u32,
-    max_combo: usize,
     combo: Option<usize>,
     acc: f64,
     n_misses: usize,
@@ -52,9 +51,8 @@ impl<'map> TaikoPP<'map> {
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
             map,
-            stars: None,
+            attributes: None,
             mods: 0,
-            max_combo: map.n_circles as usize,
             combo: None,
             acc: 1.0,
             n_misses: 0,
@@ -69,8 +67,8 @@ impl<'map> TaikoPP<'map> {
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
     pub fn attributes(mut self, attributes: impl TaikoAttributeProvider) -> Self {
-        if let Some(stars) = attributes.attributes() {
-            self.stars = Some(stars);
+        if let Some(attributes) = attributes.attributes() {
+            self.attributes.replace(attributes);
         }
 
         self
@@ -138,9 +136,10 @@ impl<'map> TaikoPP<'map> {
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> TaikoPerformanceAttributes {
-        let stars = self
-            .stars
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars);
+        let attributes = self
+            .attributes
+            .take()
+            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
 
         if self.n300.or(self.n100).is_some() {
             let total = self.map.n_circles as usize;
@@ -164,9 +163,8 @@ impl<'map> TaikoPP<'map> {
 
         let inner = TaikoPPInner {
             map: self.map,
-            stars,
+            attributes,
             mods: self.mods,
-            max_combo: self.max_combo,
             acc: self.acc,
             n_misses: self.n_misses,
         };
@@ -177,9 +175,8 @@ impl<'map> TaikoPP<'map> {
 
 struct TaikoPPInner<'map> {
     map: &'map Beatmap,
-    stars: f64,
+    attributes: TaikoDifficultyAttributes,
     mods: u32,
-    max_combo: usize,
     acc: f64,
     n_misses: usize,
 }
@@ -196,25 +193,26 @@ impl<'map> TaikoPPInner<'map> {
             multiplier *= 1.1;
         }
 
-        let strain_value = self.compute_strain_value(self.stars);
+        let strain_value = self.compute_strain_value();
         let acc_value = self.compute_accuracy_value();
 
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
         TaikoPerformanceAttributes {
-            attributes: TaikoDifficultyAttributes { stars: self.stars },
+            attributes: self.attributes,
             pp,
             pp_acc: acc_value,
             pp_strain: strain_value,
         }
     }
 
-    fn compute_strain_value(&self, stars: f64) -> f64 {
-        let exp_base = 5.0 * (stars / 0.0075).max(1.0) - 4.0;
+    fn compute_strain_value(&self) -> f64 {
+        let attributes = &self.attributes;
+        let exp_base = 5.0 * (attributes.stars / 0.0075).max(1.0) - 4.0;
         let mut strain = exp_base * exp_base / 100_000.0;
 
         // Longer maps are worth more
-        let len_bonus = 1.0 + 0.1 * (self.max_combo as f64 / 1500.0).min(1.0);
+        let len_bonus = 1.0 + 0.1 * (attributes.max_combo as f64 / 1500.0).min(1.0);
         strain *= len_bonus;
 
         // Penalize misses exponentially
@@ -245,11 +243,12 @@ impl<'map> TaikoPPInner<'map> {
         }
 
         let hit_window = difficulty_range_od(od).floor() / self.mods.speed();
+        let max_combo = self.attributes.max_combo;
 
         (150.0 / hit_window).powf(1.1)
             * self.acc.powi(15)
             * 22.0
-            * (self.max_combo as f64 / 1500.0).powf(0.3).min(1.15)
+            * (max_combo as f64 / 1500.0).powf(0.3).min(1.15)
     }
 }
 
@@ -260,37 +259,30 @@ fn difficulty_range_od(od: f64) -> f64 {
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait TaikoAttributeProvider {
-    /// Provide the star rating (only difficulty attribute for osu!taiko).
-    fn attributes(self) -> Option<f64>;
-}
-
-impl TaikoAttributeProvider for f64 {
-    #[inline]
-    fn attributes(self) -> Option<f64> {
-        Some(self)
-    }
+    /// Provide the actual difficulty attributes.
+    fn attributes(self) -> Option<TaikoDifficultyAttributes>;
 }
 
 impl TaikoAttributeProvider for TaikoDifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<f64> {
-        Some(self.stars)
+    fn attributes(self) -> Option<TaikoDifficultyAttributes> {
+        Some(self)
     }
 }
 
 impl TaikoAttributeProvider for TaikoPerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<f64> {
-        Some(self.attributes.stars)
+    fn attributes(self) -> Option<TaikoDifficultyAttributes> {
+        Some(self.attributes)
     }
 }
 
 impl TaikoAttributeProvider for DifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<f64> {
+    fn attributes(self) -> Option<TaikoDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
-            Some(attributes.stars)
+            Some(attributes)
         } else {
             None
         }
@@ -299,10 +291,10 @@ impl TaikoAttributeProvider for DifficultyAttributes {
 
 impl TaikoAttributeProvider for PerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<f64> {
+    fn attributes(self) -> Option<TaikoDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
-            Some(attributes.attributes.stars)
+            Some(attributes.attributes)
         } else {
             None
         }

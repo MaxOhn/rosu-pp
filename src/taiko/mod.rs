@@ -37,9 +37,16 @@ pub fn stars(
     mods: impl Mods,
     passed_objects: Option<usize>,
 ) -> TaikoDifficultyAttributes {
+    let max_combo = map.n_circles as usize;
+
     let skills = match calculate_skills(map, mods, passed_objects) {
         Some(skills) => skills,
-        None => return TaikoDifficultyAttributes { stars: 0.0 },
+        None => {
+            return TaikoDifficultyAttributes {
+                max_combo,
+                ..Default::default()
+            }
+        }
     };
 
     let mut buf = vec![0.0; skills[0].strain_peaks.len()];
@@ -59,7 +66,7 @@ pub fn stars(
 
     let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
 
-    TaikoDifficultyAttributes { stars }
+    TaikoDifficultyAttributes { stars, max_combo }
 }
 
 /// Essentially the same as the [`stars`] function but instead of
@@ -219,14 +226,16 @@ fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
 }
 
 /// The result of a difficulty calculation on an osu!taiko map.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TaikoDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,
+    /// The maximum combo.
+    pub max_combo: usize,
 }
 
 /// The result of a performance calculation on an osu!taiko map.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TaikoPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
     pub attributes: TaikoDifficultyAttributes,
