@@ -199,7 +199,7 @@ impl<'map> TaikoPPInner<'map> {
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
         TaikoPerformanceAttributes {
-            attributes: self.attributes,
+            difficulty: self.attributes,
             pp,
             pp_acc: acc_value,
             pp_strain: strain_value,
@@ -273,7 +273,7 @@ impl TaikoAttributeProvider for TaikoDifficultyAttributes {
 impl TaikoAttributeProvider for TaikoPerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<TaikoDifficultyAttributes> {
-        Some(self.attributes)
+        Some(self.difficulty)
     }
 }
 
@@ -294,7 +294,7 @@ impl TaikoAttributeProvider for PerformanceAttributes {
     fn attributes(self) -> Option<TaikoDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
-            Some(attributes.attributes)
+            Some(attributes.difficulty)
         } else {
             None
         }

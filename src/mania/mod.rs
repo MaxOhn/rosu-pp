@@ -152,7 +152,7 @@ pub struct ManiaDifficultyAttributes {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct ManiaPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
-    pub attributes: ManiaDifficultyAttributes,
+    pub difficulty: ManiaDifficultyAttributes,
     /// The final performance points.
     pub pp: f64,
     /// The accuracy portion of the final pp.
@@ -165,7 +165,7 @@ impl ManiaPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {
-        self.attributes.stars
+        self.difficulty.stars
     }
 
     /// Return the performance point value.
@@ -177,6 +177,6 @@ impl ManiaPerformanceAttributes {
 
 impl From<ManiaPerformanceAttributes> for ManiaDifficultyAttributes {
     fn from(attributes: ManiaPerformanceAttributes) -> Self {
-        attributes.attributes
+        attributes.difficulty
     }
 }

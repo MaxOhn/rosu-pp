@@ -310,13 +310,13 @@ impl AttributeProvider for PerformanceAttributes {
     fn attributes(self) -> DifficultyAttributes {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(f) => DifficultyAttributes::Fruits(f.attributes),
+            Self::Fruits(f) => DifficultyAttributes::Fruits(f.difficulty),
             #[cfg(feature = "mania")]
-            Self::Mania(m) => DifficultyAttributes::Mania(m.attributes),
+            Self::Mania(m) => DifficultyAttributes::Mania(m.difficulty),
             #[cfg(feature = "osu")]
-            Self::Osu(o) => DifficultyAttributes::Osu(o.attributes),
+            Self::Osu(o) => DifficultyAttributes::Osu(o.difficulty),
             #[cfg(feature = "taiko")]
-            Self::Taiko(t) => DifficultyAttributes::Taiko(t.attributes),
+            Self::Taiko(t) => DifficultyAttributes::Taiko(t.difficulty),
         }
     }
 }

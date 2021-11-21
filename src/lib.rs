@@ -432,13 +432,13 @@ impl PerformanceAttributes {
     pub fn difficulty_attributes(&self) -> DifficultyAttributes {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(attributes) => DifficultyAttributes::Fruits(attributes.attributes.clone()),
+            Self::Fruits(attributes) => DifficultyAttributes::Fruits(attributes.difficulty.clone()),
             #[cfg(feature = "mania")]
-            Self::Mania(attributes) => DifficultyAttributes::Mania(attributes.attributes),
+            Self::Mania(attributes) => DifficultyAttributes::Mania(attributes.difficulty),
             #[cfg(feature = "osu")]
-            Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.attributes.clone()),
+            Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.difficulty.clone()),
             #[cfg(feature = "taiko")]
-            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes),
+            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.difficulty),
         }
     }
 
@@ -450,12 +450,12 @@ impl PerformanceAttributes {
     pub fn max_combo(&self) -> Option<usize> {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(f) => Some(f.attributes.max_combo),
+            Self::Fruits(f) => Some(f.difficulty.max_combo),
             Self::Mania(_) => None,
             #[cfg(feature = "osu")]
-            Self::Osu(o) => Some(o.attributes.max_combo),
+            Self::Osu(o) => Some(o.difficulty.max_combo),
             #[cfg(feature = "taiko")]
-            Self::Taiko(t) => Some(t.attributes.max_combo),
+            Self::Taiko(t) => Some(t.difficulty.max_combo),
         }
     }
 
@@ -478,13 +478,13 @@ impl From<PerformanceAttributes> for DifficultyAttributes {
     fn from(attributes: PerformanceAttributes) -> Self {
         match attributes {
             #[cfg(feature = "fruits")]
-            PerformanceAttributes::Fruits(attributes) => Self::Fruits(attributes.attributes),
+            PerformanceAttributes::Fruits(attributes) => Self::Fruits(attributes.difficulty),
             #[cfg(feature = "mania")]
-            PerformanceAttributes::Mania(attributes) => Self::Mania(attributes.attributes),
+            PerformanceAttributes::Mania(attributes) => Self::Mania(attributes.difficulty),
             #[cfg(feature = "osu")]
-            PerformanceAttributes::Osu(attributes) => Self::Osu(attributes.attributes),
+            PerformanceAttributes::Osu(attributes) => Self::Osu(attributes.difficulty),
             #[cfg(feature = "taiko")]
-            PerformanceAttributes::Taiko(attributes) => Self::Taiko(attributes.attributes),
+            PerformanceAttributes::Taiko(attributes) => Self::Taiko(attributes.difficulty),
         }
     }
 }

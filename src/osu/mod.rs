@@ -477,7 +477,7 @@ pub struct OsuDifficultyAttributes {
 #[derive(Clone, Debug, Default)]
 pub struct OsuPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
-    pub attributes: OsuDifficultyAttributes,
+    pub difficulty: OsuDifficultyAttributes,
     /// The final performance points.
     pub pp: f64,
     /// The accuracy portion of the final pp.
@@ -494,7 +494,7 @@ impl OsuPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {
-        self.attributes.stars
+        self.difficulty.stars
     }
 
     /// Return the performance point value.
@@ -506,13 +506,13 @@ impl OsuPerformanceAttributes {
     /// Return the maximum combo of the map.
     #[inline]
     pub fn max_combo(&self) -> usize {
-        self.attributes.max_combo
+        self.difficulty.max_combo
     }
 }
 
 impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {
     fn from(attributes: OsuPerformanceAttributes) -> Self {
-        attributes.attributes
+        attributes.difficulty
     }
 }
 

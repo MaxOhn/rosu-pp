@@ -238,7 +238,7 @@ pub struct TaikoDifficultyAttributes {
 #[derive(Clone, Debug, Default)]
 pub struct TaikoPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
-    pub attributes: TaikoDifficultyAttributes,
+    pub difficulty: TaikoDifficultyAttributes,
     /// The final performance points.
     pub pp: f64,
     /// The accuracy portion of the final pp.
@@ -251,7 +251,7 @@ impl TaikoPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {
-        self.attributes.stars
+        self.difficulty.stars
     }
 
     /// Return the performance point value.
@@ -263,12 +263,12 @@ impl TaikoPerformanceAttributes {
     /// Return the maximum combo of the map.
     #[inline]
     pub fn max_combo(&self) -> usize {
-        self.attributes.max_combo
+        self.difficulty.max_combo
     }
 }
 
 impl From<TaikoPerformanceAttributes> for TaikoDifficultyAttributes {
     fn from(attributes: TaikoPerformanceAttributes) -> Self {
-        attributes.attributes
+        attributes.difficulty
     }
 }

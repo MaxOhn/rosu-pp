@@ -8,6 +8,7 @@
 - [BREAKING] Added the field `TaikoDifficultyAttributes::max_combo`
 - Added method `Beatmap::bpm`
 - Added method `max_combo` for `DifficultyAttributes`, `PerformanceAttributes`, and all `{Mode}PerformanceAttributes`
+- [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
 
 # v0.3.0
 

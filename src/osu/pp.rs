@@ -345,7 +345,7 @@ impl OsuPPInner {
             * multiplier;
 
         OsuPerformanceAttributes {
-            attributes: self.attributes,
+            difficulty: self.attributes,
             pp_acc: acc_value,
             pp_aim: aim_value,
             pp_flashlight: flashlight_value,
@@ -607,7 +607,7 @@ impl OsuAttributeProvider for OsuDifficultyAttributes {
 impl OsuAttributeProvider for OsuPerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<OsuDifficultyAttributes> {
-        Some(self.attributes)
+        Some(self.difficulty)
     }
 }
 
@@ -628,7 +628,7 @@ impl OsuAttributeProvider for PerformanceAttributes {
     fn attributes(self) -> Option<OsuDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Osu(attributes) = self {
-            Some(attributes.attributes)
+            Some(attributes.difficulty)
         } else {
             None
         }

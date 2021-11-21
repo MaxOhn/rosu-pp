@@ -440,7 +440,7 @@ pub struct FruitsDifficultyAttributes {
 #[derive(Clone, Debug, Default)]
 pub struct FruitsPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
-    pub attributes: FruitsDifficultyAttributes,
+    pub difficulty: FruitsDifficultyAttributes,
     /// The final performance points.
     pub pp: f64,
 }
@@ -449,7 +449,7 @@ impl FruitsPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {
-        self.attributes.stars
+        self.difficulty.stars
     }
 
     /// Return the performance point value.
@@ -461,13 +461,13 @@ impl FruitsPerformanceAttributes {
     /// Return the maximum combo of the map.
     #[inline]
     pub fn max_combo(&self) -> usize {
-        self.attributes.max_combo
+        self.difficulty.max_combo
     }
 }
 
 impl From<FruitsPerformanceAttributes> for FruitsDifficultyAttributes {
     fn from(attributes: FruitsPerformanceAttributes) -> Self {
-        attributes.attributes
+        attributes.difficulty
     }
 }
 

@@ -339,7 +339,7 @@ impl FruitsPPInner {
         }
 
         FruitsPerformanceAttributes {
-            attributes: self.attributes,
+            difficulty: self.attributes,
             pp,
         }
     }
@@ -389,7 +389,7 @@ impl FruitsAttributeProvider for FruitsDifficultyAttributes {
 impl FruitsAttributeProvider for FruitsPerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<FruitsDifficultyAttributes> {
-        Some(self.attributes)
+        Some(self.difficulty)
     }
 }
 
@@ -410,7 +410,7 @@ impl FruitsAttributeProvider for PerformanceAttributes {
     fn attributes(self) -> Option<FruitsDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Fruits(attributes) = self {
-            Some(attributes.attributes)
+            Some(attributes.difficulty)
         } else {
             None
         }

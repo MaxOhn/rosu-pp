@@ -133,7 +133,7 @@ impl<'map> ManiaPP<'map> {
         let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
         ManiaPerformanceAttributes {
-            attributes: ManiaDifficultyAttributes { stars },
+            difficulty: ManiaDifficultyAttributes { stars },
             pp_acc: acc_value,
             pp_strain: strain_value,
             pp,
@@ -193,7 +193,7 @@ impl ManiaAttributeProvider for ManiaDifficultyAttributes {
 impl ManiaAttributeProvider for ManiaPerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<f64> {
-        Some(self.attributes.stars)
+        Some(self.difficulty.stars)
     }
 }
 
@@ -214,7 +214,7 @@ impl ManiaAttributeProvider for PerformanceAttributes {
     fn attributes(self) -> Option<f64> {
         #[allow(irrefutable_let_patterns)]
         if let Self::Mania(attributes) = self {
-            Some(attributes.attributes.stars)
+            Some(attributes.difficulty.stars)
         } else {
             None
         }
