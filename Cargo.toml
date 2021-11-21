@@ -36,7 +36,7 @@ features = ["async-io", "std"]
 version = "1.2"
 optional = true
 default-features = false
-features = ["io-util"]
+features = ["fs", "io-util"]
 
 [dev-dependencies.tokio]
 version = "1.2"
