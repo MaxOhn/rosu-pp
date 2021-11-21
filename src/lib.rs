@@ -319,7 +319,7 @@ impl DifficultyAttributes {
         }
     }
 
-    /// The max combo of the map.
+    /// The maximum combo of the map.
     ///
     /// This will only be `None` for attributes of osu!mania maps.
     #[inline]
@@ -336,9 +336,9 @@ impl DifficultyAttributes {
         }
     }
 
-    /// The max combo of the map.
-    #[inline]
     #[cfg(not(feature = "mania"))]
+    #[inline]
+    /// The maximum combo of the map.
     pub fn max_combo(&self) -> usize {
         match self {
             #[cfg(feature = "fruits")]
@@ -439,6 +439,37 @@ impl PerformanceAttributes {
             Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.attributes.clone()),
             #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes),
+        }
+    }
+
+    #[cfg(feature = "mania")]
+    #[inline]
+    /// The maximum combo of the map.
+    ///
+    /// This will only be `None` for attributes of osu!mania maps.
+    pub fn max_combo(&self) -> Option<usize> {
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(f) => Some(f.attributes.max_combo),
+            Self::Mania(_) => None,
+            #[cfg(feature = "osu")]
+            Self::Osu(o) => Some(o.attributes.max_combo),
+            #[cfg(feature = "taiko")]
+            Self::Taiko(t) => Some(t.attributes.max_combo),
+        }
+    }
+
+    #[cfg(not(feature = "mania"))]
+    #[inline]
+    /// The maximum combo of the map.
+    pub fn max_combo(&self) -> usize {
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(f) => f.attributes.max_combo,
+            #[cfg(feature = "osu")]
+            Self::Osu(o) => o.attributes.max_combo,
+            #[cfg(feature = "taiko")]
+            Self::Taiko(t) => t.attributes.max_combo,
         }
     }
 }

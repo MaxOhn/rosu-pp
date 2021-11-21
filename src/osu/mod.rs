@@ -502,6 +502,12 @@ impl OsuPerformanceAttributes {
     pub fn pp(&self) -> f64 {
         self.pp
     }
+
+    /// Return the maximum combo of the map.
+    #[inline]
+    pub fn max_combo(&self) -> usize {
+        self.attributes.max_combo
+    }
 }
 
 impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {

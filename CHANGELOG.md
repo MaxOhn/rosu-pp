@@ -7,7 +7,7 @@
 - Fixed out of bounds panic on maps with single-control-point linear sliders
 - [BREAKING] Added the field `TaikoDifficultyAttributes::max_combo`
 - Added method `Beatmap::bpm`
-- Added method `DifficultyAttributes::max_combo`
+- Added method `max_combo` for `DifficultyAttributes`, `PerformanceAttributes`, and all `{Mode}PerformanceAttributes`
 
 # v0.3.0
 
