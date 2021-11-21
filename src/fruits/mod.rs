@@ -471,6 +471,7 @@ impl From<FruitsPerformanceAttributes> for FruitsDifficultyAttributes {
     }
 }
 
+#[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
 #[test]
 // #[ignore]
 fn custom_fruits() {

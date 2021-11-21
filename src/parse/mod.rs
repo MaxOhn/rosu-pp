@@ -1093,83 +1093,80 @@ mod tests {
     #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
     #[test]
     fn parsing_sync() {
-        use std::fs::File;
+        for map_id in map_ids() {
+            println!("map_id: {}", map_id);
 
-        let map_id = map_id();
-        println!("map_id: {}", map_id);
+            let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)) {
+                Ok(map) => map,
+                Err(why) => panic!("Error while parsing map: {}", why),
+            };
 
-        let file = match File::open(format!("./maps/{}.osu", map_id)) {
-            Ok(file) => file,
-            Err(why) => panic!("Could not read file: {}", why),
-        };
-
-        let map = match Beatmap::parse(file) {
-            Ok(map) => map,
-            Err(why) => panic!("Error while parsing map: {}", why),
-        };
-
-        print_info(map)
+            print_info(map);
+            println!("---");
+        }
     }
 
     #[cfg(feature = "async_tokio")]
     #[test]
     fn parsing_async_tokio() {
-        use tokio::{fs::File, runtime::Builder};
+        use tokio::runtime::Builder;
 
         Builder::new_current_thread()
             .build()
             .expect("could not start runtime")
             .block_on(async {
-                let map_id = map_id();
-                println!("map_id: {}", map_id);
+                for map_id in map_ids() {
+                    println!("map_id: {}", map_id);
 
-                let file = match File::open(format!("./maps/{}.osu", map_id)).await {
-                    Ok(file) => file,
-                    Err(why) => panic!("Could not read file: {}", why),
-                };
+                    let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
+                        Ok(map) => map,
+                        Err(why) => panic!("Error while parsing map: {}", why),
+                    };
 
-                let map = match Beatmap::parse(file).await {
-                    Ok(map) => map,
-                    Err(why) => panic!("Error while parsing map: {}", why),
-                };
-
-                print_info(map)
+                    print_info(map);
+                    println!("---");
+                }
             });
     }
 
     #[cfg(feature = "async_std")]
     #[test]
     fn parsing_async_std() {
-        use async_std::fs::File;
-
         async_std::task::block_on(async {
-            let map_id = map_id();
-            println!("map_id: {}", map_id);
+            for map_id in map_ids() {
+                println!("map_id: {}", map_id);
 
-            let file = match File::open(format!("./maps/{}.osu", map_id)).await {
-                Ok(file) => file,
-                Err(why) => panic!("Could not read file: {}", why),
-            };
+                let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
+                    Ok(map) => map,
+                    Err(why) => panic!("Error while parsing map: {}", why),
+                };
 
-            let map = match Beatmap::parse(file).await {
-                Ok(map) => map,
-                Err(why) => panic!("Error while parsing map: {}", why),
-            };
-
-            print_info(map)
+                print_info(map);
+                println!("---");
+            }
         });
     }
 
-    fn map_id() -> i32 {
+    fn map_ids() -> Vec<i32> {
+        let mut map_ids = Vec::new();
+
         if cfg!(feature = "osu") {
-            797130
-        } else if cfg!(feature = "mania") {
-            1355822
-        } else if cfg!(feature = "fruits") {
-            1977380
-        } else {
-            110219
+            map_ids.push(2785319);
         }
+
+        if cfg!(feature = "mania") {
+            map_ids.push(1974394);
+        }
+
+        if cfg!(feature = "fruits") {
+            map_ids.push(2118524);
+        }
+
+        if cfg!(feature = "taiko") {
+            map_ids.push(222766);
+        }
+
+        map_ids
     }
 
     fn print_info(map: Beatmap) {

@@ -521,6 +521,7 @@ fn difficulty_range_od(od: f64) -> f64 {
     super::difficulty_range(od, 20.0, 50.0, 80.0)
 }
 
+#[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
 #[test]
 // #[ignore]
 fn custom_osu() {
