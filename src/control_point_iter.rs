@@ -1,4 +1,4 @@
-#![cfg(any(feature = "osu", feature = "fruits"))]
+#![cfg(feature = "sliders")]
 
 use crate::{
     parse::{DifficultyPoint, TimingPoint},
@@ -42,7 +42,7 @@ pub(crate) enum ControlPoint {
     Difficulty { time: f64, slider_velocity: f64 },
 }
 
-#[cfg(any(feature = "osu", feature = "fruits"))]
+#[cfg(feature = "sliders")]
 impl ControlPoint {
     #[inline]
     pub(crate) fn time(&self) -> f64 {

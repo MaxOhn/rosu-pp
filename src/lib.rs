@@ -126,10 +126,10 @@ pub use pp::{AnyPP, AttributeProvider};
 mod curve;
 mod mods;
 
-#[cfg(any(feature = "osu", feature = "fruits"))]
+#[cfg(feature = "sliders")]
 pub(crate) mod control_point_iter;
 
-#[cfg(any(feature = "osu", feature = "fruits"))]
+#[cfg(feature = "sliders")]
 pub(crate) use control_point_iter::{ControlPoint, ControlPointIter};
 
 #[cfg(feature = "fruits")]

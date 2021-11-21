@@ -408,12 +408,12 @@ macro_rules! parse_timingpoints {
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            #[cfg(not(any(feature = "osu", feature = "fruits")))]
+            #[cfg(not(feature = "sliders"))]
             {
                 parse_timingpoints_body!(short => self, reader, buf, section)
             }
 
-            #[cfg(any(feature = "osu", feature = "fruits"))]
+            #[cfg(feature = "sliders")]
             parse_timingpoints_body!(self, reader, buf, section)
         }
     };
@@ -425,12 +425,12 @@ macro_rules! parse_timingpoints {
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            #[cfg(not(any(feature = "osu", feature = "fruits")))]
+            #[cfg(not(feature = "sliders"))]
             {
                 parse_timingpoints_body!(short => self, reader, buf, section)
             }
 
-            #[cfg(any(feature = "osu", feature = "fruits"))]
+            #[cfg(feature = "sliders")]
             parse_timingpoints_body!(self, reader, buf, section)
         }
     };
@@ -814,14 +814,15 @@ pub struct Beatmap {
     /// All hitobjects of the beatmap.
     pub hit_objects: Vec<HitObject>,
 
-    #[cfg(not(any(feature = "osu", feature = "fruits")))]
-    bpm: f64,
+    #[cfg(not(feature = "sliders"))]
+    /// Beats per minute
+    pub bpm: f64,
 
-    #[cfg(any(feature = "osu", feature = "fruits"))]
+    #[cfg(feature = "sliders")]
     /// Timing points that indicate a new timing section.
     pub timing_points: Vec<TimingPoint>,
 
-    #[cfg(any(feature = "osu", feature = "fruits"))]
+    #[cfg(feature = "sliders")]
     /// Timing point for the current timing section.
     pub difficulty_points: Vec<DifficultyPoint>,
 
@@ -848,7 +849,7 @@ impl Beatmap {
     }
 
     /// The beats per minute of the map.
-    #[cfg(any(feature = "osu", feature = "fruits"))]
+    #[cfg(feature = "sliders")]
     #[inline]
     pub fn bpm(&self) -> f64 {
         match self.timing_points.first() {
@@ -858,7 +859,7 @@ impl Beatmap {
     }
 
     /// The beats per minute of the map.
-    #[cfg(not(any(feature = "osu", feature = "fruits")))]
+    #[cfg(not(feature = "sliders"))]
     #[inline]
     pub fn bpm(&self) -> f64 {
         self.bpm
@@ -1184,7 +1185,7 @@ mod tests {
         println!("tick_rate: {}", map.tick_rate);
         println!("hit_objects: {}", map.hit_objects.len());
 
-        #[cfg(any(feature = "osu", feature = "fruits"))]
+        #[cfg(feature = "sliders")]
         {
             #[cfg(feature = "osu")]
             println!("stack_leniency: {}", map.stack_leniency);
