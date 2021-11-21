@@ -318,6 +318,37 @@ impl DifficultyAttributes {
             Self::Taiko(attributes) => attributes.stars,
         }
     }
+
+    /// The max combo of the map.
+    ///
+    /// This will only be `None` for attributes of osu!mania maps.
+    #[inline]
+    #[cfg(feature = "mania")]
+    pub fn max_combo(&self) -> Option<usize> {
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(attributes) => Some(attributes.max_combo),
+            Self::Mania(_) => None,
+            #[cfg(feature = "osu")]
+            Self::Osu(attributes) => Some(attributes.max_combo),
+            #[cfg(feature = "taiko")]
+            Self::Taiko(attributes) => Some(attributes.max_combo),
+        }
+    }
+
+    /// The max combo of the map.
+    #[inline]
+    #[cfg(not(feature = "mania"))]
+    pub fn max_combo(&self) -> usize {
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(attributes) => attributes.max_combo,
+            #[cfg(feature = "osu")]
+            Self::Osu(attributes) => attributes.max_combo,
+            #[cfg(feature = "taiko")]
+            Self::Taiko(attributes) => attributes.max_combo,
+        }
+    }
 }
 
 #[cfg(feature = "fruits")]
@@ -407,7 +438,7 @@ impl PerformanceAttributes {
             #[cfg(feature = "osu")]
             Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.attributes.clone()),
             #[cfg(feature = "taiko")]
-            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes.clone()),
+            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.attributes),
         }
     }
 }

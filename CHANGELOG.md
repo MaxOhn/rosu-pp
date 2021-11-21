@@ -6,6 +6,8 @@
 - [BREAKING] Removed the `last_control_point` field of `HitObjectKind::Slider` when neither the `osu` nor the `fruits` feature is enabled.
 - Fixed out of bounds panic on maps with single-control-point linear sliders
 - [BREAKING] Added the field `TaikoDifficultyAttributes::max_combo`
+- Added method `Beatmap::bpm`
+- Added method `DifficultyAttributes::max_combo`
 
 # v0.3.0
 

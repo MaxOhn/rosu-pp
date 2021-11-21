@@ -71,11 +71,7 @@ macro_rules! line_prepare {
     ($buf:ident) => {{
         let mut line = $buf.trim_end();
 
-        if line.is_empty()
-            || line.starts_with("//")
-            || line.starts_with(' ')
-            || line.starts_with('_')
-        {
+        if skip_line(line) {
             $buf.clear();
             continue;
         }
@@ -283,6 +279,42 @@ macro_rules! parse_difficulty {
 macro_rules! parse_timingpoints_body {
     (short => $self:ident, $reader:ident, $buf:ident, $section:ident) => {{
         let mut empty = true;
+
+        // Only parse the first timing point to calculate the bpm
+        if read_line!($reader, $buf)? != 0 {
+            let line = {
+                let mut line = $buf.trim_end();
+
+                if skip_line(line) {
+                    $buf.clear();
+                    return Ok(empty);
+                }
+
+                if let Some(idx) = line.find("//") {
+                    line = &line[..idx];
+                }
+
+                line
+            };
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *$section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                $buf.clear();
+                return Ok(empty);
+            }
+
+            let beat_len = line
+                .split(',')
+                .nth(1)
+                .next_field("beat_len")?
+                .trim()
+                .parse()?;
+
+            $self.bpm = bpm(beat_len);
+
+            $buf.clear();
+        }
 
         while read_line!($reader, $buf)? != 0 {
             let line = line_prepare!($buf);
@@ -782,6 +814,9 @@ pub struct Beatmap {
     /// All hitobjects of the beatmap.
     pub hit_objects: Vec<HitObject>,
 
+    #[cfg(not(any(feature = "osu", feature = "fruits")))]
+    bpm: f64,
+
     #[cfg(any(feature = "osu", feature = "fruits"))]
     /// Timing points that indicate a new timing section.
     pub timing_points: Vec<TimingPoint>,
@@ -810,6 +845,23 @@ impl Beatmap {
     #[inline]
     pub fn attributes(&self) -> BeatmapAttributes {
         BeatmapAttributes::new(self.ar, self.od, self.cs, self.hp)
+    }
+
+    /// The beats per minute of the map.
+    #[cfg(any(feature = "osu", feature = "fruits"))]
+    #[inline]
+    pub fn bpm(&self) -> f64 {
+        match self.timing_points.first() {
+            Some(point) => bpm(point.beat_len),
+            None => 0.0,
+        }
+    }
+
+    /// The beats per minute of the map.
+    #[cfg(not(any(feature = "osu", feature = "fruits")))]
+    #[inline]
+    pub fn bpm(&self) -> f64 {
+        self.bpm
     }
 }
 
@@ -994,6 +1046,14 @@ impl Beatmap {
     parse_hitobjects!(async AsyncBufReader<AsyncRead>);
 
     from_path!(async Path);
+}
+
+fn bpm(beat_len: f64) -> f64 {
+    beat_len.recip() * 1000.0 * 60.0
+}
+
+fn skip_line(line: &str) -> bool {
+    line.is_empty() || line.starts_with("//") || line.starts_with(' ') || line.starts_with('_')
 }
 
 #[inline]
