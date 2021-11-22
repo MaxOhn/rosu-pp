@@ -4,7 +4,7 @@ use super::NORMALIZED_RADIUS;
 
 const OBJECT_RADIUS: f32 = 64.0;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) struct ScalingFactor {
     adjusted_factor: f32,
     factor: f32,

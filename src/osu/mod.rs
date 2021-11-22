@@ -1,7 +1,8 @@
 #![cfg(feature = "osu")]
 
-mod difficulty_iter;
 mod difficulty_object;
+mod gradual_difficulty;
+mod gradual_performance;
 mod osu_object;
 mod pp;
 mod scaling_factor;
@@ -11,8 +12,9 @@ mod slider_state;
 
 use std::mem;
 
-pub use difficulty_iter::OsuDifficultyAttributesIter;
 use difficulty_object::DifficultyObject;
+pub use gradual_difficulty::*;
+pub use gradual_performance::*;
 use osu_object::{ObjectParameters, OsuObject};
 pub use pp::*;
 use scaling_factor::ScalingFactor;
@@ -32,6 +34,10 @@ const STACK_DISTANCE: f32 = 3.0;
 /// Difficulty calculation for osu!standard maps.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
+///
+/// If you want to calculate the difficulty after every few objects, instead of
+/// calling this function multiple times with different `passed_objects`, you should use
+/// [`OsuGradualDifficultyAttributes`](crate::osu::OsuGradualDifficultyAttributes).
 pub fn stars(
     map: &Beatmap,
     mods: impl Mods,
@@ -475,7 +481,7 @@ pub struct OsuDifficultyAttributes {
 }
 
 /// The result of a performance calculation on an osu!standard map.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct OsuPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
     pub difficulty: OsuDifficultyAttributes,

@@ -4,7 +4,7 @@ use std::{cmp::Ordering, fmt};
 
 const REDUCED_STRAIN_BASELINE: f64 = 0.75;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Skills {
     skills: Box<[Skill]>,
     mask: u8,
@@ -87,6 +87,7 @@ impl Skills {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct Skill {
     curr_strain: f64,
     curr_section_peak: f64,

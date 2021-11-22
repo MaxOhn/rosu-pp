@@ -43,6 +43,7 @@ const FLASHLIGHT_REDUCED_SECTION_COUNT: usize = 10;
 
 const FLASHLIGHT_HISTORY_LENGTH: usize = 10;
 
+#[derive(Clone)]
 pub(crate) struct AimHistoryEntry {
     angle: Option<f64>,
     is_slider: bool,
@@ -71,6 +72,7 @@ impl From<&DifficultyObject<'_>> for AimHistoryEntry {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct FlashlightHistoryEntry {
     end_pos: Pos2,
     is_spinner: bool,
@@ -89,7 +91,7 @@ impl From<&DifficultyObject<'_>> for FlashlightHistoryEntry {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct SpeedHistoryEntry {
     is_slider: bool,
     start_time: f64,
@@ -106,6 +108,7 @@ impl From<&DifficultyObject<'_>> for SpeedHistoryEntry {
     }
 }
 
+#[derive(Clone)]
 pub(crate) enum SkillKind {
     Aim {
         history: VecDeque<AimHistoryEntry>,

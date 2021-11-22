@@ -13,19 +13,19 @@ use super::{
     stacking, OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, SECTION_LEN,
 };
 
-/// Iterate over a map's hit objects and update the difficulty attributes each time.
+/// Gradually calculate the difficulty attributes of an osu!standard map.
 ///
 /// Note that this struct implements [`Iterator`](std::iter::Iterator).
 /// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next hit object will
-/// be processed and the [`OsuDifficultyAttributes`](`crate::osu::OsuDifficultyAttributes`)
-/// will be updated and returned.
+/// be processed and the [`OsuDifficultyAttributes`] will be updated and returned.
 ///
-/// TODO: Mention struct that does the same for performance
+/// If you want to calculate performance attributes, use
+/// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformanceAttributes) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, osu::OsuDifficultyAttributesIter};
+/// use rosu_pp::{Beatmap, osu::OsuGradualDifficultyAttributes};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -33,7 +33,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = OsuDifficultyAttributesIter::new(&map, mods);
+/// let mut iter = OsuGradualDifficultyAttributes::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -43,9 +43,9 @@ use super::{
 ///     // ...
 /// }
 /// ```
-#[derive(Debug)]
-pub struct OsuDifficultyAttributesIter {
-    idx: usize,
+#[derive(Clone, Debug)]
+pub struct OsuGradualDifficultyAttributes {
+    pub(crate) idx: usize,
     attributes: OsuDifficultyAttributes,
     clock_rate: f64,
     hit_objects: OsuObjectIter,
@@ -56,7 +56,7 @@ pub struct OsuDifficultyAttributesIter {
     strain_peak_buf: Vec<f64>,
 }
 
-impl OsuDifficultyAttributesIter {
+impl OsuGradualDifficultyAttributes {
     /// Create a new difficulty attributes iterator for osu!standard maps.
     pub fn new(map: &Beatmap, mods: impl Mods) -> Self {
         let map_attributes = map.attributes().mods(mods);
@@ -139,7 +139,7 @@ impl OsuDifficultyAttributesIter {
     }
 }
 
-impl Iterator for OsuDifficultyAttributesIter {
+impl Iterator for OsuGradualDifficultyAttributes {
     type Item = OsuDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -253,14 +253,14 @@ impl Iterator for OsuDifficultyAttributesIter {
     }
 }
 
-impl ExactSizeIterator for OsuDifficultyAttributesIter {
+impl ExactSizeIterator for OsuGradualDifficultyAttributes {
     #[inline]
     fn len(&self) -> usize {
         self.hit_objects.len()
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct OsuObjectIter {
     hit_objects: IntoIter<OsuObject>,
     scaling_factor: ScalingFactor,
@@ -298,7 +298,9 @@ mod tests {
     #[test]
     fn empty_map() {
         let map = Beatmap::default();
-        assert!(OsuDifficultyAttributesIter::new(&map, 0).next().is_none());
+        assert!(OsuGradualDifficultyAttributes::new(&map, 0)
+            .next()
+            .is_none());
     }
 
     #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
@@ -308,8 +310,8 @@ mod tests {
         let mods = 64;
         let regular = crate::osu::stars(&map, mods, None);
 
-        let iter_end = OsuDifficultyAttributesIter::new(&map, mods)
-            .reduce(|_, next| next)
+        let iter_end = OsuGradualDifficultyAttributes::new(&map, mods)
+            .last()
             .expect("empty iter");
 
         assert_eq!(regular, iter_end);

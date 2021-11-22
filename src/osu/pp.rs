@@ -36,14 +36,14 @@ pub struct OsuPP<'map> {
     map: &'map Beatmap,
     attributes: Option<OsuDifficultyAttributes>,
     mods: u32,
-    combo: Option<usize>,
     acc: Option<f64>,
+    pub(crate) combo: Option<usize>,
 
-    n300: Option<usize>,
-    n100: Option<usize>,
-    n50: Option<usize>,
-    n_misses: usize,
-    passed_objects: Option<usize>,
+    pub(crate) n300: Option<usize>,
+    pub(crate) n100: Option<usize>,
+    pub(crate) n50: Option<usize>,
+    pub(crate) n_misses: usize,
+    pub(crate) passed_objects: Option<usize>,
 }
 
 impl<'map> OsuPP<'map> {
@@ -54,8 +54,8 @@ impl<'map> OsuPP<'map> {
             map,
             attributes: None,
             mods: 0,
-            combo: None,
             acc: None,
+            combo: None,
 
             n300: None,
             n100: None,
@@ -128,6 +128,10 @@ impl<'map> OsuPP<'map> {
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the performance after every few objects, instead of
+    /// using [`OsuPP`] multiple times with different `passed_objects`, you should use
+    /// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualDifficultyAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);
@@ -260,7 +264,12 @@ impl<'map> OsuPP<'map> {
             let n50 = n50.unwrap_or(0);
 
             let numerator = n300 * 6 + n100 * 2 + n50;
-            let acc = numerator as f64 / n_objects as f64 / 6.0;
+
+            let acc = if n_objects > 0 {
+                numerator as f64 / n_objects as f64 / 6.0
+            } else {
+                0.0
+            };
 
             let total_hits = (n300 + n100 + n50 + self.n_misses).min(n_objects) as f64;
 
@@ -295,8 +304,8 @@ impl<'map> OsuPP<'map> {
 struct OsuPPInner {
     attributes: OsuDifficultyAttributes,
     mods: u32,
-    combo: Option<usize>,
     acc: f64,
+    combo: Option<usize>,
 
     n300: usize,
     n100: usize,
