@@ -43,21 +43,7 @@ pub fn stars(
     mods: impl Mods,
     passed_objects: Option<usize>,
 ) -> OsuDifficultyAttributes {
-    let (mut skills, mut attributes) = match calculate_skills(map, mods, passed_objects) {
-        Some(tuple) => tuple,
-        None => {
-            let map_attributes = map.attributes().mods(mods);
-            let hit_window = difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
-            let od = (80.0 - hit_window) / 6.0;
-
-            return OsuDifficultyAttributes {
-                ar: map_attributes.ar,
-                hp: map_attributes.hp,
-                od,
-                ..Default::default()
-            };
-        }
-    };
+    let (mut skills, mut attributes) = calculate_skills(map, mods, passed_objects);
 
     let aim_rating = {
         let aim = skills.aim();
@@ -142,10 +128,7 @@ fn calculate_star_rating(aim_rating: f64, speed_rating: f64, flashlight_rating: 
 ///
 /// Suitable to plot the difficulty of a map over time.
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    let mut skills = match calculate_skills(map, mods, None) {
-        Some((skills, _)) => skills,
-        None => return Strains::default(),
-    };
+    let (mut skills, _) = calculate_skills(map, mods, None);
 
     let mut aim = mem::take(&mut skills.aim().strain_peaks);
     let tuple = skills.speed_flashlight();
@@ -182,16 +165,12 @@ fn calculate_skills(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> Option<(Skills, OsuDifficultyAttributes)> {
+) -> (Skills, OsuDifficultyAttributes) {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
     let hit_window = difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
     let od = (80.0 - hit_window) / 6.0;
-
-    if take < 2 {
-        return None;
-    }
 
     let mut raw_ar = map.ar as f64;
     let hr = mods.hr();
@@ -205,9 +184,16 @@ fn calculate_skills(
     let time_preempt = difficulty_range_ar(raw_ar);
     let scaling_factor = ScalingFactor::new(map_attributes.cs);
 
+    let mut attributes = OsuDifficultyAttributes {
+        ar: map_attributes.ar,
+        hp: map_attributes.hp,
+        od,
+        ..Default::default()
+    };
+
     let mut params = ObjectParameters {
         map,
-        max_combo: 0,
+        attributes: &mut attributes,
         slider_state: SliderState::new(map),
         ticks: Vec::new(),
         curve_bufs: CurveBuffers::default(),
@@ -239,15 +225,19 @@ fn calculate_skills(
 
     let mut skills = Skills::new(hit_window, mods.rx(), scaling_factor.radius(), mods.fl());
 
+    let (mut prev, curr) = match (hit_objects.next(), hit_objects.next()) {
+        (Some(prev), Some(curr)) => (prev, curr),
+        (Some(_), None) | (None, None) => return (skills, attributes),
+        (None, Some(_)) => unreachable!(),
+    };
+
     let mut prev_prev = None;
-    let mut prev = hit_objects.next().unwrap();
 
     // First object has no predecessor and thus no strain, handle distinctly
     let mut curr_section_end =
         (prev.time / map_attributes.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
 
     // Handle second object separately to remove later if-branching
-    let curr = hit_objects.next().unwrap();
     let h = DifficultyObject::new(
         &curr,
         &mut prev,
@@ -289,18 +279,7 @@ fn calculate_skills(
 
     skills.save_current_peak();
 
-    let attributes = OsuDifficultyAttributes {
-        ar: map_attributes.ar,
-        hp: map_attributes.hp,
-        od,
-        n_circles: map.n_circles as usize,
-        n_sliders: map.n_sliders as usize,
-        n_spinners: map.n_spinners as usize,
-        max_combo: params.max_combo,
-        ..Default::default()
-    };
-
-    Some((skills, attributes))
+    (skills, attributes)
 }
 
 fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {

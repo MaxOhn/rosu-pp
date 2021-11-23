@@ -75,9 +75,16 @@ impl OsuGradualDifficultyAttributes {
         let time_preempt = difficulty_range_ar(raw_ar);
         let scaling_factor = ScalingFactor::new(map_attributes.cs);
 
+        let mut attributes = OsuDifficultyAttributes {
+            ar: map_attributes.ar,
+            hp: map_attributes.hp,
+            od,
+            ..Default::default()
+        };
+
         let mut params = ObjectParameters {
             map,
-            max_combo: 0,
+            attributes: &mut attributes,
             slider_state: SliderState::new(map),
             ticks: Vec::new(),
             curve_bufs: CurveBuffers::default(),
@@ -91,6 +98,11 @@ impl OsuGradualDifficultyAttributes {
         let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
         hit_objects.extend(hit_objects_iter);
 
+        attributes.n_circles = 0;
+        attributes.n_sliders = 0;
+        attributes.n_spinners = 0;
+        attributes.max_combo = 0;
+
         let stack_threshold = time_preempt * map.stack_leniency as f64;
 
         if map.version >= 6 {
@@ -98,13 +110,6 @@ impl OsuGradualDifficultyAttributes {
         } else {
             old_stacking(&mut hit_objects, stack_threshold);
         }
-
-        let attributes = OsuDifficultyAttributes {
-            ar: map_attributes.ar,
-            hp: map_attributes.hp,
-            od,
-            ..Default::default()
-        };
 
         let skills = Skills::new(hit_window, mods.rx(), scaling_factor.radius(), mods.fl());
 
@@ -122,16 +127,13 @@ impl OsuGradualDifficultyAttributes {
             kind: OsuObjectKind::Circle,
         };
 
-        let curr_section_end =
-            (prev.time / map_attributes.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
-
         Self {
             idx: 0,
             attributes,
             clock_rate: map_attributes.clock_rate,
             hit_objects,
             skills,
-            curr_section_end,
+            curr_section_end: 0.0,
             prev_prev,
             prev,
             strain_peak_buf: Vec::new(),
@@ -159,6 +161,8 @@ impl Iterator for OsuGradualDifficultyAttributes {
 
         if self.idx == 1 {
             self.prev = curr;
+            self.curr_section_end =
+                (self.prev.time / self.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
 
             return Some(self.attributes.clone());
         }
@@ -189,24 +193,29 @@ impl Iterator for OsuGradualDifficultyAttributes {
         self.skills.process(&h);
         self.prev_prev = Some(mem::replace(&mut self.prev, curr));
 
-        if self.hit_objects.len() == 0 {
-            self.skills.save_current_peak();
-        }
-
-        let missing = self.skills.aim().strain_peaks.len() - self.strain_peak_buf.len();
+        let missing = self.skills.aim().strain_peaks.len() + 1 - self.strain_peak_buf.len();
         self.strain_peak_buf.extend(iter::repeat(0.0).take(missing));
 
         let aim_rating = {
             let aim = self.skills.aim();
-            self.strain_peak_buf.copy_from_slice(&aim.strain_peaks);
+            self.strain_peak_buf[..aim.strain_peaks.len()].copy_from_slice(&aim.strain_peaks);
+
+            if let Some(last) = self.strain_peak_buf.last_mut() {
+                *last = aim.curr_section_peak;
+            }
 
             Skill::difficulty_value(&mut self.strain_peak_buf, aim).sqrt() * DIFFICULTY_MULTIPLIER
         };
 
         let slider_factor = if aim_rating > 0.0 {
             let aim_no_sliders = self.skills.aim_no_sliders();
-            self.strain_peak_buf
+            self.strain_peak_buf[..aim_no_sliders.strain_peaks.len()]
                 .copy_from_slice(&aim_no_sliders.strain_peaks);
+
+            if let Some(last) = self.strain_peak_buf.last_mut() {
+                *last = aim_no_sliders.curr_section_peak;
+            }
+
             let aim_rating_no_sliders =
                 Skill::difficulty_value(&mut self.strain_peak_buf, aim_no_sliders).sqrt()
                     * DIFFICULTY_MULTIPLIER;
@@ -219,7 +228,11 @@ impl Iterator for OsuGradualDifficultyAttributes {
         let (speed, flashlight) = self.skills.speed_flashlight();
 
         let speed_rating = if let Some(speed) = speed {
-            self.strain_peak_buf.copy_from_slice(&speed.strain_peaks);
+            self.strain_peak_buf[..speed.strain_peaks.len()].copy_from_slice(&speed.strain_peaks);
+
+            if let Some(last) = self.strain_peak_buf.last_mut() {
+                *last = speed.curr_section_peak;
+            }
 
             Skill::difficulty_value(&mut self.strain_peak_buf, speed).sqrt() * DIFFICULTY_MULTIPLIER
         } else {
@@ -227,8 +240,12 @@ impl Iterator for OsuGradualDifficultyAttributes {
         };
 
         let flashlight_rating = if let Some(flashlight) = flashlight {
-            self.strain_peak_buf
+            self.strain_peak_buf[..flashlight.strain_peaks.len()]
                 .copy_from_slice(&flashlight.strain_peaks);
+
+            if let Some(last) = self.strain_peak_buf.last_mut() {
+                *last = flashlight.curr_section_peak;
+            }
 
             Skill::difficulty_value(&mut self.strain_peak_buf, flashlight).sqrt()
                 * DIFFICULTY_MULTIPLIER

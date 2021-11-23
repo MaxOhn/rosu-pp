@@ -247,7 +247,6 @@ mod tests {
 
     #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
     #[test]
-    #[ignore = "currently broken due to incorrect object counts when the map is not fully processed"]
     fn gradual_eq_regular_passed() {
         let map = Beatmap::from_path("./maps/2785319.osu").expect("failed to parse map");
         let mods = 64;
@@ -257,8 +256,8 @@ mod tests {
         let mut gradual = OsuGradualPerformanceAttributes::new(&map, mods);
 
         let state = OsuScoreState {
-            max_combo: 110,
-            n300: 102,
+            max_combo: 122,
+            n300: 100,
             n100: 0,
             n50: 0,
             misses: 0,

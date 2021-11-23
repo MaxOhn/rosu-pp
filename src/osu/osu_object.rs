@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, convert::identity};
 
-use super::slider_state::SliderState;
+use super::{slider_state::SliderState, OsuDifficultyAttributes};
 
 use crate::{
     curve::{Curve, CurveBuffers},
@@ -49,7 +49,7 @@ pub(crate) enum NestedObjectKind {
 
 pub(crate) struct ObjectParameters<'a> {
     pub(crate) map: &'a Beatmap,
-    pub(crate) max_combo: usize,
+    pub(crate) attributes: &'a mut OsuDifficultyAttributes,
     pub(crate) ticks: Vec<(Pos2, f64)>,
     pub(crate) slider_state: SliderState<'a>,
     pub(crate) curve_bufs: CurveBuffers,
@@ -60,13 +60,13 @@ impl OsuObject {
     pub(crate) fn new(h: &HitObject, hr: bool, params: &mut ObjectParameters<'_>) -> Option<Self> {
         let ObjectParameters {
             map,
-            max_combo,
+            attributes,
             ticks,
             slider_state,
             curve_bufs,
         } = params;
 
-        *max_combo += 1; // hitcircle, slider head, or spinner
+        attributes.max_combo += 1; // hitcircle, slider head, or spinner
         let mut pos = h.pos;
 
         if hr {
@@ -74,17 +74,23 @@ impl OsuObject {
         }
 
         let obj = match &h.kind {
-            HitObjectKind::Circle => Self {
-                time: h.start_time,
-                pos,
-                stack_height: 0.0,
-                kind: OsuObjectKind::Circle,
-            },
+            HitObjectKind::Circle => {
+                attributes.n_circles += 1;
+
+                Self {
+                    time: h.start_time,
+                    pos,
+                    stack_height: 0.0,
+                    kind: OsuObjectKind::Circle,
+                }
+            }
             HitObjectKind::Slider {
                 pixel_len,
                 repeats,
                 control_points,
             } => {
+                attributes.n_sliders += 1;
+
                 // Responsible for timing point values
                 slider_state.update(h.start_time);
 
@@ -248,7 +254,7 @@ impl OsuObject {
                     _ => nested_objects.push(legacy_last_tick),
                 };
 
-                *max_combo += nested_objects.len();
+                attributes.max_combo += nested_objects.len();
 
                 let lazy_travel_time = final_span_end_time - h.start_time;
                 let mut end_time_min = lazy_travel_time / span_duration;
@@ -278,14 +284,18 @@ impl OsuObject {
                     },
                 }
             }
-            HitObjectKind::Spinner { end_time } => Self {
-                time: h.start_time,
-                pos,
-                stack_height: 0.0,
-                kind: OsuObjectKind::Spinner {
-                    end_time: *end_time,
-                },
-            },
+            HitObjectKind::Spinner { end_time } => {
+                attributes.n_spinners += 1;
+
+                Self {
+                    time: h.start_time,
+                    pos,
+                    stack_height: 0.0,
+                    kind: OsuObjectKind::Spinner {
+                        end_time: *end_time,
+                    },
+                }
+            }
             HitObjectKind::Hold { .. } => return None,
         };
 

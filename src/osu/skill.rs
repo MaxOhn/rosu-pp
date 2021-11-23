@@ -90,7 +90,7 @@ impl Skills {
 #[derive(Clone)]
 pub(crate) struct Skill {
     curr_strain: f64,
-    curr_section_peak: f64,
+    pub(crate) curr_section_peak: f64,
 
     kind: SkillKind,
     pub(crate) strain_peaks: Vec<f64>,
