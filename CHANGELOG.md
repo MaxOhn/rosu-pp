@@ -11,7 +11,8 @@
 - [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
 - Added `OsuGradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 - Added `OsuGradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `OsuPP` over and over.
-- osu: Fixed incorrect attributes on maps with only 1 or 2 hit objects
+- Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
+- [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
 
 # v0.3.0
 

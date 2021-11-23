@@ -157,9 +157,10 @@ impl<'map> FruitsPP<'map> {
             .n_droplets
             .unwrap_or_else(|| attributes.n_droplets.saturating_sub(self.n_misses));
 
+        let max_combo = attributes.max_combo();
+
         let n_fruits = self.n_fruits.unwrap_or_else(|| {
-            attributes
-                .max_combo
+            max_combo
                 .saturating_sub(self.n_misses)
                 .saturating_sub(n_droplets)
         });
@@ -168,7 +169,7 @@ impl<'map> FruitsPP<'map> {
         acc /= 100.0;
 
         let n_tiny_droplets = self.n_tiny_droplets.unwrap_or_else(|| {
-            ((acc * (attributes.max_combo + max_tiny_droplets) as f64).round() as usize)
+            ((acc * (max_combo + max_tiny_droplets) as f64).round() as usize)
                 .saturating_sub(n_fruits)
                 .saturating_sub(n_droplets)
         });
@@ -184,10 +185,12 @@ impl<'map> FruitsPP<'map> {
     }
 
     fn assert_hitresults(self, attributes: FruitsDifficultyAttributes) -> FruitsPPInner {
+        let max_combo = attributes.max_combo();
+
         let correct_combo_hits = self
             .n_fruits
             .and_then(|f| self.n_droplets.map(|d| f + d + self.n_misses))
-            .filter(|h| *h == attributes.max_combo);
+            .filter(|h| *h == max_combo);
 
         let correct_fruits = self
             .n_fruits
@@ -213,8 +216,7 @@ impl<'map> FruitsPP<'map> {
             let mut n_tiny_droplets = self.n_tiny_droplets.unwrap_or(0);
             let n_tiny_droplet_misses = self.n_tiny_droplet_misses.unwrap_or(0);
 
-            let missing = attributes
-                .max_combo
+            let missing = max_combo
                 .saturating_sub(n_fruits)
                 .saturating_sub(n_droplets)
                 .saturating_sub(self.n_misses);
@@ -279,6 +281,7 @@ impl FruitsPPInner {
     fn calculate(self) -> FruitsPerformanceAttributes {
         let attributes = &self.attributes;
         let stars = attributes.stars;
+        let max_combo = attributes.max_combo();
 
         // Relying heavily on aim
         let mut pp = (5.0 * (stars / 0.0049).max(1.0) - 4.0).powi(2) / 100_000.0;
@@ -286,7 +289,7 @@ impl FruitsPPInner {
         let mut combo_hits = self.combo_hits();
 
         if combo_hits == 0 {
-            combo_hits = attributes.max_combo;
+            combo_hits = max_combo;
         }
 
         // Longer maps are worth more
@@ -300,10 +303,8 @@ impl FruitsPPInner {
         pp *= 0.97_f64.powi(self.n_misses as i32);
 
         // Combo scaling
-        if let Some(combo) = self.combo.filter(|_| attributes.max_combo > 0) {
-            pp *= (combo as f64 / attributes.max_combo as f64)
-                .powf(0.8)
-                .min(1.0);
+        if let Some(combo) = self.combo.filter(|_| max_combo > 0) {
+            pp *= (combo as f64 / max_combo as f64).powf(0.8).min(1.0);
         }
 
         // AR scaling
@@ -427,7 +428,6 @@ mod test {
             n_fruits: 1234,
             n_droplets: 567,
             n_tiny_droplets: 2345,
-            max_combo: 1234 + 567,
             ..Default::default()
         }
     }

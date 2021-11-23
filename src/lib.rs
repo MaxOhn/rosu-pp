@@ -327,7 +327,7 @@ impl DifficultyAttributes {
     pub fn max_combo(&self) -> Option<usize> {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(attributes) => Some(attributes.max_combo),
+            Self::Fruits(attributes) => Some(attributes.max_combo()),
             Self::Mania(_) => None,
             #[cfg(feature = "osu")]
             Self::Osu(attributes) => Some(attributes.max_combo),
@@ -450,7 +450,7 @@ impl PerformanceAttributes {
     pub fn max_combo(&self) -> Option<usize> {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(f) => Some(f.difficulty.max_combo),
+            Self::Fruits(f) => Some(f.difficulty.max_combo()),
             Self::Mania(_) => None,
             #[cfg(feature = "osu")]
             Self::Osu(o) => Some(o.difficulty.max_combo),

@@ -35,15 +35,10 @@ pub fn stars(
     mods: impl Mods,
     passed_objects: Option<usize>,
 ) -> FruitsDifficultyAttributes {
-    match calculate_movement(map, mods, passed_objects) {
-        Some((mut movement, mut attributes)) => {
-            attributes.stars = movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR;
-            attributes.max_combo = attributes.n_fruits + attributes.n_droplets;
+    let (mut movement, mut attributes) = calculate_movement(map, mods, passed_objects);
+    attributes.stars = movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR;
 
-            attributes
-        }
-        None => FruitsDifficultyAttributes::default(),
-    }
+    attributes
 }
 
 /// Essentially the same as the [`stars`] function but instead of
@@ -51,12 +46,11 @@ pub fn stars(
 ///
 /// Suitable to plot the difficulty of a map over time.
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    match calculate_movement(map, mods, None) {
-        Some((movement, _)) => Strains {
-            section_length: SECTION_LENGTH * mods.speed(),
-            strains: movement.strain_peaks,
-        },
-        None => Strains::default(),
+    let (movement, _) = calculate_movement(map, mods, None);
+
+    Strains {
+        section_length: SECTION_LENGTH * mods.speed(),
+        strains: movement.strain_peaks,
     }
 }
 
@@ -64,11 +58,7 @@ fn calculate_movement(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> Option<(Movement, FruitsDifficultyAttributes)> {
-    if map.hit_objects.len() < 2 {
-        return None;
-    }
-
+) -> (Movement, FruitsDifficultyAttributes) {
     let take = passed_objects.unwrap_or(usize::MAX);
 
     let map_attributes = map.attributes().mods(mods);
@@ -224,11 +214,15 @@ fn calculate_movement(
     // Strain business
     let mut movement = Movement::new(map_attributes.cs as f32);
     let section_len = SECTION_LENGTH * map_attributes.clock_rate;
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
 
-    let mut prev = hit_objects.next().unwrap();
-    let mut curr = hit_objects.next().unwrap();
+    let (mut prev, mut curr) = match (hit_objects.next(), hit_objects.next()) {
+        (Some(prev), Some(curr)) => (prev, curr),
+        (Some(_), None) | (None, None) => return (movement, attributes),
+        (None, Some(_)) => unreachable!(),
+    };
+
+    // TODO: time of second second object instead?
+    let mut curr_section_end = (prev.time / section_len).ceil() * section_len;
 
     prev.init_hyper_dash(
         half_catcher_width,
@@ -253,8 +247,8 @@ fn calculate_movement(
         map_attributes.clock_rate,
     );
 
-    while h.base.time > current_section_end {
-        current_section_end += section_len;
+    while h.base.time > curr_section_end {
+        curr_section_end += section_len;
     }
 
     movement.process(&h);
@@ -278,10 +272,10 @@ fn calculate_movement(
             map_attributes.clock_rate,
         );
 
-        while h.base.time > current_section_end {
+        while h.base.time > curr_section_end {
             movement.save_current_peak();
-            movement.start_new_section_from(current_section_end / map_attributes.clock_rate);
-            current_section_end += section_len;
+            movement.start_new_section_from(curr_section_end / map_attributes.clock_rate);
+            curr_section_end += section_len;
         }
 
         movement.process(&h);
@@ -298,17 +292,17 @@ fn calculate_movement(
         map_attributes.clock_rate,
     );
 
-    while h.base.time > current_section_end {
+    while h.base.time > curr_section_end {
         movement.save_current_peak();
-        movement.start_new_section_from(current_section_end / map_attributes.clock_rate);
+        movement.start_new_section_from(curr_section_end / map_attributes.clock_rate);
 
-        current_section_end += section_len;
+        curr_section_end += section_len;
     }
 
     movement.process(&h);
     movement.save_current_peak();
 
-    Some((movement, attributes))
+    (movement, attributes)
 }
 
 // BUG: Sometimes there are off-by-one errors,
@@ -424,8 +418,6 @@ impl<I: Iterator<Item = CatchObject>> Iterator for FruitOrJuice<I> {
 pub struct FruitsDifficultyAttributes {
     /// The final star rating
     pub stars: f64,
-    /// The maximum combo.
-    pub max_combo: usize,
     /// The approach rate.
     pub ar: f64,
     /// The amount of fruits.
@@ -434,6 +426,14 @@ pub struct FruitsDifficultyAttributes {
     pub n_droplets: usize,
     /// The amount of tiny droplets.
     pub n_tiny_droplets: usize,
+}
+
+impl FruitsDifficultyAttributes {
+    /// Return the maximum combo.
+    #[inline]
+    pub fn max_combo(&self) -> usize {
+        self.n_fruits + self.n_droplets
+    }
 }
 
 /// The result of a performance calculation on an osu!ctb map.
@@ -461,7 +461,7 @@ impl FruitsPerformanceAttributes {
     /// Return the maximum combo of the map.
     #[inline]
     pub fn max_combo(&self) -> usize {
-        self.difficulty.max_combo
+        self.difficulty.max_combo()
     }
 }
 
