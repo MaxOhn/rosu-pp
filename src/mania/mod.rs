@@ -69,7 +69,6 @@ fn calculate_strain(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize
     };
 
     let clock_rate = mods.speed();
-    let section_len = SECTION_LEN * clock_rate;
     let mut strain = Strain::new(columns);
     let columns = columns as f32;
 
@@ -81,31 +80,22 @@ fn calculate_strain(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize
         .zip(map.hit_objects.iter())
         .map(|(base, prev)| DifficultyHitObject::new(base, prev, columns, clock_rate));
 
-    // No strain for first object
-    let mut curr_section_end = match map.hit_objects.first() {
-        Some(h) => (h.start_time / section_len).ceil() * section_len,
-        None => return strain,
-    };
-
-    // Handle second object separately to remove later if-branching
+    // Handle first object distinctly
     let h = match hit_objects.next() {
         Some(h) => h,
         None => return strain,
     };
 
-    while h.base.start_time > curr_section_end {
-        curr_section_end += section_len;
-    }
-
+    // No strain for first object
+    let mut curr_section_end = (h.start_time / SECTION_LEN).ceil() * SECTION_LEN;
     strain.process(&h);
 
     // Handle all other objects
     for h in hit_objects {
-        while h.base.start_time > curr_section_end {
+        while h.start_time > curr_section_end {
             strain.save_current_peak();
-            strain.start_new_section_from(curr_section_end / clock_rate);
-
-            curr_section_end += section_len;
+            strain.start_new_section_from(curr_section_end);
+            curr_section_end += SECTION_LEN;
         }
 
         strain.process(&h);
@@ -147,7 +137,7 @@ pub struct ManiaDifficultyAttributes {
 }
 
 /// The result of a performance calculation on an osu!mania map.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct ManiaPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
     pub difficulty: ManiaDifficultyAttributes,

@@ -34,7 +34,7 @@ pub struct ManiaPP<'map> {
     map: &'map Beatmap,
     stars: Option<f64>,
     mods: u32,
-    score: Option<f64>,
+    pub(crate) score: Option<f64>,
     passed_objects: Option<usize>,
 }
 
@@ -83,6 +83,9 @@ impl<'map> ManiaPP<'map> {
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// Be sure you also set [`score`](ManiaPP::score) or the final values
+    /// won't be correct because it will incorrectly assume a score of 1,000,000.
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);

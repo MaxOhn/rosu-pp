@@ -43,7 +43,7 @@ use super::{DifficultyHitObject, ManiaDifficultyAttributes, STAR_SCALING_FACTOR}
 /// ```
 #[derive(Clone, Debug)]
 pub struct ManiaGradualDifficultyAttributes<'map> {
-    idx: usize,
+    pub(crate) idx: usize,
     difficulty_objects: ManiaObjectIter<'map>,
     strain: Strain,
     curr_section_end: f64,
@@ -79,14 +79,7 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
         let clock_rate = mods.speed();
         let strain = Strain::new(columns);
         let columns = columns as f32;
-
-        let hit_objects = map.hit_objects.iter().skip(1).zip(map.hit_objects.iter());
-
-        let difficulty_objects = ManiaObjectIter {
-            hit_objects,
-            columns,
-            clock_rate,
-        };
+        let difficulty_objects = ManiaObjectIter::new(&map.hit_objects, columns, clock_rate);
 
         Self {
             idx: 0,
@@ -102,28 +95,25 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
     type Item = ManiaDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let h = self.difficulty_objects.next()?;
-        self.idx += 1;
-
-        let section_len = SECTION_LEN * self.difficulty_objects.clock_rate;
+        self.idx = self.idx.saturating_add(1);
 
         if self.idx == 1 {
-            self.curr_section_end = (h.start_time / section_len).ceil() * section_len;
+            return (!self.difficulty_objects.is_empty).then(ManiaDifficultyAttributes::default);
+        }
+
+        let h = self.difficulty_objects.next()?;
+
+        if self.idx == 2 {
+            self.curr_section_end = (h.start_time / SECTION_LEN).ceil() * SECTION_LEN;
+            self.strain.process(&h);
 
             return Some(ManiaDifficultyAttributes::default());
         }
 
-        if self.idx == 2 {
-            while h.base.start_time > self.curr_section_end {
-                self.curr_section_end += section_len;
-            }
-        } else {
-            while h.base.start_time > self.curr_section_end {
-                self.strain.save_current_peak();
-                let time = self.curr_section_end / self.difficulty_objects.clock_rate;
-                self.strain.start_new_section_from(time);
-                self.curr_section_end += section_len;
-            }
+        while h.start_time > self.curr_section_end {
+            self.strain.save_current_peak();
+            self.strain.start_new_section_from(self.curr_section_end);
+            self.curr_section_end += SECTION_LEN;
         }
 
         self.strain.process(&h);
@@ -145,14 +135,17 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.difficulty_objects.size_hint()
+        let (mut len, _) = self.difficulty_objects.size_hint();
+        len += (self.idx == 0) as usize;
+
+        (len, Some(len))
     }
 }
 
 impl ExactSizeIterator for ManiaGradualDifficultyAttributes<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.difficulty_objects.len()
+        self.difficulty_objects.len() + (self.idx == 0) as usize
     }
 }
 
@@ -161,6 +154,21 @@ struct ManiaObjectIter<'map> {
     hit_objects: Zip<Skip<Iter<'map, HitObject>>, Iter<'map, HitObject>>,
     columns: f32,
     clock_rate: f64,
+    is_empty: bool,
+}
+
+impl<'map> ManiaObjectIter<'map> {
+    fn new(hit_objects: &'map [HitObject], columns: f32, clock_rate: f64) -> Self {
+        let is_empty = hit_objects.is_empty();
+        let hit_objects = hit_objects.iter().skip(1).zip(hit_objects);
+
+        Self {
+            hit_objects,
+            columns,
+            clock_rate,
+            is_empty,
+        }
+    }
 }
 
 impl<'map> Iterator for ManiaObjectIter<'map> {
@@ -172,6 +180,11 @@ impl<'map> Iterator for ManiaObjectIter<'map> {
         let obj = DifficultyHitObject::new(base, prev, self.columns, self.clock_rate);
 
         Some(obj)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.hit_objects.size_hint()
     }
 }
 
