@@ -1,8 +1,12 @@
 #![cfg(feature = "mania")]
 
+mod gradual_difficulty;
+mod gradual_performance;
 mod pp;
 mod strain;
 
+pub use gradual_difficulty::*;
+pub use gradual_performance::*;
 pub use pp::*;
 use strain::Strain;
 
@@ -22,7 +26,7 @@ pub fn stars(
     let mut strain = calculate_strain(map, mods, passed_objects);
 
     ManiaDifficultyAttributes {
-        stars: strain.difficulty_value() * STAR_SCALING_FACTOR,
+        stars: Strain::difficulty_value(&mut strain.strain_peaks) * STAR_SCALING_FACTOR,
     }
 }
 
@@ -136,7 +140,7 @@ impl<'o> DifficultyHitObject<'o> {
 }
 
 /// The result of a difficulty calculation on an osu!mania map.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct ManiaDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,

@@ -2,9 +2,10 @@ use super::DifficultyHitObject;
 
 use std::cmp::Ordering;
 
+#[derive(Clone, Debug)]
 pub(crate) struct Strain {
     current_strain: f64,
-    current_section_peak: f64,
+    pub(crate) curr_section_peak: f64,
 
     individual_strain: f64,
     overall_strain: f64,
@@ -28,7 +29,7 @@ impl Strain {
     pub(crate) fn new(column_count: u8) -> Self {
         Self {
             current_strain: 1.0,
-            current_section_peak: 1.0,
+            curr_section_peak: 1.0,
 
             individual_strain: 0.0,
             overall_strain: 1.0,
@@ -43,12 +44,12 @@ impl Strain {
 
     #[inline]
     pub(crate) fn save_current_peak(&mut self) {
-        self.strain_peaks.push(self.current_section_peak);
+        self.strain_peaks.push(self.curr_section_peak);
     }
 
     #[inline]
     pub(crate) fn start_new_section_from(&mut self, time: f64) {
-        self.current_section_peak = self.peak_strain(time - self.prev_time.unwrap());
+        self.curr_section_peak = self.peak_strain(time - self.prev_time.unwrap());
     }
 
     #[inline]
@@ -66,7 +67,7 @@ impl Strain {
     pub(crate) fn process(&mut self, current: &DifficultyHitObject<'_>) {
         self.current_strain *= self.strain_decay(current.delta);
         self.current_strain += self.strain_value_of(current) * SKILL_MULTIPLIER;
-        self.current_section_peak = self.current_strain.max(self.current_section_peak);
+        self.curr_section_peak = self.current_strain.max(self.curr_section_peak);
         self.prev_time.replace(current.start_time);
     }
 
@@ -107,14 +108,13 @@ impl Strain {
     }
 
     #[inline]
-    pub(crate) fn difficulty_value(&mut self) -> f64 {
+    pub(crate) fn difficulty_value(strain_peaks: &mut [f64]) -> f64 {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
-        self.strain_peaks
-            .sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
+        strain_peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
-        for &strain in self.strain_peaks.iter() {
+        for &strain in strain_peaks.iter() {
             difficulty += strain * weight;
             weight *= DECAY_WEIGHT;
         }

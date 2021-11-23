@@ -315,9 +315,8 @@ mod tests {
     #[test]
     fn empty_map() {
         let map = Beatmap::default();
-        assert!(OsuGradualDifficultyAttributes::new(&map, 0)
-            .next()
-            .is_none());
+        let mut attributes = OsuGradualDifficultyAttributes::new(&map, 0);
+        assert!(attributes.next().is_none());
     }
 
     #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]

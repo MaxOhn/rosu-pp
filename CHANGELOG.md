@@ -14,6 +14,7 @@
 - Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
 - [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
 - Added methods `TaikoDifficultyAttributes::max_combo` and `OsuDifficultyAttributes::max_combo`
+- Added `ManiaGradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 
 # v0.3.0
 
