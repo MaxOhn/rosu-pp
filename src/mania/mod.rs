@@ -19,11 +19,10 @@ pub fn stars(
     mods: impl Mods,
     passed_objects: Option<usize>,
 ) -> ManiaDifficultyAttributes {
-    match calculate_strain(map, mods, passed_objects) {
-        Some(mut strain) => ManiaDifficultyAttributes {
-            stars: strain.difficulty_value() * STAR_SCALING_FACTOR,
-        },
-        None => ManiaDifficultyAttributes::default(),
+    let mut strain = calculate_strain(map, mods, passed_objects);
+
+    ManiaDifficultyAttributes {
+        stars: strain.difficulty_value() * STAR_SCALING_FACTOR,
     }
 }
 
@@ -32,26 +31,16 @@ pub fn stars(
 ///
 /// Suitable to plot the difficulty of a map over time.
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    match calculate_strain(map, mods, None) {
-        Some(strain) => Strains {
-            section_length: SECTION_LEN * mods.speed(),
-            strains: strain.strain_peaks,
-        },
-        None => Strains::default(),
+    let strain = calculate_strain(map, mods, None);
+
+    Strains {
+        section_length: SECTION_LEN * mods.speed(),
+        strains: strain.strain_peaks,
     }
 }
 
-fn calculate_strain(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> Option<Strain> {
+fn calculate_strain(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> Strain {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
-
-    if take < 2 {
-        return None;
-    }
-
     let rounded_cs = map.cs.round();
 
     let columns = match map.mode {
@@ -89,25 +78,30 @@ fn calculate_strain(
         .map(|(base, prev)| DifficultyHitObject::new(base, prev, columns, clock_rate));
 
     // No strain for first object
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
+    let mut curr_section_end = match map.hit_objects.first() {
+        Some(h) => (h.start_time / section_len).ceil() * section_len,
+        None => return strain,
+    };
 
     // Handle second object separately to remove later if-branching
-    let h = hit_objects.next().unwrap();
+    let h = match hit_objects.next() {
+        Some(h) => h,
+        None => return strain,
+    };
 
-    while h.base.start_time > current_section_end {
-        current_section_end += section_len;
+    while h.base.start_time > curr_section_end {
+        curr_section_end += section_len;
     }
 
     strain.process(&h);
 
     // Handle all other objects
     for h in hit_objects {
-        while h.base.start_time > current_section_end {
+        while h.base.start_time > curr_section_end {
             strain.save_current_peak();
-            strain.start_new_section_from(current_section_end / clock_rate);
+            strain.start_new_section_from(curr_section_end / clock_rate);
 
-            current_section_end += section_len;
+            curr_section_end += section_len;
         }
 
         strain.process(&h);
@@ -115,7 +109,7 @@ fn calculate_strain(
 
     strain.save_current_peak();
 
-    Some(strain)
+    strain
 }
 
 #[derive(Debug)]
