@@ -232,6 +232,14 @@ pub struct TaikoDifficultyAttributes {
     pub max_combo: usize,
 }
 
+impl TaikoDifficultyAttributes {
+    /// Return the maximum combo.
+    #[inline]
+    pub fn max_combo(&self) -> usize {
+        self.max_combo
+    }
+}
+
 /// The result of a performance calculation on an osu!taiko map.
 #[derive(Clone, Debug, Default)]
 pub struct TaikoPerformanceAttributes {

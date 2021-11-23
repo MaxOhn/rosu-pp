@@ -13,6 +13,7 @@
 - Added `OsuGradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `OsuPP` over and over.
 - Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
 - [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
+- Added methods `TaikoDifficultyAttributes::max_combo` and `OsuDifficultyAttributes::max_combo`
 
 # v0.3.0
 

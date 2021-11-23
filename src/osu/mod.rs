@@ -459,6 +459,14 @@ pub struct OsuDifficultyAttributes {
     pub max_combo: usize,
 }
 
+impl OsuDifficultyAttributes {
+    /// Return the maximum combo.
+    #[inline]
+    pub fn max_combo(&self) -> usize {
+        self.max_combo
+    }
+}
+
 /// The result of a performance calculation on an osu!standard map.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct OsuPerformanceAttributes {
