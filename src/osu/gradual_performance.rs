@@ -210,8 +210,8 @@ mod tests {
         }
 
         let state = OsuScoreState {
-            max_combo: 110,
-            n300: 90,
+            max_combo: 122,
+            n300: 88,
             n100: 8,
             n50: 2,
             misses: 2,
