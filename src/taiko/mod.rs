@@ -37,18 +37,7 @@ pub fn stars(
     mods: impl Mods,
     passed_objects: Option<usize>,
 ) -> TaikoDifficultyAttributes {
-    let max_combo = map.n_circles as usize;
-
-    let skills = match calculate_skills(map, mods, passed_objects) {
-        Some(skills) => skills,
-        None => {
-            return TaikoDifficultyAttributes {
-                max_combo,
-                ..Default::default()
-            }
-        }
-    };
-
+    let (skills, max_combo) = calculate_skills(map, mods, passed_objects);
     let mut buf = vec![0.0; skills[0].strain_peaks.len()];
 
     let color_rating = skills[0].difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
@@ -74,10 +63,7 @@ pub fn stars(
 ///
 /// Suitable to plot the difficulty of a map over time.
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    let skills = match calculate_skills(map, mods, None) {
-        Some(skills) => skills,
-        None => return Strains::default(),
-    };
+    let (skills, _) = calculate_skills(map, mods, None);
 
     let strains = skills[0]
         .strain_peaks
@@ -100,12 +86,8 @@ fn calculate_skills(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> Option<Vec<Skill>> {
+) -> (Vec<Skill>, usize) {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
-
-    if take < 2 {
-        return None;
-    }
 
     // True if the object at that index is stamina cheese
     let cheese = map.find_cheese();
@@ -119,10 +101,22 @@ fn calculate_skills(
 
     let clock_rate = mods.speed();
     let section_len = SECTION_LEN * clock_rate;
+    let mut max_combo = 0;
 
     // No strain for first object
-    let mut current_section_end =
-        (map.hit_objects[0].start_time / section_len).ceil() * section_len;
+    let mut curr_section_end = match map.hit_objects.first() {
+        Some(h) => {
+            max_combo += h.is_circle() as usize;
+
+            (h.start_time / section_len).ceil() * section_len
+        }
+        None => return (skills, max_combo),
+    };
+
+    match map.hit_objects.get(1) {
+        Some(h) => max_combo += h.is_circle() as usize,
+        None => return (skills, max_combo),
+    }
 
     let mut hit_objects = map
         .hit_objects
@@ -132,15 +126,19 @@ fn calculate_skills(
         .skip(2)
         .zip(map.hit_objects.iter().skip(1))
         .zip(map.hit_objects.iter())
+        .inspect(|(((_, base), _), _)| max_combo += base.is_circle() as usize)
         .map(|(((idx, base), prev), prev_prev)| {
             DifficultyObject::new(idx, base, prev, prev_prev, clock_rate)
         });
 
     // Handle second object separately to remove later if-branching
-    let h = hit_objects.next().unwrap();
+    let h = match hit_objects.next() {
+        Some(h) => h,
+        None => return (skills, max_combo),
+    };
 
-    while h.base.start_time > current_section_end {
-        current_section_end += section_len;
+    while h.base.start_time > curr_section_end {
+        curr_section_end += section_len;
     }
 
     for skill in skills.iter_mut() {
@@ -149,13 +147,13 @@ fn calculate_skills(
 
     // Handle all other objects
     for h in hit_objects {
-        while h.base.start_time > current_section_end {
+        while h.base.start_time > curr_section_end {
             for skill in skills.iter_mut() {
                 skill.save_current_peak();
-                skill.start_new_section_from(current_section_end / clock_rate);
+                skill.start_new_section_from(curr_section_end / clock_rate);
             }
 
-            current_section_end += section_len;
+            curr_section_end += section_len;
         }
 
         for skill in skills.iter_mut() {
@@ -167,7 +165,7 @@ fn calculate_skills(
         skill.save_current_peak();
     }
 
-    Some(skills)
+    (skills, max_combo)
 }
 
 #[inline]
