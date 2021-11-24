@@ -8,13 +8,13 @@ const BEZIER_TOLERANCE: f32 = 0.25;
 const CATMULL_DETAIL: usize = 50;
 const CIRCULAR_ARC_TOLERANCE: f32 = 0.1;
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct CurveBuffers {
     vertices: Vec<Pos2>,
     bezier: BezierBuffers,
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 struct BezierBuffers {
     buf1: Vec<Pos2>,
     buf2: Vec<Pos2>,

@@ -9,15 +9,13 @@
 - Added method `Beatmap::bpm`
 - Added method `max_combo` for `DifficultyAttributes`, `PerformanceAttributes`, and all `{Mode}PerformanceAttributes`
 - [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
-- Added `OsuGradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 - Added `OsuGradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `OsuPP` over and over.
 - Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
 - [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
 - Added methods `TaikoDifficultyAttributes::max_combo` and `OsuDifficultyAttributes::max_combo`
-- Added `ManiaGradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 - Added `ManiaGradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `ManiaPP` over and over.
-- Added `TaikoGradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 - Added `TaikoGradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `TaikoPP` over and over.
+- Added structs `{Mode}GradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the mode's `stars` function over and over.
 
 # v0.3.0
 

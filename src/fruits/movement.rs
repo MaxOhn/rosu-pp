@@ -10,6 +10,7 @@ const SKILL_MULTIPLIER: f64 = 900.0;
 const STRAIN_DECAY_BASE: f64 = 0.2;
 const DECAY_WEIGHT: f64 = 0.94;
 
+#[derive(Clone, Debug)]
 pub(crate) struct Movement {
     pub(crate) half_catcher_width: f32,
 
@@ -18,7 +19,7 @@ pub(crate) struct Movement {
     last_strain_time: f64,
 
     current_strain: f64,
-    current_section_peak: f64,
+    pub(crate) curr_section_peak: f64,
 
     pub(crate) strain_peaks: Vec<f64>,
     prev_time: Option<f64>,
@@ -38,7 +39,7 @@ impl Movement {
             last_strain_time: 0.0,
 
             current_strain: 1.0,
-            current_section_peak: 1.0,
+            curr_section_peak: 1.0,
 
             strain_peaks: Vec::with_capacity(128),
             prev_time: None,
@@ -47,29 +48,28 @@ impl Movement {
 
     #[inline]
     pub(crate) fn save_current_peak(&mut self) {
-        self.strain_peaks.push(self.current_section_peak);
+        self.strain_peaks.push(self.curr_section_peak);
     }
 
     #[inline]
     pub(crate) fn start_new_section_from(&mut self, time: f64) {
-        self.current_section_peak = self.peak_strain(time - self.prev_time.unwrap());
+        self.curr_section_peak = self.peak_strain(time - self.prev_time.unwrap());
     }
 
     pub(crate) fn process(&mut self, current: &DifficultyObject<'_>) {
         self.current_strain *= strain_decay(current.delta);
         self.current_strain += self.strain_value_of(current) * SKILL_MULTIPLIER;
-        self.current_section_peak = self.current_strain.max(self.current_section_peak);
+        self.curr_section_peak = self.current_strain.max(self.curr_section_peak);
         self.prev_time.replace(current.start_time);
     }
 
-    pub(crate) fn difficulty_value(&mut self) -> f64 {
+    pub(crate) fn difficulty_value(strain_peaks: &mut [f64]) -> f64 {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
-        self.strain_peaks
-            .sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
+        strain_peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
-        for &strain in self.strain_peaks.iter() {
+        for &strain in strain_peaks.iter() {
             difficulty += strain * weight;
             weight *= DECAY_WEIGHT;
         }

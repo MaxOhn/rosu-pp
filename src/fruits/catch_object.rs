@@ -1,9 +1,11 @@
 use crate::parse::Pos2;
 
+use super::fruit_or_juice::FruitParams;
+
 const PLAYFIELD_WIDTH: f32 = 512.0;
 const BASE_SPEED: f64 = 1.0;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CatchObject {
     pub(crate) pos: f32,
     pub(crate) time: f64,
@@ -23,11 +25,11 @@ impl CatchObject {
         }
     }
 
-    pub(crate) fn with_hr(mut self, last_pos: &mut Option<f32>, last_time: &mut f64) -> Self {
+    pub(crate) fn with_hr(mut self, params: &mut FruitParams<'_>) -> Self {
         let mut offset_pos = self.pos;
-        let time_diff = self.time - *last_time;
+        let time_diff = self.time - params.last_time;
 
-        if let Some(last_pos_ref) = last_pos.filter(|_| time_diff <= 1000.0) {
+        if let Some(last_pos_ref) = params.last_pos.filter(|_| time_diff <= 1000.0) {
             let pos_diff = offset_pos - last_pos_ref;
 
             if pos_diff.abs() > f32::EPSILON {
@@ -41,14 +43,14 @@ impl CatchObject {
                     }
                 }
 
-                last_pos.replace(offset_pos);
-                *last_time = self.time;
+                params.last_pos.replace(offset_pos);
+                params.last_time = self.time;
             }
 
             self.pos = offset_pos;
         } else {
-            last_pos.replace(offset_pos);
-            *last_time = self.time;
+            params.last_pos.replace(offset_pos);
+            params.last_time = self.time;
         }
 
         self

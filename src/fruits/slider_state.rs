@@ -1,5 +1,6 @@
 use crate::{Beatmap, ControlPoint, ControlPointIter};
 
+#[derive(Clone, Debug)]
 pub(crate) struct SliderState<'p> {
     control_points: ControlPointIter<'p>,
     next: Option<ControlPoint>,

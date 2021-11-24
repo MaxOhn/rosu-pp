@@ -13,6 +13,7 @@ macro_rules! next_tuple {
     };
 }
 
+#[derive(Clone, Debug)]
 pub(crate) struct ControlPointIter<'p> {
     timing_points: Iter<'p, TimingPoint>,
     difficulty_points: Iter<'p, DifficultyPoint>,
@@ -37,7 +38,7 @@ impl<'p> ControlPointIter<'p> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) enum ControlPoint {
     Timing { time: f64, beat_len: f64 },
     Difficulty { time: f64, slider_velocity: f64 },
