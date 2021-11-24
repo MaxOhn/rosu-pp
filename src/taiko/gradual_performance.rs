@@ -5,6 +5,8 @@ use super::{TaikoGradualDifficultyAttributes, TaikoPerformanceAttributes};
 // TODO: Benchmark if Copy is faster than Clone
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
+///
+/// This struct is used for [`TaikoGradualPerformanceAttributes`].
 #[derive(Copy, Clone, Debug, Default)]
 pub struct TaikoScoreState {
     /// Maximum combo that the score has had so far.
@@ -33,7 +35,7 @@ impl TaikoScoreState {
 /// To process multiple objects at once, use
 /// [`process_next_n_objects`](`TaikoGradualPerformanceAttributes::process_next_n_objects`) instead.
 ///
-/// Both methods require an [`TaikoScoreState`] that contains the current
+/// Both methods require a [`TaikoScoreState`] that contains the current
 /// hitresults as well as the maximum combo so far.
 ///
 /// If you only want to calculate difficulty attributes use

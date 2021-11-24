@@ -5,6 +5,8 @@ use super::{OsuGradualDifficultyAttributes, OsuPerformanceAttributes};
 // TODO: Benchmark if Copy is faster than Clone
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
+///
+/// This struct is used for [`OsuGradualPerformanceAttributes`].
 #[derive(Copy, Clone, Debug, Default)]
 pub struct OsuScoreState {
     /// Maximum combo that the score has had so far.

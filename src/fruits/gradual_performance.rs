@@ -5,6 +5,8 @@ use super::{FruitsGradualDifficultyAttributes, FruitsPerformanceAttributes};
 // TODO: Benchmark if Copy is faster than Clone
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
+///
+/// This struct is used for [`FruitsGradualPerformanceAttributes`].
 #[derive(Copy, Clone, Debug, Default)]
 pub struct FruitsScoreState {
     /// Maximum combo that the score has had so far.
@@ -39,7 +41,7 @@ impl FruitsScoreState {
 /// To process multiple objects at once, use
 /// [`process_next_n_objects`](`FruitsGradualPerformanceAttributes::process_next_n_objects`) instead.
 ///
-/// Both methods require an [`FruitsScoreState`] that contains the current
+/// Both methods require a [`FruitsScoreState`] that contains the current
 /// hitresults as well as the maximum combo so far.
 ///
 /// Note that neither hits nor misses of tiny droplets require

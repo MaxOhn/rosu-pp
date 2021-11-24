@@ -120,6 +120,9 @@ pub mod taiko;
 /// Beatmap parsing and the contained types.
 pub mod parse;
 
+mod gradual;
+pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes, ScoreState};
+
 mod pp;
 pub use pp::{AnyPP, AttributeProvider};
 
@@ -168,9 +171,21 @@ pub trait BeatmapExt {
     ///
     /// Suitable to plot the difficulty of a map over time.
     fn strains(&self, mods: impl Mods) -> Strains;
+
+    /// Return an iterator that gives you the `DifficultyAttributes` after each hit object.
+    ///
+    /// Suitable to efficiently get the map's star rating after multiple different locations.
+    fn gradual_difficulty(&self, mods: impl Mods) -> GradualDifficultyAttributes<'_>;
+
+    /// Return a struct that gives you the `PerformanceAttributes` after every (few) hit object(s).
+    ///
+    /// Suitable to efficiently get a score's performance after multiple different locations,
+    /// i.e. live update a score's pp.
+    fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_>;
 }
 
 impl BeatmapExt for Beatmap {
+    #[inline]
     fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> DifficultyAttributes {
         match self.mode {
             GameMode::STD => {
@@ -204,6 +219,7 @@ impl BeatmapExt for Beatmap {
         }
     }
 
+    #[inline]
     fn max_pp(&self, mods: u32) -> PerformanceAttributes {
         match self.mode {
             GameMode::STD => {
@@ -242,6 +258,7 @@ impl BeatmapExt for Beatmap {
         AnyPP::new(self)
     }
 
+    #[inline]
     fn strains(&self, mods: impl Mods) -> Strains {
         match self.mode {
             GameMode::STD => {
@@ -273,6 +290,16 @@ impl BeatmapExt for Beatmap {
                 fruits::strains(self, mods)
             }
         }
+    }
+
+    #[inline]
+    fn gradual_difficulty(&self, mods: impl Mods) -> GradualDifficultyAttributes<'_> {
+        GradualDifficultyAttributes::new(self, mods)
+    }
+
+    #[inline]
+    fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_> {
+        GradualPerformanceAttributes::new(self, mods)
     }
 }
 
@@ -353,6 +380,7 @@ impl DifficultyAttributes {
 
 #[cfg(feature = "fruits")]
 impl From<fruits::FruitsDifficultyAttributes> for DifficultyAttributes {
+    #[inline]
     fn from(attributes: fruits::FruitsDifficultyAttributes) -> Self {
         Self::Fruits(attributes)
     }
@@ -360,6 +388,7 @@ impl From<fruits::FruitsDifficultyAttributes> for DifficultyAttributes {
 
 #[cfg(feature = "mania")]
 impl From<mania::ManiaDifficultyAttributes> for DifficultyAttributes {
+    #[inline]
     fn from(attributes: mania::ManiaDifficultyAttributes) -> Self {
         Self::Mania(attributes)
     }
@@ -367,6 +396,7 @@ impl From<mania::ManiaDifficultyAttributes> for DifficultyAttributes {
 
 #[cfg(feature = "osu")]
 impl From<osu::OsuDifficultyAttributes> for DifficultyAttributes {
+    #[inline]
     fn from(attributes: osu::OsuDifficultyAttributes) -> Self {
         Self::Osu(attributes)
     }
@@ -374,6 +404,7 @@ impl From<osu::OsuDifficultyAttributes> for DifficultyAttributes {
 
 #[cfg(feature = "taiko")]
 impl From<taiko::TaikoDifficultyAttributes> for DifficultyAttributes {
+    #[inline]
     fn from(attributes: taiko::TaikoDifficultyAttributes) -> Self {
         Self::Taiko(attributes)
     }
@@ -491,6 +522,7 @@ impl From<PerformanceAttributes> for DifficultyAttributes {
 
 #[cfg(feature = "fruits")]
 impl From<fruits::FruitsPerformanceAttributes> for PerformanceAttributes {
+    #[inline]
     fn from(attributes: fruits::FruitsPerformanceAttributes) -> Self {
         Self::Fruits(attributes)
     }
@@ -498,6 +530,7 @@ impl From<fruits::FruitsPerformanceAttributes> for PerformanceAttributes {
 
 #[cfg(feature = "mania")]
 impl From<mania::ManiaPerformanceAttributes> for PerformanceAttributes {
+    #[inline]
     fn from(attributes: mania::ManiaPerformanceAttributes) -> Self {
         Self::Mania(attributes)
     }
@@ -505,6 +538,7 @@ impl From<mania::ManiaPerformanceAttributes> for PerformanceAttributes {
 
 #[cfg(feature = "osu")]
 impl From<osu::OsuPerformanceAttributes> for PerformanceAttributes {
+    #[inline]
     fn from(attributes: osu::OsuPerformanceAttributes) -> Self {
         Self::Osu(attributes)
     }
@@ -512,6 +546,7 @@ impl From<osu::OsuPerformanceAttributes> for PerformanceAttributes {
 
 #[cfg(feature = "taiko")]
 impl From<taiko::TaikoPerformanceAttributes> for PerformanceAttributes {
+    #[inline]
     fn from(attributes: taiko::TaikoPerformanceAttributes) -> Self {
         Self::Taiko(attributes)
     }

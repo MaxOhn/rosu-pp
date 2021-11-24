@@ -14,6 +14,7 @@
 - Added methods `TaikoDifficultyAttributes::max_combo` and `OsuDifficultyAttributes::max_combo`
 - Added structs `{Mode}GradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the mode's `stars` function over and over.
 - Added structs `{Mode}GradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `{Mode}PP` over and over.
+- Added `BeatmapExt::gradual_difficulty` and `BeatmapExt::gradual_performance` to gradually calculate the difficulty or performance on maps of any mode.
 
 # v0.3.0
 
