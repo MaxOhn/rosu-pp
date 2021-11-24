@@ -112,7 +112,7 @@ impl Iterator for GradualDifficultyAttributes<'_> {
     }
 }
 
-/// Aggregation for a score's current state i.e. what wa
+/// Aggregation for a score's current state i.e. what is
 /// the maximum combo so far, what are the current
 /// hitresults and what is the current score.
 ///

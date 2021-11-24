@@ -139,7 +139,7 @@ impl<'map> FruitsPP<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`FruitsPP`] multiple times with different `passed_objects`, you should use
-    /// [`FruitsGradualPerformanceAttributes`](crate::fuits::FruitsGradualPerformanceAttributes).
+    /// [`FruitsGradualPerformanceAttributes`](crate::fruits::FruitsGradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);
