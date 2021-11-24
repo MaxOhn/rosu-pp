@@ -21,8 +21,10 @@ use super::{
 /// Gradually calculate the difficulty attributes of an osu!ctb map.
 ///
 /// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next hit object will
-/// be processed and the [`FruitsDifficultyAttributes`] will be updated and returned.
+/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next fruit or droplet
+/// will be processed and the [`FruitsDifficultyAttributes`] will be updated and returned.
+///
+/// Note that it does not return attributes after a tiny droplet. Only for fruits and droplets.
 ///
 /// If you want to calculate performance attributes, use
 /// [`FruitsGradualPerformanceAttributes`](crate::fruits::FruitsGradualPerformanceAttributes) instead.
@@ -202,7 +204,7 @@ impl Iterator for FruitsObjectIter<'_> {
             return Some(h);
         }
 
-        while let Some(h) = self.hit_objects.next() {
+        for h in &mut self.hit_objects {
             if let Some(h) = FruitOrJuice::new(h, &mut self.params) {
                 return self.last_object.insert(h).next();
             }

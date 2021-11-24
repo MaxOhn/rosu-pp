@@ -38,11 +38,11 @@ pub struct FruitsPP<'map> {
     mods: u32,
     combo: Option<usize>,
 
-    n_fruits: Option<usize>,
-    n_droplets: Option<usize>,
-    n_tiny_droplets: Option<usize>,
-    n_tiny_droplet_misses: Option<usize>,
-    n_misses: usize,
+    pub(crate) n_fruits: Option<usize>,
+    pub(crate) n_droplets: Option<usize>,
+    pub(crate) n_tiny_droplets: Option<usize>,
+    pub(crate) n_tiny_droplet_misses: Option<usize>,
+    pub(crate) n_misses: usize,
     passed_objects: Option<usize>,
 }
 

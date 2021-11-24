@@ -4,6 +4,7 @@ mod catch_object;
 mod difficulty_object;
 mod fruit_or_juice;
 mod gradual_difficulty;
+mod gradual_performance;
 mod movement;
 mod pp;
 mod slider_state;
@@ -12,6 +13,7 @@ use catch_object::CatchObject;
 use difficulty_object::DifficultyObject;
 use fruit_or_juice::FruitOrJuice;
 pub use gradual_difficulty::*;
+pub use gradual_performance::*;
 use movement::Movement;
 pub use pp::*;
 use slider_state::SliderState;
@@ -185,7 +187,7 @@ impl FruitsDifficultyAttributes {
 }
 
 /// The result of a performance calculation on an osu!ctb map.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct FruitsPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
     pub difficulty: FruitsDifficultyAttributes,
