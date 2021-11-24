@@ -1,4 +1,4 @@
-use crate::{Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes, ScoreState};
 
 #[cfg(feature = "fruits")]
 use crate::fruits::{FruitsDifficultyAttributes, FruitsPP};
@@ -127,6 +127,10 @@ impl<'map> AnyPP<'map> {
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the performance after every few objects, instead of
+    /// using [`AnyPP`] multiple times with different `passed_objects`, you should use
+    /// [`GradualPerformanceAttributes`](crate::GradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {
@@ -138,6 +142,21 @@ impl<'map> AnyPP<'map> {
             Self::Osu(o) => Self::Osu(o.passed_objects(passed_objects)),
             #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.passed_objects(passed_objects)),
+        }
+    }
+
+    /// Provide parameters through a [`ScoreState`].
+    #[inline]
+    pub fn state(self, state: ScoreState) -> Self {
+        match self {
+            #[cfg(feature = "fruits")]
+            Self::Fruits(f) => Self::Fruits(f.state(state.into())),
+            #[cfg(feature = "mania")]
+            Self::Mania(m) => Self::Mania(m.score(state.score)),
+            #[cfg(feature = "osu")]
+            Self::Osu(o) => Self::Osu(o.state(state.into())),
+            #[cfg(feature = "taiko")]
+            Self::Taiko(t) => Self::Taiko(t.state(state.into())),
         }
     }
 

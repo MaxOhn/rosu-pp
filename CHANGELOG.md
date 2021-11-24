@@ -2,19 +2,20 @@
 
 - Added method `Beatmap::from_path` so the file does not have to be created manually for `Beatmap::parse`.
 - Added a bunch of documentation.
-- [BREAKING] Removed the `ParseError` variants `InvalidPathType` and `InvalidTimingSignature` and renamed `InvalidFloatingPoint` to `InvalidDecimalNumber`.
-- [BREAKING] Removed the `last_control_point` field of `HitObjectKind::Slider` when neither the `osu` nor the `fruits` feature is enabled.
 - Fixed out of bounds panic on maps with single-control-point linear sliders
-- [BREAKING] Added the field `TaikoDifficultyAttributes::max_combo`
 - Added method `Beatmap::bpm`
 - Added method `max_combo` for `DifficultyAttributes`, `PerformanceAttributes`, and all `{Mode}PerformanceAttributes`
-- [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
 - Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
-- [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
 - Added methods `TaikoDifficultyAttributes::max_combo` and `OsuDifficultyAttributes::max_combo`
-- Added structs `{Mode}GradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the mode's `stars` function over and over.
-- Added structs `{Mode}GradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `{Mode}PP` over and over.
-- Added `BeatmapExt::gradual_difficulty` and `BeatmapExt::gradual_performance` to gradually calculate the difficulty or performance on maps of any mode.
+- Added structs `{Mode}GradualDifficultyAttributes` to calculate a map's difficulty after every or every few objects instead of calling the mode's `stars` function over and over.
+- Added structs `{Mode}GradualPerformanceAttributes` to calculate the performance on a map after every or every few objects instead of using `{Mode}PP` over and over.
+- Added `BeatmapExt::gradual_difficulty` and `BeatmapExt::gradual_performance` to gradually calculate the difficulty or performance on maps of any mode, hit object by hit object.
+- Added methods `{Mode}PP::state` that take a `{Mode}ScoreState` (same for `AnyPP` and `ScoreState`) to set all parameters at once.
+- [BREAKING] Removed the `ParseError` variants `InvalidPathType` and `InvalidTimingSignature` and renamed `InvalidFloatingPoint` to `InvalidDecimalNumber`.
+- [BREAKING] Removed the `last_control_point` field of `HitObjectKind::Slider` when neither the `osu` nor the `fruits` feature is enabled.
+- [BREAKING] Added the field `TaikoDifficultyAttributes::max_combo`
+- [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
+- [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
 
 # v0.3.0
 

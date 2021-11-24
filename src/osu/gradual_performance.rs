@@ -156,16 +156,11 @@ impl<'map> OsuGradualPerformanceAttributes<'map> {
         let n = n.min(self.difficulty.len()).saturating_sub(1);
         let difficulty = self.difficulty.nth(n)?;
 
-        let _ = self.performance.n300.insert(state.n300);
-        let _ = self.performance.n100.insert(state.n100);
-        let _ = self.performance.n50.insert(state.n50);
-        self.performance.n_misses = state.misses;
-
         let performance = self
             .performance
             .clone()
             .attributes(difficulty)
-            .combo(state.max_combo)
+            .state(state)
             .passed_objects(self.difficulty.idx)
             .calculate();
 

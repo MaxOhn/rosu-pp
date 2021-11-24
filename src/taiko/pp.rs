@@ -1,4 +1,4 @@
-use super::{stars, TaikoDifficultyAttributes, TaikoPerformanceAttributes};
+use super::{stars, TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState};
 use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
 /// Performance calculator on osu!taiko maps.
@@ -127,9 +127,31 @@ impl<'map> TaikoPP<'map> {
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the performance after every few objects, instead of
+    /// using [`TaikoPP`] multiple times with different `passed_objects`, you should use
+    /// [`TaikoGradualPerformanceAttributes`](crate::taiko::TaikoGradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);
+
+        self
+    }
+
+    /// Provide parameters through a [`TaikoScoreState`].
+    #[inline]
+    pub fn state(mut self, state: TaikoScoreState) -> Self {
+        let TaikoScoreState {
+            max_combo,
+            n300,
+            n100,
+            misses,
+        } = state;
+
+        self.combo = Some(max_combo);
+        self.n300 = Some(n300);
+        self.n100 = Some(n100);
+        self.n_misses = misses;
 
         self
     }

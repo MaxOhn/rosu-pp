@@ -1,4 +1,4 @@
-use super::{OsuDifficultyAttributes, OsuPerformanceAttributes};
+use super::{OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState};
 use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
 /// Performance calculator on osu!standard maps.
@@ -131,10 +131,30 @@ impl<'map> OsuPP<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`OsuPP`] multiple times with different `passed_objects`, you should use
-    /// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualDifficultyAttributes).
+    /// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);
+
+        self
+    }
+
+    /// Provide parameters through an [`OsuScoreState`].
+    #[inline]
+    pub fn state(mut self, state: OsuScoreState) -> Self {
+        let OsuScoreState {
+            max_combo,
+            n300,
+            n100,
+            n50,
+            misses,
+        } = state;
+
+        self.combo = Some(max_combo);
+        self.n300 = Some(n300);
+        self.n100 = Some(n100);
+        self.n50 = Some(n50);
+        self.n_misses = misses;
 
         self
     }

@@ -86,6 +86,10 @@ impl<'map> ManiaPP<'map> {
     ///
     /// Be sure you also set [`score`](ManiaPP::score) or the final values
     /// won't be correct because it will incorrectly assume a score of 1,000,000.
+    ///
+    /// If you want to calculate the performance after every few objects, instead of
+    /// using [`ManiaPP`] multiple times with different `passed_objects`, you should use
+    /// [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);

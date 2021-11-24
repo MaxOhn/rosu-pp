@@ -22,7 +22,7 @@ pub struct FruitsScoreState {
     pub n_tiny_droplets: usize,
     /// Amount of current tiny droplet misses (katus).
     pub n_tiny_droplet_misses: usize,
-    /// Amount of current misses (fruits + droplets).
+    /// Amount of current misses (fruits and droplets).
     pub misses: usize,
 }
 
@@ -177,23 +177,11 @@ impl<'map> FruitsGradualPerformanceAttributes<'map> {
 
         let difficulty = difficulty?;
 
-        let _ = self.performance.n_fruits.insert(state.n_fruits);
-        let _ = self.performance.n_droplets.insert(state.n_droplets);
-        let _ = self
-            .performance
-            .n_tiny_droplets
-            .insert(state.n_tiny_droplets);
-        let _ = self
-            .performance
-            .n_tiny_droplet_misses
-            .insert(state.n_tiny_droplet_misses);
-        self.performance.n_misses = state.misses;
-
         let performance = self
             .performance
             .clone()
             .attributes(difficulty)
-            .combo(state.max_combo)
+            .state(state)
             .passed_objects(self.difficulty.idx)
             .calculate();
 

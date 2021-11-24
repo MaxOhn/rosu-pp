@@ -1,4 +1,4 @@
-use super::{stars, FruitsDifficultyAttributes, FruitsPerformanceAttributes};
+use super::{stars, FruitsDifficultyAttributes, FruitsPerformanceAttributes, FruitsScoreState};
 use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
 /// Performance calculator on osu!ctb maps.
@@ -136,9 +136,35 @@ impl<'map> FruitsPP<'map> {
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the performance after every few objects, instead of
+    /// using [`FruitsPP`] multiple times with different `passed_objects`, you should use
+    /// [`FruitsGradualPerformanceAttributes`](crate::fuits::FruitsGradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);
+
+        self
+    }
+
+    /// Provide parameters through an [`FruitsScoreState`].
+    #[inline]
+    pub fn state(mut self, state: FruitsScoreState) -> Self {
+        let FruitsScoreState {
+            max_combo,
+            n_fruits,
+            n_droplets,
+            n_tiny_droplets,
+            n_tiny_droplet_misses,
+            misses,
+        } = state;
+
+        self.combo = Some(max_combo);
+        self.n_fruits = Some(n_fruits);
+        self.n_droplets = Some(n_droplets);
+        self.n_tiny_droplets = Some(n_tiny_droplets);
+        self.n_tiny_droplet_misses = Some(n_tiny_droplet_misses);
+        self.n_misses = misses;
 
         self
     }
