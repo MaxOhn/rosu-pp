@@ -16,6 +16,7 @@
 - Added methods `TaikoDifficultyAttributes::max_combo` and `OsuDifficultyAttributes::max_combo`
 - Added `ManiaGradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 - Added `ManiaGradualPerformanceAttributes`. Suitable to calculate the performance on a map after every or every few objects instead of using `ManiaPP` over and over.
+- Added `TaikoGradualDifficultyAttributes`. Suitable to calculate a map's difficulty after every or every few objects instead of calling the `stars` function over and over.
 
 # v0.3.0
 

@@ -3,6 +3,7 @@ use std::iter::{Cycle, Skip, Take};
 use std::ops::Index;
 use std::slice::Iter;
 
+#[derive(Clone, Debug)]
 pub(crate) struct LimitedQueue<T> {
     queue: Vec<T>,
     start: usize,

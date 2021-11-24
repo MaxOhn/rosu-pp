@@ -1,6 +1,7 @@
 #![cfg(feature = "taiko")]
 
 mod difficulty_object;
+mod gradual_difficulty;
 mod hitobject_rhythm;
 mod limited_queue;
 mod pp;
@@ -10,14 +11,15 @@ mod skill_kind;
 mod stamina_cheese;
 
 use difficulty_object::DifficultyObject;
+pub use gradual_difficulty::*;
 use hitobject_rhythm::{closest_rhythm, HitObjectRhythm};
 use limited_queue::LimitedQueue;
 pub use pp::*;
 use rim::Rim;
-use skill::Skill;
 use skill_kind::SkillKind;
 use stamina_cheese::StaminaCheeseDetector;
 
+use crate::taiko::skill::Skills;
 use crate::{Beatmap, Mods, Strains};
 
 use std::cmp::Ordering;
@@ -38,19 +40,26 @@ pub fn stars(
     passed_objects: Option<usize>,
 ) -> TaikoDifficultyAttributes {
     let (skills, max_combo) = calculate_skills(map, mods, passed_objects);
-    let mut buf = vec![0.0; skills[0].strain_peaks.len()];
+    let mut buf = vec![0.0; skills.strain_peaks_len()];
 
-    let color_rating = skills[0].difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
-    let rhythm_rating = skills[1].difficulty_value(&mut buf) * RHYTHM_SKILL_MULTIPLIER;
+    skills.color.copy_strain_peaks(&mut buf);
+    let color_rating = skills.color.difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
 
-    let mut stamina_rating = (skills[2].difficulty_value(&mut buf)
-        + skills[3].difficulty_value(&mut buf))
-        * STAMINA_SKILL_MULTIPLIER;
+    skills.rhythm.copy_strain_peaks(&mut buf);
+    let rhythm_rating = skills.rhythm.difficulty_value(&mut buf) * RHYTHM_SKILL_MULTIPLIER;
+
+    skills.stamina_right.copy_strain_peaks(&mut buf);
+    let stamina_right = skills.stamina_right.difficulty_value(&mut buf);
+
+    skills.stamina_left.copy_strain_peaks(&mut buf);
+    let stamina_left = skills.stamina_left.difficulty_value(&mut buf);
+
+    let mut stamina_rating = (stamina_right + stamina_left) * STAMINA_SKILL_MULTIPLIER;
 
     let stamina_penalty = simple_color_penalty(stamina_rating, color_rating);
     stamina_rating *= stamina_penalty;
 
-    let combined_rating = locally_combined_difficulty(&skills, stamina_penalty);
+    let combined_rating = locally_combined_difficulty(&mut buf, &skills, stamina_penalty);
     let separate_rating = norm(1.5, color_rating, rhythm_rating, stamina_rating);
 
     let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
@@ -65,12 +74,13 @@ pub fn stars(
 pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
     let (skills, _) = calculate_skills(map, mods, None);
 
-    let strains = skills[0]
+    let strains = skills
+        .color
         .strain_peaks
         .iter()
-        .zip(skills[1].strain_peaks.iter())
-        .zip(skills[2].strain_peaks.iter())
-        .zip(skills[3].strain_peaks.iter())
+        .zip(skills.rhythm.strain_peaks.iter())
+        .zip(skills.stamina_right.strain_peaks.iter())
+        .zip(skills.stamina_left.strain_peaks.iter())
         .map(|(((color, rhythm), stamina_right), stamina_left)| {
             color + rhythm + stamina_right + stamina_left
         })
@@ -86,32 +96,19 @@ fn calculate_skills(
     map: &Beatmap,
     mods: impl Mods,
     passed_objects: Option<usize>,
-) -> (Vec<Skill>, usize) {
+) -> (Skills, usize) {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     // True if the object at that index is stamina cheese
     let cheese = map.find_cheese();
-
-    let mut skills = vec![
-        Skill::new(SkillKind::color()),
-        Skill::new(SkillKind::rhythm()),
-        Skill::new(SkillKind::stamina(true)),
-        Skill::new(SkillKind::stamina(false)),
-    ];
-
+    let mut skills = Skills::new();
     let clock_rate = mods.speed();
-    let section_len = SECTION_LEN * clock_rate;
     let mut max_combo = 0;
 
-    // No strain for first object
-    let mut curr_section_end = match map.hit_objects.first() {
-        Some(h) => {
-            max_combo += h.is_circle() as usize;
-
-            (h.start_time / section_len).ceil() * section_len
-        }
+    match map.hit_objects.get(0) {
+        Some(h) => max_combo += h.is_circle() as usize,
         None => return (skills, max_combo),
-    };
+    }
 
     match map.hit_objects.get(1) {
         Some(h) => max_combo += h.is_circle() as usize,
@@ -131,39 +128,27 @@ fn calculate_skills(
             DifficultyObject::new(idx, base, prev, prev_prev, clock_rate)
         });
 
-    // Handle second object separately to remove later if-branching
+    // Handle first element distinctly
     let h = match hit_objects.next() {
         Some(h) => h,
         None => return (skills, max_combo),
     };
 
-    while h.base.start_time > curr_section_end {
-        curr_section_end += section_len;
-    }
-
-    for skill in skills.iter_mut() {
-        skill.process(&h, &cheese);
-    }
+    // No strain for first object
+    let mut curr_section_end = (h.start_time / SECTION_LEN).ceil() * SECTION_LEN;
+    skills.process(&h, &cheese);
 
     // Handle all other objects
     for h in hit_objects {
-        while h.base.start_time > curr_section_end {
-            for skill in skills.iter_mut() {
-                skill.save_current_peak();
-                skill.start_new_section_from(curr_section_end / clock_rate);
-            }
-
-            curr_section_end += section_len;
+        while h.start_time > curr_section_end {
+            skills.save_peak_and_start_new_section(curr_section_end);
+            curr_section_end += SECTION_LEN;
         }
 
-        for skill in skills.iter_mut() {
-            skill.process(&h, &cheese);
-        }
+        skills.process(&h, &cheese);
     }
 
-    for skill in skills.iter_mut() {
-        skill.save_current_peak();
-    }
+    skills.save_current_peak();
 
     (skills, max_combo)
 }
@@ -186,15 +171,16 @@ fn simple_color_penalty(stamina: f64, color: f64) -> f64 {
     }
 }
 
-fn locally_combined_difficulty(skills: &[Skill], stamina_penalty: f64) -> f64 {
-    let mut peaks = Vec::with_capacity(skills[0].strain_peaks.len());
+fn locally_combined_difficulty(peaks: &mut Vec<f64>, skills: &Skills, stamina_penalty: f64) -> f64 {
+    peaks.clear();
 
-    let iter = skills[0]
+    let iter = skills
+        .color
         .strain_peaks
         .iter()
-        .zip(skills[1].strain_peaks.iter())
-        .zip(skills[2].strain_peaks.iter())
-        .zip(skills[3].strain_peaks.iter())
+        .zip(skills.rhythm.strain_peaks.iter())
+        .zip(skills.stamina_right.strain_peaks.iter())
+        .zip(skills.stamina_left.strain_peaks.iter())
         .map(|(((&color, &rhythm), &stamina_right), &stamina_left)| {
             norm(
                 2.0,
@@ -211,7 +197,7 @@ fn locally_combined_difficulty(skills: &[Skill], stamina_penalty: f64) -> f64 {
     let mut weight = 1.0;
 
     for strain in peaks {
-        difficulty += strain * weight;
+        difficulty += *strain * weight;
         weight *= 0.9;
     }
 
@@ -224,7 +210,7 @@ fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
 }
 
 /// The result of a difficulty calculation on an osu!taiko map.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct TaikoDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,

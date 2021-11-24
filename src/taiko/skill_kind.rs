@@ -9,6 +9,7 @@ const MONO_HISTORY_MAX_LEN: usize = 5;
 const RHYTHM_HISTORY_MAX_LEN: usize = 8;
 const STAMINA_HISTORY_MAX_LEN: usize = 2;
 
+#[derive(Clone, Debug)]
 pub(crate) enum SkillKind {
     Color {
         mono_history: LimitedQueue<usize>,
@@ -16,7 +17,7 @@ pub(crate) enum SkillKind {
         current_mono_len: usize,
     },
     Rhythm {
-        rhythm_history: LimitedQueue<(usize, HitObjectRhythm)>, // (idx, rhythm)
+        rhythm_history: LimitedQueue<(usize, &'static HitObjectRhythm)>, // (idx, rhythm)
         notes_since_rhythm_change: usize,
         current_strain: f64,
     },
@@ -163,7 +164,7 @@ impl SkillKind {
 
                 let mut strain = current.rhythm.difficulty;
 
-                rhythm_history.push((current.idx, *current.rhythm));
+                rhythm_history.push((current.idx, current.rhythm));
 
                 let mut reps_penalty = 1.0;
 

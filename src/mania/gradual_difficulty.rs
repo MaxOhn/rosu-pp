@@ -105,15 +105,12 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
 
         if self.idx == 2 {
             self.curr_section_end = (h.start_time / SECTION_LEN).ceil() * SECTION_LEN;
-            self.strain.process(&h);
-
-            return Some(ManiaDifficultyAttributes::default());
-        }
-
-        while h.start_time > self.curr_section_end {
-            self.strain.save_current_peak();
-            self.strain.start_new_section_from(self.curr_section_end);
-            self.curr_section_end += SECTION_LEN;
+        } else {
+            while h.start_time > self.curr_section_end {
+                self.strain.save_current_peak();
+                self.strain.start_new_section_from(self.curr_section_end);
+                self.curr_section_end += SECTION_LEN;
+            }
         }
 
         self.strain.process(&h);
@@ -135,8 +132,7 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (mut len, _) = self.difficulty_objects.size_hint();
-        len += (self.idx == 0) as usize;
+        let len = self.len();
 
         (len, Some(len))
     }
