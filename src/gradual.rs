@@ -1,11 +1,19 @@
-use crate::{
-    fruits::{
-        FruitsGradualDifficultyAttributes, FruitsGradualPerformanceAttributes, FruitsScoreState,
-    },
-    mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes},
-    osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
-    taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
-    Beatmap, DifficultyAttributes, GameMode, Mods, PerformanceAttributes,
+use crate::{Beatmap, DifficultyAttributes, GameMode, Mods, PerformanceAttributes};
+
+#[cfg(feature = "fruits")]
+use crate::fruits::{
+    FruitsGradualDifficultyAttributes, FruitsGradualPerformanceAttributes, FruitsScoreState,
+};
+
+#[cfg(feature = "mania")]
+use crate::mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes};
+
+#[cfg(feature = "osu")]
+use crate::osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState};
+
+#[cfg(feature = "taiko")]
+use crate::taiko::{
+    TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState,
 };
 
 /// Gradually calculate the difficulty attributes on maps of any mode.
@@ -19,7 +27,7 @@ use crate::{
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use rosu_pp::{Beatmap, GradualDifficultyAttributes};
 ///
 /// # /*
@@ -228,7 +236,7 @@ impl From<ScoreState> for TaikoScoreState {
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use rosu_pp::{Beatmap, GradualPerformanceAttributes, ScoreState};
 ///
 /// # /*

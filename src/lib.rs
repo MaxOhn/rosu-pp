@@ -496,11 +496,11 @@ impl PerformanceAttributes {
     pub fn max_combo(&self) -> usize {
         match self {
             #[cfg(feature = "fruits")]
-            Self::Fruits(f) => f.attributes.max_combo,
+            Self::Fruits(f) => f.difficulty.max_combo,
             #[cfg(feature = "osu")]
-            Self::Osu(o) => o.attributes.max_combo,
+            Self::Osu(o) => o.difficulty.max_combo,
             #[cfg(feature = "taiko")]
-            Self::Taiko(t) => t.attributes.max_combo,
+            Self::Taiko(t) => t.difficulty.max_combo,
         }
     }
 }

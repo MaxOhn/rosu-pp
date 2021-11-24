@@ -16,7 +16,7 @@ use crate::taiko::{TaikoDifficultyAttributes, TaikoPP};
 ///
 /// # Example
 ///
-/// ```
+/// ```no_run
 /// use rosu_pp::{AnyPP, Beatmap};
 ///
 /// # /*
