@@ -2,12 +2,11 @@ use crate::{Beatmap, FruitsPP};
 
 use super::{FruitsGradualDifficultyAttributes, FruitsPerformanceAttributes};
 
-// TODO: Benchmark if Copy is faster than Clone
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
 ///
 /// This struct is used for [`FruitsGradualPerformanceAttributes`].
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct FruitsScoreState {
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
@@ -70,10 +69,10 @@ impl FruitsScoreState {
 ///     state.max_combo += 1;
 ///
 ///     # /*
-///     let performance = gradual_perf.process_next_object(state).unwrap();
+///     let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 ///     println!("PP: {}", performance.pp);
 ///     # */
-///     # let _ = gradual_perf.process_next_object(state);
+///     # let _ = gradual_perf.process_next_object(state.clone());
 /// }
 ///
 /// // Then comes a miss.
@@ -81,10 +80,10 @@ impl FruitsScoreState {
 /// // the next few objects because the combo is reset.
 /// state.misses += 1;
 /// # /*
-/// let performance = gradual_perf.process_next_object(state).unwrap();
+/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_object(state);
+/// # let _ = gradual_perf.process_next_object(state.clone());
 ///
 /// // The next 10 objects will be a mixture of fruits and droplets.
 /// // Notice how tiny droplets from sliders do not count as hit objects
@@ -94,19 +93,19 @@ impl FruitsScoreState {
 /// state.n_droplets += 6;
 /// state.n_tiny_droplets += 12;
 /// # /*
-/// let performance = gradual_perf.process_next_n_objects(state, 10).unwrap();
+/// let performance = gradual_perf.process_next_n_objects(state.clone(), 10).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state, 10);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), 10);
 ///
 /// // Now comes another fruit. Note that the max combo gets incremented again.
 /// state.n_fruits += 1;
 /// state.max_combo += 1;
 /// # /*
-/// let performance = gradual_perf.process_next_object(state).unwrap();
+/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_object(state);
+/// # let _ = gradual_perf.process_next_object(state.clone());
 ///
 /// // Skip to the end
 /// # /*
@@ -116,10 +115,10 @@ impl FruitsScoreState {
 /// state.n_tiny_droplets = ...
 /// state.n_tiny_droplet_misses = ...
 /// state.misses = ...
-/// let final_performance = gradual_perf.process_next_n_objects(state, usize::MAX).unwrap();
+/// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state, usize::MAX);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), usize::MAX);
 ///
 /// // Once the final performance was calculated,
 /// // attempting to process further objects will return `None`.
@@ -202,7 +201,9 @@ mod tests {
         let mut gradual = FruitsGradualPerformanceAttributes::new(&map, mods);
         let state = FruitsScoreState::default();
 
-        assert!(gradual.process_next_n_objects(state, usize::MAX).is_some());
+        assert!(gradual
+            .process_next_n_objects(state.clone(), usize::MAX)
+            .is_some());
         assert!(gradual.process_next_object(state).is_none());
     }
 
@@ -217,14 +218,14 @@ mod tests {
         let mut gradual2 = FruitsGradualPerformanceAttributes::new(&map, mods);
 
         for _ in 0..20 {
-            let _ = gradual1.process_next_object(state);
-            let _ = gradual2.process_next_object(state);
+            let _ = gradual1.process_next_object(state.clone());
+            let _ = gradual2.process_next_object(state.clone());
         }
 
         let n = 80;
 
         for _ in 1..n {
-            let _ = gradual1.process_next_object(state);
+            let _ = gradual1.process_next_object(state.clone());
         }
 
         // TODO
@@ -237,7 +238,7 @@ mod tests {
             misses: 0,
         };
 
-        let next = gradual1.process_next_object(state);
+        let next = gradual1.process_next_object(state.clone());
         let next_n = gradual2.process_next_n_objects(state, n);
 
         assert_eq!(next_n, next);

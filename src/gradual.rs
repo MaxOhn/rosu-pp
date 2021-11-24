@@ -112,17 +112,13 @@ impl Iterator for GradualDifficultyAttributes<'_> {
     }
 }
 
-// TODO: Benchmark if Copy is faster than Clone
 /// Aggregation for a score's current state i.e. what wa
 /// the maximum combo so far, what are the current
 /// hitresults and what is the current score.
 ///
 /// This struct is used for [`GradualPerformanceAttributes`].
-///
-/// Depending on your mode features, some fields might be optimized out.
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ScoreState {
-    #[cfg(any(feature = "osu", feature = "fruits", feature = "taiko"))]
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
     ///
@@ -130,32 +126,26 @@ pub struct ScoreState {
     ///
     /// Irrelevant for osu!mania.
     pub max_combo: usize,
-    #[cfg(feature = "fruits")]
     /// Amount of current katus (tiny droplet misses for osu!ctb).
     ///
     /// Only relevant for osu!ctb.
     pub n_katu: usize,
-    #[cfg(any(feature = "osu", feature = "fruits", feature = "taiko"))]
     /// Amount of current 300s (fruits for osu!ctb).
     ///
     /// Irrelevant for osu!mania.
     pub n300: usize,
-    #[cfg(any(feature = "osu", feature = "fruits", feature = "taiko"))]
     /// Amount of current 100s (droplets for osu!ctb).
     ///
     /// Irrelevant for osu!mania.
     pub n100: usize,
-    #[cfg(any(feature = "osu", feature = "fruits"))]
     /// Amount of current 50s (tiny droplets for osu!ctb).
     ///
     /// Irrelevant for osu!taiko and osu!mania.
     pub n50: usize,
-    #[cfg(any(feature = "osu", feature = "fruits", feature = "taiko"))]
     /// Amount of current misses (fruits + droplets for osu!ctb).
     ///
     /// Irrelevant for osu!mania.
     pub misses: usize,
-    #[cfg(feature = "mania")]
     /// The current score.
     ///
     /// Only relevant for osu!mania.
@@ -255,10 +245,10 @@ impl From<ScoreState> for TaikoScoreState {
 ///     state.score += 123;
 ///
 ///     # /*
-///     let performance = gradual_perf.process_next_object(state).unwrap();
+///     let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 ///     println!("PP: {}", performance.pp);
 ///     # */
-///     # let _ = gradual_perf.process_next_object(state);
+///     # let _ = gradual_perf.process_next_object(state.clone());
 /// }
 ///
 /// // Then comes a miss.
@@ -266,10 +256,10 @@ impl From<ScoreState> for TaikoScoreState {
 /// // the next few objects because the combo is reset.
 /// state.misses += 1;
 /// # /*
-/// let performance = gradual_perf.process_next_object(state).unwrap();
+/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_object(state);
+/// # let _ = gradual_perf.process_next_object(state.clone());
 ///
 /// // The next 10 objects will be a mixture of 300s, 100s, and 50s.
 /// // Notice how all 10 objects will be processed in one go.
@@ -279,30 +269,30 @@ impl From<ScoreState> for TaikoScoreState {
 /// state.score += 987;
 /// // Don't forget state.n_katu
 /// # /*
-/// let performance = gradual_perf.process_next_n_objects(state, 10).unwrap();
+/// let performance = gradual_perf.process_next_n_objects(state.clone(), 10).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state, 10);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), 10);
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
 /// state.score += 123;
 /// # /*
-/// let performance = gradual_perf.process_next_object(state).unwrap();
+/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_object(state);
+/// # let _ = gradual_perf.process_next_object(state.clone());
 ///
 /// // Skip to the end
 /// # /*
 /// state.max_combo = ...
 /// state.n300 = ...
 /// ...
-/// let final_performance = gradual_perf.process_next_n_objects(state, usize::MAX).unwrap();
+/// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state, usize::MAX);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), usize::MAX);
 ///
 /// // Once the final performance was calculated,
 /// // attempting to process further objects will return `None`.

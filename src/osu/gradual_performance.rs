@@ -2,12 +2,11 @@ use crate::{Beatmap, OsuPP};
 
 use super::{OsuGradualDifficultyAttributes, OsuPerformanceAttributes};
 
-// TODO: Benchmark if Copy is faster than Clone
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
 ///
 /// This struct is used for [`OsuGradualPerformanceAttributes`].
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct OsuScoreState {
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
@@ -63,10 +62,10 @@ impl OsuScoreState {
 ///     state.max_combo += 1;
 ///
 ///     # /*
-///     let performance = gradual_perf.process_next_object(state).unwrap();
+///     let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 ///     println!("PP: {}", performance.pp);
 ///     # */
-///     # let _ = gradual_perf.process_next_object(state);
+///     # let _ = gradual_perf.process_next_object(state.clone());
 /// }
 ///
 /// // Then comes a miss.
@@ -74,10 +73,10 @@ impl OsuScoreState {
 /// // the next few objects because the combo is reset.
 /// state.misses += 1;
 /// # /*
-/// let performance = gradual_perf.process_next_object(state).unwrap();
+/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_object(state);
+/// # let _ = gradual_perf.process_next_object(state.clone());
 ///
 /// // The next 10 objects will be a mixture of 300s, 100s, and 50s.
 /// // Notice how all 10 objects will be processed in one go.
@@ -85,19 +84,19 @@ impl OsuScoreState {
 /// state.n100 += 7;
 /// state.n50 += 1;
 /// # /*
-/// let performance = gradual_perf.process_next_n_objects(state, 10).unwrap();
+/// let performance = gradual_perf.process_next_n_objects(state.clone(), 10).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state, 10);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), 10);
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
 /// # /*
-/// let performance = gradual_perf.process_next_object(state).unwrap();
+/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_object(state);
+/// # let _ = gradual_perf.process_next_object(state.clone());
 ///
 /// // Skip to the end
 /// # /*
@@ -106,10 +105,10 @@ impl OsuScoreState {
 /// state.n100 = ...
 /// state.n50 = ...
 /// state.misses = ...
-/// let final_performance = gradual_perf.process_next_n_objects(state, usize::MAX).unwrap();
+/// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state, usize::MAX);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), usize::MAX);
 ///
 /// // Once the final performance was calculated,
 /// // attempting to process further objects will return `None`.
@@ -181,7 +180,9 @@ mod tests {
         let mut gradual = OsuGradualPerformanceAttributes::new(&map, mods);
         let state = OsuScoreState::default();
 
-        assert!(gradual.process_next_n_objects(state, usize::MAX).is_some());
+        assert!(gradual
+            .process_next_n_objects(state.clone(), usize::MAX)
+            .is_some());
         assert!(gradual.process_next_object(state).is_none());
     }
 
@@ -196,14 +197,14 @@ mod tests {
         let mut gradual2 = OsuGradualPerformanceAttributes::new(&map, mods);
 
         for _ in 0..20 {
-            let _ = gradual1.process_next_object(state);
-            let _ = gradual2.process_next_object(state);
+            let _ = gradual1.process_next_object(state.clone());
+            let _ = gradual2.process_next_object(state.clone());
         }
 
         let n = 80;
 
         for _ in 1..n {
-            let _ = gradual1.process_next_object(state);
+            let _ = gradual1.process_next_object(state.clone());
         }
 
         let state = OsuScoreState {
@@ -214,7 +215,7 @@ mod tests {
             misses: 2,
         };
 
-        let next = gradual1.process_next_object(state);
+        let next = gradual1.process_next_object(state.clone());
         let next_n = gradual2.process_next_n_objects(state, n);
 
         assert_eq!(next_n, next);
