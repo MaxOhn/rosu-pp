@@ -379,7 +379,7 @@ mod tests {
     #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
     #[test]
     fn iter_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/222766.osu").expect("failed to parse map");
+        let map = Beatmap::from_path("./maps/1028484.osu").expect("failed to parse map");
         let mods = 64;
         let regular = crate::taiko::stars(&map, mods, None);
 

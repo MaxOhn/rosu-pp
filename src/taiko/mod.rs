@@ -2,6 +2,7 @@
 
 mod difficulty_object;
 mod gradual_difficulty;
+mod gradual_performance;
 mod hitobject_rhythm;
 mod limited_queue;
 mod pp;
@@ -12,6 +13,7 @@ mod stamina_cheese;
 
 use difficulty_object::DifficultyObject;
 pub use gradual_difficulty::*;
+pub use gradual_performance::*;
 use hitobject_rhythm::{closest_rhythm, HitObjectRhythm};
 use limited_queue::LimitedQueue;
 pub use pp::*;
@@ -227,7 +229,7 @@ impl TaikoDifficultyAttributes {
 }
 
 /// The result of a performance calculation on an osu!taiko map.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TaikoPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
     pub difficulty: TaikoDifficultyAttributes,

@@ -1163,7 +1163,7 @@ mod tests {
         }
 
         if cfg!(feature = "taiko") {
-            map_ids.push(222766);
+            map_ids.push(1028484);
         }
 
         map_ids

@@ -38,11 +38,11 @@ pub struct TaikoPP<'map> {
     mods: u32,
     combo: Option<usize>,
     acc: f64,
-    n_misses: usize,
     passed_objects: Option<usize>,
 
-    n300: Option<usize>,
-    n100: Option<usize>,
+    pub(crate) n300: Option<usize>,
+    pub(crate) n100: Option<usize>,
+    pub(crate) n_misses: usize,
 }
 
 impl<'map> TaikoPP<'map> {
