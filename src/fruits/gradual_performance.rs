@@ -228,12 +228,11 @@ mod tests {
             let _ = gradual1.process_next_object(state.clone());
         }
 
-        // TODO
         let state = FruitsScoreState {
-            max_combo: 0,
-            n_fruits: 0,
-            n_droplets: 0,
-            n_tiny_droplets: 0,
+            max_combo: 101,
+            n_fruits: 99,
+            n_droplets: 2,
+            n_tiny_droplets: 68,
             n_tiny_droplet_misses: 0,
             misses: 0,
         };
