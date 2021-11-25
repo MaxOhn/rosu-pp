@@ -1,11 +1,15 @@
 ## Upcoming
 
+- Nothing as of now
+
+# v0.4.0
+
+- Fixed out of bounds panic on maps with single-control-point linear sliders
+- Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
 - Added method `Beatmap::from_path` so the file does not have to be created manually for `Beatmap::parse`.
 - Added a bunch of documentation.
-- Fixed out of bounds panic on maps with single-control-point linear sliders
 - Added method `Beatmap::bpm`
 - Added method `max_combo` for `DifficultyAttributes`, `PerformanceAttributes`, and all `{Mode}PerformanceAttributes`
-- Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
 - Added methods `TaikoDifficultyAttributes::max_combo` and `OsuDifficultyAttributes::max_combo`
 - Added structs `{Mode}GradualDifficultyAttributes` to calculate a map's difficulty after every or every few objects instead of calling the mode's `stars` function over and over.
 - Added structs `{Mode}GradualPerformanceAttributes` to calculate the performance on a map after every or every few objects instead of using `{Mode}PP` over and over.
@@ -17,7 +21,7 @@
 - [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
 - [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
 
-# v0.3.0
+## v0.3.0
 
 - [BREAKING] With the importance of sliders for osu!standard, the `no_sliders_no_leniency` feature became too inaccurate. Additionally, since considering sliders now inherently drags performance down a little more, the difference between `no_leniency` and `all_included` became too small. Hence, the three osu features `no_sliders_no_leniency`, `no_leniency`, and `all_included` were removed. When the `osu` feature is enabled, it will now essentially use `all_included` under the hood.
   Additionally, instead of importing through `rosu_pp::osu::{version}`, you now have to import through `rosu_pp::osu`.
