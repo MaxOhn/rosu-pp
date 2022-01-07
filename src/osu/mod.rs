@@ -83,7 +83,11 @@ pub fn stars(
         0.0
     };
 
-    let star_rating = calculate_star_rating(aim_rating, speed_rating, flashlight_rating);
+    let star_rating = if attributes.max_combo == 0 {
+        0.0
+    } else {
+        calculate_star_rating(aim_rating, speed_rating, flashlight_rating)
+    };
 
     attributes.aim_strain = aim_rating;
     attributes.speed_strain = speed_rating;
@@ -284,7 +288,11 @@ fn calculate_skills(
 
 fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
     let mut extended_start_idx = 0;
-    let extended_end_idx = hit_objects.len() - 1;
+
+    let extended_end_idx = match hit_objects.len().checked_sub(1) {
+        Some(idx) => idx,
+        None => return,
+    };
 
     // First big `if` in osu!lazer's function can be skipped
 

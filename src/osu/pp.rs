@@ -337,41 +337,48 @@ struct OsuPPInner {
 
 impl OsuPPInner {
     fn calculate(mut self) -> OsuPerformanceAttributes {
-        let mut multiplier = 1.12;
+        let (aim_value, speed_value, acc_value, flashlight_value, pp) =
+            if self.total_hits.abs() <= f64::EPSILON {
+                (0.0, 0.0, 0.0, 0.0, 0.0)
+            } else {
+                let mut multiplier = 1.12;
 
-        // NF penalty
-        if self.mods.nf() {
-            multiplier *= (1.0 - 0.02 * (self.effective_misses as f64)).max(0.9);
-        }
+                // NF penalty
+                if self.mods.nf() {
+                    multiplier *= (1.0 - 0.02 * (self.effective_misses as f64)).max(0.9);
+                }
 
-        // SO penalty
-        if self.mods.so() {
-            let n_spinners = self.attributes.n_spinners;
-            multiplier *= 1.0 - (n_spinners as f64 / self.total_hits).powf(0.85);
-        }
+                // SO penalty
+                if self.mods.so() {
+                    let n_spinners = self.attributes.n_spinners;
+                    multiplier *= 1.0 - (n_spinners as f64 / self.total_hits).powf(0.85);
+                }
 
-        // Relax penalty
-        if self.mods.rx() {
-            // * As we're adding 100s and 50s to an approximated number of combo breaks\
-            // * the result can be higher than total hits in specific scenarios
-            // * (which breaks some calculations) so we need to clamp it.
-            self.effective_misses =
-                (self.effective_misses + self.n100 + self.n50).min(self.total_hits as usize);
+                // Relax penalty
+                if self.mods.rx() {
+                    // * As we're adding 100s and 50s to an approximated number of combo breaks\
+                    // * the result can be higher than total hits in specific scenarios
+                    // * (which breaks some calculations) so we need to clamp it.
+                    self.effective_misses = (self.effective_misses + self.n100 + self.n50)
+                        .min(self.total_hits as usize);
 
-            multiplier *= 0.6;
-        }
+                    multiplier *= 0.6;
+                }
 
-        let aim_value = self.compute_aim_value();
-        let speed_value = self.compute_speed_value();
-        let acc_value = self.compute_accuracy_value();
-        let flashlight_value = self.compute_flashlight_value();
+                let aim_value = self.compute_aim_value();
+                let speed_value = self.compute_speed_value();
+                let acc_value = self.compute_accuracy_value();
+                let flashlight_value = self.compute_flashlight_value();
 
-        let pp = (aim_value.powf(1.1)
-            + speed_value.powf(1.1)
-            + acc_value.powf(1.1)
-            + flashlight_value.powf(1.1))
-        .powf(1.0 / 1.1)
-            * multiplier;
+                let pp = (aim_value.powf(1.1)
+                    + speed_value.powf(1.1)
+                    + acc_value.powf(1.1)
+                    + flashlight_value.powf(1.1))
+                .powf(1.0 / 1.1)
+                    * multiplier;
+
+                (aim_value, speed_value, acc_value, flashlight_value, pp)
+            };
 
         OsuPerformanceAttributes {
             difficulty: self.attributes,
