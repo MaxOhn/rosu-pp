@@ -1,6 +1,6 @@
 ## Upcoming
 
-- Nothing as of now
+- osu: Fix panic on maps with 0 objects
 
 # v0.4.0
 
