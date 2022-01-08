@@ -28,7 +28,8 @@ async fn async_main() {
     println!("Deserializing data from output.json...");
 
     let file = StdFile::open("../pp-gen/output.json").expect("failed to open `output.json` file");
-    let data: Vec<Data> = serde_json::from_reader(file).expect("failed to deserialize data");
+    let data: Vec<SimulateData> =
+        serde_json::from_reader(file).expect("failed to deserialize data");
 
     println!(
         "Calculating values for {} map-mod combinations...",
@@ -39,10 +40,10 @@ async fn async_main() {
     let result = data
         .into_iter()
         .map(|data| async move {
-            let path = format!("{}/{}.osu", map_path, data.map_id);
+            let path = format!("{}/{}.osu", map_path, data.score.map_id);
             let file = File::open(path).await?;
             let map = Beatmap::parse(file).await?;
-            let mods = parse_mods(&data.inner.mods);
+            let mods = parse_mods(&data.score.mods);
             let attrs = map.max_pp(mods);
 
             Ok::<_, Error>((data, attrs, mods))
@@ -67,7 +68,7 @@ async fn async_main() {
     ];
 
     for (data, attributes, mods) in tuples {
-        evaluators[data.mode as usize].process(data, attributes, mods);
+        evaluators[data.score.mode as usize].process(data, attributes, mods);
     }
 
     for evaluator in evaluators {
@@ -78,8 +79,6 @@ async fn async_main() {
             print_err(err);
         }
     }
-
-    println!("Done");
 }
 
 /// Mode specific evaluator containing differences
@@ -109,61 +108,62 @@ impl Evaluator {
 
     /// For all mode-specific data points, calculate the
     /// differences of `data`'s value and `attrs`' value
-    fn process(&mut self, data: Data, attrs: PerformanceAttributes, mods: u32) {
+    fn process(&mut self, data: SimulateData, attrs: PerformanceAttributes, mods: u32) {
         self.count += 1;
-        self.stars.push(difference(data.inner.stars, attrs.stars()));
-        self.pp.push(difference(data.inner.pp, attrs.pp()));
+        self.stars
+            .push(difference(data.difficulty.stars, attrs.stars()));
+        self.pp.push(difference(data.performance.pp, attrs.pp()));
 
         match attrs {
             PerformanceAttributes::Fruits(_) => {}
             PerformanceAttributes::Mania(attrs) => {
-                if let Some(acc) = data.inner.accuracy {
+                if let Some(acc) = data.performance.acc {
                     let values = self.accuracy.get_or_insert_with(Vec::new);
                     let entry = difference(acc, attrs.pp_acc);
                     values.push(entry);
                 }
 
-                if let Some(strain) = data.inner.strain {
+                if let Some(strain) = data.performance.difficulty {
                     let values = self.strain.get_or_insert_with(Vec::new);
                     let entry = difference(strain, attrs.pp_strain);
                     values.push(entry);
                 }
             }
             PerformanceAttributes::Osu(attrs) => {
-                if let Some(acc) = data.inner.accuracy {
+                if let Some(acc) = data.performance.acc {
                     let values = self.accuracy.get_or_insert_with(Vec::new);
                     let entry = difference(acc, attrs.pp_acc);
                     values.push(entry);
                 }
 
-                if let Some(aim) = data.inner.aim {
+                if let Some(aim) = data.performance.aim {
                     let values = self.aim.get_or_insert_with(Vec::new);
                     let entry = difference(aim, attrs.pp_aim);
                     values.push(entry);
                 }
 
                 if mods & 1024 > 0 {
-                    if let Some(flashlight) = data.inner.flashlight {
+                    if let Some(flashlight) = data.performance.flashlight {
                         let values = self.flashlight.get_or_insert_with(Vec::new);
                         let entry = difference(flashlight, attrs.pp_flashlight);
                         values.push(entry);
                     }
                 }
 
-                if let Some(speed) = data.inner.speed {
+                if let Some(speed) = data.performance.speed {
                     let values = self.speed.get_or_insert_with(Vec::new);
                     let entry = difference(speed, attrs.pp_speed);
                     values.push(entry);
                 }
             }
             PerformanceAttributes::Taiko(attrs) => {
-                if let Some(acc) = data.inner.accuracy {
+                if let Some(acc) = data.performance.acc {
                     let values = self.accuracy.get_or_insert_with(Vec::new);
                     let entry = difference(acc, attrs.pp_acc);
                     values.push(entry);
                 }
 
-                if let Some(strain) = data.inner.strain {
+                if let Some(strain) = data.performance.difficulty {
                     let values = self.strain.get_or_insert_with(Vec::new);
                     let entry = difference(strain, attrs.pp_strain);
                     values.push(entry);
@@ -220,7 +220,6 @@ impl Evaluator {
         }
 
         root.present()?;
-        println!("Finished plotting {}", mode);
 
         Ok(())
     }
@@ -295,8 +294,6 @@ impl Evaluator {
 
         vec.reverse();
 
-        println!("---");
-
         vec
     }
 }
@@ -350,12 +347,11 @@ fn difference(actual: f64, calculated: f64) -> f64 {
     (actual - calculated).abs()
 }
 
-fn parse_mods(mods_str: &str) -> u32 {
+fn parse_mods(mods_list: &[String]) -> u32 {
     let mut mods = 0;
 
-    for m in mods_str.split(", ") {
-        match m {
-            "None" => {}
+    for m in mods_list {
+        match m.as_str() {
             "NF" => mods += 1,
             "EZ" => mods += 2,
             "TD" => mods += 4,
@@ -382,33 +378,79 @@ fn print_err(err: Error) {
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct Data {
-    mode: u32,
-    map_id: u32,
-    #[serde(flatten)]
-    inner: GenericData,
+#[derive(Deserialize)]
+struct SimulateData {
+    score: Score,
+    performance: Performance,
+    difficulty: Difficulty,
 }
 
-#[derive(Debug, Deserialize)]
-struct GenericData {
-    #[serde(default, alias = "Aim")]
+#[derive(Deserialize)]
+struct Score {
+    mode: u32,
+    map_id: u32,
+    mods: Vec<String>,
+    total_score: u32,
+    acc: f64,
+    combo: u32,
+    stats: Statistics,
+}
+
+#[derive(Deserialize)]
+struct Statistics {
+    #[serde(default)]
+    perfect: usize,
+    great: usize,
+    #[serde(default)]
+    good: usize,
+    ok: usize,
+    meh: usize,
+    miss: usize,
+}
+
+#[derive(Deserialize)]
+struct Performance {
+    #[serde(default)]
     aim: Option<f64>,
-    #[serde(default, alias = "Speed")]
+    #[serde(default)]
     speed: Option<f64>,
-    #[serde(default, alias = "Accuracy")]
-    accuracy: Option<f64>,
-    #[serde(default, alias = "Flashlight")]
+    #[serde(default)]
+    acc: Option<f64>,
+    #[serde(default)]
     flashlight: Option<f64>,
-    #[serde(default, alias = "Strain")]
-    strain: Option<f64>,
-    #[serde(default, alias = "OD")]
-    od: Option<f64>,
-    #[serde(default, alias = "AR")]
-    ar: Option<f64>,
-    #[serde(alias = "Mods")]
-    mods: String,
-    #[serde(alias = "Stars")]
-    stars: f64,
+    #[serde(default)]
+    effective_miss_count: Option<f64>,
+    #[serde(default)]
+    scaled_score: Option<f64>,
+    #[serde(default)]
+    difficulty: Option<f64>,
     pp: f64,
+}
+
+#[derive(Deserialize)]
+struct Difficulty {
+    stars: f64,
+    max_combo: u32,
+    #[serde(default)]
+    aim: Option<f64>,
+    #[serde(default)]
+    speed: Option<f64>,
+    #[serde(default)]
+    flashlight: Option<f64>,
+    #[serde(default)]
+    slider_factor: Option<f64>,
+    #[serde(default)]
+    stamina: Option<f64>,
+    #[serde(default)]
+    rhythm: Option<f64>,
+    #[serde(default)]
+    colour: Option<f64>,
+    #[serde(default)]
+    ar: Option<f64>,
+    #[serde(default)]
+    od: Option<f64>,
+    #[serde(default)]
+    great_hit_window: Option<f64>,
+    #[serde(default)]
+    score_multiplier: Option<f64>,
 }

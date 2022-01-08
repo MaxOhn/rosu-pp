@@ -12,7 +12,10 @@ use std::{
 use futures::{future, stream::FuturesUnordered, Stream, StreamExt, TryStreamExt};
 use pbr::ProgressBar;
 use rosu_pp::{Beatmap, GameMode};
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{SeqAccess, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 use tokio::{
     fs::{self, DirEntry, File, ReadDir},
     process::Command,
@@ -86,7 +89,16 @@ async fn async_main() {
 
     let mut output = StdFile::create("./output.json").expect("failed to create output file");
 
-    let take = 250;
+    let take = env::var("MAP_TAKE")
+        .expect("missing `MAP_TAKE` environment variable")
+        .parse()
+        .expect("`MAP_TAKE` must be an integer");
+
+    let mut skip: u32 = env::var("MAP_SKIP")
+        .expect("missing `MAP_SKIP` environment variable")
+        .parse()
+        .expect("`MAP_SKIP` must be an integer");
+    skip += 1;
 
     let pbr = Mutex::new(ProgressBar::new(take));
     println!("[INFO] Calculating...");
@@ -98,9 +110,9 @@ async fn async_main() {
         .scan(0, |idx, entry| {
             *idx += 1;
 
-            future::ready(Some((*idx % 76 == 0).then(|| entry)))
+            future::ready(Some((*idx % skip == 0).then(|| entry)))
         })
-        .filter_map(|opt| future::ready(opt))
+        .filter_map(future::ready)
         .take(take as usize)
         .map(|dir_entry| async {
             let dir_entry = dir_entry?;
@@ -129,7 +141,7 @@ async fn async_main() {
         })
         .collect::<FuturesUnordered<_>>()
         .await
-        .try_collect::<Vec<Vec<Data>>>()
+        .try_collect::<Vec<Vec<SimulateData>>>()
         .await;
 
     pbr.lock().unwrap().finish_println(&format!(
@@ -139,19 +151,19 @@ async fn async_main() {
 
     let mut mode_counts = [0; 4];
 
-    let data: Vec<Data> = match result {
+    let data: Vec<SimulateData> = match result {
         Ok(data) => data
             .into_iter()
             .map(|d| {
                 if let Some(data) = d.get(0) {
-                    mode_counts[data.mode as usize] += 1;
+                    mode_counts[data.score.mode as usize] += 1;
                 }
 
                 d.into_iter()
             })
             .flatten()
             .collect(),
-        Err(err) => return print_err(err.into()),
+        Err(err) => return print_err(err),
     };
 
     println!(
@@ -189,7 +201,7 @@ async fn handle_map(
     map_id: u32,
     path: PathBuf,
     perf_calc_path: &str,
-) -> Result<Vec<Data>, Error> {
+) -> Result<Vec<SimulateData>, Error> {
     let (mods, mode_str) = match mode {
         GameMode::STD => (OSU_MODS, OSU),
         GameMode::TKO => (TAIKO_MODS, TAIKO),
@@ -217,7 +229,7 @@ async fn handle_map(
 
         let output = command.output().await?;
 
-        let data = match serde_json::from_slice(&output.stdout) {
+        let mut data: SimulateData = match serde_json::from_slice(&output.stdout) {
             Ok(data) => data,
             Err(_) => {
                 let content = String::from_utf8_lossy(&output.stderr);
@@ -230,7 +242,7 @@ async fn handle_map(
             }
         };
 
-        let data = Data::new(mode as u32, map_id, data);
+        data.score.map_id = map_id;
         result.push(data);
     }
 
@@ -288,45 +300,161 @@ impl From<serde_json::Error> for Error {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Data {
-    mode: u32,
-    map_id: u32,
-    #[serde(flatten)]
-    inner: GenericData,
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct SimulateData {
+    score: Score,
+    #[serde(alias = "performance_attributes")]
+    performance: Performance,
+    #[serde(alias = "difficulty_attributes")]
+    difficulty: Difficulty,
 }
 
-impl Data {
-    fn new(mode: u32, map_id: u32, inner: GenericData) -> Self {
-        Self {
-            mode,
-            map_id,
-            inner,
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Score {
+    #[serde(alias = "ruleset_id")]
+    mode: u32,
+    #[serde(alias = "beatmap_id")]
+    map_id: u32,
+    #[serde(alias = "beatmap", skip_serializing)]
+    _map: String,
+    #[serde(deserialize_with = "deserialize_mods")]
+    mods: Vec<String>,
+    total_score: u32,
+    #[serde(alias = "accuracy")]
+    acc: f64,
+    combo: u32,
+    #[serde(alias = "statistics")]
+    stats: Statistics,
+}
+
+fn deserialize_mods<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<String>, D::Error> {
+    d.deserialize_seq(ModVisitor)
+}
+
+struct ModVisitor;
+
+impl<'de> Visitor<'de> for ModVisitor {
+    type Value = Vec<String>;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("a sequence of mods")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+        let mut mods = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+
+        #[derive(Deserialize)]
+        struct Mod {
+            acronym: String,
         }
+
+        while let Some(elem) = seq.next_element::<Mod>()? {
+            mods.push(elem.acronym);
+        }
+
+        Ok(mods)
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct GenericData {
-    #[serde(default, alias = "Aim", skip_serializing_if = "Option::is_none")]
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Statistics {
+    #[serde(alias = "Perfect", default)]
+    perfect: usize,
+    #[serde(alias = "Great")]
+    great: usize,
+    #[serde(alias = "Good", alias = "SmallTickMiss", default)]
+    good: usize,
+    #[serde(alias = "Ok", alias = "LargeTickHit")]
+    ok: usize,
+    #[serde(alias = "Meh", alias = "SmallTickHit")]
+    meh: usize,
+    #[serde(alias = "Miss")]
+    miss: usize,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Performance {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     aim: Option<f64>,
-    #[serde(default, alias = "Speed", skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     speed: Option<f64>,
-    #[serde(default, alias = "Accuracy", skip_serializing_if = "Option::is_none")]
-    accuracy: Option<f64>,
-    #[serde(default, alias = "Flashlight", skip_serializing_if = "Option::is_none")]
+    #[serde(alias = "accuracy", default, skip_serializing_if = "Option::is_none")]
+    acc: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     flashlight: Option<f64>,
-    #[serde(default, alias = "Strain", skip_serializing_if = "Option::is_none")]
-    strain: Option<f64>,
-    #[serde(default, alias = "OD", skip_serializing_if = "Option::is_none")]
-    od: Option<f64>,
-    #[serde(default, alias = "AR", skip_serializing_if = "Option::is_none")]
-    ar: Option<f64>,
-    #[serde(alias = "Mods")]
-    mods: String,
-    #[serde(alias = "Stars")]
-    stars: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    effective_miss_count: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    scaled_score: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    difficulty: Option<f64>,
     pp: f64,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Difficulty {
+    #[serde(alias = "star_rating")]
+    stars: f64,
+    max_combo: u32,
+    #[serde(
+        alias = "aim_difficulty",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    aim: Option<f64>,
+    #[serde(
+        alias = "speed_difficulty",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    speed: Option<f64>,
+    #[serde(
+        alias = "flashlight_difficulty",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    flashlight: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    slider_factor: Option<f64>,
+    #[serde(
+        alias = "stamina_difficulty",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    stamina: Option<f64>,
+    #[serde(
+        alias = "rhythm_difficulty",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    rhythm: Option<f64>,
+    #[serde(
+        alias = "colour_difficulty",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    colour: Option<f64>,
+    #[serde(
+        alias = "approach_rate",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    ar: Option<f64>,
+    #[serde(
+        alias = "overall_difficulty",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    od: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    great_hit_window: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    score_multiplier: Option<f64>,
 }
 
 struct ReadDirStream {
