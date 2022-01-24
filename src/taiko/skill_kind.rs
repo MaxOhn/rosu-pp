@@ -67,9 +67,9 @@ impl SkillKind {
                 prev_is_rim,
                 current_mono_len,
             } => {
-                let prev_is_circle = current.prev.is_circle();
-                let base_is_circle = current.base.is_circle();
-                let curr_is_rim = current.base.is_rim();
+                let prev_is_circle = current.prev.h.is_circle();
+                let base_is_circle = current.base.h.is_circle();
+                let curr_is_rim = current.base.sound.is_rim();
 
                 if !(current.delta < 1000.0 && prev_is_circle && base_is_circle) {
                     mono_history.clear();
@@ -146,7 +146,7 @@ impl SkillKind {
                 notes_since_rhythm_change,
                 current_strain,
             } => {
-                let base_is_circle = current.base.is_circle();
+                let base_is_circle = current.base.h.is_circle();
 
                 if !base_is_circle {
                     *current_strain = 0.0;
@@ -218,7 +218,7 @@ impl SkillKind {
                 note_pair_duration_history,
                 off_hand_object_duration,
             } => {
-                let base_is_circle = current.base.is_circle();
+                let base_is_circle = current.base.h.is_circle();
 
                 if !base_is_circle {
                     return 0.0;

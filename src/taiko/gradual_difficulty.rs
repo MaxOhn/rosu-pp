@@ -1,7 +1,6 @@
 use std::{
     cmp::Ordering,
     iter::{self, Enumerate, Skip, Zip},
-    slice::Iter,
 };
 
 use crate::{
@@ -14,7 +13,11 @@ use crate::{
     Beatmap, Mods,
 };
 
-use super::{skill::Skills, TaikoDifficultyAttributes};
+use super::{
+    skill::Skills,
+    taiko_object::{IntoTaikoObjectIter, TaikoObjectIter},
+    TaikoDifficultyAttributes,
+};
 
 /// Gradually calculate the difficulty attributes of an osu!taiko map.
 ///
@@ -49,7 +52,7 @@ use super::{skill::Skills, TaikoDifficultyAttributes};
 #[derive(Clone, Debug)]
 pub struct TaikoGradualDifficultyAttributes<'map> {
     pub(crate) idx: usize,
-    difficulty_objects: TaikoObjectIter<'map>,
+    difficulty_objects: GradualTaikoObjectIter<'map>,
     cheese: Vec<bool>,
     skills: Skills,
     curr_section_end: f64,
@@ -64,7 +67,7 @@ impl<'map> TaikoGradualDifficultyAttributes<'map> {
 
         let skills = Skills::new();
         let clock_rate = mods.speed();
-        let difficulty_objects = TaikoObjectIter::new(&map.hit_objects, clock_rate);
+        let difficulty_objects = GradualTaikoObjectIter::new(map, clock_rate);
 
         Self {
             idx: 0,
@@ -274,8 +277,8 @@ impl ExactSizeIterator for TaikoGradualDifficultyAttributes<'_> {
 }
 
 type InnerIter<'map> = Zip<
-    Zip<Skip<Enumerate<Iter<'map, HitObject>>>, Skip<Iter<'map, HitObject>>>,
-    Iter<'map, HitObject>,
+    Zip<Skip<Enumerate<TaikoObjectIter<'map>>>, Skip<TaikoObjectIter<'map>>>,
+    TaikoObjectIter<'map>,
 >;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -306,7 +309,7 @@ impl SimpleObject {
 }
 
 #[derive(Clone, Debug)]
-struct TaikoObjectIter<'map> {
+struct GradualTaikoObjectIter<'map> {
     hit_objects: InnerIter<'map>,
     max_combo: usize,
     clock_rate: f64,
@@ -314,17 +317,23 @@ struct TaikoObjectIter<'map> {
     second_object: SimpleObject,
 }
 
-impl<'map> TaikoObjectIter<'map> {
-    fn new(hit_objects: &'map [HitObject], clock_rate: f64) -> Self {
-        let first_object = hit_objects.get(0).map_or(SimpleObject::Empty, From::from);
-        let second_object = hit_objects.get(1).map_or(SimpleObject::Empty, From::from);
+impl<'map> GradualTaikoObjectIter<'map> {
+    fn new(map: &'map Beatmap, clock_rate: f64) -> Self {
+        let first_object = map
+            .hit_objects
+            .get(0)
+            .map_or(SimpleObject::Empty, From::from);
+        let second_object = map
+            .hit_objects
+            .get(1)
+            .map_or(SimpleObject::Empty, From::from);
 
-        let hit_objects = hit_objects
-            .iter()
+        let hit_objects = map
+            .taiko_objects()
             .enumerate()
             .skip(2)
-            .zip(hit_objects.iter().skip(1))
-            .zip(hit_objects.iter());
+            .zip(map.taiko_objects().skip(1))
+            .zip(map.taiko_objects());
 
         Self {
             hit_objects,
@@ -336,12 +345,12 @@ impl<'map> TaikoObjectIter<'map> {
     }
 }
 
-impl<'map> Iterator for TaikoObjectIter<'map> {
+impl<'map> Iterator for GradualTaikoObjectIter<'map> {
     type Item = DifficultyObject<'map>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let (((idx, base), prev), prev_prev) = self.hit_objects.next()?;
-        self.max_combo += base.is_circle() as usize;
+        self.max_combo += base.h.is_circle() as usize;
 
         Some(DifficultyObject::new(
             idx,
@@ -358,7 +367,7 @@ impl<'map> Iterator for TaikoObjectIter<'map> {
     }
 }
 
-impl ExactSizeIterator for TaikoObjectIter<'_> {
+impl ExactSizeIterator for GradualTaikoObjectIter<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.hit_objects.len()

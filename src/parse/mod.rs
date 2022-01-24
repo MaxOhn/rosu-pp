@@ -608,8 +608,8 @@ macro_rules! parse_hitobjects_body {
                 pos,
                 start_time: time,
                 kind,
-                sound,
             });
+            $self.sounds.push(sound);
 
             prev_time = time;
             $buf.clear();
@@ -813,6 +813,9 @@ pub struct Beatmap {
     pub tick_rate: f64,
     /// All hitobjects of the beatmap.
     pub hit_objects: Vec<HitObject>,
+    /// Store the sounds for all objects in their own Vec to minimize the struct size.
+    /// Hitsounds are only used in osu!taiko in which they represent color.
+    pub sounds: Vec<u8>,
 
     #[cfg(not(feature = "sliders"))]
     /// Beats per minute

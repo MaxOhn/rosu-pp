@@ -1,6 +1,7 @@
 ## Upcoming
 
 - osu: Fix panic on maps with 0 objects
+- [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
 
 # v0.4.0
 

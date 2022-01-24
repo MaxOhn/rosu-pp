@@ -1,11 +1,10 @@
-use super::{closest_rhythm, HitObjectRhythm};
-use crate::parse::HitObject;
+use super::{closest_rhythm, taiko_object::TaikoObject, HitObjectRhythm};
 
 #[derive(Clone, Debug)]
 pub(crate) struct DifficultyObject<'o> {
     pub(crate) idx: usize,
-    pub(crate) base: &'o HitObject,
-    pub(crate) prev: &'o HitObject,
+    pub(crate) base: TaikoObject<'o>,
+    pub(crate) prev: TaikoObject<'o>,
     pub(crate) delta: f64,
     pub(crate) rhythm: &'static HitObjectRhythm,
     pub(crate) start_time: f64,
@@ -15,13 +14,13 @@ impl<'o> DifficultyObject<'o> {
     #[inline]
     pub(crate) fn new(
         idx: usize,
-        base: &'o HitObject,
-        prev: &'o HitObject,
-        prev_prev: &HitObject,
+        base: TaikoObject<'o>,
+        prev: TaikoObject<'o>,
+        prev_prev: TaikoObject<'o>,
         clock_rate: f64,
     ) -> Self {
-        let delta = (base.start_time - prev.start_time) / clock_rate;
-        let rhythm = closest_rhythm(delta, prev, prev_prev, clock_rate);
+        let delta = (base.h.start_time - prev.h.start_time) / clock_rate;
+        let rhythm = closest_rhythm(delta, prev.h, prev_prev.h, clock_rate);
 
         Self {
             idx,
@@ -29,7 +28,7 @@ impl<'o> DifficultyObject<'o> {
             prev,
             delta,
             rhythm,
-            start_time: base.start_time / clock_rate,
+            start_time: base.h.start_time / clock_rate,
         }
     }
 }

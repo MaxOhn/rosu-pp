@@ -10,6 +10,7 @@ mod rim;
 mod skill;
 mod skill_kind;
 mod stamina_cheese;
+mod taiko_object;
 
 use difficulty_object::DifficultyObject;
 pub use gradual_difficulty::*;
@@ -20,6 +21,7 @@ pub use pp::*;
 use rim::Rim;
 use skill_kind::SkillKind;
 use stamina_cheese::StaminaCheeseDetector;
+use taiko_object::IntoTaikoObjectIter;
 
 use crate::taiko::skill::Skills;
 use crate::{Beatmap, Mods, Strains};
@@ -118,14 +120,13 @@ fn calculate_skills(
     }
 
     let mut hit_objects = map
-        .hit_objects
-        .iter()
+        .taiko_objects()
         .take(take)
         .enumerate()
         .skip(2)
-        .zip(map.hit_objects.iter().skip(1))
-        .zip(map.hit_objects.iter())
-        .inspect(|(((_, base), _), _)| max_combo += base.is_circle() as usize)
+        .zip(map.taiko_objects().skip(1))
+        .zip(map.taiko_objects())
+        .inspect(|(((_, base), _), _)| max_combo += base.h.is_circle() as usize)
         .map(|(((idx, base), prev), prev_prev)| {
             DifficultyObject::new(idx, base, prev, prev_prev, clock_rate)
         });

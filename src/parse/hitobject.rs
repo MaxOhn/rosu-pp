@@ -12,8 +12,6 @@ pub struct HitObject {
     pub start_time: f64,
     /// The type of the object.
     pub kind: HitObjectKind,
-    /// The hitsound of the object. Used as color in osu!taiko.
-    pub sound: u8,
 }
 
 impl HitObject {
