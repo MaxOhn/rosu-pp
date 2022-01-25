@@ -1,5 +1,3 @@
-#![cfg(feature = "mania")]
-
 mod gradual_difficulty;
 mod gradual_performance;
 mod pp;

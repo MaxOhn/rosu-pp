@@ -1,5 +1,3 @@
-#![cfg(feature = "taiko")]
-
 mod difficulty_object;
 mod gradual_difficulty;
 mod gradual_performance;

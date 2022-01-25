@@ -1,5 +1,3 @@
-#![cfg(feature = "sliders")]
-
 use crate::{
     parse::{DifficultyPoint, TimingPoint},
     Beatmap,
@@ -44,7 +42,6 @@ pub(crate) enum ControlPoint {
     Difficulty { time: f64, slider_velocity: f64 },
 }
 
-#[cfg(feature = "sliders")]
 impl ControlPoint {
     #[inline]
     pub(crate) fn time(&self) -> f64 {

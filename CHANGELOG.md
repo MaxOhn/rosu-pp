@@ -1,8 +1,9 @@
 ## Upcoming
 
 - osu: Fix panic on maps with 0 objects
-- [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
 - Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
+- [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
+- [BREAKING] Removed the mode features `osu`, `fruits`, `taiko`, and `mania`. Now all modes are always supported.
 
 # v0.4.0
 

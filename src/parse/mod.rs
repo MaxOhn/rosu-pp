@@ -38,8 +38,7 @@ use async_std::{
     path::Path,
 };
 
-#[cfg(feature = "sliders")]
-pub use osu_fruits::*;
+pub use slider_parsing::*;
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
@@ -116,8 +115,6 @@ macro_rules! parse_general_body {
     ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
         let mut mode = None;
         let mut empty = true;
-
-        #[cfg(feature = "osu")]
         let mut stack_leniency = None;
 
         while read_line!($reader, $buf)? != 0 {
@@ -142,7 +139,6 @@ macro_rules! parse_general_body {
                 };
             }
 
-            #[cfg(feature = "osu")]
             if key == "StackLeniency" {
                 stack_leniency = Some(value.parse()?);
             }
@@ -151,31 +147,7 @@ macro_rules! parse_general_body {
         }
 
         $self.mode = mode.unwrap_or(GameMode::STD);
-
-        #[cfg(not(feature = "osu"))]
-        if $self.mode == GameMode::STD {
-            return Err(ParseError::UnincludedMode(GameMode::STD));
-        }
-
-        #[cfg(not(feature = "taiko"))]
-        if $self.mode == GameMode::TKO {
-            return Err(ParseError::UnincludedMode(GameMode::TKO));
-        }
-
-        #[cfg(not(feature = "fruits"))]
-        if $self.mode == GameMode::CTB {
-            return Err(ParseError::UnincludedMode(GameMode::CTB));
-        }
-
-        #[cfg(not(feature = "mania"))]
-        if $self.mode == GameMode::MNA {
-            return Err(ParseError::UnincludedMode(GameMode::MNA));
-        }
-
-        #[cfg(feature = "osu")]
-        {
-            $self.stack_leniency = stack_leniency.unwrap_or(0.7);
-        }
+        $self.stack_leniency = stack_leniency.unwrap_or(0.7);
 
         Ok(empty)
     }};
@@ -277,61 +249,6 @@ macro_rules! parse_difficulty {
 }
 
 macro_rules! parse_timingpoints_body {
-    (short => $self:ident, $reader:ident, $buf:ident, $section:ident) => {{
-        let mut empty = true;
-
-        // Only parse the first timing point to calculate the bpm
-        if read_line!($reader, $buf)? != 0 {
-            let line = {
-                let mut line = $buf.trim_end();
-
-                if skip_line(line) {
-                    $buf.clear();
-                    return Ok(empty);
-                }
-
-                if let Some(idx) = line.find("//") {
-                    line = &line[..idx];
-                }
-
-                line
-            };
-
-            if line.starts_with('[') && line.ends_with(']') {
-                *$section = Section::from_str(&line[1..line.len() - 1]);
-                empty = false;
-                $buf.clear();
-                return Ok(empty);
-            }
-
-            let beat_len = line
-                .split(',')
-                .nth(1)
-                .next_field("beat_len")?
-                .trim()
-                .parse()?;
-
-            $self.bpm = bpm(beat_len);
-
-            $buf.clear();
-        }
-
-        while read_line!($reader, $buf)? != 0 {
-            let line = line_prepare!($buf);
-
-            if line.starts_with('[') && line.ends_with(']') {
-                *$section = Section::from_str(&line[1..line.len() - 1]);
-                empty = false;
-                $buf.clear();
-                break;
-            }
-
-            $buf.clear();
-        }
-
-        Ok(empty)
-    }};
-
     ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
         let mut unsorted_timings = false;
         let mut unsorted_difficulties = false;
@@ -408,12 +325,6 @@ macro_rules! parse_timingpoints {
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            #[cfg(not(feature = "sliders"))]
-            {
-                parse_timingpoints_body!(short => self, reader, buf, section)
-            }
-
-            #[cfg(feature = "sliders")]
             parse_timingpoints_body!(self, reader, buf, section)
         }
     };
@@ -425,12 +336,6 @@ macro_rules! parse_timingpoints {
             buf: &mut String,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            #[cfg(not(feature = "sliders"))]
-            {
-                parse_timingpoints_body!(short => self, reader, buf, section)
-            }
-
-            #[cfg(feature = "sliders")]
             parse_timingpoints_body!(self, reader, buf, section)
         }
     };
@@ -446,11 +351,9 @@ macro_rules! parse_hitobjects_body {
         // with each element having its lifetime bound to `buf`.
         // To circumvent this, `point_split_raw` will contain
         // the actual `&str` elements transmuted into `usize`.
-        #[cfg(feature = "sliders")]
         let mut point_split_raw: Vec<usize> = Vec::new();
 
         // Buffer to re-use for all sliders
-        #[cfg(feature = "sliders")]
         let mut vertices = Vec::new();
 
         while read_line!($reader, $buf)? != 0 {
@@ -491,99 +394,85 @@ macro_rules! parse_hitobjects_body {
             } else if kind & Self::SLIDER_FLAG > 0 {
                 $self.n_sliders += 1;
 
-                #[cfg(feature = "sliders")]
-                {
-                    let mut control_points = Vec::new();
+                let mut control_points = Vec::new();
 
-                    let control_point_iter = split.next().next_field("control points")?.split('|');
-                    let mut repeats: usize = split.next().next_field("repeats")?.parse()?;
+                let control_point_iter = split.next().next_field("control points")?.split('|');
+                let mut repeats: usize = split.next().next_field("repeats")?.parse()?;
 
-                    if repeats > 9000 {
-                        return Err(ParseError::TooManyRepeats);
-                    }
-
-                    // * osu-stable treated the first span of the slider
-                    // * as a repeat, but no repeats are happening
-                    repeats = repeats.saturating_sub(1);
-
-                    let mut start_idx = 0;
-                    let mut end_idx = 0;
-                    let mut first = true;
-
-                    // SAFETY: `Vec<usize>` and `Vec<&str>` have the same size and layout.
-                    let point_split: &mut Vec<&str> =
-                        unsafe { std::mem::transmute(&mut point_split_raw) };
-
-                    point_split.clear();
-                    point_split.extend(control_point_iter);
-
-                    #[allow(clippy::blocks_in_if_conditions)]
-                    while {
-                        end_idx += 1;
-
-                        end_idx < point_split.len()
-                    } {
-                        // * Keep incrementing end_idx while it's not the start of a new segment
-                        // * (indicated by having a type descriptor of length 1).
-                        if point_split[end_idx].len() > 1 {
-                            continue;
-                        }
-
-                        // * Multi-segmented sliders DON'T contain the end point as part of the
-                        // * current segment as it's assumed to be the start of the next segment.
-                        // * The start of the next segment is the index after the type descriptor.
-                        let end_point = point_split.get(end_idx + 1).copied();
-
-                        convert_points(
-                            &point_split[start_idx..end_idx],
-                            end_point,
-                            first,
-                            pos,
-                            &mut control_points,
-                            &mut vertices,
-                        )?;
-
-                        start_idx = end_idx;
-                        first = false;
-                    }
-
-                    if end_idx > start_idx {
-                        convert_points(
-                            &point_split[start_idx..end_idx],
-                            None,
-                            first,
-                            pos,
-                            &mut control_points,
-                            &mut vertices,
-                        )?;
-                    }
-
-                    if control_points.is_empty() {
-                        HitObjectKind::Circle
-                    } else {
-                        let pixel_len = split
-                            .next()
-                            .next_field("pixel len")?
-                            .parse::<f64>()?
-                            .max(0.0)
-                            .min(MAX_COORDINATE_VALUE);
-
-                        HitObjectKind::Slider {
-                            repeats,
-                            pixel_len,
-                            control_points,
-                        }
-                    }
+                if repeats > 9000 {
+                    return Err(ParseError::TooManyRepeats);
                 }
 
-                #[cfg(not(feature = "sliders"))]
-                {
-                    let span_count = split.nth(1).next_field("repeats")?.parse()?;
-                    let pixel_len = split.next().next_field("pixel len")?.parse()?;
+                // * osu-stable treated the first span of the slider
+                // * as a repeat, but no repeats are happening
+                repeats = repeats.saturating_sub(1);
+
+                let mut start_idx = 0;
+                let mut end_idx = 0;
+                let mut first = true;
+
+                // SAFETY: `Vec<usize>` and `Vec<&str>` have the same size and layout.
+                let point_split: &mut Vec<&str> =
+                    unsafe { std::mem::transmute(&mut point_split_raw) };
+
+                point_split.clear();
+                point_split.extend(control_point_iter);
+
+                #[allow(clippy::blocks_in_if_conditions)]
+                while {
+                    end_idx += 1;
+
+                    end_idx < point_split.len()
+                } {
+                    // * Keep incrementing end_idx while it's not the start of a new segment
+                    // * (indicated by having a type descriptor of length 1).
+                    if point_split[end_idx].len() > 1 {
+                        continue;
+                    }
+
+                    // * Multi-segmented sliders DON'T contain the end point as part of the
+                    // * current segment as it's assumed to be the start of the next segment.
+                    // * The start of the next segment is the index after the type descriptor.
+                    let end_point = point_split.get(end_idx + 1).copied();
+
+                    convert_points(
+                        &point_split[start_idx..end_idx],
+                        end_point,
+                        first,
+                        pos,
+                        &mut control_points,
+                        &mut vertices,
+                    )?;
+
+                    start_idx = end_idx;
+                    first = false;
+                }
+
+                if end_idx > start_idx {
+                    convert_points(
+                        &point_split[start_idx..end_idx],
+                        None,
+                        first,
+                        pos,
+                        &mut control_points,
+                        &mut vertices,
+                    )?;
+                }
+
+                if control_points.is_empty() {
+                    HitObjectKind::Circle
+                } else {
+                    let pixel_len = split
+                        .next()
+                        .next_field("pixel len")?
+                        .parse::<f64>()?
+                        .max(0.0)
+                        .min(MAX_COORDINATE_VALUE);
 
                     HitObjectKind::Slider {
-                        span_count,
+                        repeats,
                         pixel_len,
+                        control_points,
                     }
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {
@@ -818,19 +707,12 @@ pub struct Beatmap {
     /// Hitsounds are only used in osu!taiko in which they represent color.
     pub sounds: Vec<u8>,
 
-    #[cfg(not(feature = "sliders"))]
-    /// Beats per minute
-    pub bpm: f64,
-
-    #[cfg(feature = "sliders")]
     /// Timing points that indicate a new timing section.
     pub timing_points: Vec<TimingPoint>,
 
-    #[cfg(feature = "sliders")]
     /// Timing point for the current timing section.
     pub difficulty_points: Vec<DifficultyPoint>,
 
-    #[cfg(feature = "osu")]
     /// The stack leniency that is used to calculate
     /// the stack offset for stacked positions.
     pub stack_leniency: f32,
@@ -853,25 +735,16 @@ impl Beatmap {
     }
 
     /// The beats per minute of the map.
-    #[cfg(feature = "sliders")]
     #[inline]
     pub fn bpm(&self) -> f64 {
         match self.timing_points.first() {
-            Some(point) => bpm(point.beat_len),
+            Some(point) => point.beat_len.recip() * 1000.0 * 60.0,
             None => 0.0,
         }
     }
-
-    /// The beats per minute of the map.
-    #[cfg(not(feature = "sliders"))]
-    #[inline]
-    pub fn bpm(&self) -> f64 {
-        self.bpm
-    }
 }
 
-#[cfg(feature = "sliders")]
-mod osu_fruits {
+mod slider_parsing {
     use crate::ParseError;
 
     use super::Pos2;
@@ -1053,19 +926,14 @@ impl Beatmap {
     from_path!(async Path);
 }
 
-fn bpm(beat_len: f64) -> f64 {
-    beat_len.recip() * 1000.0 * 60.0
-}
-
 fn skip_line(line: &str) -> bool {
     line.is_empty() || line.starts_with("//") || line.starts_with(' ') || line.starts_with('_')
 }
 
-#[inline]
 fn split_colon(line: &str) -> Option<(&str, &str)> {
-    let mut split = line.split(':');
+    let (front, back) = line.split_once(':')?;
 
-    Some((split.next()?, split.next()?.trim()))
+    Some((front, back.trim()))
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -1152,25 +1020,12 @@ mod tests {
     }
 
     fn map_ids() -> Vec<i32> {
-        let mut map_ids = Vec::new();
-
-        if cfg!(feature = "osu") {
-            map_ids.push(2785319);
-        }
-
-        if cfg!(feature = "mania") {
-            map_ids.push(1974394);
-        }
-
-        if cfg!(feature = "fruits") {
-            map_ids.push(2118524);
-        }
-
-        if cfg!(feature = "taiko") {
-            map_ids.push(1028484);
-        }
-
-        map_ids
+        vec![
+            2785319, // osu
+            1974394, // mania
+            2118524, // fruits
+            1028484, // taiko
+        ]
     }
 
     fn print_info(map: Beatmap) {
@@ -1185,14 +1040,8 @@ mod tests {
         println!("slider_mult: {}", map.slider_mult);
         println!("tick_rate: {}", map.tick_rate);
         println!("hit_objects: {}", map.hit_objects.len());
-
-        #[cfg(feature = "sliders")]
-        {
-            #[cfg(feature = "osu")]
-            println!("stack_leniency: {}", map.stack_leniency);
-
-            println!("timing_points: {}", map.timing_points.len());
-            println!("difficulty_points: {}", map.difficulty_points.len());
-        }
+        println!("stack_leniency: {}", map.stack_leniency);
+        println!("timing_points: {}", map.timing_points.len());
+        println!("difficulty_points: {}", map.difficulty_points.len());
     }
 }

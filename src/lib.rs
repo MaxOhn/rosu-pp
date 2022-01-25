@@ -179,23 +179,15 @@
     missing_docs
 )]
 
-#[cfg(feature = "fruits")]
-#[cfg_attr(docsrs, doc(cfg(feature = "fruits")))]
 /// Everything about osu!ctb.
 pub mod fruits;
 
-#[cfg(feature = "mania")]
-#[cfg_attr(docsrs, doc(cfg(feature = "mania")))]
 /// Everything about osu!mania.
 pub mod mania;
 
-#[cfg(feature = "osu")]
-#[cfg_attr(docsrs, doc(cfg(feature = "osu")))]
 /// Everything about osu!standard.
 pub mod osu;
 
-#[cfg(feature = "taiko")]
-#[cfg_attr(docsrs, doc(cfg(feature = "taiko")))]
 /// Everything about osu!taiko.
 pub mod taiko;
 
@@ -211,22 +203,13 @@ pub use pp::{AnyPP, AttributeProvider};
 mod curve;
 mod mods;
 
-#[cfg(feature = "sliders")]
 pub(crate) mod control_point_iter;
 
-#[cfg(feature = "sliders")]
 pub(crate) use control_point_iter::{ControlPoint, ControlPointIter};
 
-#[cfg(feature = "fruits")]
 pub use fruits::FruitsPP;
-
-#[cfg(feature = "mania")]
 pub use mania::ManiaPP;
-
-#[cfg(feature = "osu")]
 pub use osu::OsuPP;
-
-#[cfg(feature = "taiko")]
 pub use taiko::TaikoPP;
 
 pub use mods::Mods;
@@ -270,32 +253,10 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> DifficultyAttributes {
         match self.mode {
-            GameMode::STD => {
-                #[cfg(not(feature = "osu"))]
-                panic!("`osu` feature is not enabled");
-
-                #[cfg(feature = "osu")]
-                DifficultyAttributes::Osu(osu::stars(self, mods, passed_objects))
-            }
-            GameMode::MNA => {
-                #[cfg(not(feature = "mania"))]
-                panic!("`mania` feature is not enabled");
-
-                #[cfg(feature = "mania")]
-                DifficultyAttributes::Mania(mania::stars(self, mods, passed_objects))
-            }
-            GameMode::TKO => {
-                #[cfg(not(feature = "taiko"))]
-                panic!("`taiko` feature is not enabled");
-
-                #[cfg(feature = "taiko")]
-                DifficultyAttributes::Taiko(taiko::stars(self, mods, passed_objects))
-            }
+            GameMode::STD => DifficultyAttributes::Osu(osu::stars(self, mods, passed_objects)),
+            GameMode::MNA => DifficultyAttributes::Mania(mania::stars(self, mods, passed_objects)),
+            GameMode::TKO => DifficultyAttributes::Taiko(taiko::stars(self, mods, passed_objects)),
             GameMode::CTB => {
-                #[cfg(not(feature = "fruits"))]
-                panic!("`fruits` feature is not enabled");
-
-                #[cfg(feature = "fruits")]
                 DifficultyAttributes::Fruits(fruits::stars(self, mods, passed_objects))
             }
         }
@@ -304,32 +265,14 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn max_pp(&self, mods: u32) -> PerformanceAttributes {
         match self.mode {
-            GameMode::STD => {
-                #[cfg(not(feature = "osu"))]
-                panic!("`osu` feature is not enabled");
-
-                #[cfg(feature = "osu")]
-                PerformanceAttributes::Osu(OsuPP::new(self).mods(mods).calculate())
-            }
+            GameMode::STD => PerformanceAttributes::Osu(OsuPP::new(self).mods(mods).calculate()),
             GameMode::MNA => {
-                #[cfg(not(feature = "mania"))]
-                panic!("`mania` feature is not enabled");
-
-                #[cfg(feature = "mania")]
                 PerformanceAttributes::Mania(ManiaPP::new(self).mods(mods).calculate())
             }
             GameMode::TKO => {
-                #[cfg(not(feature = "taiko"))]
-                panic!("`taiko` feature is not enabled");
-
-                #[cfg(feature = "taiko")]
                 PerformanceAttributes::Taiko(TaikoPP::new(self).mods(mods).calculate())
             }
             GameMode::CTB => {
-                #[cfg(not(feature = "fruits"))]
-                panic!("`fruits` feature is not enabled");
-
-                #[cfg(feature = "fruits")]
                 PerformanceAttributes::Fruits(FruitsPP::new(self).mods(mods).calculate())
             }
         }
@@ -343,34 +286,10 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn strains(&self, mods: impl Mods) -> Strains {
         match self.mode {
-            GameMode::STD => {
-                #[cfg(not(feature = "osu"))]
-                panic!("`osu` feature is not enabled");
-
-                #[cfg(feature = "osu")]
-                osu::strains(self, mods)
-            }
-            GameMode::MNA => {
-                #[cfg(not(feature = "mania"))]
-                panic!("`mania` feature is not enabled");
-
-                #[cfg(feature = "mania")]
-                mania::strains(self, mods)
-            }
-            GameMode::TKO => {
-                #[cfg(not(feature = "taiko"))]
-                panic!("`taiko` feature is not enabled");
-
-                #[cfg(feature = "taiko")]
-                taiko::strains(self, mods)
-            }
-            GameMode::CTB => {
-                #[cfg(not(feature = "fruits"))]
-                panic!("`fruits` feature is not enabled");
-
-                #[cfg(feature = "fruits")]
-                fruits::strains(self, mods)
-            }
+            GameMode::STD => osu::strains(self, mods),
+            GameMode::MNA => mania::strains(self, mods),
+            GameMode::TKO => taiko::strains(self, mods),
+            GameMode::CTB => fruits::strains(self, mods),
         }
     }
 
@@ -398,16 +317,12 @@ pub struct Strains {
 /// The result of a difficulty calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum DifficultyAttributes {
-    #[cfg(feature = "fruits")]
     /// osu!ctb difficulty calculation reseult.
     Fruits(fruits::FruitsDifficultyAttributes),
-    #[cfg(feature = "mania")]
     /// osu!mania difficulty calculation reseult.
     Mania(mania::ManiaDifficultyAttributes),
-    #[cfg(feature = "osu")]
     /// osu!standard difficulty calculation reseult.
     Osu(osu::OsuDifficultyAttributes),
-    #[cfg(feature = "taiko")]
     /// osu!taiko difficulty calculation reseult.
     Taiko(taiko::TaikoDifficultyAttributes),
 }
@@ -417,13 +332,9 @@ impl DifficultyAttributes {
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => attributes.stars,
-            #[cfg(feature = "mania")]
             Self::Mania(attributes) => attributes.stars,
-            #[cfg(feature = "osu")]
             Self::Osu(attributes) => attributes.stars,
-            #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => attributes.stars,
         }
     }
@@ -432,35 +343,16 @@ impl DifficultyAttributes {
     ///
     /// This will only be `None` for attributes of osu!mania maps.
     #[inline]
-    #[cfg(feature = "mania")]
     pub fn max_combo(&self) -> Option<usize> {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => Some(attributes.max_combo()),
             Self::Mania(_) => None,
-            #[cfg(feature = "osu")]
             Self::Osu(attributes) => Some(attributes.max_combo),
-            #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => Some(attributes.max_combo),
-        }
-    }
-
-    #[cfg(not(feature = "mania"))]
-    #[inline]
-    /// The maximum combo of the map.
-    pub fn max_combo(&self) -> usize {
-        match self {
-            #[cfg(feature = "fruits")]
-            Self::Fruits(attributes) => attributes.max_combo,
-            #[cfg(feature = "osu")]
-            Self::Osu(attributes) => attributes.max_combo,
-            #[cfg(feature = "taiko")]
-            Self::Taiko(attributes) => attributes.max_combo,
         }
     }
 }
 
-#[cfg(feature = "fruits")]
 impl From<fruits::FruitsDifficultyAttributes> for DifficultyAttributes {
     #[inline]
     fn from(attributes: fruits::FruitsDifficultyAttributes) -> Self {
@@ -468,7 +360,6 @@ impl From<fruits::FruitsDifficultyAttributes> for DifficultyAttributes {
     }
 }
 
-#[cfg(feature = "mania")]
 impl From<mania::ManiaDifficultyAttributes> for DifficultyAttributes {
     #[inline]
     fn from(attributes: mania::ManiaDifficultyAttributes) -> Self {
@@ -476,7 +367,6 @@ impl From<mania::ManiaDifficultyAttributes> for DifficultyAttributes {
     }
 }
 
-#[cfg(feature = "osu")]
 impl From<osu::OsuDifficultyAttributes> for DifficultyAttributes {
     #[inline]
     fn from(attributes: osu::OsuDifficultyAttributes) -> Self {
@@ -484,7 +374,6 @@ impl From<osu::OsuDifficultyAttributes> for DifficultyAttributes {
     }
 }
 
-#[cfg(feature = "taiko")]
 impl From<taiko::TaikoDifficultyAttributes> for DifficultyAttributes {
     #[inline]
     fn from(attributes: taiko::TaikoDifficultyAttributes) -> Self {
@@ -495,16 +384,12 @@ impl From<taiko::TaikoDifficultyAttributes> for DifficultyAttributes {
 /// The result of a performance calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum PerformanceAttributes {
-    #[cfg(feature = "fruits")]
     /// osu!ctb performance calculation result.
     Fruits(fruits::FruitsPerformanceAttributes),
-    #[cfg(feature = "mania")]
     /// osu!mania performance calculation result.
     Mania(mania::ManiaPerformanceAttributes),
-    #[cfg(feature = "osu")]
     /// osu!standard performance calculation result.
     Osu(osu::OsuPerformanceAttributes),
-    #[cfg(feature = "taiko")]
     /// osu!taiko performance calculation result.
     Taiko(taiko::TaikoPerformanceAttributes),
 }
@@ -514,13 +399,9 @@ impl PerformanceAttributes {
     #[inline]
     pub fn pp(&self) -> f64 {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => attributes.pp,
-            #[cfg(feature = "mania")]
             Self::Mania(attributes) => attributes.pp,
-            #[cfg(feature = "osu")]
             Self::Osu(attributes) => attributes.pp,
-            #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => attributes.pp,
         }
     }
@@ -529,13 +410,9 @@ impl PerformanceAttributes {
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => attributes.stars(),
-            #[cfg(feature = "mania")]
             Self::Mania(attributes) => attributes.stars(),
-            #[cfg(feature = "osu")]
             Self::Osu(attributes) => attributes.stars(),
-            #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => attributes.stars(),
         }
     }
@@ -544,45 +421,23 @@ impl PerformanceAttributes {
     #[inline]
     pub fn difficulty_attributes(&self) -> DifficultyAttributes {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(attributes) => DifficultyAttributes::Fruits(attributes.difficulty.clone()),
-            #[cfg(feature = "mania")]
             Self::Mania(attributes) => DifficultyAttributes::Mania(attributes.difficulty),
-            #[cfg(feature = "osu")]
             Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.difficulty.clone()),
-            #[cfg(feature = "taiko")]
             Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.difficulty),
         }
     }
 
-    #[cfg(feature = "mania")]
     #[inline]
     /// The maximum combo of the map.
     ///
     /// This will only be `None` for attributes of osu!mania maps.
     pub fn max_combo(&self) -> Option<usize> {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Some(f.difficulty.max_combo()),
             Self::Mania(_) => None,
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Some(o.difficulty.max_combo),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Some(t.difficulty.max_combo),
-        }
-    }
-
-    #[cfg(not(feature = "mania"))]
-    #[inline]
-    /// The maximum combo of the map.
-    pub fn max_combo(&self) -> usize {
-        match self {
-            #[cfg(feature = "fruits")]
-            Self::Fruits(f) => f.difficulty.max_combo,
-            #[cfg(feature = "osu")]
-            Self::Osu(o) => o.difficulty.max_combo,
-            #[cfg(feature = "taiko")]
-            Self::Taiko(t) => t.difficulty.max_combo,
         }
     }
 }
@@ -590,19 +445,14 @@ impl PerformanceAttributes {
 impl From<PerformanceAttributes> for DifficultyAttributes {
     fn from(attributes: PerformanceAttributes) -> Self {
         match attributes {
-            #[cfg(feature = "fruits")]
             PerformanceAttributes::Fruits(attributes) => Self::Fruits(attributes.difficulty),
-            #[cfg(feature = "mania")]
             PerformanceAttributes::Mania(attributes) => Self::Mania(attributes.difficulty),
-            #[cfg(feature = "osu")]
             PerformanceAttributes::Osu(attributes) => Self::Osu(attributes.difficulty),
-            #[cfg(feature = "taiko")]
             PerformanceAttributes::Taiko(attributes) => Self::Taiko(attributes.difficulty),
         }
     }
 }
 
-#[cfg(feature = "fruits")]
 impl From<fruits::FruitsPerformanceAttributes> for PerformanceAttributes {
     #[inline]
     fn from(attributes: fruits::FruitsPerformanceAttributes) -> Self {
@@ -610,7 +460,6 @@ impl From<fruits::FruitsPerformanceAttributes> for PerformanceAttributes {
     }
 }
 
-#[cfg(feature = "mania")]
 impl From<mania::ManiaPerformanceAttributes> for PerformanceAttributes {
     #[inline]
     fn from(attributes: mania::ManiaPerformanceAttributes) -> Self {
@@ -618,7 +467,6 @@ impl From<mania::ManiaPerformanceAttributes> for PerformanceAttributes {
     }
 }
 
-#[cfg(feature = "osu")]
 impl From<osu::OsuPerformanceAttributes> for PerformanceAttributes {
     #[inline]
     fn from(attributes: osu::OsuPerformanceAttributes) -> Self {
@@ -626,7 +474,6 @@ impl From<osu::OsuPerformanceAttributes> for PerformanceAttributes {
     }
 }
 
-#[cfg(feature = "taiko")]
 impl From<taiko::TaikoPerformanceAttributes> for PerformanceAttributes {
     #[inline]
     fn from(attributes: taiko::TaikoPerformanceAttributes) -> Self {
@@ -634,7 +481,6 @@ impl From<taiko::TaikoPerformanceAttributes> for PerformanceAttributes {
     }
 }
 
-#[cfg(any(feature = "osu", feature = "taiko"))]
 #[inline]
 fn difficulty_range(val: f64, max: f64, avg: f64, min: f64) -> f64 {
     if val > 5.0 {
@@ -645,14 +491,6 @@ fn difficulty_range(val: f64, max: f64, avg: f64, min: f64) -> f64 {
         avg
     }
 }
-
-#[cfg(not(any(
-    feature = "osu",
-    feature = "taiko",
-    feature = "fruits",
-    feature = "mania"
-)))]
-compile_error!("At least one of the features `osu`, `taiko`, `fruits`, `mania` must be enabled");
 
 #[cfg(all(feature = "async_tokio", feature = "async_std"))]
 compile_error!("Only one of the features `async_tokio` and `async_std` should be enabled");

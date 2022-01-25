@@ -1,5 +1,3 @@
-#![cfg(feature = "fruits")]
-
 mod catch_object;
 mod difficulty_object;
 mod fruit_or_juice;

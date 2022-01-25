@@ -1,5 +1,3 @@
-#![cfg(feature = "osu")]
-
 mod difficulty_object;
 mod gradual_difficulty;
 mod gradual_performance;

@@ -1,17 +1,11 @@
 use super::OSU_FILE_HEADER;
 
-#[cfg(not(all(
-    feature = "osu",
-    feature = "taiko",
-    feature = "fruits",
-    feature = "mania"
-)))]
-use super::GameMode;
-
-use std::error::Error as StdError;
-use std::fmt;
-use std::io::Error as IOError;
-use std::num::{ParseFloatError, ParseIntError};
+use std::{
+    error::Error as StdError,
+    fmt,
+    io::Error as IOError,
+    num::{ParseFloatError, ParseIntError},
+};
 
 /// `Result<_, ParseError>`
 pub type ParseResult<T> = Result<T, ParseError>;
@@ -40,15 +34,6 @@ pub enum ParseError {
     TooManyRepeats,
     /// Failed to recognized specified type for hitobjects.
     UnknownHitObjectKind,
-
-    #[cfg(not(all(
-        feature = "osu",
-        feature = "taiko",
-        feature = "fruits",
-        feature = "mania"
-    )))]
-    /// Tried to parse a map with a game mode who's feature was not enabled
-    UnincludedMode(GameMode),
 }
 
 impl fmt::Display for ParseError {
@@ -66,18 +51,6 @@ impl fmt::Display for ParseError {
             Self::MissingField(field) => write!(f, "missing field `{}`", field),
             Self::TooManyRepeats => f.write_str("repeat count is way too high"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
-
-            #[cfg(not(all(
-                feature = "osu",
-                feature = "taiko",
-                feature = "fruits",
-                feature = "mania"
-            )))]
-            Self::UnincludedMode(mode) => write!(
-                f,
-                "cannot process {:?} map; its mode's feature has not been included",
-                mode
-            ),
         }
     }
 }
@@ -95,14 +68,6 @@ impl StdError for ParseError {
             Self::MissingField(_) => None,
             Self::TooManyRepeats => None,
             Self::UnknownHitObjectKind => None,
-
-            #[cfg(not(all(
-                feature = "osu",
-                feature = "taiko",
-                feature = "fruits",
-                feature = "mania"
-            )))]
-            Self::UnincludedMode(_) => None,
         }
     }
 }

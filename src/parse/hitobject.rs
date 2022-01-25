@@ -58,7 +58,6 @@ impl PartialOrd for HitObject {
 pub enum HitObjectKind {
     /// A circle object.
     Circle,
-    #[cfg(feature = "sliders")]
     /// A full slider object.
     Slider {
         /// Total length of the slider in pixels.
@@ -67,14 +66,6 @@ pub enum HitObjectKind {
         repeats: usize,
         /// The control points of the slider.
         control_points: Vec<super::PathControlPoint>,
-    },
-    #[cfg(not(feature = "sliders"))]
-    /// A partial slider object.
-    Slider {
-        /// Total length of the slider in pixels.
-        pixel_len: f64,
-        /// The amount of spans of the slider.
-        span_count: usize,
     },
     /// A spinner object.
     Spinner {

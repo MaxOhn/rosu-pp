@@ -1,16 +1,10 @@
-use crate::{Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes, ScoreState};
-
-#[cfg(feature = "fruits")]
-use crate::fruits::{FruitsDifficultyAttributes, FruitsPP, FruitsPerformanceAttributes};
-
-#[cfg(feature = "mania")]
-use crate::mania::{ManiaDifficultyAttributes, ManiaPP, ManiaPerformanceAttributes};
-
-#[cfg(feature = "osu")]
-use crate::osu::{OsuDifficultyAttributes, OsuPP, OsuPerformanceAttributes};
-
-#[cfg(feature = "taiko")]
-use crate::taiko::{TaikoDifficultyAttributes, TaikoPP, TaikoPerformanceAttributes};
+use crate::{
+    fruits::{FruitsDifficultyAttributes, FruitsPP, FruitsPerformanceAttributes},
+    mania::{ManiaDifficultyAttributes, ManiaPP, ManiaPerformanceAttributes},
+    osu::{OsuDifficultyAttributes, OsuPP, OsuPerformanceAttributes},
+    taiko::{TaikoDifficultyAttributes, TaikoPP, TaikoPerformanceAttributes},
+    Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes, ScoreState,
+};
 
 /// Performance calculator on maps of any mode.
 ///
@@ -44,16 +38,12 @@ use crate::taiko::{TaikoDifficultyAttributes, TaikoPP, TaikoPerformanceAttribute
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug)]
 pub enum AnyPP<'map> {
-    #[cfg(feature = "fruits")]
     /// osu!ctb performance calculator
     Fruits(FruitsPP<'map>),
-    #[cfg(feature = "mania")]
     /// osu!mania performance calculator
     Mania(ManiaPP<'map>),
-    #[cfg(feature = "osu")]
     /// osu!standard performance calculator
     Osu(OsuPP<'map>),
-    #[cfg(feature = "taiko")]
     /// osu!taiko performance calculator
     Taiko(TaikoPP<'map>),
 }
@@ -63,16 +53,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         match map.mode {
-            #[cfg(feature = "fruits")]
             GameMode::CTB => Self::Fruits(FruitsPP::new(map)),
-            #[cfg(feature = "mania")]
             GameMode::MNA => Self::Mania(ManiaPP::new(map)),
-            #[cfg(feature = "osu")]
             GameMode::STD => Self::Osu(OsuPP::new(map)),
-            #[cfg(feature = "taiko")]
             GameMode::TKO => Self::Taiko(TaikoPP::new(map)),
-            #[allow(unreachable_patterns)]
-            _ => panic!("feature for mode {:?} is not enabled", map.mode),
         }
     }
 
@@ -81,13 +65,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn calculate(self) -> PerformanceAttributes {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => PerformanceAttributes::Fruits(f.calculate()),
-            #[cfg(feature = "mania")]
             Self::Mania(m) => PerformanceAttributes::Mania(m.calculate()),
-            #[cfg(feature = "osu")]
             Self::Osu(o) => PerformanceAttributes::Osu(o.calculate()),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => PerformanceAttributes::Taiko(t.calculate()),
         }
     }
@@ -98,13 +78,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn attributes(self, attributes: impl AttributeProvider) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.attributes(attributes.attributes())),
-            #[cfg(feature = "mania")]
             Self::Mania(m) => Self::Mania(m.attributes(attributes.attributes())),
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.attributes(attributes.attributes())),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.attributes(attributes.attributes())),
         }
     }
@@ -115,13 +91,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn mods(self, mods: u32) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.mods(mods)),
-            #[cfg(feature = "mania")]
             Self::Mania(m) => Self::Mania(m.mods(mods)),
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.mods(mods)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.mods(mods)),
         }
     }
@@ -134,13 +106,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.passed_objects(passed_objects)),
-            #[cfg(feature = "mania")]
             Self::Mania(m) => Self::Mania(m.passed_objects(passed_objects)),
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.passed_objects(passed_objects)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.passed_objects(passed_objects)),
         }
     }
@@ -149,13 +117,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn state(self, state: ScoreState) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.state(state.into())),
-            #[cfg(feature = "mania")]
             Self::Mania(m) => Self::Mania(m.score(state.score)),
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.state(state.into())),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.state(state.into())),
         }
     }
@@ -170,13 +134,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn accuracy(self, acc: f64) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.accuracy(acc)),
-            #[cfg(feature = "mania")]
             Self::Mania(_) => self,
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.accuracy(acc)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.accuracy(acc)),
         }
     }
@@ -188,13 +148,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn misses(self, misses: usize) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.misses(misses)),
-            #[cfg(feature = "mania")]
             Self::Mania(_) => self,
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.misses(misses)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.misses(misses)),
         }
     }
@@ -206,13 +162,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn combo(self, combo: usize) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.combo(combo)),
-            #[cfg(feature = "mania")]
             Self::Mania(_) => self,
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.combo(combo)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.combo(combo)),
         }
     }
@@ -224,13 +176,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n300(self, n300: usize) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.fruits(n300)),
-            #[cfg(feature = "mania")]
             Self::Mania(_) => self,
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.n300(n300)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.n300(n300)),
         }
     }
@@ -242,13 +190,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n100(self, n100: usize) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.droplets(n100)),
-            #[cfg(feature = "mania")]
             Self::Mania(_) => self,
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.n100(n100)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => Self::Taiko(t.n100(n100)),
         }
     }
@@ -260,13 +204,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n50(self, n50: usize) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.tiny_droplets(n50)),
-            #[cfg(feature = "mania")]
             Self::Mania(_) => self,
-            #[cfg(feature = "osu")]
             Self::Osu(o) => Self::Osu(o.n50(n50)),
-            #[cfg(feature = "taiko")]
             Self::Taiko(_) => self,
         }
     }
@@ -279,13 +219,9 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n_katu(self, n_katu: usize) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => Self::Fruits(f.tiny_droplet_misses(n_katu)),
-            #[cfg(feature = "mania")]
             Self::Mania(_) => self,
-            #[cfg(feature = "osu")]
             Self::Osu(_) => self,
-            #[cfg(feature = "taiko")]
             Self::Taiko(_) => self,
         }
     }
@@ -295,17 +231,12 @@ impl<'map> AnyPP<'map> {
     /// This value is only relevant for osu!mania.
     ///
     /// On `NoMod` its between 0 and 1,000,000, on `Easy` between 0 and 500,000, etc.
-    #[allow(unused_variables)]
     #[inline]
     pub fn score(self, score: u32) -> Self {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(_) => self,
-            #[cfg(feature = "mania")]
             Self::Mania(m) => Self::Mania(m.score(score)),
-            #[cfg(feature = "osu")]
             Self::Osu(_) => self,
-            #[cfg(feature = "taiko")]
             Self::Taiko(_) => self,
         }
     }
@@ -328,70 +259,36 @@ impl AttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> DifficultyAttributes {
         match self {
-            #[cfg(feature = "fruits")]
             Self::Fruits(f) => DifficultyAttributes::Fruits(f.difficulty),
-            #[cfg(feature = "mania")]
             Self::Mania(m) => DifficultyAttributes::Mania(m.difficulty),
-            #[cfg(feature = "osu")]
             Self::Osu(o) => DifficultyAttributes::Osu(o.difficulty),
-            #[cfg(feature = "taiko")]
             Self::Taiko(t) => DifficultyAttributes::Taiko(t.difficulty),
         }
     }
 }
 
-#[cfg(feature = "fruits")]
-impl AttributeProvider for FruitsDifficultyAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Fruits(self)
-    }
+macro_rules! impl_attr_provider {
+    ($mode:ident: $difficulty:ident, $performance:ident) => {
+        impl AttributeProvider for $difficulty {
+            #[inline]
+            fn attributes(self) -> DifficultyAttributes {
+                DifficultyAttributes::$mode(self)
+            }
+        }
+
+        impl AttributeProvider for $performance {
+            #[inline]
+            fn attributes(self) -> DifficultyAttributes {
+                DifficultyAttributes::$mode(self.difficulty)
+            }
+        }
+    };
 }
 
-#[cfg(feature = "mania")]
-impl AttributeProvider for ManiaDifficultyAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Mania(self)
-    }
-}
-
-#[cfg(feature = "osu")]
-impl AttributeProvider for OsuDifficultyAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Osu(self)
-    }
-}
-
-#[cfg(feature = "taiko")]
-impl AttributeProvider for TaikoDifficultyAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Taiko(self)
-    }
-}
-
-#[cfg(feature = "fruits")]
-impl AttributeProvider for FruitsPerformanceAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Fruits(self.difficulty)
-    }
-}
-
-#[cfg(feature = "mania")]
-impl AttributeProvider for ManiaPerformanceAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Mania(self.difficulty)
-    }
-}
-
-#[cfg(feature = "osu")]
-impl AttributeProvider for OsuPerformanceAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Osu(self.difficulty)
-    }
-}
-
-#[cfg(feature = "taiko")]
-impl AttributeProvider for TaikoPerformanceAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        DifficultyAttributes::Taiko(self.difficulty)
-    }
-}
+impl_attr_provider!(
+    Fruits: FruitsDifficultyAttributes,
+    FruitsPerformanceAttributes
+);
+impl_attr_provider!(Mania: ManiaDifficultyAttributes, ManiaPerformanceAttributes);
+impl_attr_provider!(Osu: OsuDifficultyAttributes, OsuPerformanceAttributes);
+impl_attr_provider!(Taiko: TaikoDifficultyAttributes, TaikoPerformanceAttributes);

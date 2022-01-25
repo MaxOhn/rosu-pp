@@ -1,5 +1,3 @@
-#![cfg(feature = "sliders")]
-
 use std::{borrow::Cow, cmp::Ordering, convert::identity, f32::consts::PI, iter};
 
 use crate::parse::{PathControlPoint, PathType, Pos2};

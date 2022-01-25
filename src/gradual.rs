@@ -1,19 +1,11 @@
-use crate::{Beatmap, DifficultyAttributes, GameMode, Mods, PerformanceAttributes};
-
-#[cfg(feature = "fruits")]
-use crate::fruits::{
-    FruitsGradualDifficultyAttributes, FruitsGradualPerformanceAttributes, FruitsScoreState,
-};
-
-#[cfg(feature = "mania")]
-use crate::mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes};
-
-#[cfg(feature = "osu")]
-use crate::osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState};
-
-#[cfg(feature = "taiko")]
-use crate::taiko::{
-    TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState,
+use crate::{
+    fruits::{
+        FruitsGradualDifficultyAttributes, FruitsGradualPerformanceAttributes, FruitsScoreState,
+    },
+    mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes},
+    osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
+    taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
+    Beatmap, DifficultyAttributes, GameMode, Mods, PerformanceAttributes,
 };
 
 /// Gradually calculate the difficulty attributes on maps of any mode.
@@ -48,16 +40,12 @@ use crate::taiko::{
 /// ```
 #[derive(Clone, Debug)]
 pub enum GradualDifficultyAttributes<'map> {
-    #[cfg(feature = "fruits")]
     /// Gradual osu!fruits difficulty attributes.
     Fruits(FruitsGradualDifficultyAttributes<'map>),
-    #[cfg(feature = "mania")]
     /// Gradual osu!mania difficulty attributes.
     Mania(ManiaGradualDifficultyAttributes<'map>),
-    #[cfg(feature = "osu")]
     /// Gradual osu!standard difficulty attributes.
     Osu(OsuGradualDifficultyAttributes),
-    #[cfg(feature = "taiko")]
     /// Gradual osu!taiko difficulty attributes.
     Taiko(TaikoGradualDifficultyAttributes<'map>),
 }
@@ -66,16 +54,10 @@ impl<'map> GradualDifficultyAttributes<'map> {
     /// Create a new gradual difficulty calculator for maps of any mode.
     pub fn new(map: &'map Beatmap, mods: impl Mods) -> Self {
         match map.mode {
-            #[cfg(feature = "osu")]
             GameMode::STD => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
-            #[cfg(feature = "taiko")]
             GameMode::TKO => Self::Taiko(TaikoGradualDifficultyAttributes::new(map, mods)),
-            #[cfg(feature = "fruits")]
             GameMode::CTB => Self::Fruits(FruitsGradualDifficultyAttributes::new(map, mods)),
-            #[cfg(feature = "mania")]
             GameMode::MNA => Self::Mania(ManiaGradualDifficultyAttributes::new(map, mods)),
-            #[allow(unreachable_patterns)]
-            _ => panic!("feature for mode {:?} is not enabled", map.mode),
         }
     }
 }
@@ -86,13 +68,9 @@ impl Iterator for GradualDifficultyAttributes<'_> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            #[cfg(feature = "fruits")]
             GradualDifficultyAttributes::Fruits(f) => f.next().map(DifficultyAttributes::Fruits),
-            #[cfg(feature = "mania")]
             GradualDifficultyAttributes::Mania(m) => m.next().map(DifficultyAttributes::Mania),
-            #[cfg(feature = "osu")]
             GradualDifficultyAttributes::Osu(o) => o.next().map(DifficultyAttributes::Osu),
-            #[cfg(feature = "taiko")]
             GradualDifficultyAttributes::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
         }
     }
@@ -100,13 +78,9 @@ impl Iterator for GradualDifficultyAttributes<'_> {
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            #[cfg(feature = "fruits")]
             GradualDifficultyAttributes::Fruits(f) => f.size_hint(),
-            #[cfg(feature = "mania")]
             GradualDifficultyAttributes::Mania(m) => m.size_hint(),
-            #[cfg(feature = "osu")]
             GradualDifficultyAttributes::Osu(o) => o.size_hint(),
-            #[cfg(feature = "taiko")]
             GradualDifficultyAttributes::Taiko(t) => t.size_hint(),
         }
     }
@@ -159,7 +133,6 @@ impl ScoreState {
     }
 }
 
-#[cfg(feature = "fruits")]
 impl From<ScoreState> for FruitsScoreState {
     #[inline]
     fn from(state: ScoreState) -> Self {
@@ -174,7 +147,6 @@ impl From<ScoreState> for FruitsScoreState {
     }
 }
 
-#[cfg(feature = "osu")]
 impl From<ScoreState> for OsuScoreState {
     #[inline]
     fn from(state: ScoreState) -> Self {
@@ -188,7 +160,6 @@ impl From<ScoreState> for OsuScoreState {
     }
 }
 
-#[cfg(feature = "taiko")]
 impl From<ScoreState> for TaikoScoreState {
     #[inline]
     fn from(state: ScoreState) -> Self {
@@ -300,16 +271,12 @@ impl From<ScoreState> for TaikoScoreState {
 /// ```
 #[derive(Clone, Debug)]
 pub enum GradualPerformanceAttributes<'map> {
-    #[cfg(feature = "fruits")]
     /// Gradual osu!ctb performance attributes.
     Fruits(FruitsGradualPerformanceAttributes<'map>),
-    #[cfg(feature = "mania")]
     /// Gradual osu!mania performance attributes.
     Mania(ManiaGradualPerformanceAttributes<'map>),
-    #[cfg(feature = "osu")]
     /// Gradual osu!standard performance attributes.
     Osu(OsuGradualPerformanceAttributes<'map>),
-    #[cfg(feature = "taiko")]
     /// Gradual osu!taiko performance attributes.
     Taiko(TaikoGradualPerformanceAttributes<'map>),
 }
@@ -318,16 +285,10 @@ impl<'map> GradualPerformanceAttributes<'map> {
     /// Create a new gradual performance calculator for maps of any mode.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
-            #[cfg(feature = "osu")]
             GameMode::STD => Self::Osu(OsuGradualPerformanceAttributes::new(map, mods)),
-            #[cfg(feature = "taiko")]
             GameMode::TKO => Self::Taiko(TaikoGradualPerformanceAttributes::new(map, mods)),
-            #[cfg(feature = "fruits")]
             GameMode::CTB => Self::Fruits(FruitsGradualPerformanceAttributes::new(map, mods)),
-            #[cfg(feature = "mania")]
             GameMode::MNA => Self::Mania(ManiaGradualPerformanceAttributes::new(map, mods)),
-            #[allow(unreachable_patterns)]
-            _ => panic!("feature for mode {:?} is not enabled", map.mode),
         }
     }
 
@@ -349,19 +310,15 @@ impl<'map> GradualPerformanceAttributes<'map> {
         n: usize,
     ) -> Option<PerformanceAttributes> {
         match self {
-            #[cfg(feature = "fruits")]
             GradualPerformanceAttributes::Fruits(f) => f
                 .process_next_n_objects(state.into(), n)
                 .map(PerformanceAttributes::Fruits),
-            #[cfg(feature = "mania")]
             GradualPerformanceAttributes::Mania(m) => m
                 .process_next_n_objects(state.score, n)
                 .map(PerformanceAttributes::Mania),
-            #[cfg(feature = "osu")]
             GradualPerformanceAttributes::Osu(o) => o
                 .process_next_n_objects(state.into(), n)
                 .map(PerformanceAttributes::Osu),
-            #[cfg(feature = "taiko")]
             GradualPerformanceAttributes::Taiko(t) => t
                 .process_next_n_objects(state.into(), n)
                 .map(PerformanceAttributes::Taiko),
