@@ -684,6 +684,7 @@ macro_rules! parse_body {
         let mut map = Beatmap {
             version,
             hit_objects: Vec::with_capacity(256),
+            sounds: Vec::with_capacity(256),
             ..Default::default()
         };
 
