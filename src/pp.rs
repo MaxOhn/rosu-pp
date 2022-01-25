@@ -1,16 +1,16 @@
 use crate::{Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes, ScoreState};
 
 #[cfg(feature = "fruits")]
-use crate::fruits::{FruitsDifficultyAttributes, FruitsPP};
+use crate::fruits::{FruitsDifficultyAttributes, FruitsPP, FruitsPerformanceAttributes};
 
 #[cfg(feature = "mania")]
-use crate::mania::{ManiaDifficultyAttributes, ManiaPP};
+use crate::mania::{ManiaDifficultyAttributes, ManiaPP, ManiaPerformanceAttributes};
 
 #[cfg(feature = "osu")]
-use crate::osu::{OsuDifficultyAttributes, OsuPP};
+use crate::osu::{OsuDifficultyAttributes, OsuPP, OsuPerformanceAttributes};
 
 #[cfg(feature = "taiko")]
-use crate::taiko::{TaikoDifficultyAttributes, TaikoPP};
+use crate::taiko::{TaikoDifficultyAttributes, TaikoPP, TaikoPerformanceAttributes};
 
 /// Performance calculator on maps of any mode.
 ///
@@ -365,5 +365,33 @@ impl AttributeProvider for OsuDifficultyAttributes {
 impl AttributeProvider for TaikoDifficultyAttributes {
     fn attributes(self) -> DifficultyAttributes {
         DifficultyAttributes::Taiko(self)
+    }
+}
+
+#[cfg(feature = "fruits")]
+impl AttributeProvider for FruitsPerformanceAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Fruits(self.difficulty)
+    }
+}
+
+#[cfg(feature = "mania")]
+impl AttributeProvider for ManiaPerformanceAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Mania(self.difficulty)
+    }
+}
+
+#[cfg(feature = "osu")]
+impl AttributeProvider for OsuPerformanceAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Osu(self.difficulty)
+    }
+}
+
+#[cfg(feature = "taiko")]
+impl AttributeProvider for TaikoPerformanceAttributes {
+    fn attributes(self) -> DifficultyAttributes {
+        DifficultyAttributes::Taiko(self.difficulty)
     }
 }

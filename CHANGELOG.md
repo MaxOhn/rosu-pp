@@ -2,6 +2,7 @@
 
 - osu: Fix panic on maps with 0 objects
 - [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
+- Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
 
 # v0.4.0
 
