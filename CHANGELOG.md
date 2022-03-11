@@ -1,6 +1,7 @@
 ## Upcoming
 
 - osu: Fix panic on maps with 0 objects
+- Fixed timing point parsing on some (older) maps where "uninherited" value did not coincide with beat length
 - Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
 - [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
 - [BREAKING] Removed the mode features `osu`, `fruits`, `taiko`, and `mania`. Now all modes are always supported.

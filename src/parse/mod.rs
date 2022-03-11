@@ -278,11 +278,26 @@ macro_rules! parse_timingpoints_body {
                 .validate()?;
 
             let beat_len: f64 = split.next().next_field("beat len")?.trim().parse()?;
+            let timing_change = split.nth(4).and_then(|value| value.bytes().next());
 
-            if beat_len < 0.0 {
+            if timing_change == Some(b'1') {
+                $self.timing_points.push(TimingPoint { time, beat_len });
+
+                if time < prev_time {
+                    unsorted_timings = true;
+                } else {
+                    prev_time = time;
+                }
+            } else {
+                let speed_multiplier = if beat_len < 0.0 {
+                    (-100.0 / beat_len).max(0.1).min(10.0)
+                } else {
+                    1.0
+                };
+
                 let point = DifficultyPoint {
                     time,
-                    speed_multiplier: (-100.0 / beat_len).max(0.1).min(10.0),
+                    speed_multiplier,
                 };
 
                 $self.difficulty_points.push(point);
@@ -291,14 +306,6 @@ macro_rules! parse_timingpoints_body {
                     unsorted_difficulties = true;
                 } else {
                     prev_diff = time;
-                }
-            } else {
-                $self.timing_points.push(TimingPoint { time, beat_len });
-
-                if time < prev_time {
-                    unsorted_timings = true;
-                } else {
-                    prev_time = time;
                 }
             }
 

@@ -8,3 +8,4 @@ output
 
 /pp-plot/.env
 /pp-plot/target
+/pp-plot/accuracy_*
