@@ -280,7 +280,7 @@ macro_rules! parse_timingpoints_body {
             let beat_len: f64 = split.next().next_field("beat len")?.trim().parse()?;
             let timing_change = split.nth(4).and_then(|value| value.bytes().next());
 
-            if timing_change == Some(b'1') {
+            if matches!(timing_change, Some(b'1') | None) {
                 $self.timing_points.push(TimingPoint { time, beat_len });
 
                 if time < prev_time {
