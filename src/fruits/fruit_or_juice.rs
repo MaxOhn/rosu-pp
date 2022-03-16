@@ -131,15 +131,23 @@ impl FruitOrJuice {
                         // Reverse tick
                         slider_objects.push((pos, h.start_time + time_offset));
 
-                        let new_ticks = params.ticks.iter().enumerate().map(|(i, (pos, time))| {
-                            (*pos, *time + time_offset + time_add * i as f64)
-                        });
-
                         // Actual ticks
                         if span_idx & 1 == 1 {
-                            slider_objects.extend(new_ticks.rev());
+                            let tick_iter = params
+                                .ticks
+                                .iter()
+                                .rev()
+                                .zip(params.ticks.iter())
+                                .map(|((pos, _), (_, time))| (*pos, *time + time_offset));
+
+                            slider_objects.extend(tick_iter);
                         } else {
-                            slider_objects.extend(new_ticks);
+                            let tick_iter = params
+                                .ticks
+                                .iter()
+                                .map(|(pos, time)| (*pos, *time + time_offset));
+
+                            slider_objects.extend(tick_iter);
                         }
                     }
 

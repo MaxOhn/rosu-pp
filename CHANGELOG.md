@@ -1,6 +1,7 @@
 ## Upcoming
 
 - osu: Fix panic on maps with 0 objects
+- fruits: Fixed droplet timings on juicestreams with span count >1
 - Fixed timing point parsing on some (older) maps where "uninherited" value did not coincide with beat length
 - Fixed handling .osu files with missing difficulty attributes
 - Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
