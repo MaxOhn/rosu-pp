@@ -283,6 +283,7 @@ macro_rules! parse_timingpoints_body {
             let timing_change = split.nth(4).and_then(|value| value.bytes().next());
 
             if matches!(timing_change, Some(b'1') | None) {
+                let beat_len = beat_len.clamp(6.0, 60_000.0);
                 $self.timing_points.push(TimingPoint { time, beat_len });
 
                 if time < prev_time {
@@ -292,7 +293,7 @@ macro_rules! parse_timingpoints_body {
                 }
             } else {
                 let speed_multiplier = if beat_len < 0.0 {
-                    (-100.0 / beat_len).max(0.1).min(10.0)
+                    (-100.0 / beat_len).clamp(0.1, 10.0)
                 } else {
                     1.0
                 };

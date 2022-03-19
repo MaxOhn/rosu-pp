@@ -4,6 +4,7 @@
 - fruits: Fixed droplet timings on juicestreams with span count >1
 - Fixed timing point parsing on some (older) maps where "uninherited" value did not coincide with beat length
 - Fixed handling .osu files with missing difficulty attributes
+- Fixed huge memory allocations caused by incorrectly parsed .osu files by clamping beat length
 - Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
 - [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
 - [BREAKING] Removed the mode features `osu`, `fruits`, `taiko`, and `mania`. Now all modes are always supported.
