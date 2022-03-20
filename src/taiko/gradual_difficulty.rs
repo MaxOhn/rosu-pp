@@ -66,7 +66,7 @@ impl<'map> TaikoGradualDifficultyAttributes<'map> {
         let cheese = map.find_cheese();
 
         let skills = Skills::new();
-        let clock_rate = mods.speed();
+        let clock_rate = mods.clock_rate();
         let difficulty_objects = GradualTaikoObjectIter::new(map, clock_rate);
 
         Self {

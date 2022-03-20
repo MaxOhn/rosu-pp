@@ -163,7 +163,7 @@ impl<'map> OsuStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> Strains {
-        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.speed());
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (mut skills, _) = calculate_skills(self);
 
         let mut aim = mem::take(&mut skills.aim().strain_peaks);
@@ -236,7 +236,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     } = params;
 
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
-    let clock_rate = clock_rate.unwrap_or_else(|| mods.speed());
+    let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
     let map_attributes = map.attributes().mods(mods);
     let hit_window = difficulty_range_od(map_attributes.od) / clock_rate;

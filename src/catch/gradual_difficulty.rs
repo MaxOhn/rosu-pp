@@ -86,7 +86,7 @@ impl<'map> CatchGradualDifficultyAttributes<'map> {
 
         Self {
             idx: 0,
-            clock_rate: mods.speed(),
+            clock_rate: mods.clock_rate(),
             hit_objects,
             movement,
             prev,

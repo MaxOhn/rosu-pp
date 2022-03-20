@@ -41,7 +41,7 @@ impl BeatmapAttributes {
             return self;
         }
 
-        let clock_rate = mods.speed();
+        let clock_rate = mods.clock_rate();
         let multiplier = mods.od_ar_hp_multiplier();
 
         // AR

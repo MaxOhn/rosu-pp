@@ -76,7 +76,7 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
             other => panic!("can not calculate mania difficulty on a {:?} map", other),
         };
 
-        let clock_rate = mods.speed();
+        let clock_rate = mods.clock_rate();
         let strain = Strain::new(columns);
         let columns = columns as f32;
         let difficulty_objects = ManiaObjectIter::new(&map.hit_objects, columns, clock_rate);

@@ -285,7 +285,7 @@ impl<'map> TaikoPPInner<'map> {
             od *= 0.5;
         }
 
-        let hit_window = difficulty_range_od(od).floor() / self.mods.speed();
+        let hit_window = difficulty_range_od(od).floor() / self.mods.clock_rate();
         let max_combo = self.attributes.max_combo;
 
         (150.0 / hit_window).powf(1.1)

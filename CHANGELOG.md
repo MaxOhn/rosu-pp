@@ -12,6 +12,7 @@
 - [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
 - [BREAKING] Removed the mode features `osu`, `fruits`, `taiko`, and `mania`. Now all modes are always supported.
 - [BREAKING] Renamed the `rosu_pp::fruits` module to `rosu_pp::catch`. Similarly, all structs `Fruits{Name}` were renamed to `Catch{Name}` and enums over the mode have their `Fruits` variant renamed to `Catch`
+- [BREAKING] Renamed `Mods`' method `speed` to `clock_rate`
 
 # v0.4.0
 

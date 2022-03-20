@@ -98,7 +98,7 @@ impl<'map> ManiaStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> Strains {
-        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.speed());
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let strain = calculate_strain(self);
 
         Strains {
@@ -140,7 +140,7 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
         other => panic!("can not calculate mania difficulty on a {:?} map", other),
     };
 
-    let clock_rate = clock_rate.unwrap_or_else(|| mods.speed());
+    let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
     let mut strain = Strain::new(columns);
     let columns = columns as f32;
 

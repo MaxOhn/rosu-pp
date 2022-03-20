@@ -139,7 +139,7 @@ impl<'map> TaikoStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> Strains {
-        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.speed());
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (skills, _) = calculate_skills(self);
 
         let strains = skills
@@ -170,7 +170,7 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Skills, usize) {
     } = params;
 
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
-    let clock_rate = clock_rate.unwrap_or_else(|| mods.speed());
+    let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
     // True if the object at that index is stamina cheese
     let cheese = map.find_cheese();

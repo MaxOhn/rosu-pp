@@ -26,7 +26,7 @@ pub trait Mods: Copy {
     /// If object time's or positions are affected by the mods.
     fn change_map(self) -> bool;
     /// The clock rate with the mods.
-    fn speed(self) -> f64;
+    fn clock_rate(self) -> f64;
     /// Multiplier for beatmap attributes with respect to the mods.
     fn od_ar_hp_multiplier(self) -> f64;
     fn nf(self) -> bool;
@@ -53,7 +53,7 @@ impl Mods for u32 {
     }
 
     #[inline]
-    fn speed(self) -> f64 {
+    fn clock_rate(self) -> f64 {
         if self & Self::DT > 0 {
             1.5
         } else if self & Self::HT > 0 {
