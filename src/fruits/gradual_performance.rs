@@ -11,7 +11,7 @@ pub struct FruitsScoreState {
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
     ///
-    /// Note that only fruits and droplets are considered for osu!ctb combo.
+    /// Note that only fruits and droplets are considered for osu!catch combo.
     pub max_combo: usize,
     /// Amount of current fruits (300s).
     pub n_fruits: usize,
@@ -32,7 +32,7 @@ impl FruitsScoreState {
     }
 }
 
-/// Gradually calculate the performance attributes of an osu!ctb map.
+/// Gradually calculate the performance attributes of an osu!catch map.
 ///
 /// After each hit object you can call
 /// [`process_next_object`](`FruitsGradualPerformanceAttributes::process_next_object`)

@@ -1,4 +1,4 @@
-use super::{stars, TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState};
+use super::{TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState, TaikoStars};
 use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
 /// Performance calculator on osu!taiko maps.
@@ -158,10 +158,12 @@ impl<'map> TaikoPP<'map> {
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> TaikoPerformanceAttributes {
-        let attributes = self
-            .attributes
-            .take()
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
+        let attributes = self.attributes.take().unwrap_or_else(|| {
+            TaikoStars::new(self.map)
+                .mods(self.mods)
+                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
+                .calculate()
+        });
 
         if self.n300.or(self.n100).is_some() {
             let total = self.map.n_circles as usize;

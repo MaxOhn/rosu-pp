@@ -24,39 +24,96 @@ const STAR_SCALING_FACTOR: f64 = 0.153;
 const ALLOWED_CATCH_RANGE: f32 = 0.8;
 const CATCHER_SIZE: f32 = 106.75;
 
-/// Difficulty calculation for osu!ctb maps.
+/// Difficulty calculator on osu!catch maps.
 ///
-/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
+/// # Example
+///
+/// ```
+/// use rosu_pp::{FruitsStars, Beatmap};
+///
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+/// # let map = Beatmap::default();
+///
+/// let difficulty_attrs = FruitsStars::new(&map)
+///     .mods(8 + 64) // HDDT
+///     .calculate();
+///
+/// println!("Stars: {}", difficulty_attrs.stars);
+/// ```
+#[derive(Clone, Debug)]
+pub struct FruitsStars<'map> {
+    map: &'map Beatmap,
+    mods: u32,
     passed_objects: Option<usize>,
-) -> FruitsDifficultyAttributes {
-    let (mut movement, mut attributes) = calculate_movement(map, mods, passed_objects);
-    attributes.stars =
-        Movement::difficulty_value(&mut movement.strain_peaks).sqrt() * STAR_SCALING_FACTOR;
-
-    attributes
 }
 
-/// Essentially the same as the [`stars`] function but instead of
-/// evaluating the final strains, it just returns them as is.
-///
-/// Suitable to plot the difficulty of a map over time.
-pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    let (movement, _) = calculate_movement(map, mods, None);
+impl<'map> FruitsStars<'map> {
+    /// Create a new difficulty calculator for osu!catch maps.
+    #[inline]
+    pub fn new(map: &'map Beatmap) -> Self {
+        Self {
+            map,
+            mods: 0,
+            passed_objects: None,
+        }
+    }
 
-    Strains {
-        section_length: SECTION_LENGTH * mods.speed(),
-        strains: movement.strain_peaks,
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
+    #[inline]
+    pub fn mods(mut self, mods: u32) -> Self {
+        self.mods = mods;
+
+        self
+    }
+
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the difficulty after every few objects, instead of
+    /// using [`FruitsStars`] multiple times with different `passed_objects`, you should use
+    /// [`FruitsGradualDifficultyAttributes`](crate::fruits::FruitsGradualDifficultyAttributes).
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects = Some(passed_objects);
+
+        self
+    }
+
+    /// Calculate all difficulty related values, including stars.
+    #[inline]
+    pub fn calculate(self) -> FruitsDifficultyAttributes {
+        let (mut movement, mut attributes) = calculate_movement(self);
+        attributes.stars =
+            Movement::difficulty_value(&mut movement.strain_peaks).sqrt() * STAR_SCALING_FACTOR;
+
+        attributes
+    }
+
+    /// Calculate the skill strains.
+    ///
+    /// Suitable to plot the difficulty of a map over time.
+    #[inline]
+    pub fn strains(self) -> Strains {
+        let mods = self.mods;
+        let (movement, _) = calculate_movement(self);
+
+        Strains {
+            section_length: SECTION_LENGTH * mods.speed(),
+            strains: movement.strain_peaks,
+        }
     }
 }
 
-fn calculate_movement(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> (Movement, FruitsDifficultyAttributes) {
+fn calculate_movement(params: FruitsStars<'_>) -> (Movement, FruitsDifficultyAttributes) {
+    let FruitsStars {
+        map,
+        mods,
+        passed_objects,
+    } = params;
+
     let take = passed_objects.unwrap_or(usize::MAX);
 
     let map_attributes = map.attributes().mods(mods);
@@ -161,7 +218,7 @@ pub(crate) fn calculate_catch_width(cs: f32) -> f32 {
     CATCHER_SIZE * scale.abs() * ALLOWED_CATCH_RANGE
 }
 
-/// The result of a difficulty calculation on an osu!ctb map.
+/// The result of a difficulty calculation on an osu!catch map.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FruitsDifficultyAttributes {
     /// The final star rating
@@ -184,7 +241,7 @@ impl FruitsDifficultyAttributes {
     }
 }
 
-/// The result of a performance calculation on an osu!ctb map.
+/// The result of a performance calculation on an osu!catch map.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct FruitsPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation

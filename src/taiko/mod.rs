@@ -33,72 +33,129 @@ const COLOR_SKILL_MULTIPLIER: f64 = 0.01;
 const RHYTHM_SKILL_MULTIPLIER: f64 = 0.014;
 const STAMINA_SKILL_MULTIPLIER: f64 = 0.02;
 
-/// Difficulty calculation for osu!taiko maps.
+/// Difficulty calculator on osu!taiko maps.
 ///
-/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
+/// # Example
+///
+/// ```
+/// use rosu_pp::{TaikoStars, Beatmap};
+///
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+/// # let map = Beatmap::default();
+///
+/// let difficulty_attrs = TaikoStars::new(&map)
+///     .mods(8 + 64) // HDDT
+///     .calculate();
+///
+/// println!("Stars: {}", difficulty_attrs.stars);
+/// ```
+#[derive(Clone, Debug)]
+pub struct TaikoStars<'map> {
+    map: &'map Beatmap,
+    mods: u32,
     passed_objects: Option<usize>,
-) -> TaikoDifficultyAttributes {
-    let (skills, max_combo) = calculate_skills(map, mods, passed_objects);
-    let mut buf = vec![0.0; skills.strain_peaks_len()];
-
-    skills.color.copy_strain_peaks(&mut buf);
-    let color_rating = skills.color.difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
-
-    skills.rhythm.copy_strain_peaks(&mut buf);
-    let rhythm_rating = skills.rhythm.difficulty_value(&mut buf) * RHYTHM_SKILL_MULTIPLIER;
-
-    skills.stamina_right.copy_strain_peaks(&mut buf);
-    let stamina_right = skills.stamina_right.difficulty_value(&mut buf);
-
-    skills.stamina_left.copy_strain_peaks(&mut buf);
-    let stamina_left = skills.stamina_left.difficulty_value(&mut buf);
-
-    let mut stamina_rating = (stamina_right + stamina_left) * STAMINA_SKILL_MULTIPLIER;
-
-    let stamina_penalty = simple_color_penalty(stamina_rating, color_rating);
-    stamina_rating *= stamina_penalty;
-
-    let combined_rating = locally_combined_difficulty(&mut buf, &skills, stamina_penalty);
-    let separate_rating = norm(1.5, color_rating, rhythm_rating, stamina_rating);
-
-    let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
-
-    TaikoDifficultyAttributes { stars, max_combo }
 }
 
-/// Essentially the same as the [`stars`] function but instead of
-/// evaluating the final strains, it just returns them as is.
-///
-/// Suitable to plot the difficulty of a map over time.
-pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    let (skills, _) = calculate_skills(map, mods, None);
+impl<'map> TaikoStars<'map> {
+    /// Create a new difficulty calculator for osu!taiko maps.
+    #[inline]
+    pub fn new(map: &'map Beatmap) -> Self {
+        Self {
+            map,
+            mods: 0,
+            passed_objects: None,
+        }
+    }
 
-    let strains = skills
-        .color
-        .strain_peaks
-        .iter()
-        .zip(skills.rhythm.strain_peaks.iter())
-        .zip(skills.stamina_right.strain_peaks.iter())
-        .zip(skills.stamina_left.strain_peaks.iter())
-        .map(|(((color, rhythm), stamina_right), stamina_left)| {
-            color + rhythm + stamina_right + stamina_left
-        })
-        .collect();
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
+    #[inline]
+    pub fn mods(mut self, mods: u32) -> Self {
+        self.mods = mods;
 
-    Strains {
-        section_length: SECTION_LEN * mods.speed(),
-        strains,
+        self
+    }
+
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the difficulty after every few objects, instead of
+    /// using [`TaikoStars`] multiple times with different `passed_objects`, you should use
+    /// [`TaikoGradualDifficultyAttributes`](crate::taiko::TaikoGradualDifficultyAttributes).
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects = Some(passed_objects);
+
+        self
+    }
+
+    /// Calculate all difficulty related values, including stars.
+    #[inline]
+    pub fn calculate(self) -> TaikoDifficultyAttributes {
+        let (skills, max_combo) = calculate_skills(self);
+        let mut buf = vec![0.0; skills.strain_peaks_len()];
+
+        skills.color.copy_strain_peaks(&mut buf);
+        let color_rating = skills.color.difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
+
+        skills.rhythm.copy_strain_peaks(&mut buf);
+        let rhythm_rating = skills.rhythm.difficulty_value(&mut buf) * RHYTHM_SKILL_MULTIPLIER;
+
+        skills.stamina_right.copy_strain_peaks(&mut buf);
+        let stamina_right = skills.stamina_right.difficulty_value(&mut buf);
+
+        skills.stamina_left.copy_strain_peaks(&mut buf);
+        let stamina_left = skills.stamina_left.difficulty_value(&mut buf);
+
+        let mut stamina_rating = (stamina_right + stamina_left) * STAMINA_SKILL_MULTIPLIER;
+
+        let stamina_penalty = simple_color_penalty(stamina_rating, color_rating);
+        stamina_rating *= stamina_penalty;
+
+        let combined_rating = locally_combined_difficulty(&mut buf, &skills, stamina_penalty);
+        let separate_rating = norm(1.5, color_rating, rhythm_rating, stamina_rating);
+
+        let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
+
+        TaikoDifficultyAttributes { stars, max_combo }
+    }
+
+    /// Calculate the skill strains.
+    ///
+    /// Suitable to plot the difficulty of a map over time.
+    #[inline]
+    pub fn strains(self) -> Strains {
+        let mods = self.mods;
+        let (skills, _) = calculate_skills(self);
+
+        let strains = skills
+            .color
+            .strain_peaks
+            .iter()
+            .zip(skills.rhythm.strain_peaks.iter())
+            .zip(skills.stamina_right.strain_peaks.iter())
+            .zip(skills.stamina_left.strain_peaks.iter())
+            .map(|(((color, rhythm), stamina_right), stamina_left)| {
+                color + rhythm + stamina_right + stamina_left
+            })
+            .collect();
+
+        Strains {
+            section_length: SECTION_LEN * mods.speed(),
+            strains,
+        }
     }
 }
 
-fn calculate_skills(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> (Skills, usize) {
+fn calculate_skills(params: TaikoStars<'_>) -> (Skills, usize) {
+    let TaikoStars {
+        map,
+        mods,
+        passed_objects,
+    } = params;
+
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     // True if the object at that index is stamina cheese

@@ -44,7 +44,11 @@ let next_result = map.pp()
 
 println!("Next PP: {}", next_result.pp());
 
-let stars = map.stars(16, None).stars(); // HR
+let stars = map.stars()
+    .mods(16)  // HR
+    .calculate()
+    .stars();
+
 let max_pp = map.max_pp(16).pp();
 
 println!("Stars: {} | Max PP: {}", stars, max_pp);
@@ -161,7 +165,7 @@ println!("PP after the first 11 objects: {}", curr_performance.pp());
 | `default` | Enable all modes. |
 | `osu` | Enable osu!standard. |
 | `taiko` | Enable osu!taiko. |
-| `fruits` | Enable osu!ctb. |
+| `fruits` | Enable osu!catch. |
 | `mania` | Enable osu!mania. |
 | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
 | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |

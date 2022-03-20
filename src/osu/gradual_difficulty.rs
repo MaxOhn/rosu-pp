@@ -324,7 +324,7 @@ mod tests {
     fn iter_end_eq_regular() {
         let map = Beatmap::from_path("./maps/2785319.osu").expect("failed to parse map");
         let mods = 64;
-        let regular = crate::osu::stars(&map, mods, None);
+        let regular = crate::OsuStars::new(&map).mods(mods).calculate();
 
         let iter_end = OsuGradualDifficultyAttributes::new(&map, mods)
             .last()

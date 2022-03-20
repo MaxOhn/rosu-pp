@@ -18,7 +18,7 @@ use super::{
     FruitsDifficultyAttributes, ALLOWED_CATCH_RANGE,
 };
 
-/// Gradually calculate the difficulty attributes of an osu!ctb map.
+/// Gradually calculate the difficulty attributes of an osu!catch map.
 ///
 /// Note that this struct implements [`Iterator`](std::iter::Iterator).
 /// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next fruit or droplet
@@ -65,7 +65,7 @@ pub struct FruitsGradualDifficultyAttributes<'map> {
 }
 
 impl<'map> FruitsGradualDifficultyAttributes<'map> {
-    /// Create a new difficulty attributes iterator for osu!ctb maps.
+    /// Create a new difficulty attributes iterator for osu!catch maps.
     pub fn new(map: &'map Beatmap, mods: impl Mods) -> Self {
         let map_attributes = map.attributes().mods(mods);
 
@@ -230,7 +230,7 @@ mod tests {
     fn iter_end_eq_regular() {
         let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
         let mods = 64;
-        let regular = crate::fruits::stars(&map, mods, None);
+        let regular = crate::FruitsStars::new(&map).mods(mods).calculate();
 
         let iter_end = FruitsGradualDifficultyAttributes::new(&map, mods)
             .last()

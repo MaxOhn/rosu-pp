@@ -96,27 +96,27 @@ pub struct ScoreState {
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
     ///
-    /// Note that for osu!ctb only fruits and droplets are considered for combo.
+    /// Note that for osu!catch only fruits and droplets are considered for combo.
     ///
     /// Irrelevant for osu!mania.
     pub max_combo: usize,
-    /// Amount of current katus (tiny droplet misses for osu!ctb).
+    /// Amount of current katus (tiny droplet misses for osu!catch).
     ///
-    /// Only relevant for osu!ctb.
+    /// Only relevant for osu!catch.
     pub n_katu: usize,
-    /// Amount of current 300s (fruits for osu!ctb).
+    /// Amount of current 300s (fruits for osu!catch).
     ///
     /// Irrelevant for osu!mania.
     pub n300: usize,
-    /// Amount of current 100s (droplets for osu!ctb).
+    /// Amount of current 100s (droplets for osu!catch).
     ///
     /// Irrelevant for osu!mania.
     pub n100: usize,
-    /// Amount of current 50s (tiny droplets for osu!ctb).
+    /// Amount of current 50s (tiny droplets for osu!catch).
     ///
     /// Irrelevant for osu!taiko and osu!mania.
     pub n50: usize,
-    /// Amount of current misses (fruits + droplets for osu!ctb).
+    /// Amount of current misses (fruits + droplets for osu!catch).
     ///
     /// Irrelevant for osu!mania.
     pub misses: usize,
@@ -271,7 +271,7 @@ impl From<ScoreState> for TaikoScoreState {
 /// ```
 #[derive(Clone, Debug)]
 pub enum GradualPerformanceAttributes<'map> {
-    /// Gradual osu!ctb performance attributes.
+    /// Gradual osu!catch performance attributes.
     Fruits(FruitsGradualPerformanceAttributes<'map>),
     /// Gradual osu!mania performance attributes.
     Mania(ManiaGradualPerformanceAttributes<'map>),

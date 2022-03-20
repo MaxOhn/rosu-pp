@@ -42,7 +42,11 @@
 //!
 //! println!("Next PP: {}", next_result.pp());
 //!
-//! let stars = map.stars(16, None).stars(); // HR
+//! let stars = map.stars()
+//!     .mods(16)  // HR
+//!     .calculate()
+//!     .stars();
+//!
 //! let max_pp = map.max_pp(16).pp();
 //!
 //! println!("Stars: {} | Max PP: {}", stars, max_pp);
@@ -162,7 +166,7 @@
 //! | `default` | Enable all modes. |
 //! | `osu` | Enable osu!standard. |
 //! | `taiko` | Enable osu!taiko. |
-//! | `fruits` | Enable osu!ctb. |
+//! | `fruits` | Enable osu!catch. |
 //! | `mania` | Enable osu!mania. |
 //! | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
 //! | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
@@ -179,7 +183,7 @@
     missing_docs
 )]
 
-/// Everything about osu!ctb.
+/// Everything about osu!catch.
 pub mod fruits;
 
 /// Everything about osu!mania.
@@ -200,6 +204,9 @@ pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes, Sco
 mod pp;
 pub use pp::{AnyPP, AttributeProvider};
 
+mod stars;
+pub use stars::AnyStars;
+
 mod curve;
 mod mods;
 
@@ -207,10 +214,10 @@ pub(crate) mod control_point_iter;
 
 pub(crate) use control_point_iter::{ControlPoint, ControlPointIter};
 
-pub use fruits::FruitsPP;
-pub use mania::ManiaPP;
-pub use osu::OsuPP;
-pub use taiko::TaikoPP;
+pub use fruits::{FruitsPP, FruitsStars};
+pub use mania::{ManiaPP, ManiaStars};
+pub use osu::{OsuPP, OsuStars};
+pub use taiko::{TaikoPP, TaikoStars};
 
 pub use mods::Mods;
 pub use parse::{Beatmap, BeatmapAttributes, GameMode, ParseError, ParseResult};
@@ -218,7 +225,7 @@ pub use parse::{Beatmap, BeatmapAttributes, GameMode, ParseError, ParseResult};
 /// Provides some additional methods on [`Beatmap`](crate::Beatmap).
 pub trait BeatmapExt {
     /// Calculate the stars and other attributes of a beatmap which are required for pp calculation.
-    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> DifficultyAttributes;
+    fn stars(&self) -> AnyStars<'_>;
 
     /// Calculate the max pp of a beatmap.
     ///
@@ -235,7 +242,7 @@ pub trait BeatmapExt {
     /// instead of evaluating the final strains, they are just returned as is.
     ///
     /// Suitable to plot the difficulty of a map over time.
-    fn strains(&self, mods: impl Mods) -> Strains;
+    fn strains(&self, mods: u32) -> Strains;
 
     /// Return an iterator that gives you the `DifficultyAttributes` after each hit object.
     ///
@@ -251,14 +258,12 @@ pub trait BeatmapExt {
 
 impl BeatmapExt for Beatmap {
     #[inline]
-    fn stars(&self, mods: impl Mods, passed_objects: Option<usize>) -> DifficultyAttributes {
+    fn stars(&self) -> AnyStars<'_> {
         match self.mode {
-            GameMode::STD => DifficultyAttributes::Osu(osu::stars(self, mods, passed_objects)),
-            GameMode::MNA => DifficultyAttributes::Mania(mania::stars(self, mods, passed_objects)),
-            GameMode::TKO => DifficultyAttributes::Taiko(taiko::stars(self, mods, passed_objects)),
-            GameMode::CTB => {
-                DifficultyAttributes::Fruits(fruits::stars(self, mods, passed_objects))
-            }
+            GameMode::STD => AnyStars::Osu(OsuStars::new(self)),
+            GameMode::MNA => AnyStars::Mania(ManiaStars::new(self)),
+            GameMode::TKO => AnyStars::Taiko(TaikoStars::new(self)),
+            GameMode::CTB => AnyStars::Fruits(FruitsStars::new(self)),
         }
     }
 
@@ -284,12 +289,12 @@ impl BeatmapExt for Beatmap {
     }
 
     #[inline]
-    fn strains(&self, mods: impl Mods) -> Strains {
+    fn strains(&self, mods: u32) -> Strains {
         match self.mode {
-            GameMode::STD => osu::strains(self, mods),
-            GameMode::MNA => mania::strains(self, mods),
-            GameMode::TKO => taiko::strains(self, mods),
-            GameMode::CTB => fruits::strains(self, mods),
+            GameMode::STD => OsuStars::new(self).mods(mods).strains(),
+            GameMode::MNA => ManiaStars::new(self).mods(mods).strains(),
+            GameMode::TKO => TaikoStars::new(self).mods(mods).strains(),
+            GameMode::CTB => FruitsStars::new(self).mods(mods).strains(),
         }
     }
 
@@ -317,7 +322,7 @@ pub struct Strains {
 /// The result of a difficulty calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum DifficultyAttributes {
-    /// osu!ctb difficulty calculation reseult.
+    /// osu!catch difficulty calculation reseult.
     Fruits(fruits::FruitsDifficultyAttributes),
     /// osu!mania difficulty calculation reseult.
     Mania(mania::ManiaDifficultyAttributes),
@@ -384,7 +389,7 @@ impl From<taiko::TaikoDifficultyAttributes> for DifficultyAttributes {
 /// The result of a performance calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum PerformanceAttributes {
-    /// osu!ctb performance calculation result.
+    /// osu!catch performance calculation result.
     Fruits(fruits::FruitsPerformanceAttributes),
     /// osu!mania performance calculation result.
     Mania(mania::ManiaPerformanceAttributes),

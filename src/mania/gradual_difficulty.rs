@@ -207,7 +207,7 @@ mod tests {
     fn iter_end_eq_regular() {
         let map = Beatmap::from_path("./maps/1974394.osu").expect("failed to parse map");
         let mods = 64;
-        let regular = crate::mania::stars(&map, mods, None);
+        let regular = crate::ManiaStars::new(&map).mods(mods).calculate();
 
         let iter_end = ManiaGradualDifficultyAttributes::new(&map, mods)
             .last()

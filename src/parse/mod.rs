@@ -670,7 +670,7 @@ pub enum GameMode {
     STD = 0,
     /// osu!taiko
     TKO = 1,
-    /// osu!ctb
+    /// osu!catch
     CTB = 2,
     /// osu!mania
     MNA = 3,

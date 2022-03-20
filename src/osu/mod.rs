@@ -29,71 +29,161 @@ const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
 const NORMALIZED_RADIUS: f32 = 50.0; // * diameter of 100; easier mental maths.
 const STACK_DISTANCE: f32 = 3.0;
 
-/// Difficulty calculation for osu!standard maps.
+/// Difficulty calculator on osu!standard maps.
 ///
-/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
+/// # Example
 ///
-/// If you want to calculate the difficulty after every few objects, instead of
-/// calling this function multiple times with different `passed_objects`, you should use
-/// [`OsuGradualDifficultyAttributes`](crate::osu::OsuGradualDifficultyAttributes).
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
+/// ```
+/// use rosu_pp::{OsuStars, Beatmap};
+///
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+/// # let map = Beatmap::default();
+///
+/// let difficulty_attrs = OsuStars::new(&map)
+///     .mods(8 + 64) // HDDT
+///     .calculate();
+///
+/// println!("Stars: {}", difficulty_attrs.stars);
+/// ```
+#[derive(Clone, Debug)]
+pub struct OsuStars<'map> {
+    map: &'map Beatmap,
+    mods: u32,
     passed_objects: Option<usize>,
-) -> OsuDifficultyAttributes {
-    let (mut skills, mut attributes) = calculate_skills(map, mods, passed_objects);
+}
 
-    let aim_rating = {
-        let aim = skills.aim();
-        let mut aim_strains = mem::take(&mut aim.strain_peaks);
+impl<'map> OsuStars<'map> {
+    /// Create a new difficulty calculator for osu!standard maps.
+    #[inline]
+    pub fn new(map: &'map Beatmap) -> Self {
+        Self {
+            map,
+            mods: 0,
+            passed_objects: None,
+        }
+    }
 
-        Skill::difficulty_value(&mut aim_strains, aim).sqrt() * DIFFICULTY_MULTIPLIER
-    };
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
+    #[inline]
+    pub fn mods(mut self, mods: u32) -> Self {
+        self.mods = mods;
 
-    let slider_factor = if aim_rating > 0.0 {
-        let aim_no_sliders = skills.aim_no_sliders();
+        self
+    }
 
-        let mut aim_strains_no_sliders = mem::take(&mut aim_no_sliders.strain_peaks);
-        let aim_rating_no_sliders =
-            Skill::difficulty_value(&mut aim_strains_no_sliders, aim_no_sliders).sqrt()
-                * DIFFICULTY_MULTIPLIER;
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the difficulty after every few objects, instead of
+    /// using [`OsuStars`] multiple times with different `passed_objects`, you should use
+    /// [`OsuGradualDifficultyAttributes`](crate::osu::OsuGradualDifficultyAttributes).
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects = Some(passed_objects);
 
-        aim_rating_no_sliders / aim_rating
-    } else {
-        1.0
-    };
+        self
+    }
 
-    let (speed, flashlight) = skills.speed_flashlight();
+    /// Calculate all difficulty related values, including stars.
+    #[inline]
+    pub fn calculate(self) -> OsuDifficultyAttributes {
+        let (mut skills, mut attributes) = calculate_skills(self);
 
-    let speed_rating = if let Some(speed) = speed {
-        let mut speed_strains = mem::take(&mut speed.strain_peaks);
+        let aim_rating = {
+            let aim = skills.aim();
+            let mut aim_strains = mem::take(&mut aim.strain_peaks);
 
-        Skill::difficulty_value(&mut speed_strains, speed).sqrt() * DIFFICULTY_MULTIPLIER
-    } else {
-        0.0
-    };
+            Skill::difficulty_value(&mut aim_strains, aim).sqrt() * DIFFICULTY_MULTIPLIER
+        };
 
-    let flashlight_rating = if let Some(flashlight) = flashlight {
-        let mut flashlight_strains = mem::take(&mut flashlight.strain_peaks);
+        let slider_factor = if aim_rating > 0.0 {
+            let aim_no_sliders = skills.aim_no_sliders();
 
-        Skill::difficulty_value(&mut flashlight_strains, flashlight).sqrt() * DIFFICULTY_MULTIPLIER
-    } else {
-        0.0
-    };
+            let mut aim_strains_no_sliders = mem::take(&mut aim_no_sliders.strain_peaks);
+            let aim_rating_no_sliders =
+                Skill::difficulty_value(&mut aim_strains_no_sliders, aim_no_sliders).sqrt()
+                    * DIFFICULTY_MULTIPLIER;
 
-    let star_rating = if attributes.max_combo == 0 {
-        0.0
-    } else {
-        calculate_star_rating(aim_rating, speed_rating, flashlight_rating)
-    };
+            aim_rating_no_sliders / aim_rating
+        } else {
+            1.0
+        };
 
-    attributes.aim_strain = aim_rating;
-    attributes.speed_strain = speed_rating;
-    attributes.flashlight_rating = flashlight_rating;
-    attributes.slider_factor = slider_factor;
-    attributes.stars = star_rating;
+        let (speed, flashlight) = skills.speed_flashlight();
 
-    attributes
+        let speed_rating = if let Some(speed) = speed {
+            let mut speed_strains = mem::take(&mut speed.strain_peaks);
+
+            Skill::difficulty_value(&mut speed_strains, speed).sqrt() * DIFFICULTY_MULTIPLIER
+        } else {
+            0.0
+        };
+
+        let flashlight_rating = if let Some(flashlight) = flashlight {
+            let mut flashlight_strains = mem::take(&mut flashlight.strain_peaks);
+
+            Skill::difficulty_value(&mut flashlight_strains, flashlight).sqrt()
+                * DIFFICULTY_MULTIPLIER
+        } else {
+            0.0
+        };
+
+        let star_rating = if attributes.max_combo == 0 {
+            0.0
+        } else {
+            calculate_star_rating(aim_rating, speed_rating, flashlight_rating)
+        };
+
+        attributes.aim_strain = aim_rating;
+        attributes.speed_strain = speed_rating;
+        attributes.flashlight_rating = flashlight_rating;
+        attributes.slider_factor = slider_factor;
+        attributes.stars = star_rating;
+
+        attributes
+    }
+
+    /// Calculate the skill strains.
+    ///
+    /// Suitable to plot the difficulty of a map over time.
+    #[inline]
+    pub fn strains(self) -> Strains {
+        let mods = self.mods;
+        let (mut skills, _) = calculate_skills(self);
+
+        let mut aim = mem::take(&mut skills.aim().strain_peaks);
+        let tuple = skills.speed_flashlight();
+
+        let strains = match tuple {
+            (Some(speed), Some(flashlight)) => {
+                for ((aim, speed), flashlight) in aim
+                    .iter_mut()
+                    .zip(&speed.strain_peaks)
+                    .zip(&flashlight.strain_peaks)
+                {
+                    *aim += speed + flashlight;
+                }
+
+                aim
+            }
+            (Some(strains), None) | (None, Some(strains)) => {
+                for (aim, strain) in aim.iter_mut().zip(&strains.strain_peaks) {
+                    *aim += strain;
+                }
+
+                aim
+            }
+            (None, None) => aim,
+        };
+
+        Strains {
+            section_length: SECTION_LEN * mods.speed(),
+            strains,
+        }
+    }
 }
 
 fn calculate_star_rating(aim_rating: f64, speed_rating: f64, flashlight_rating: f64) -> f64 {
@@ -125,49 +215,13 @@ fn calculate_star_rating(aim_rating: f64, speed_rating: f64, flashlight_rating: 
     }
 }
 
-/// Essentially the same as the [`stars`] function but instead of
-/// evaluating the final strains, it just returns them as is.
-///
-/// Suitable to plot the difficulty of a map over time.
-pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    let (mut skills, _) = calculate_skills(map, mods, None);
+fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
+    let OsuStars {
+        map,
+        mods,
+        passed_objects,
+    } = params;
 
-    let mut aim = mem::take(&mut skills.aim().strain_peaks);
-    let tuple = skills.speed_flashlight();
-
-    let strains = match tuple {
-        (Some(speed), Some(flashlight)) => {
-            for ((aim, speed), flashlight) in aim
-                .iter_mut()
-                .zip(&speed.strain_peaks)
-                .zip(&flashlight.strain_peaks)
-            {
-                *aim += speed + flashlight;
-            }
-
-            aim
-        }
-        (Some(strains), None) | (None, Some(strains)) => {
-            for (aim, strain) in aim.iter_mut().zip(&strains.strain_peaks) {
-                *aim += strain;
-            }
-
-            aim
-        }
-        (None, None) => aim,
-    };
-
-    Strains {
-        section_length: SECTION_LEN * mods.speed(),
-        strains,
-    }
-}
-
-fn calculate_skills(
-    map: &Beatmap,
-    mods: impl Mods,
-    passed_objects: Option<usize>,
-) -> (Skills, OsuDifficultyAttributes) {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
 
     let map_attributes = map.attributes().mods(mods);
@@ -207,7 +261,7 @@ fn calculate_skills(
         .take(take)
         .filter_map(|h| OsuObject::new(h, hr, &mut params));
 
-    let mut hit_objects = Vec::with_capacity(take);
+    let mut hit_objects = Vec::with_capacity(take.min(map.hit_objects.len()));
     hit_objects.extend(hit_objects_iter);
 
     let stack_threshold = time_preempt * map.stack_leniency as f64;

@@ -1,4 +1,4 @@
-use super::{stars, ManiaDifficultyAttributes, ManiaPerformanceAttributes};
+use super::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaStars};
 use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
 /// Performance calculator on osu!mania maps.
@@ -99,9 +99,13 @@ impl<'map> ManiaPP<'map> {
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(self) -> ManiaPerformanceAttributes {
-        let stars = self
-            .stars
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects).stars);
+        let stars = self.stars.unwrap_or_else(|| {
+            ManiaStars::new(self.map)
+                .mods(self.mods)
+                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
+                .calculate()
+                .stars
+        });
 
         let ez = self.mods.ez();
         let nf = self.mods.nf();

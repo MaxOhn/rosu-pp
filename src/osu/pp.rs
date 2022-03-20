@@ -1,5 +1,5 @@
 use super::{OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState};
-use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, Mods, OsuStars, PerformanceAttributes};
 
 /// Performance calculator on osu!standard maps.
 ///
@@ -312,10 +312,12 @@ impl<'map> OsuPP<'map> {
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> OsuPerformanceAttributes {
-        let attributes = self
-            .attributes
-            .take()
-            .unwrap_or_else(|| super::stars(self.map, self.mods, self.passed_objects));
+        let attributes = self.attributes.take().unwrap_or_else(|| {
+            OsuStars::new(self.map)
+                .mods(self.mods)
+                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
+                .calculate()
+        });
 
         self.assert_hitresults(attributes).calculate()
     }

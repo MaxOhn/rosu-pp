@@ -1,7 +1,9 @@
-use super::{stars, FruitsDifficultyAttributes, FruitsPerformanceAttributes, FruitsScoreState};
+use super::{
+    FruitsDifficultyAttributes, FruitsPerformanceAttributes, FruitsScoreState, FruitsStars,
+};
 use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
-/// Performance calculator on osu!ctb maps.
+/// Performance calculator on osu!catch maps.
 ///
 /// # Example
 ///
@@ -47,7 +49,7 @@ pub struct FruitsPP<'map> {
 }
 
 impl<'map> FruitsPP<'map> {
-    /// Create a new performance calculator for osu!ctb maps.
+    /// Create a new performance calculator for osu!catch maps.
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
@@ -174,7 +176,12 @@ impl<'map> FruitsPP<'map> {
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
     pub fn accuracy(mut self, mut acc: f64) -> Self {
         if self.attributes.is_none() {
-            self.attributes = Some(stars(self.map, self.mods, self.passed_objects));
+            let attrs = FruitsStars::new(self.map)
+                .mods(self.mods)
+                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
+                .calculate();
+
+            self.attributes = Some(attrs);
         }
 
         let attributes = self.attributes.as_ref().unwrap();
@@ -283,10 +290,12 @@ impl<'map> FruitsPP<'map> {
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> FruitsPerformanceAttributes {
-        let attributes = self
-            .attributes
-            .take()
-            .unwrap_or_else(|| stars(self.map, self.mods, self.passed_objects));
+        let attributes = self.attributes.take().unwrap_or_else(|| {
+            FruitsStars::new(self.map)
+                .mods(self.mods)
+                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
+                .calculate()
+        });
 
         self.assert_hitresults(attributes).calculate()
     }

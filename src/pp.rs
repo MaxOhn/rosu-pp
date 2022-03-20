@@ -38,7 +38,7 @@ use crate::{
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug)]
 pub enum AnyPP<'map> {
-    /// osu!ctb performance calculator
+    /// osu!catch performance calculator
     Fruits(FruitsPP<'map>),
     /// osu!mania performance calculator
     Mania(ManiaPP<'map>),
@@ -213,7 +213,7 @@ impl<'map> AnyPP<'map> {
 
     /// Specify the amount of katus of a play.
     ///
-    /// This value is only relevant for osu!ctb for which it represents
+    /// This value is only relevant for osu!catch for which it represents
     /// the amount of tiny droplet misses.
     #[allow(unused_variables)]
     #[inline]

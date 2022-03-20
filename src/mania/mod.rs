@@ -13,35 +13,96 @@ use crate::{parse::HitObject, Beatmap, GameMode, Mods, Strains};
 const SECTION_LEN: f64 = 400.0;
 const STAR_SCALING_FACTOR: f64 = 0.018;
 
-/// Difficulty calculation for osu!mania maps.
+/// Difficulty calculator on osu!mania maps.
 ///
-/// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(
-    map: &Beatmap,
-    mods: impl Mods,
+/// # Example
+///
+/// ```
+/// use rosu_pp::{ManiaStars, Beatmap};
+///
+/// # /*
+/// let map: Beatmap = ...
+/// # */
+/// # let map = Beatmap::default();
+///
+/// let difficulty_attrs = ManiaStars::new(&map)
+///     .mods(8 + 64) // HDDT
+///     .calculate();
+///
+/// println!("Stars: {}", difficulty_attrs.stars);
+/// ```
+#[derive(Clone, Debug)]
+pub struct ManiaStars<'map> {
+    map: &'map Beatmap,
+    mods: u32,
     passed_objects: Option<usize>,
-) -> ManiaDifficultyAttributes {
-    let mut strain = calculate_strain(map, mods, passed_objects);
+}
 
-    ManiaDifficultyAttributes {
-        stars: Strain::difficulty_value(&mut strain.strain_peaks) * STAR_SCALING_FACTOR,
+impl<'map> ManiaStars<'map> {
+    /// Create a new difficulty calculator for osu!mania maps.
+    #[inline]
+    pub fn new(map: &'map Beatmap) -> Self {
+        Self {
+            map,
+            mods: 0,
+            passed_objects: None,
+        }
+    }
+
+    /// Specify mods through their bit values.
+    ///
+    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
+    #[inline]
+    pub fn mods(mut self, mods: u32) -> Self {
+        self.mods = mods;
+
+        self
+    }
+
+    /// Amount of passed objects for partial plays, e.g. a fail.
+    ///
+    /// If you want to calculate the difficulty after every few objects, instead of
+    /// using [`ManiaStars`] multiple times with different `passed_objects`, you should use
+    /// [`ManiaGradualDifficultyAttributes`](crate::mania::ManiaGradualDifficultyAttributes).
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+        self.passed_objects = Some(passed_objects);
+
+        self
+    }
+
+    /// Calculate all difficulty related values, including stars.
+    #[inline]
+    pub fn calculate(self) -> ManiaDifficultyAttributes {
+        let mut strain = calculate_strain(self);
+
+        ManiaDifficultyAttributes {
+            stars: Strain::difficulty_value(&mut strain.strain_peaks) * STAR_SCALING_FACTOR,
+        }
+    }
+
+    /// Calculate the skill strains.
+    ///
+    /// Suitable to plot the difficulty of a map over time.
+    #[inline]
+    pub fn strains(self) -> Strains {
+        let mods = self.mods;
+        let strain = calculate_strain(self);
+
+        Strains {
+            section_length: SECTION_LEN * mods.speed(),
+            strains: strain.strain_peaks,
+        }
     }
 }
 
-/// Essentially the same as the [`stars`] function but instead of
-/// evaluating the final strains, it just returns them as is.
-///
-/// Suitable to plot the difficulty of a map over time.
-pub fn strains(map: &Beatmap, mods: impl Mods) -> Strains {
-    let strain = calculate_strain(map, mods, None);
+fn calculate_strain(params: ManiaStars<'_>) -> Strain {
+    let ManiaStars {
+        map,
+        mods,
+        passed_objects,
+    } = params;
 
-    Strains {
-        section_length: SECTION_LEN * mods.speed(),
-        strains: strain.strain_peaks,
-    }
-}
-
-fn calculate_strain(map: &Beatmap, mods: impl Mods, passed_objects: Option<usize>) -> Strain {
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
     let rounded_cs = map.cs.round();
 
