@@ -6,6 +6,7 @@
 - Fixed handling .osu files with missing difficulty attributes
 - Fixed huge memory allocations caused by incorrectly parsed .osu files by clamping beat length
 - Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
+- Added the method `clock_rate` to `{Mode}PP` and `{Mode}Stars` to consider a custom clock rate instead of the one dictated by mods.
 - [BREAKING] The `stars` and `strains` functions for all modes were removed. Instead use the `{Mode}Stars` builder pattern which is similar to `{Mode}PP`.
 - [BREAKING] `BeatmapExt::stars`'s definition was adjusted to use the `AnyStars` builder struct
 - [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size

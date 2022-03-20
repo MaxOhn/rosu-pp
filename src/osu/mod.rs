@@ -52,6 +52,7 @@ pub struct OsuStars<'map> {
     map: &'map Beatmap,
     mods: u32,
     passed_objects: Option<usize>,
+    clock_rate: Option<f64>,
 }
 
 impl<'map> OsuStars<'map> {
@@ -62,6 +63,7 @@ impl<'map> OsuStars<'map> {
             map,
             mods: 0,
             passed_objects: None,
+            clock_rate: None,
         }
     }
 
@@ -83,6 +85,16 @@ impl<'map> OsuStars<'map> {
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
+
+        self
+    }
+
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
 
         self
     }
@@ -151,7 +163,7 @@ impl<'map> OsuStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> Strains {
-        let mods = self.mods;
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.speed());
         let (mut skills, _) = calculate_skills(self);
 
         let mut aim = mem::take(&mut skills.aim().strain_peaks);
@@ -180,7 +192,7 @@ impl<'map> OsuStars<'map> {
         };
 
         Strains {
-            section_length: SECTION_LEN * mods.speed(),
+            section_length: SECTION_LEN * clock_rate,
             strains,
         }
     }
@@ -220,12 +232,14 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         map,
         mods,
         passed_objects,
+        clock_rate,
     } = params;
 
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+    let clock_rate = clock_rate.unwrap_or_else(|| mods.speed());
 
     let map_attributes = map.attributes().mods(mods);
-    let hit_window = difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
+    let hit_window = difficulty_range_od(map_attributes.od) / clock_rate;
     let od = (80.0 - hit_window) / 6.0;
 
     let mut raw_ar = map.ar as f64;
@@ -290,8 +304,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     let mut prev_prev = None;
 
     // First object has no predecessor and thus no strain, handle distinctly
-    let mut curr_section_end =
-        (prev.time / map_attributes.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
+    let mut curr_section_end = (prev.time / clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
 
     // Handle second object separately to remove later if-branching
     let h = DifficultyObject::new(
@@ -299,10 +312,10 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         &mut prev,
         prev_prev.as_ref(),
         &scaling_factor,
-        map_attributes.clock_rate,
+        clock_rate,
     );
 
-    let base_time = h.base.time / map_attributes.clock_rate;
+    let base_time = h.base.time / clock_rate;
 
     while base_time > curr_section_end {
         skills.start_new_section_from(curr_section_end);
@@ -319,10 +332,10 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
             &mut prev,
             prev_prev.as_ref(),
             &scaling_factor,
-            map_attributes.clock_rate,
+            clock_rate,
         );
 
-        let base_time = h.base.time / map_attributes.clock_rate;
+        let base_time = h.base.time / clock_rate;
 
         while base_time > curr_section_end {
             skills.save_peak_and_start_new_section(curr_section_end);

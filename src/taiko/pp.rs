@@ -39,6 +39,7 @@ pub struct TaikoPP<'map> {
     combo: Option<usize>,
     acc: f64,
     passed_objects: Option<usize>,
+    clock_rate: Option<f64>,
 
     pub(crate) n300: Option<usize>,
     pub(crate) n100: Option<usize>,
@@ -57,6 +58,7 @@ impl<'map> TaikoPP<'map> {
             acc: 1.0,
             n_misses: 0,
             passed_objects: None,
+            clock_rate: None,
             n300: None,
             n100: None,
         }
@@ -138,6 +140,16 @@ impl<'map> TaikoPP<'map> {
         self
     }
 
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
+
+        self
+    }
+
     /// Provide parameters through a [`TaikoScoreState`].
     #[inline]
     pub fn state(mut self, state: TaikoScoreState) -> Self {
@@ -159,10 +171,17 @@ impl<'map> TaikoPP<'map> {
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> TaikoPerformanceAttributes {
         let attributes = self.attributes.take().unwrap_or_else(|| {
-            TaikoStars::new(self.map)
-                .mods(self.mods)
-                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
-                .calculate()
+            let mut calculator = TaikoStars::new(self.map).mods(self.mods);
+
+            if let Some(passed_objects) = self.passed_objects {
+                calculator = calculator.passed_objects(passed_objects);
+            }
+
+            if let Some(clock_rate) = self.clock_rate {
+                calculator = calculator.clock_rate(clock_rate);
+            }
+
+            calculator.calculate()
         });
 
         if self.n300.or(self.n100).is_some() {

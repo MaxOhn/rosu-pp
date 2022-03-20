@@ -56,6 +56,7 @@ pub struct TaikoStars<'map> {
     map: &'map Beatmap,
     mods: u32,
     passed_objects: Option<usize>,
+    clock_rate: Option<f64>,
 }
 
 impl<'map> TaikoStars<'map> {
@@ -66,6 +67,7 @@ impl<'map> TaikoStars<'map> {
             map,
             mods: 0,
             passed_objects: None,
+            clock_rate: None,
         }
     }
 
@@ -87,6 +89,16 @@ impl<'map> TaikoStars<'map> {
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
+
+        self
+    }
+
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
 
         self
     }
@@ -127,7 +139,7 @@ impl<'map> TaikoStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> Strains {
-        let mods = self.mods;
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.speed());
         let (skills, _) = calculate_skills(self);
 
         let strains = skills
@@ -143,7 +155,7 @@ impl<'map> TaikoStars<'map> {
             .collect();
 
         Strains {
-            section_length: SECTION_LEN * mods.speed(),
+            section_length: SECTION_LEN * clock_rate,
             strains,
         }
     }
@@ -154,14 +166,15 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Skills, usize) {
         map,
         mods,
         passed_objects,
+        clock_rate,
     } = params;
 
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+    let clock_rate = clock_rate.unwrap_or_else(|| mods.speed());
 
     // True if the object at that index is stamina cheese
     let cheese = map.find_cheese();
     let mut skills = Skills::new();
-    let clock_rate = mods.speed();
     let mut max_combo = 0;
 
     match map.hit_objects.get(0) {

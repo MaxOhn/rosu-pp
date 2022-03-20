@@ -46,6 +46,7 @@ pub struct FruitsPP<'map> {
     pub(crate) n_tiny_droplet_misses: Option<usize>,
     pub(crate) n_misses: usize,
     passed_objects: Option<usize>,
+    clock_rate: Option<f64>,
 }
 
 impl<'map> FruitsPP<'map> {
@@ -64,6 +65,7 @@ impl<'map> FruitsPP<'map> {
             n_tiny_droplet_misses: None,
             n_misses: 0,
             passed_objects: None,
+            clock_rate: None,
         }
     }
 
@@ -149,6 +151,16 @@ impl<'map> FruitsPP<'map> {
         self
     }
 
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
+
+        self
+    }
+
     /// Provide parameters through an [`FruitsScoreState`].
     #[inline]
     pub fn state(mut self, state: FruitsScoreState) -> Self {
@@ -176,12 +188,17 @@ impl<'map> FruitsPP<'map> {
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
     pub fn accuracy(mut self, mut acc: f64) -> Self {
         if self.attributes.is_none() {
-            let attrs = FruitsStars::new(self.map)
-                .mods(self.mods)
-                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
-                .calculate();
+            let mut calculator = FruitsStars::new(self.map).mods(self.mods);
 
-            self.attributes = Some(attrs);
+            if let Some(passed_objects) = self.passed_objects {
+                calculator = calculator.passed_objects(passed_objects);
+            }
+
+            if let Some(clock_rate) = self.clock_rate {
+                calculator = calculator.clock_rate(clock_rate);
+            }
+
+            self.attributes = Some(calculator.calculate());
         }
 
         let attributes = self.attributes.as_ref().unwrap();
@@ -291,10 +308,17 @@ impl<'map> FruitsPP<'map> {
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> FruitsPerformanceAttributes {
         let attributes = self.attributes.take().unwrap_or_else(|| {
-            FruitsStars::new(self.map)
-                .mods(self.mods)
-                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
-                .calculate()
+            let mut calculator = FruitsStars::new(self.map).mods(self.mods);
+
+            if let Some(passed_objects) = self.passed_objects {
+                calculator = calculator.passed_objects(passed_objects);
+            }
+
+            if let Some(clock_rate) = self.clock_rate {
+                calculator = calculator.clock_rate(clock_rate);
+            }
+
+            calculator.calculate()
         });
 
         self.assert_hitresults(attributes).calculate()

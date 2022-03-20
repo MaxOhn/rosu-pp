@@ -36,6 +36,7 @@ pub struct ManiaStars<'map> {
     map: &'map Beatmap,
     mods: u32,
     passed_objects: Option<usize>,
+    clock_rate: Option<f64>,
 }
 
 impl<'map> ManiaStars<'map> {
@@ -46,6 +47,7 @@ impl<'map> ManiaStars<'map> {
             map,
             mods: 0,
             passed_objects: None,
+            clock_rate: None,
         }
     }
 
@@ -71,6 +73,16 @@ impl<'map> ManiaStars<'map> {
         self
     }
 
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
+
+        self
+    }
+
     /// Calculate all difficulty related values, including stars.
     #[inline]
     pub fn calculate(self) -> ManiaDifficultyAttributes {
@@ -86,11 +98,11 @@ impl<'map> ManiaStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> Strains {
-        let mods = self.mods;
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.speed());
         let strain = calculate_strain(self);
 
         Strains {
-            section_length: SECTION_LEN * mods.speed(),
+            section_length: SECTION_LEN * clock_rate,
             strains: strain.strain_peaks,
         }
     }
@@ -101,6 +113,7 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
         map,
         mods,
         passed_objects,
+        clock_rate,
     } = params;
 
     let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
@@ -127,7 +140,7 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
         other => panic!("can not calculate mania difficulty on a {:?} map", other),
     };
 
-    let clock_rate = mods.speed();
+    let clock_rate = clock_rate.unwrap_or_else(|| mods.speed());
     let mut strain = Strain::new(columns);
     let columns = columns as f32;
 

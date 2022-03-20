@@ -47,6 +47,7 @@ pub struct FruitsStars<'map> {
     map: &'map Beatmap,
     mods: u32,
     passed_objects: Option<usize>,
+    clock_rate: Option<f64>,
 }
 
 impl<'map> FruitsStars<'map> {
@@ -57,6 +58,7 @@ impl<'map> FruitsStars<'map> {
             map,
             mods: 0,
             passed_objects: None,
+            clock_rate: None,
         }
     }
 
@@ -82,6 +84,16 @@ impl<'map> FruitsStars<'map> {
         self
     }
 
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
+
+        self
+    }
+
     /// Calculate all difficulty related values, including stars.
     #[inline]
     pub fn calculate(self) -> FruitsDifficultyAttributes {
@@ -97,11 +109,11 @@ impl<'map> FruitsStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> Strains {
-        let mods = self.mods;
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.speed());
         let (movement, _) = calculate_movement(self);
 
         Strains {
-            section_length: SECTION_LENGTH * mods.speed(),
+            section_length: SECTION_LENGTH * clock_rate,
             strains: movement.strain_peaks,
         }
     }
@@ -112,11 +124,13 @@ fn calculate_movement(params: FruitsStars<'_>) -> (Movement, FruitsDifficultyAtt
         map,
         mods,
         passed_objects,
+        clock_rate,
     } = params;
 
     let take = passed_objects.unwrap_or(usize::MAX);
 
     let map_attributes = map.attributes().mods(mods);
+    let clock_rate = clock_rate.unwrap_or(map_attributes.clock_rate);
 
     let attributes = FruitsDifficultyAttributes {
         ar: map_attributes.ar,
@@ -157,8 +171,7 @@ fn calculate_movement(params: FruitsStars<'_>) -> (Movement, FruitsDifficultyAtt
         (None, Some(_)) => unreachable!(),
     };
 
-    let mut curr_section_end =
-        (curr.time / map_attributes.clock_rate / SECTION_LENGTH).ceil() * SECTION_LENGTH;
+    let mut curr_section_end = (curr.time / clock_rate / SECTION_LENGTH).ceil() * SECTION_LENGTH;
 
     prev.init_hyper_dash(
         half_catcher_width,
@@ -168,12 +181,7 @@ fn calculate_movement(params: FruitsStars<'_>) -> (Movement, FruitsDifficultyAtt
     );
 
     // Handle first object distinctly
-    let h = DifficultyObject::new(
-        &curr,
-        &prev,
-        movement.half_catcher_width,
-        map_attributes.clock_rate,
-    );
+    let h = DifficultyObject::new(&curr, &prev, movement.half_catcher_width, clock_rate);
 
     movement.process(&h);
     prev = curr;
@@ -187,14 +195,9 @@ fn calculate_movement(params: FruitsStars<'_>) -> (Movement, FruitsDifficultyAtt
             &mut last_excess,
         );
 
-        let h = DifficultyObject::new(
-            &curr,
-            &prev,
-            movement.half_catcher_width,
-            map_attributes.clock_rate,
-        );
+        let h = DifficultyObject::new(&curr, &prev, movement.half_catcher_width, clock_rate);
 
-        let base_time = h.base.time / map_attributes.clock_rate;
+        let base_time = h.base.time / clock_rate;
 
         while base_time > curr_section_end {
             movement.save_current_peak();

@@ -72,6 +72,19 @@ impl<'map> AnyStars<'map> {
         }
     }
 
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(self, clock_rate: f64) -> Self {
+        match self {
+            Self::Fruits(f) => Self::Fruits(f.clock_rate(clock_rate)),
+            Self::Mania(m) => Self::Mania(m.clock_rate(clock_rate)),
+            Self::Osu(o) => Self::Osu(o.clock_rate(clock_rate)),
+            Self::Taiko(t) => Self::Taiko(t.clock_rate(clock_rate)),
+        }
+    }
+
     /// Consume the difficulty calculator and calculate
     /// difficulty attributes for the given parameters.
     #[inline]

@@ -36,6 +36,7 @@ pub struct ManiaPP<'map> {
     mods: u32,
     pub(crate) score: Option<f64>,
     passed_objects: Option<usize>,
+    clock_rate: Option<f64>,
 }
 
 impl<'map> ManiaPP<'map> {
@@ -48,6 +49,7 @@ impl<'map> ManiaPP<'map> {
             mods: 0,
             score: None,
             passed_objects: None,
+            clock_rate: None,
         }
     }
 
@@ -97,14 +99,30 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Adjust the clock rate used in the calculation.
+    /// If none is specified, it will take the clock rate based on the mods
+    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    #[inline]
+    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
+
+        self
+    }
+
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(self) -> ManiaPerformanceAttributes {
         let stars = self.stars.unwrap_or_else(|| {
-            ManiaStars::new(self.map)
-                .mods(self.mods)
-                .passed_objects(self.passed_objects.unwrap_or(usize::MAX))
-                .calculate()
-                .stars
+            let mut calculator = ManiaStars::new(self.map).mods(self.mods);
+
+            if let Some(passed_objects) = self.passed_objects {
+                calculator = calculator.passed_objects(passed_objects);
+            }
+
+            if let Some(clock_rate) = self.clock_rate {
+                calculator = calculator.clock_rate(clock_rate);
+            }
+
+            calculator.calculate().stars
         });
 
         let ez = self.mods.ez();
