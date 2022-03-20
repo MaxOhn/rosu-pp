@@ -1,13 +1,13 @@
-use crate::{Beatmap, FruitsPP};
+use crate::{Beatmap, CatchPP};
 
-use super::{FruitsGradualDifficultyAttributes, FruitsPerformanceAttributes};
+use super::{CatchGradualDifficultyAttributes, CatchPerformanceAttributes};
 
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
 ///
-/// This struct is used for [`FruitsGradualPerformanceAttributes`].
+/// This struct is used for [`CatchGradualPerformanceAttributes`].
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct FruitsScoreState {
+pub struct CatchScoreState {
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
     ///
@@ -25,7 +25,7 @@ pub struct FruitsScoreState {
     pub misses: usize,
 }
 
-impl FruitsScoreState {
+impl CatchScoreState {
     /// Create a new empty score state.
     pub fn new() -> Self {
         Self::default()
@@ -35,24 +35,24 @@ impl FruitsScoreState {
 /// Gradually calculate the performance attributes of an osu!catch map.
 ///
 /// After each hit object you can call
-/// [`process_next_object`](`FruitsGradualPerformanceAttributes::process_next_object`)
-/// and it will return the resulting current [`FruitsPerformanceAttributes`].
+/// [`process_next_object`](`CatchGradualPerformanceAttributes::process_next_object`)
+/// and it will return the resulting current [`CatchPerformanceAttributes`].
 /// To process multiple objects at once, use
-/// [`process_next_n_objects`](`FruitsGradualPerformanceAttributes::process_next_n_objects`) instead.
+/// [`process_next_n_objects`](`CatchGradualPerformanceAttributes::process_next_n_objects`) instead.
 ///
-/// Both methods require a [`FruitsScoreState`] that contains the current
+/// Both methods require a [`CatchScoreState`] that contains the current
 /// hitresults as well as the maximum combo so far.
 ///
 /// Note that neither hits nor misses of tiny droplets require
 /// to be processed. Only fruits and droplets do.
 ///
 /// If you only want to calculate difficulty attributes use
-/// [`FruitsGradualDifficultyAttributes`](crate::fruits::FruitsGradualDifficultyAttributes) instead.
+/// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficultyAttributes) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, fruits::{FruitsGradualPerformanceAttributes, FruitsScoreState}};
+/// use rosu_pp::{Beatmap, catch::{CatchGradualPerformanceAttributes, CatchScoreState}};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -60,8 +60,8 @@ impl FruitsScoreState {
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut gradual_perf = FruitsGradualPerformanceAttributes::new(&map, mods);
-/// let mut state = FruitsScoreState::new(); // empty state, everything is on 0.
+/// let mut gradual_perf = CatchGradualPerformanceAttributes::new(&map, mods);
+/// let mut state = CatchScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are only fruits
 /// for _ in 0..10 {
@@ -125,16 +125,16 @@ impl FruitsScoreState {
 /// assert!(gradual_perf.process_next_object(state).is_none());
 /// ```
 #[derive(Clone, Debug)]
-pub struct FruitsGradualPerformanceAttributes<'map> {
-    difficulty: FruitsGradualDifficultyAttributes<'map>,
-    performance: FruitsPP<'map>,
+pub struct CatchGradualPerformanceAttributes<'map> {
+    difficulty: CatchGradualDifficultyAttributes<'map>,
+    performance: CatchPP<'map>,
 }
 
-impl<'map> FruitsGradualPerformanceAttributes<'map> {
+impl<'map> CatchGradualPerformanceAttributes<'map> {
     /// Create a new gradual performance calculator for osu!standard maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
-        let difficulty = FruitsGradualDifficultyAttributes::new(map, mods);
-        let performance = FruitsPP::new(map).mods(mods).passed_objects(0);
+        let difficulty = CatchGradualDifficultyAttributes::new(map, mods);
+        let performance = CatchPP::new(map).mods(mods).passed_objects(0);
 
         Self {
             difficulty,
@@ -149,12 +149,12 @@ impl<'map> FruitsGradualPerformanceAttributes<'map> {
     /// to be processed. Only fruits and droplets do.
     pub fn process_next_object(
         &mut self,
-        state: FruitsScoreState,
-    ) -> Option<FruitsPerformanceAttributes> {
+        state: CatchScoreState,
+    ) -> Option<CatchPerformanceAttributes> {
         self.process_next_n_objects(state, 1)
     }
 
-    /// Same as [`process_next_object`](`FruitsGradualPerformanceAttributes::process_next_object`)
+    /// Same as [`process_next_object`](`CatchGradualPerformanceAttributes::process_next_object`)
     /// but instead of processing only one object it process `n` many.
     ///
     /// If `n` is 0 it will be considered as 1.
@@ -162,9 +162,9 @@ impl<'map> FruitsGradualPerformanceAttributes<'map> {
     /// of remaining objects, `n` will be considered as the amount of remaining objects.
     pub fn process_next_n_objects(
         &mut self,
-        state: FruitsScoreState,
+        state: CatchScoreState,
         n: usize,
-    ) -> Option<FruitsPerformanceAttributes> {
+    ) -> Option<CatchPerformanceAttributes> {
         let mut difficulty = None;
 
         for _ in 0..n.max(1) {
@@ -198,8 +198,8 @@ mod tests {
         let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
         let mods = 64;
 
-        let mut gradual = FruitsGradualPerformanceAttributes::new(&map, mods);
-        let state = FruitsScoreState::default();
+        let mut gradual = CatchGradualPerformanceAttributes::new(&map, mods);
+        let state = CatchScoreState::default();
 
         assert!(gradual
             .process_next_n_objects(state.clone(), usize::MAX)
@@ -212,10 +212,10 @@ mod tests {
     fn next_and_next_n() {
         let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
         let mods = 64;
-        let state = FruitsScoreState::default();
+        let state = CatchScoreState::default();
 
-        let mut gradual1 = FruitsGradualPerformanceAttributes::new(&map, mods);
-        let mut gradual2 = FruitsGradualPerformanceAttributes::new(&map, mods);
+        let mut gradual1 = CatchGradualPerformanceAttributes::new(&map, mods);
+        let mut gradual2 = CatchGradualPerformanceAttributes::new(&map, mods);
 
         for _ in 0..20 {
             let _ = gradual1.process_next_object(state.clone());
@@ -228,7 +228,7 @@ mod tests {
             let _ = gradual1.process_next_object(state.clone());
         }
 
-        let state = FruitsScoreState {
+        let state = CatchScoreState {
             max_combo: 101,
             n_fruits: 99,
             n_droplets: 2,
@@ -248,11 +248,11 @@ mod tests {
     fn gradual_end_eq_regular() {
         let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
         let mods = 64;
-        let regular = FruitsPP::new(&map).mods(mods).calculate();
+        let regular = CatchPP::new(&map).mods(mods).calculate();
 
-        let mut gradual = FruitsGradualPerformanceAttributes::new(&map, mods);
+        let mut gradual = CatchGradualPerformanceAttributes::new(&map, mods);
 
-        let state = FruitsScoreState {
+        let state = CatchScoreState {
             max_combo: 730,
             n_fruits: 728,
             n_droplets: 2,
@@ -272,11 +272,11 @@ mod tests {
         let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
         let mods = 64;
         let n = 100;
-        let regular = FruitsPP::new(&map).mods(mods).passed_objects(n).calculate();
+        let regular = CatchPP::new(&map).mods(mods).passed_objects(n).calculate();
 
-        let mut gradual = FruitsGradualPerformanceAttributes::new(&map, mods);
+        let mut gradual = CatchGradualPerformanceAttributes::new(&map, mods);
 
-        let state = FruitsScoreState {
+        let state = CatchScoreState {
             max_combo: 101,
             n_fruits: 99,
             n_droplets: 2,

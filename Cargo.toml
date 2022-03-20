@@ -15,7 +15,6 @@ default = []
 async_std = ["async-std"]
 async_tokio = ["tokio"]
 
-
 [dependencies.async-std]
 version = "1.9"
 optional = true

@@ -6,14 +6,14 @@ use crate::{
     Beatmap,
 };
 
-use super::{catch_object::CatchObject, slider_state::SliderState, FruitsDifficultyAttributes};
+use super::{catch_object::CatchObject, slider_state::SliderState, CatchDifficultyAttributes};
 
 const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
 const BASE_SCORING_DISTANCE: f64 = 100.0;
 
 #[derive(Clone, Debug)]
 pub(crate) struct FruitParams<'a> {
-    pub(crate) attributes: FruitsDifficultyAttributes,
+    pub(crate) attributes: CatchDifficultyAttributes,
     pub(crate) curve_bufs: CurveBuffers,
     pub(crate) last_pos: Option<f32>,
     pub(crate) last_time: f64,

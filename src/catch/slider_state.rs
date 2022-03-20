@@ -57,7 +57,7 @@ mod test {
     use super::SliderState;
 
     #[test]
-    fn fruits_slider_state() {
+    fn catch_slider_state() {
         let map = Beatmap {
             timing_points: vec![
                 TimingPoint {

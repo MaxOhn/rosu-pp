@@ -63,7 +63,7 @@ async fn async_main() {
     let mut evaluators = [
         Evaluator::new("osu"),
         Evaluator::new("taiko"),
-        Evaluator::new("fruits"),
+        Evaluator::new("catch"),
         Evaluator::new("mania"),
     ];
 
@@ -115,7 +115,7 @@ impl Evaluator {
         self.pp.push(difference(data.performance.pp, attrs.pp()));
 
         match attrs {
-            PerformanceAttributes::Fruits(_) => {}
+            PerformanceAttributes::Catch(_) => {}
             PerformanceAttributes::Mania(attrs) => {
                 if let Some(acc) = data.performance.acc {
                     let values = self.accuracy.get_or_insert_with(Vec::new);

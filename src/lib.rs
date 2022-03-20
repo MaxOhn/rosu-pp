@@ -163,11 +163,7 @@
 //!
 //! | Flag | Description |
 //! |-----|-----|
-//! | `default` | Enable all modes. |
-//! | `osu` | Enable osu!standard. |
-//! | `taiko` | Enable osu!taiko. |
-//! | `fruits` | Enable osu!catch. |
-//! | `mania` | Enable osu!mania. |
+//! | `default` | Beatmap parsing will be non-async |
 //! | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
 //! | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
 //!
@@ -184,7 +180,7 @@
 )]
 
 /// Everything about osu!catch.
-pub mod fruits;
+pub mod catch;
 
 /// Everything about osu!mania.
 pub mod mania;
@@ -214,7 +210,7 @@ pub(crate) mod control_point_iter;
 
 pub(crate) use control_point_iter::{ControlPoint, ControlPointIter};
 
-pub use fruits::{FruitsPP, FruitsStars};
+pub use catch::{CatchPP, CatchStars};
 pub use mania::{ManiaPP, ManiaStars};
 pub use osu::{OsuPP, OsuStars};
 pub use taiko::{TaikoPP, TaikoStars};
@@ -263,7 +259,7 @@ impl BeatmapExt for Beatmap {
             GameMode::STD => AnyStars::Osu(OsuStars::new(self)),
             GameMode::MNA => AnyStars::Mania(ManiaStars::new(self)),
             GameMode::TKO => AnyStars::Taiko(TaikoStars::new(self)),
-            GameMode::CTB => AnyStars::Fruits(FruitsStars::new(self)),
+            GameMode::CTB => AnyStars::Catch(CatchStars::new(self)),
         }
     }
 
@@ -278,7 +274,7 @@ impl BeatmapExt for Beatmap {
                 PerformanceAttributes::Taiko(TaikoPP::new(self).mods(mods).calculate())
             }
             GameMode::CTB => {
-                PerformanceAttributes::Fruits(FruitsPP::new(self).mods(mods).calculate())
+                PerformanceAttributes::Catch(CatchPP::new(self).mods(mods).calculate())
             }
         }
     }
@@ -294,7 +290,7 @@ impl BeatmapExt for Beatmap {
             GameMode::STD => OsuStars::new(self).mods(mods).strains(),
             GameMode::MNA => ManiaStars::new(self).mods(mods).strains(),
             GameMode::TKO => TaikoStars::new(self).mods(mods).strains(),
-            GameMode::CTB => FruitsStars::new(self).mods(mods).strains(),
+            GameMode::CTB => CatchStars::new(self).mods(mods).strains(),
         }
     }
 
@@ -323,7 +319,7 @@ pub struct Strains {
 #[derive(Clone, Debug)]
 pub enum DifficultyAttributes {
     /// osu!catch difficulty calculation reseult.
-    Fruits(fruits::FruitsDifficultyAttributes),
+    Catch(catch::CatchDifficultyAttributes),
     /// osu!mania difficulty calculation reseult.
     Mania(mania::ManiaDifficultyAttributes),
     /// osu!standard difficulty calculation reseult.
@@ -337,7 +333,7 @@ impl DifficultyAttributes {
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
-            Self::Fruits(attributes) => attributes.stars,
+            Self::Catch(attributes) => attributes.stars,
             Self::Mania(attributes) => attributes.stars,
             Self::Osu(attributes) => attributes.stars,
             Self::Taiko(attributes) => attributes.stars,
@@ -350,7 +346,7 @@ impl DifficultyAttributes {
     #[inline]
     pub fn max_combo(&self) -> Option<usize> {
         match self {
-            Self::Fruits(attributes) => Some(attributes.max_combo()),
+            Self::Catch(attributes) => Some(attributes.max_combo()),
             Self::Mania(_) => None,
             Self::Osu(attributes) => Some(attributes.max_combo),
             Self::Taiko(attributes) => Some(attributes.max_combo),
@@ -358,10 +354,10 @@ impl DifficultyAttributes {
     }
 }
 
-impl From<fruits::FruitsDifficultyAttributes> for DifficultyAttributes {
+impl From<catch::CatchDifficultyAttributes> for DifficultyAttributes {
     #[inline]
-    fn from(attributes: fruits::FruitsDifficultyAttributes) -> Self {
-        Self::Fruits(attributes)
+    fn from(attributes: catch::CatchDifficultyAttributes) -> Self {
+        Self::Catch(attributes)
     }
 }
 
@@ -390,7 +386,7 @@ impl From<taiko::TaikoDifficultyAttributes> for DifficultyAttributes {
 #[derive(Clone, Debug)]
 pub enum PerformanceAttributes {
     /// osu!catch performance calculation result.
-    Fruits(fruits::FruitsPerformanceAttributes),
+    Catch(catch::CatchPerformanceAttributes),
     /// osu!mania performance calculation result.
     Mania(mania::ManiaPerformanceAttributes),
     /// osu!standard performance calculation result.
@@ -404,7 +400,7 @@ impl PerformanceAttributes {
     #[inline]
     pub fn pp(&self) -> f64 {
         match self {
-            Self::Fruits(attributes) => attributes.pp,
+            Self::Catch(attributes) => attributes.pp,
             Self::Mania(attributes) => attributes.pp,
             Self::Osu(attributes) => attributes.pp,
             Self::Taiko(attributes) => attributes.pp,
@@ -415,7 +411,7 @@ impl PerformanceAttributes {
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
-            Self::Fruits(attributes) => attributes.stars(),
+            Self::Catch(attributes) => attributes.stars(),
             Self::Mania(attributes) => attributes.stars(),
             Self::Osu(attributes) => attributes.stars(),
             Self::Taiko(attributes) => attributes.stars(),
@@ -426,7 +422,7 @@ impl PerformanceAttributes {
     #[inline]
     pub fn difficulty_attributes(&self) -> DifficultyAttributes {
         match self {
-            Self::Fruits(attributes) => DifficultyAttributes::Fruits(attributes.difficulty.clone()),
+            Self::Catch(attributes) => DifficultyAttributes::Catch(attributes.difficulty.clone()),
             Self::Mania(attributes) => DifficultyAttributes::Mania(attributes.difficulty),
             Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.difficulty.clone()),
             Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.difficulty),
@@ -439,7 +435,7 @@ impl PerformanceAttributes {
     /// This will only be `None` for attributes of osu!mania maps.
     pub fn max_combo(&self) -> Option<usize> {
         match self {
-            Self::Fruits(f) => Some(f.difficulty.max_combo()),
+            Self::Catch(f) => Some(f.difficulty.max_combo()),
             Self::Mania(_) => None,
             Self::Osu(o) => Some(o.difficulty.max_combo),
             Self::Taiko(t) => Some(t.difficulty.max_combo),
@@ -450,7 +446,7 @@ impl PerformanceAttributes {
 impl From<PerformanceAttributes> for DifficultyAttributes {
     fn from(attributes: PerformanceAttributes) -> Self {
         match attributes {
-            PerformanceAttributes::Fruits(attributes) => Self::Fruits(attributes.difficulty),
+            PerformanceAttributes::Catch(attributes) => Self::Catch(attributes.difficulty),
             PerformanceAttributes::Mania(attributes) => Self::Mania(attributes.difficulty),
             PerformanceAttributes::Osu(attributes) => Self::Osu(attributes.difficulty),
             PerformanceAttributes::Taiko(attributes) => Self::Taiko(attributes.difficulty),
@@ -458,10 +454,10 @@ impl From<PerformanceAttributes> for DifficultyAttributes {
     }
 }
 
-impl From<fruits::FruitsPerformanceAttributes> for PerformanceAttributes {
+impl From<catch::CatchPerformanceAttributes> for PerformanceAttributes {
     #[inline]
-    fn from(attributes: fruits::FruitsPerformanceAttributes) -> Self {
-        Self::Fruits(attributes)
+    fn from(attributes: catch::CatchPerformanceAttributes) -> Self {
+        Self::Catch(attributes)
     }
 }
 

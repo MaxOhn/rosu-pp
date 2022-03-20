@@ -16,7 +16,7 @@ use movement::Movement;
 pub use pp::*;
 use slider_state::SliderState;
 
-use crate::{curve::CurveBuffers, fruits::fruit_or_juice::FruitParams, Beatmap, Mods, Strains};
+use crate::{catch::fruit_or_juice::FruitParams, curve::CurveBuffers, Beatmap, Mods, Strains};
 
 const SECTION_LENGTH: f64 = 750.0;
 const STAR_SCALING_FACTOR: f64 = 0.153;
@@ -29,28 +29,28 @@ const CATCHER_SIZE: f32 = 106.75;
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{FruitsStars, Beatmap};
+/// use rosu_pp::{CatchStars, Beatmap};
 ///
 /// # /*
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
 ///
-/// let difficulty_attrs = FruitsStars::new(&map)
+/// let difficulty_attrs = CatchStars::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .calculate();
 ///
 /// println!("Stars: {}", difficulty_attrs.stars);
 /// ```
 #[derive(Clone, Debug)]
-pub struct FruitsStars<'map> {
+pub struct CatchStars<'map> {
     map: &'map Beatmap,
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
 }
 
-impl<'map> FruitsStars<'map> {
+impl<'map> CatchStars<'map> {
     /// Create a new difficulty calculator for osu!catch maps.
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
@@ -75,8 +75,8 @@ impl<'map> FruitsStars<'map> {
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
-    /// using [`FruitsStars`] multiple times with different `passed_objects`, you should use
-    /// [`FruitsGradualDifficultyAttributes`](crate::fruits::FruitsGradualDifficultyAttributes).
+    /// using [`CatchStars`] multiple times with different `passed_objects`, you should use
+    /// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficultyAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
@@ -96,7 +96,7 @@ impl<'map> FruitsStars<'map> {
 
     /// Calculate all difficulty related values, including stars.
     #[inline]
-    pub fn calculate(self) -> FruitsDifficultyAttributes {
+    pub fn calculate(self) -> CatchDifficultyAttributes {
         let (mut movement, mut attributes) = calculate_movement(self);
         attributes.stars =
             Movement::difficulty_value(&mut movement.strain_peaks).sqrt() * STAR_SCALING_FACTOR;
@@ -119,8 +119,8 @@ impl<'map> FruitsStars<'map> {
     }
 }
 
-fn calculate_movement(params: FruitsStars<'_>) -> (Movement, FruitsDifficultyAttributes) {
-    let FruitsStars {
+fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttributes) {
+    let CatchStars {
         map,
         mods,
         passed_objects,
@@ -132,7 +132,7 @@ fn calculate_movement(params: FruitsStars<'_>) -> (Movement, FruitsDifficultyAtt
     let map_attributes = map.attributes().mods(mods);
     let clock_rate = clock_rate.unwrap_or(map_attributes.clock_rate);
 
-    let attributes = FruitsDifficultyAttributes {
+    let attributes = CatchDifficultyAttributes {
         ar: map_attributes.ar,
         ..Default::default()
     };
@@ -223,7 +223,7 @@ pub(crate) fn calculate_catch_width(cs: f32) -> f32 {
 
 /// The result of a difficulty calculation on an osu!catch map.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct FruitsDifficultyAttributes {
+pub struct CatchDifficultyAttributes {
     /// The final star rating
     pub stars: f64,
     /// The approach rate.
@@ -236,7 +236,7 @@ pub struct FruitsDifficultyAttributes {
     pub n_tiny_droplets: usize,
 }
 
-impl FruitsDifficultyAttributes {
+impl CatchDifficultyAttributes {
     /// Return the maximum combo.
     #[inline]
     pub fn max_combo(&self) -> usize {
@@ -246,14 +246,14 @@ impl FruitsDifficultyAttributes {
 
 /// The result of a performance calculation on an osu!catch map.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct FruitsPerformanceAttributes {
+pub struct CatchPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation
-    pub difficulty: FruitsDifficultyAttributes,
+    pub difficulty: CatchDifficultyAttributes,
     /// The final performance points.
     pub pp: f64,
 }
 
-impl FruitsPerformanceAttributes {
+impl CatchPerformanceAttributes {
     /// Return the star value.
     #[inline]
     pub fn stars(&self) -> f64 {
@@ -273,8 +273,8 @@ impl FruitsPerformanceAttributes {
     }
 }
 
-impl From<FruitsPerformanceAttributes> for FruitsDifficultyAttributes {
-    fn from(attributes: FruitsPerformanceAttributes) -> Self {
+impl From<CatchPerformanceAttributes> for CatchDifficultyAttributes {
+    fn from(attributes: CatchPerformanceAttributes) -> Self {
         attributes.difficulty
     }
 }

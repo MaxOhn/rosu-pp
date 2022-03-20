@@ -1,5 +1,5 @@
 use crate::{
-    fruits::{FruitsDifficultyAttributes, FruitsPP, FruitsPerformanceAttributes},
+    catch::{CatchDifficultyAttributes, CatchPP, CatchPerformanceAttributes},
     mania::{ManiaDifficultyAttributes, ManiaPP, ManiaPerformanceAttributes},
     osu::{OsuDifficultyAttributes, OsuPP, OsuPerformanceAttributes},
     taiko::{TaikoDifficultyAttributes, TaikoPP, TaikoPerformanceAttributes},
@@ -39,7 +39,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub enum AnyPP<'map> {
     /// osu!catch performance calculator
-    Fruits(FruitsPP<'map>),
+    Catch(CatchPP<'map>),
     /// osu!mania performance calculator
     Mania(ManiaPP<'map>),
     /// osu!standard performance calculator
@@ -53,7 +53,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         match map.mode {
-            GameMode::CTB => Self::Fruits(FruitsPP::new(map)),
+            GameMode::CTB => Self::Catch(CatchPP::new(map)),
             GameMode::MNA => Self::Mania(ManiaPP::new(map)),
             GameMode::STD => Self::Osu(OsuPP::new(map)),
             GameMode::TKO => Self::Taiko(TaikoPP::new(map)),
@@ -65,7 +65,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn calculate(self) -> PerformanceAttributes {
         match self {
-            Self::Fruits(f) => PerformanceAttributes::Fruits(f.calculate()),
+            Self::Catch(f) => PerformanceAttributes::Catch(f.calculate()),
             Self::Mania(m) => PerformanceAttributes::Mania(m.calculate()),
             Self::Osu(o) => PerformanceAttributes::Osu(o.calculate()),
             Self::Taiko(t) => PerformanceAttributes::Taiko(t.calculate()),
@@ -78,7 +78,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn attributes(self, attributes: impl AttributeProvider) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.attributes(attributes.attributes())),
+            Self::Catch(f) => Self::Catch(f.attributes(attributes.attributes())),
             Self::Mania(m) => Self::Mania(m.attributes(attributes.attributes())),
             Self::Osu(o) => Self::Osu(o.attributes(attributes.attributes())),
             Self::Taiko(t) => Self::Taiko(t.attributes(attributes.attributes())),
@@ -91,7 +91,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn mods(self, mods: u32) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.mods(mods)),
+            Self::Catch(f) => Self::Catch(f.mods(mods)),
             Self::Mania(m) => Self::Mania(m.mods(mods)),
             Self::Osu(o) => Self::Osu(o.mods(mods)),
             Self::Taiko(t) => Self::Taiko(t.mods(mods)),
@@ -106,7 +106,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.passed_objects(passed_objects)),
+            Self::Catch(f) => Self::Catch(f.passed_objects(passed_objects)),
             Self::Mania(m) => Self::Mania(m.passed_objects(passed_objects)),
             Self::Osu(o) => Self::Osu(o.passed_objects(passed_objects)),
             Self::Taiko(t) => Self::Taiko(t.passed_objects(passed_objects)),
@@ -119,7 +119,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn clock_rate(self, clock_rate: f64) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.clock_rate(clock_rate)),
+            Self::Catch(f) => Self::Catch(f.clock_rate(clock_rate)),
             Self::Mania(m) => Self::Mania(m.clock_rate(clock_rate)),
             Self::Osu(o) => Self::Osu(o.clock_rate(clock_rate)),
             Self::Taiko(t) => Self::Taiko(t.clock_rate(clock_rate)),
@@ -130,7 +130,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn state(self, state: ScoreState) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.state(state.into())),
+            Self::Catch(f) => Self::Catch(f.state(state.into())),
             Self::Mania(m) => Self::Mania(m.score(state.score)),
             Self::Osu(o) => Self::Osu(o.state(state.into())),
             Self::Taiko(t) => Self::Taiko(t.state(state.into())),
@@ -147,7 +147,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn accuracy(self, acc: f64) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.accuracy(acc)),
+            Self::Catch(f) => Self::Catch(f.accuracy(acc)),
             Self::Mania(_) => self,
             Self::Osu(o) => Self::Osu(o.accuracy(acc)),
             Self::Taiko(t) => Self::Taiko(t.accuracy(acc)),
@@ -161,7 +161,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn misses(self, misses: usize) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.misses(misses)),
+            Self::Catch(f) => Self::Catch(f.misses(misses)),
             Self::Mania(_) => self,
             Self::Osu(o) => Self::Osu(o.misses(misses)),
             Self::Taiko(t) => Self::Taiko(t.misses(misses)),
@@ -175,7 +175,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn combo(self, combo: usize) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.combo(combo)),
+            Self::Catch(f) => Self::Catch(f.combo(combo)),
             Self::Mania(_) => self,
             Self::Osu(o) => Self::Osu(o.combo(combo)),
             Self::Taiko(t) => Self::Taiko(t.combo(combo)),
@@ -189,7 +189,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n300(self, n300: usize) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.fruits(n300)),
+            Self::Catch(f) => Self::Catch(f.fruits(n300)),
             Self::Mania(_) => self,
             Self::Osu(o) => Self::Osu(o.n300(n300)),
             Self::Taiko(t) => Self::Taiko(t.n300(n300)),
@@ -203,7 +203,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n100(self, n100: usize) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.droplets(n100)),
+            Self::Catch(f) => Self::Catch(f.droplets(n100)),
             Self::Mania(_) => self,
             Self::Osu(o) => Self::Osu(o.n100(n100)),
             Self::Taiko(t) => Self::Taiko(t.n100(n100)),
@@ -217,7 +217,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n50(self, n50: usize) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.tiny_droplets(n50)),
+            Self::Catch(f) => Self::Catch(f.tiny_droplets(n50)),
             Self::Mania(_) => self,
             Self::Osu(o) => Self::Osu(o.n50(n50)),
             Self::Taiko(_) => self,
@@ -232,7 +232,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n_katu(self, n_katu: usize) -> Self {
         match self {
-            Self::Fruits(f) => Self::Fruits(f.tiny_droplet_misses(n_katu)),
+            Self::Catch(f) => Self::Catch(f.tiny_droplet_misses(n_katu)),
             Self::Mania(_) => self,
             Self::Osu(_) => self,
             Self::Taiko(_) => self,
@@ -247,7 +247,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn score(self, score: u32) -> Self {
         match self {
-            Self::Fruits(_) => self,
+            Self::Catch(_) => self,
             Self::Mania(m) => Self::Mania(m.score(score)),
             Self::Osu(_) => self,
             Self::Taiko(_) => self,
@@ -272,7 +272,7 @@ impl AttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> DifficultyAttributes {
         match self {
-            Self::Fruits(f) => DifficultyAttributes::Fruits(f.difficulty),
+            Self::Catch(f) => DifficultyAttributes::Catch(f.difficulty),
             Self::Mania(m) => DifficultyAttributes::Mania(m.difficulty),
             Self::Osu(o) => DifficultyAttributes::Osu(o.difficulty),
             Self::Taiko(t) => DifficultyAttributes::Taiko(t.difficulty),
@@ -298,10 +298,7 @@ macro_rules! impl_attr_provider {
     };
 }
 
-impl_attr_provider!(
-    Fruits: FruitsDifficultyAttributes,
-    FruitsPerformanceAttributes
-);
+impl_attr_provider!(Catch: CatchDifficultyAttributes, CatchPerformanceAttributes);
 impl_attr_provider!(Mania: ManiaDifficultyAttributes, ManiaPerformanceAttributes);
 impl_attr_provider!(Osu: OsuDifficultyAttributes, OsuPerformanceAttributes);
 impl_attr_provider!(Taiko: TaikoDifficultyAttributes, TaikoPerformanceAttributes);

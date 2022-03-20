@@ -1033,7 +1033,7 @@ mod tests {
         vec![
             2785319, // osu
             1974394, // mania
-            2118524, // fruits
+            2118524, // catch
             1028484, // taiko
         ]
     }

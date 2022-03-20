@@ -1,7 +1,7 @@
 ## Upcoming
 
 - osu: Fix panic on maps with 0 objects
-- fruits: Fixed droplet timings on juicestreams with span count >1
+- catch: Fixed droplet timings on juicestreams with span count >1
 - Fixed timing point parsing on some (older) maps where "uninherited" value did not coincide with beat length
 - Fixed handling .osu files with missing difficulty attributes
 - Fixed huge memory allocations caused by incorrectly parsed .osu files by clamping beat length
@@ -11,6 +11,7 @@
 - [BREAKING] `BeatmapExt::stars`'s definition was adjusted to use the `AnyStars` builder struct
 - [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
 - [BREAKING] Removed the mode features `osu`, `fruits`, `taiko`, and `mania`. Now all modes are always supported.
+- [BREAKING] Renamed the `rosu_pp::fruits` module to `rosu_pp::catch`. Similarly, all structs `Fruits{Name}` were renamed to `Catch{Name}` and enums over the mode have their `Fruits` variant renamed to `Catch`
 
 # v0.4.0
 

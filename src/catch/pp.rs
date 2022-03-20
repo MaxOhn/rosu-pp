@@ -1,6 +1,4 @@
-use super::{
-    FruitsDifficultyAttributes, FruitsPerformanceAttributes, FruitsScoreState, FruitsStars,
-};
+use super::{CatchDifficultyAttributes, CatchPerformanceAttributes, CatchScoreState, CatchStars};
 use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 
 /// Performance calculator on osu!catch maps.
@@ -8,14 +6,14 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{FruitsPP, Beatmap};
+/// use rosu_pp::{CatchPP, Beatmap};
 ///
 /// # /*
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
 ///
-/// let pp_result = FruitsPP::new(&map)
+/// let pp_result = CatchPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
 ///     .misses(1)
@@ -24,7 +22,7 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 ///
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
 ///
-/// let next_result = FruitsPP::new(&map)
+/// let next_result = CatchPP::new(&map)
 ///     .attributes(pp_result)  // reusing previous results for performance
 ///     .mods(8 + 64)           // has to be the same to reuse attributes
 ///     .accuracy(99.5)
@@ -34,9 +32,9 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
-pub struct FruitsPP<'map> {
+pub struct CatchPP<'map> {
     map: &'map Beatmap,
-    attributes: Option<FruitsDifficultyAttributes>,
+    attributes: Option<CatchDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
 
@@ -49,7 +47,7 @@ pub struct FruitsPP<'map> {
     clock_rate: Option<f64>,
 }
 
-impl<'map> FruitsPP<'map> {
+impl<'map> CatchPP<'map> {
     /// Create a new performance calculator for osu!catch maps.
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
@@ -73,7 +71,7 @@ impl<'map> FruitsPP<'map> {
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn attributes(mut self, attributes: impl FruitsAttributeProvider) -> Self {
+    pub fn attributes(mut self, attributes: impl CatchAttributeProvider) -> Self {
         if let Some(attributes) = attributes.attributes() {
             self.attributes.replace(attributes);
         }
@@ -142,8 +140,8 @@ impl<'map> FruitsPP<'map> {
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
     /// If you want to calculate the performance after every few objects, instead of
-    /// using [`FruitsPP`] multiple times with different `passed_objects`, you should use
-    /// [`FruitsGradualPerformanceAttributes`](crate::fruits::FruitsGradualPerformanceAttributes).
+    /// using [`CatchPP`] multiple times with different `passed_objects`, you should use
+    /// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);
@@ -161,10 +159,10 @@ impl<'map> FruitsPP<'map> {
         self
     }
 
-    /// Provide parameters through an [`FruitsScoreState`].
+    /// Provide parameters through an [`CatchScoreState`].
     #[inline]
-    pub fn state(mut self, state: FruitsScoreState) -> Self {
-        let FruitsScoreState {
+    pub fn state(mut self, state: CatchScoreState) -> Self {
+        let CatchScoreState {
             max_combo,
             n_fruits,
             n_droplets,
@@ -188,7 +186,7 @@ impl<'map> FruitsPP<'map> {
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
     pub fn accuracy(mut self, mut acc: f64) -> Self {
         if self.attributes.is_none() {
-            let mut calculator = FruitsStars::new(self.map).mods(self.mods);
+            let mut calculator = CatchStars::new(self.map).mods(self.mods);
 
             if let Some(passed_objects) = self.passed_objects {
                 calculator = calculator.passed_objects(passed_objects);
@@ -234,7 +232,7 @@ impl<'map> FruitsPP<'map> {
         self
     }
 
-    fn assert_hitresults(self, attributes: FruitsDifficultyAttributes) -> FruitsPPInner {
+    fn assert_hitresults(self, attributes: CatchDifficultyAttributes) -> CatchPPInner {
         let max_combo = attributes.max_combo();
 
         let correct_combo_hits = self
@@ -281,7 +279,7 @@ impl<'map> FruitsPP<'map> {
                 .saturating_sub(n_tiny_droplets)
                 .saturating_sub(n_tiny_droplet_misses);
 
-            return FruitsPPInner {
+            return CatchPPInner {
                 attributes,
                 mods: self.mods,
                 combo: self.combo,
@@ -293,7 +291,7 @@ impl<'map> FruitsPP<'map> {
             };
         }
 
-        FruitsPPInner {
+        CatchPPInner {
             attributes,
             mods: self.mods,
             combo: self.combo,
@@ -306,9 +304,9 @@ impl<'map> FruitsPP<'map> {
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(mut self) -> FruitsPerformanceAttributes {
+    pub fn calculate(mut self) -> CatchPerformanceAttributes {
         let attributes = self.attributes.take().unwrap_or_else(|| {
-            let mut calculator = FruitsStars::new(self.map).mods(self.mods);
+            let mut calculator = CatchStars::new(self.map).mods(self.mods);
 
             if let Some(passed_objects) = self.passed_objects {
                 calculator = calculator.passed_objects(passed_objects);
@@ -325,8 +323,8 @@ impl<'map> FruitsPP<'map> {
     }
 }
 
-struct FruitsPPInner {
-    attributes: FruitsDifficultyAttributes,
+struct CatchPPInner {
+    attributes: CatchDifficultyAttributes,
     mods: u32,
     combo: Option<usize>,
     n_fruits: usize,
@@ -336,8 +334,8 @@ struct FruitsPPInner {
     n_misses: usize,
 }
 
-impl FruitsPPInner {
-    fn calculate(self) -> FruitsPerformanceAttributes {
+impl CatchPPInner {
+    fn calculate(self) -> CatchPerformanceAttributes {
         let attributes = &self.attributes;
         let stars = attributes.stars;
         let max_combo = attributes.max_combo();
@@ -398,7 +396,7 @@ impl FruitsPPInner {
             pp *= 0.9;
         }
 
-        FruitsPerformanceAttributes {
+        CatchPerformanceAttributes {
             difficulty: self.attributes,
             pp,
         }
@@ -434,30 +432,30 @@ impl FruitsPPInner {
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
-pub trait FruitsAttributeProvider {
+pub trait CatchAttributeProvider {
     /// Provide the actual difficulty attributes.
-    fn attributes(self) -> Option<FruitsDifficultyAttributes>;
+    fn attributes(self) -> Option<CatchDifficultyAttributes>;
 }
 
-impl FruitsAttributeProvider for FruitsDifficultyAttributes {
+impl CatchAttributeProvider for CatchDifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
+    fn attributes(self) -> Option<CatchDifficultyAttributes> {
         Some(self)
     }
 }
 
-impl FruitsAttributeProvider for FruitsPerformanceAttributes {
+impl CatchAttributeProvider for CatchPerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
+    fn attributes(self) -> Option<CatchDifficultyAttributes> {
         Some(self.difficulty)
     }
 }
 
-impl FruitsAttributeProvider for DifficultyAttributes {
+impl CatchAttributeProvider for DifficultyAttributes {
     #[inline]
-    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
+    fn attributes(self) -> Option<CatchDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
-        if let Self::Fruits(attributes) = self {
+        if let Self::Catch(attributes) = self {
             Some(attributes)
         } else {
             None
@@ -465,11 +463,11 @@ impl FruitsAttributeProvider for DifficultyAttributes {
     }
 }
 
-impl FruitsAttributeProvider for PerformanceAttributes {
+impl CatchAttributeProvider for PerformanceAttributes {
     #[inline]
-    fn attributes(self) -> Option<FruitsDifficultyAttributes> {
+    fn attributes(self) -> Option<CatchDifficultyAttributes> {
         #[allow(irrefutable_let_patterns)]
-        if let Self::Fruits(attributes) = self {
+        if let Self::Catch(attributes) = self {
             Some(attributes.difficulty)
         } else {
             None
@@ -482,8 +480,8 @@ mod test {
     use super::*;
     use crate::Beatmap;
 
-    fn attributes() -> FruitsDifficultyAttributes {
-        FruitsDifficultyAttributes {
+    fn attributes() -> CatchDifficultyAttributes {
+        CatchDifficultyAttributes {
             n_fruits: 1234,
             n_droplets: 567,
             n_tiny_droplets: 2345,
@@ -499,7 +497,7 @@ mod test {
         let total_objects = attributes.n_fruits + attributes.n_droplets;
         let target_acc = 97.5;
 
-        let calculator = FruitsPP::new(&map)
+        let calculator = CatchPP::new(&map)
             .attributes(attributes)
             .passed_objects(total_objects)
             .accuracy(target_acc);
@@ -529,7 +527,7 @@ mod test {
         let n_droplets = 550;
         let n_tiny_droplets = 2222;
 
-        let calculator = FruitsPP::new(&map)
+        let calculator = CatchPP::new(&map)
             .attributes(attributes)
             .passed_objects(total_objects)
             .droplets(n_droplets)
@@ -571,7 +569,7 @@ mod test {
         let n_tiny_droplet_misses = 20;
         let n_misses = 2;
 
-        let calculator = FruitsPP::new(&map)
+        let calculator = CatchPP::new(&map)
             .attributes(attributes.clone())
             .passed_objects(total_objects)
             .fruits(n_fruits)

@@ -162,11 +162,7 @@ println!("PP after the first 11 objects: {}", curr_performance.pp());
 
 | Flag | Description |
 |-----|-----|
-| `default` | Enable all modes. |
-| `osu` | Enable osu!standard. |
-| `taiko` | Enable osu!taiko. |
-| `fruits` | Enable osu!catch. |
-| `mania` | Enable osu!mania. |
+| `default` | Beatmap parsing will be non-async |
 | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio) |
 | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
 

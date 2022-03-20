@@ -1,11 +1,11 @@
 use std::{iter, slice::Iter};
 
 use crate::{
-    curve::CurveBuffers,
-    fruits::{
+    catch::{
         difficulty_object::DifficultyObject, slider_state::SliderState, SECTION_LENGTH,
         STAR_SCALING_FACTOR,
     },
+    curve::CurveBuffers,
     parse::{HitObject, Pos2},
     Beatmap, Mods,
 };
@@ -15,24 +15,24 @@ use super::{
     catch_object::CatchObject,
     fruit_or_juice::{FruitOrJuice, FruitParams},
     movement::Movement,
-    FruitsDifficultyAttributes, ALLOWED_CATCH_RANGE,
+    CatchDifficultyAttributes, ALLOWED_CATCH_RANGE,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!catch map.
 ///
 /// Note that this struct implements [`Iterator`](std::iter::Iterator).
 /// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next fruit or droplet
-/// will be processed and the [`FruitsDifficultyAttributes`] will be updated and returned.
+/// will be processed and the [`CatchDifficultyAttributes`] will be updated and returned.
 ///
 /// Note that it does not return attributes after a tiny droplet. Only for fruits and droplets.
 ///
 /// If you want to calculate performance attributes, use
-/// [`FruitsGradualPerformanceAttributes`](crate::fruits::FruitsGradualPerformanceAttributes) instead.
+/// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformanceAttributes) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, fruits::FruitsGradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, catch::CatchGradualDifficultyAttributes};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -40,7 +40,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = FruitsGradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = CatchGradualDifficultyAttributes::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -51,10 +51,10 @@ use super::{
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct FruitsGradualDifficultyAttributes<'map> {
+pub struct CatchGradualDifficultyAttributes<'map> {
     pub(crate) idx: usize,
     clock_rate: f64,
-    hit_objects: FruitsObjectIter<'map>,
+    hit_objects: CatchObjectIter<'map>,
     movement: Movement,
     prev: CatchObject,
     half_catcher_width: f64,
@@ -64,17 +64,17 @@ pub struct FruitsGradualDifficultyAttributes<'map> {
     strain_peak_buf: Vec<f64>,
 }
 
-impl<'map> FruitsGradualDifficultyAttributes<'map> {
+impl<'map> CatchGradualDifficultyAttributes<'map> {
     /// Create a new difficulty attributes iterator for osu!catch maps.
     pub fn new(map: &'map Beatmap, mods: impl Mods) -> Self {
         let map_attributes = map.attributes().mods(mods);
 
-        let attributes = FruitsDifficultyAttributes {
+        let attributes = CatchDifficultyAttributes {
             ar: map_attributes.ar,
             ..Default::default()
         };
 
-        let hit_objects = FruitsObjectIter::new(map, mods, attributes);
+        let hit_objects = CatchObjectIter::new(map, mods, attributes);
 
         let half_catcher_width =
             (calculate_catch_width(map_attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
@@ -108,8 +108,8 @@ impl<'map> FruitsGradualDifficultyAttributes<'map> {
     }
 }
 
-impl Iterator for FruitsGradualDifficultyAttributes<'_> {
-    type Item = FruitsDifficultyAttributes;
+impl Iterator for CatchGradualDifficultyAttributes<'_> {
+    type Item = CatchDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
         let curr = self.hit_objects.next()?;
@@ -165,14 +165,14 @@ impl Iterator for FruitsGradualDifficultyAttributes<'_> {
 }
 
 #[derive(Clone, Debug)]
-struct FruitsObjectIter<'map> {
+struct CatchObjectIter<'map> {
     last_object: Option<FruitOrJuice>,
     hit_objects: Iter<'map, HitObject>,
     params: FruitParams<'map>,
 }
 
-impl<'map> FruitsObjectIter<'map> {
-    fn new(map: &'map Beatmap, mods: impl Mods, attributes: FruitsDifficultyAttributes) -> Self {
+impl<'map> CatchObjectIter<'map> {
+    fn new(map: &'map Beatmap, mods: impl Mods, attributes: CatchDifficultyAttributes) -> Self {
         let params = FruitParams {
             attributes,
             curve_bufs: CurveBuffers::default(),
@@ -191,12 +191,12 @@ impl<'map> FruitsObjectIter<'map> {
         }
     }
 
-    fn attributes(&self) -> FruitsDifficultyAttributes {
+    fn attributes(&self) -> CatchDifficultyAttributes {
         self.params.attributes.clone()
     }
 }
 
-impl Iterator for FruitsObjectIter<'_> {
+impl Iterator for CatchObjectIter<'_> {
     type Item = CatchObject;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn empty_map() {
         let map = Beatmap::default();
-        let mut attributes = FruitsGradualDifficultyAttributes::new(&map, 0);
+        let mut attributes = CatchGradualDifficultyAttributes::new(&map, 0);
         assert!(attributes.next().is_none());
     }
 
@@ -230,9 +230,9 @@ mod tests {
     fn iter_end_eq_regular() {
         let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
         let mods = 64;
-        let regular = crate::FruitsStars::new(&map).mods(mods).calculate();
+        let regular = crate::CatchStars::new(&map).mods(mods).calculate();
 
-        let iter_end = FruitsGradualDifficultyAttributes::new(&map, mods)
+        let iter_end = CatchGradualDifficultyAttributes::new(&map, mods)
             .last()
             .expect("empty iter");
 

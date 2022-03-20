@@ -1,7 +1,5 @@
 use crate::{
-    fruits::{
-        FruitsGradualDifficultyAttributes, FruitsGradualPerformanceAttributes, FruitsScoreState,
-    },
+    catch::{CatchGradualDifficultyAttributes, CatchGradualPerformanceAttributes, CatchScoreState},
     mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes},
     osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
     taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
@@ -40,8 +38,8 @@ use crate::{
 /// ```
 #[derive(Clone, Debug)]
 pub enum GradualDifficultyAttributes<'map> {
-    /// Gradual osu!fruits difficulty attributes.
-    Fruits(FruitsGradualDifficultyAttributes<'map>),
+    /// Gradual osu!catch difficulty attributes.
+    Catch(CatchGradualDifficultyAttributes<'map>),
     /// Gradual osu!mania difficulty attributes.
     Mania(ManiaGradualDifficultyAttributes<'map>),
     /// Gradual osu!standard difficulty attributes.
@@ -56,7 +54,7 @@ impl<'map> GradualDifficultyAttributes<'map> {
         match map.mode {
             GameMode::STD => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
             GameMode::TKO => Self::Taiko(TaikoGradualDifficultyAttributes::new(map, mods)),
-            GameMode::CTB => Self::Fruits(FruitsGradualDifficultyAttributes::new(map, mods)),
+            GameMode::CTB => Self::Catch(CatchGradualDifficultyAttributes::new(map, mods)),
             GameMode::MNA => Self::Mania(ManiaGradualDifficultyAttributes::new(map, mods)),
         }
     }
@@ -68,7 +66,7 @@ impl Iterator for GradualDifficultyAttributes<'_> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            GradualDifficultyAttributes::Fruits(f) => f.next().map(DifficultyAttributes::Fruits),
+            GradualDifficultyAttributes::Catch(f) => f.next().map(DifficultyAttributes::Catch),
             GradualDifficultyAttributes::Mania(m) => m.next().map(DifficultyAttributes::Mania),
             GradualDifficultyAttributes::Osu(o) => o.next().map(DifficultyAttributes::Osu),
             GradualDifficultyAttributes::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
@@ -78,7 +76,7 @@ impl Iterator for GradualDifficultyAttributes<'_> {
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            GradualDifficultyAttributes::Fruits(f) => f.size_hint(),
+            GradualDifficultyAttributes::Catch(f) => f.size_hint(),
             GradualDifficultyAttributes::Mania(m) => m.size_hint(),
             GradualDifficultyAttributes::Osu(o) => o.size_hint(),
             GradualDifficultyAttributes::Taiko(t) => t.size_hint(),
@@ -133,7 +131,7 @@ impl ScoreState {
     }
 }
 
-impl From<ScoreState> for FruitsScoreState {
+impl From<ScoreState> for CatchScoreState {
     #[inline]
     fn from(state: ScoreState) -> Self {
         Self {
@@ -187,7 +185,7 @@ impl From<ScoreState> for TaikoScoreState {
 ///
 /// Alternatively, you can match on the map's mode yourself and use the gradual
 /// performance attribute struct for the corresponding mode, i.e.
-/// [`FruitsGradualPerformanceAttributes`],
+/// [`CatchGradualPerformanceAttributes`],
 /// [`ManiaGradualPerformanceAttributes`],
 /// [`OsuGradualPerformanceAttributes`], or
 /// [`TaikoGradualPerformanceAttributes`].
@@ -272,7 +270,7 @@ impl From<ScoreState> for TaikoScoreState {
 #[derive(Clone, Debug)]
 pub enum GradualPerformanceAttributes<'map> {
     /// Gradual osu!catch performance attributes.
-    Fruits(FruitsGradualPerformanceAttributes<'map>),
+    Catch(CatchGradualPerformanceAttributes<'map>),
     /// Gradual osu!mania performance attributes.
     Mania(ManiaGradualPerformanceAttributes<'map>),
     /// Gradual osu!standard performance attributes.
@@ -287,7 +285,7 @@ impl<'map> GradualPerformanceAttributes<'map> {
         match map.mode {
             GameMode::STD => Self::Osu(OsuGradualPerformanceAttributes::new(map, mods)),
             GameMode::TKO => Self::Taiko(TaikoGradualPerformanceAttributes::new(map, mods)),
-            GameMode::CTB => Self::Fruits(FruitsGradualPerformanceAttributes::new(map, mods)),
+            GameMode::CTB => Self::Catch(CatchGradualPerformanceAttributes::new(map, mods)),
             GameMode::MNA => Self::Mania(ManiaGradualPerformanceAttributes::new(map, mods)),
         }
     }
@@ -310,9 +308,9 @@ impl<'map> GradualPerformanceAttributes<'map> {
         n: usize,
     ) -> Option<PerformanceAttributes> {
         match self {
-            GradualPerformanceAttributes::Fruits(f) => f
+            GradualPerformanceAttributes::Catch(f) => f
                 .process_next_n_objects(state.into(), n)
-                .map(PerformanceAttributes::Fruits),
+                .map(PerformanceAttributes::Catch),
             GradualPerformanceAttributes::Mania(m) => m
                 .process_next_n_objects(state.score, n)
                 .map(PerformanceAttributes::Mania),
