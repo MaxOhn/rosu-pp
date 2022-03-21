@@ -3,7 +3,7 @@
 - __Fixes:__
   - Performance calculation for taiko & mania now considers custom clock rates properly
 
-# v0.5.0
+# v0.5.0 (2022-03-21)
 
 - __Fixes:__
   - Fixed panic on maps with 0 objects
@@ -22,7 +22,7 @@
   - Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
   - Added the method `clock_rate` to `{Mode}PP` and `{Mode}Stars` to consider a custom clock rate instead of the one dictated by mods.
 
-## v0.4.0
+## v0.4.0 (2021-11-25)
 
 - Fixed out of bounds panic on maps with single-control-point linear sliders
 - Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes
@@ -41,7 +41,7 @@
 - [BREAKING] Renamed the `attributes` field to `difficulty` for all `{Mode}PerformanceAttributes` structs
 - [BREAKING] Replaced field `FruitsDifficultyAttributes::max_combo` by a method with the same name
 
-## v0.3.0
+## v0.3.0 (2021-11-14)
 
 - [BREAKING] With the importance of sliders for osu!standard, the `no_sliders_no_leniency` feature became too inaccurate. Additionally, since considering sliders now inherently drags performance down a little more, the difference between `no_leniency` and `all_included` became too small. Hence, the three osu features `no_sliders_no_leniency`, `no_leniency`, and `all_included` were removed. When the `osu` feature is enabled, it will now essentially use `all_included` under the hood.
   Additionally, instead of importing through `rosu_pp::osu::{version}`, you now have to import through `rosu_pp::osu`.
@@ -52,7 +52,7 @@
 - Added internal binary crate `pp-plot` to plot out differences between `pp-gen`'s output and `rosu-pp` values
 - osu: Updated up to commit [9fb2402781ad91c197d51aeec716b0000f52c4d1](https://github.com/ppy/osu/commit/9fb2402781ad91c197d51aeec716b0000f52c4d1) (2021-11-12)
 
-## v0.2.3
+## v0.2.3 (2021-08-09)
 
 - Reduced amount of required features of `async_std` and `async_tokio`
 - Fixed a panic for some mania difficulty calculations on converts
@@ -60,7 +60,7 @@
 - Fixed dead loop when reading empty `.osu` files ([#2] - [@Pure-Peace])
 - Updated osu's clockrate bugfix for all modes
 
-## v0.2.2
+## v0.2.2 (2021-05-05)
 
 - osu & fruits:
   - Fixed specific slider patterns
@@ -74,18 +74,18 @@
 - taiko:
   - Micro optimizations
 
-## v0.2.1
+## v0.2.1 (2021-04-17)
 
 - parse & osu:
   - Cleanup and tiny optimizations
 
-## v0.2.0
+## v0.2.0 (2021-02-25)
 
 - Async beatmap parsing through features `async_tokio` or `async_std` ([#1] - [@Pure-Peace])
 - [BREAKING] Hide various parsing related types further inwards, i.e. `rosu_pp::parse::some_type` instead of `rosu_pp::some_type`
   - Affected types: `DifficultyPoint`, `HitObject`, `Pos2`, `TimingPoint`, `HitObjectKind`, `PathType`, `HitSound`
 
-## v0.1.1
+## v0.1.1 (2021-02-15)
 
 - parse:
   - Efficiently handle huge amounts of curvepoints
