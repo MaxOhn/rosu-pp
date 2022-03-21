@@ -141,7 +141,7 @@ impl<'map> ManiaPP<'map> {
         }
 
         let mut od = 34.0 + 3.0 * (10.0 - self.map.od as f64).max(0.0).min(10.0);
-        let clock_rate = self.mods.clock_rate();
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
 
         let mut multiplier = 0.8;
 

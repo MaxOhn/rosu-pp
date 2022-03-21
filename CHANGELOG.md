@@ -1,6 +1,7 @@
 ## Upcoming
 
-- Nothing as of now
+- __Fixes:__
+  - Performance calculation for taiko & mania now considers custom clock rates properly
 
 # v0.5.0
 

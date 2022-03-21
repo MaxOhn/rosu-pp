@@ -210,6 +210,7 @@ impl<'map> TaikoPP<'map> {
             mods: self.mods,
             acc: self.acc,
             n_misses: self.n_misses,
+            clock_rate: self.clock_rate.unwrap_or_else(|| self.mods.clock_rate()),
         };
 
         inner.calculate()
@@ -222,6 +223,7 @@ struct TaikoPPInner<'map> {
     mods: u32,
     acc: f64,
     n_misses: usize,
+    clock_rate: f64,
 }
 
 impl<'map> TaikoPPInner<'map> {
@@ -285,7 +287,7 @@ impl<'map> TaikoPPInner<'map> {
             od *= 0.5;
         }
 
-        let hit_window = difficulty_range_od(od).floor() / self.mods.clock_rate();
+        let hit_window = difficulty_range_od(od).floor() / self.clock_rate;
         let max_combo = self.attributes.max_combo;
 
         (150.0 / hit_window).powf(1.1)
