@@ -1,9 +1,13 @@
 ## Upcoming
 
+- Nothing as of now
+
+# v0.5.1 (2022-03-21)
+
 - __Fixes:__
   - Performance calculation for taiko & mania now considers custom clock rates properly
 
-# v0.5.0 (2022-03-21)
+## v0.5.0 (2022-03-21)
 
 - __Fixes:__
   - Fixed panic on maps with 0 objects
