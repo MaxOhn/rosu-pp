@@ -1,20 +1,27 @@
 ## Upcoming
 
-- osu: Fix panic on maps with 0 objects
-- catch: Fixed droplet timings on juicestreams with span count >1
-- Fixed timing point parsing on some (older) maps where "uninherited" value did not coincide with beat length
-- Fixed handling .osu files with missing difficulty attributes
-- Fixed huge memory allocations caused by incorrectly parsed .osu files by clamping beat length
-- Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
-- Added the method `clock_rate` to `{Mode}PP` and `{Mode}Stars` to consider a custom clock rate instead of the one dictated by mods.
-- [BREAKING] The `stars` and `strains` functions for all modes were removed. Instead use the `{Mode}Stars` builder pattern which is similar to `{Mode}PP`.
-- [BREAKING] `BeatmapExt::stars`'s definition was adjusted to use the `AnyStars` builder struct
-- [BREAKING] Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
-- [BREAKING] Removed the mode features `osu`, `fruits`, `taiko`, and `mania`. Now all modes are always supported.
-- [BREAKING] Renamed the `rosu_pp::fruits` module to `rosu_pp::catch`. Similarly, all structs `Fruits{Name}` were renamed to `Catch{Name}` and enums over the mode have their `Fruits` variant renamed to `Catch`
-- [BREAKING] Renamed `Mods`' method `speed` to `clock_rate`
+- Nothing as of now
 
-# v0.4.0
+# v0.5.0
+
+- __Fixes:__
+  - Fixed panic on maps with 0 objects
+  - Fixed droplet timings on juicestreams with span count >1
+  - Fixed timing point parsing on some (older) maps where "uninherited" value did not coincide with beat length
+  - Fixed handling .osu files with missing difficulty attributes
+  - Fixed huge memory allocations caused by incorrectly parsing .osu files
+- __Breaking changes:__
+  - The `stars` and `strains` functions for all modes were removed. Instead use the `{Mode}Stars` builder pattern which is similar to `{Mode}PP`.
+  - `BeatmapExt::stars`'s definition was adjusted to use the `AnyStars` builder struct
+  - Store `HitObject::sound` in `Beatmap::sounds` instead to reduce the struct size
+  - Removed the mode features `osu`, `fruits`, `taiko`, and `mania`. Now all modes are always supported.
+  - Renamed the `rosu_pp::fruits` module to `rosu_pp::catch`. Similarly, all structs `Fruits{Name}` were renamed to `Catch{Name}` and enums over the mode have their `Fruits` variant renamed to `Catch`
+  - Renamed `Mods`' method `speed` to `clock_rate`
+- __Additions:__
+  - Added `AttributeProvider` impl for `{Mode}PerformanceAttributes`
+  - Added the method `clock_rate` to `{Mode}PP` and `{Mode}Stars` to consider a custom clock rate instead of the one dictated by mods.
+
+## v0.4.0
 
 - Fixed out of bounds panic on maps with single-control-point linear sliders
 - Fixed incorrect attributes on maps with only 1 or 2 hit objects for all modes

@@ -121,6 +121,7 @@ impl<'map> ManiaGradualPerformanceAttributes<'map> {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
