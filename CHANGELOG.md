@@ -1,6 +1,7 @@
 ## Upcoming
 
-- Nothing as of now
+- __Fixes:__
+  - Handle missing approach rate properly this time
 
 # v0.5.1 (2022-03-21)
 

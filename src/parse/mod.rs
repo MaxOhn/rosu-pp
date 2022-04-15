@@ -218,7 +218,7 @@ macro_rules! parse_difficulty_body {
         $self.od = od.unwrap_or(DEFAULT_DIFFICULTY);
         $self.cs = cs.unwrap_or(DEFAULT_DIFFICULTY);
         $self.hp = hp.unwrap_or(DEFAULT_DIFFICULTY);
-        $self.ar = ar.unwrap_or(DEFAULT_DIFFICULTY);
+        $self.ar = ar.unwrap_or($self.od);
         $self.slider_mult = sv.next_field("sv")?;
         $self.tick_rate = tick_rate.next_field("tick rate")?;
 
