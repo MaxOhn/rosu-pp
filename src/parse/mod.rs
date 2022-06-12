@@ -228,7 +228,7 @@ macro_rules! parse_timingpoints_body {
                 break;
             }
 
-            let line = $reader.get_line();
+            let line = $reader.get_line().ok_or(ParseError::InvalidUtf8)?;
             let mut split = line.split(',');
 
             let time = split
@@ -328,7 +328,7 @@ macro_rules! parse_hitobjects_body {
                 break;
             }
 
-            let line = $reader.get_line();
+            let line = $reader.get_line().ok_or(ParseError::InvalidUtf8)?;
             let mut split = line.split(',');
 
             let pos = Pos2 {
@@ -509,11 +509,10 @@ macro_rules! parse_hitobjects {
 macro_rules! parse_body {
     ($input:ident) => {{
         let mut reader = FileReader::new($input);
+        next_line!(reader)?;
 
-        while next_line!(reader)? != 0 {
-            if !reader.is_initial_empty_line() {
-                break;
-            }
+        if reader.is_initial_empty_line() {
+            next_line!(reader)?;
         }
 
         let version = reader.version().ok_or(ParseError::IncorrectFileHeader)?;

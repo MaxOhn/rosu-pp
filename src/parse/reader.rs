@@ -4,7 +4,7 @@ use std::io::Error as IoError;
 use std::io::{BufRead, BufReader, Read};
 
 #[cfg(feature = "async_tokio")]
-use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncRead as Read, BufReader};
 
 #[cfg(feature = "async_std")]
 use async_std::io::{prelude::BufReadExt, BufReader, Read};
@@ -20,119 +20,140 @@ pub(crate) struct FileReader<R> {
     inner: BufReader<R>,
 }
 
-#[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
-impl<R: Read> FileReader<R> {
-    pub(crate) fn new(src: R) -> Self {
-        Self {
-            inner: BufReader::new(src),
-            buf: Vec::with_capacity(32),
+macro_rules! read_until {
+    ($self:expr) => {{
+        #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
+        {
+            $self.inner.read_until(b'\n', &mut $self.buf)
         }
-    }
 
-    pub(crate) fn next_line(&mut self) -> Result<usize, IoError> {
+        #[cfg(any(feature = "async_std", feature = "async_tokio"))]
+        {
+            $self.inner.read_until(b'\n', &mut $self.buf).await
+        }
+    }};
+}
+
+macro_rules! impl_reader {
+    () => {
+        impl<R: Read> FileReader<R> {
+            impl_reader!(@NEW);
+            impl_reader!(@NEXT_LINE);
+        }
+    };
+    (async) => {
+        impl<R: Read + Unpin> FileReader<R> {
+            impl_reader!(@NEW);
+            impl_reader!(@ASYNC NEXT_LINE);
+        }
+    };
+    (@NEW) => {
+            pub(crate) fn new(src: R) -> Self {
+                Self {
+                    inner: BufReader::new(src),
+                    buf: Vec::with_capacity(32),
+                }
+            }
+    };
+    (@NEXT_LINE) => {
+        pub(crate) fn next_line(&mut self) -> Result<usize, IoError> {
+            impl_reader!(@NEXT_LINE_BODY, self);
+        }
+    };
+    (@ASYNC NEXT_LINE) => {
+        pub(crate) async fn next_line(&mut self) -> Result<usize, IoError> {
+            impl_reader!(@NEXT_LINE_BODY, self);
+        }
+    };
+    (@NEXT_LINE_BODY, $self:ident) => {
         loop {
-            self.buf.clear();
-            let bytes = self.inner.read_until(b'\n', &mut self.buf)?;
+            $self.buf.clear();
+            let bytes = read_until!($self)?;
 
-            // TODO: check on lines like `       // comment continuation`
-            if !skip_line(&self.buf) {
+            if bytes == 0 {
+                return Ok(bytes);
+            }
+
+            $self.truncate();
+
+            if !$self.buf.is_empty() {
                 return Ok(bytes);
             }
         }
-    }
+    };
 }
+
+#[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
+impl_reader!();
 
 #[cfg(feature = "async_tokio")]
-impl<R: AsyncRead + Unpin> FileReader<R> {
-    pub(crate) fn new(src: R) -> Self {
-        Self {
-            inner: BufReader::new(src),
-            buf: Vec::with_capacity(32),
-        }
-    }
-
-    pub(crate) async fn next_line(&mut self) -> Result<usize, IoError> {
-        loop {
-            self.buf.clear();
-            let bytes = self.inner.read_until(b'\n', &mut self.buf).await?;
-
-            // TODO: check on lines like `       // comment continuation`
-            if !skip_line(&self.buf) {
-                return Ok(bytes);
-            }
-        }
-    }
-}
+impl_reader!(async);
 
 #[cfg(feature = "async_std")]
-impl<R: Read + Unpin> FileReader<R> {
-    pub(crate) fn new(src: R) -> Self {
-        Self {
-            inner: BufReader::new(src),
-            buf: Vec::with_capacity(32),
-        }
-    }
-
-    pub(crate) async fn next_line(&mut self) -> Result<usize, IoError> {
-        loop {
-            self.buf.clear();
-            let bytes = self.inner.read_until(b'\n', &mut self.buf).await?;
-
-            // TODO: check on lines like `       // comment continuation`
-            if !skip_line(&self.buf) {
-                return Ok(bytes);
-            }
-        }
-    }
-}
+impl_reader!(async);
 
 impl<R> FileReader<R> {
     pub(crate) fn is_initial_empty_line(&self) -> bool {
-        let pats: [&[u8]; 5] = [
-            &[b' '],
-            &[b'\t'],
-            &[b'\n'],
-            &[b'\r'],
-            &[239, 187, 191], // U+FEFF
-        ];
-
-        consists_of(&self.buf, pats)
+        self.buf == [239, 187, 191] // U+FEFF (BOM)
     }
 
     pub(crate) fn version(&self) -> Option<u8> {
-        const OSU_FILE_HEADER: &[u8] = b"osu file format v";
+        if self.buf.starts_with(b"osu file format v") {
+            let mut n = 0;
 
-        self.find(OSU_FILE_HEADER)
-            .and_then(|i| self.buf.get(i + OSU_FILE_HEADER.len()..))
-            .map(|infix| {
-                let mut n = 0;
-
-                for byte in infix {
-                    if !(b'0'..=b'9').contains(byte) {
-                        break;
-                    }
-
-                    n = 10 * n + (*byte & 0xF);
+            // TODO: check if this panics on any ranked map
+            for byte in &self.buf[17..] {
+                if !(b'0'..=b'9').contains(byte) {
+                    break;
                 }
 
-                n
-            })
+                n = 10 * n + (*byte & 0xF);
+            }
+
+            Some(n)
+        } else {
+            None
+        }
     }
 
+    /// Returns the bytes inbetween '[' and ']'.
     pub(crate) fn get_section(&self) -> Option<&[u8]> {
         if self.buf[0] == b'[' {
-            if let Some(end) = self.find(&[b']']) {
-                return Some(&self.buf[1..end]);
+            if let Some(end) = self.buf[1..].iter().position(|&byte| byte == b']') {
+                return Some(&self.buf[1..=end]);
             }
         }
 
         None
     }
 
-    pub(crate) fn get_line(&self) -> &str {
-        // TODO: benchmark if necessary
-        // trim comment so the utf8 validation skips it
-        let end = self
+    /// Parse the buffer into a string, returning `None` if the UTF-8 validation fails.
+    pub(crate) fn get_line(&self) -> Option<&str> {
+        std::str::from_utf8(&self.buf).ok()
+    }
+
+    /// Split the buffer at the first ':', then parse the second half into a string.
+    ///
+    /// Returns `None` if there is no ':' or if the second half is invalid UTF-8.
+    pub(crate) fn split_colon(&self) -> Option<(&[u8], &str)> {
+        let idx = self.buf.iter().position(|&byte| byte == b':')?;
+        let front = &self.buf[..idx];
+        let back = std::str::from_utf8(&self.buf[idx + 1..]).ok()?;
+
+        Some((front, back.trim_start()))
+    }
+
+    /// # Panics
+    ///
+    /// This method always assumes the line ends with '\n' so it panics if `self.buf` is empty.
+    fn truncate(&mut self) {
+        // necessary check for the edge case `//\r\n`
+        if self.buf.starts_with(&[b'/', b'/']) {
+            return self.buf.clear();
+        }
+
+        // len without "//" or alternatively len without trailing "(\r)\n"
+        let len = self
             .buf
             .windows(3)
             .rev()
@@ -149,61 +170,20 @@ impl<R> FileReader<R> {
 
                 None
             })
-            .unwrap_or(self.buf.len());
+            .unwrap_or_else(|| {
+                self.buf.len()
+                    - 1
+                    - (self.buf.len() >= 2 && self.buf[self.buf.len() - 2] == b'\r') as usize
+            });
 
-        std::str::from_utf8(&self.buf[..end]).unwrap().trim_end()
-    }
-
-    pub(crate) fn split_colon(&self) -> Option<(&[u8], &str)> {
-        let idx = self.buf.iter().position(|&byte| byte == b':')?;
-        let front = &self.buf[..idx];
-        let back = std::str::from_utf8(&self.buf[idx + 1..]).ok()?;
-
-        Some((front, back.trim()))
-    }
-
-    fn find(&self, pat: &[u8]) -> Option<usize> {
-        self.buf
-            .windows(pat.len())
+        // trim whitespace
+        let len = self.buf[..len]
+            .iter()
             .enumerate()
-            .find_map(|(i, window)| (window == pat).then(|| i))
+            .rev()
+            .find_map(|(i, byte)| (!matches!(byte, b' ' | b'\t')).then(|| i + 1))
+            .unwrap_or(len);
+
+        self.buf.truncate(len);
     }
-}
-
-fn skip_line(line: &[u8]) -> bool {
-    !line.is_empty()
-        && (matches!(line[0], b'\n' | b' ' | b'_') || (line.len() >= 2 && &line[..2] == b"//"))
-}
-
-/// Check if `src` is a combination of the given patterns.
-fn consists_of<const N: usize>(src: &[u8], pats: [&[u8]; N]) -> bool {
-    let max_len = pats.iter().map(|pat| pat.len()).max().unwrap_or(0);
-    let limit = src.len().saturating_sub(max_len);
-    let mut i = 0;
-
-    'outer1: while i < limit {
-        for pat in pats {
-            if &src[i..i + pat.len()] == pat {
-                i += pat.len();
-
-                continue 'outer1;
-            }
-        }
-
-        return false;
-    }
-
-    'outer2: while i < src.len() {
-        for pat in pats {
-            if i + pat.len() <= src.len() && &src[i..i + pat.len()] == pat {
-                i += pat.len();
-
-                continue 'outer2;
-            }
-        }
-
-        return false;
-    }
-
-    true
 }
