@@ -1,15 +1,23 @@
+use std::io::Error as IoError;
+
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
-use std::io::{BufRead, BufReader, Error as IoError, Read};
+use std::io::{BufRead, BufReader, Read};
+
+#[cfg(feature = "async_tokio")]
+use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
+
+#[cfg(feature = "async_std")]
+use async_std::io::{prelude::BufReadExt, BufReader, Read};
 
 pub(crate) struct FileReader<R> {
-    #[cfg(feature = "async_std")] // TODO
+    buf: Vec<u8>,
+
+    #[cfg(feature = "async_std")]
     inner: BufReader<R>,
-    #[cfg(feature = "async_tokio")] // TODO
+    #[cfg(feature = "async_tokio")]
     inner: BufReader<R>,
     #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
     inner: BufReader<R>,
-
-    buf: Vec<u8>,
 }
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
@@ -25,6 +33,50 @@ impl<R: Read> FileReader<R> {
         loop {
             self.buf.clear();
             let bytes = self.inner.read_until(b'\n', &mut self.buf)?;
+
+            // TODO: check on lines like `       // comment continuation`
+            if !skip_line(&self.buf) {
+                return Ok(bytes);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "async_tokio")]
+impl<R: AsyncRead + Unpin> FileReader<R> {
+    pub(crate) fn new(src: R) -> Self {
+        Self {
+            inner: BufReader::new(src),
+            buf: Vec::with_capacity(32),
+        }
+    }
+
+    pub(crate) async fn next_line(&mut self) -> Result<usize, IoError> {
+        loop {
+            self.buf.clear();
+            let bytes = self.inner.read_until(b'\n', &mut self.buf).await?;
+
+            // TODO: check on lines like `       // comment continuation`
+            if !skip_line(&self.buf) {
+                return Ok(bytes);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "async_std")]
+impl<R: Read + Unpin> FileReader<R> {
+    pub(crate) fn new(src: R) -> Self {
+        Self {
+            inner: BufReader::new(src),
+            buf: Vec::with_capacity(32),
+        }
+    }
+
+    pub(crate) async fn next_line(&mut self) -> Result<usize, IoError> {
+        loop {
+            self.buf.clear();
+            let bytes = self.inner.read_until(b'\n', &mut self.buf).await?;
 
             // TODO: check on lines like `       // comment continuation`
             if !skip_line(&self.buf) {

@@ -13,6 +13,9 @@ pub use error::{ParseError, ParseResult};
 pub use hitobject::{HitObject, HitObjectKind};
 pub use hitsound::HitSound;
 pub use pos2::Pos2;
+pub use slider_parsing::*;
+
+use reader::FileReader;
 use sort::legacy_sort;
 
 use std::cmp::Ordering;
@@ -21,24 +24,13 @@ use std::cmp::Ordering;
 use std::{fs::File, io::Read};
 
 #[cfg(feature = "async_tokio")]
-use tokio::{
-    fs::File,
-    io::{AsyncBufReadExt, AsyncRead, BufReader},
-};
+use tokio::{fs::File, io::AsyncRead};
 
 #[cfg(not(feature = "async_std"))]
 use std::path::Path;
 
 #[cfg(feature = "async_std")]
-use async_std::{
-    fs::File,
-    io::{prelude::BufReadExt, BufReader as AsyncBufReader, Read as AsyncRead},
-    path::Path,
-};
-
-pub use slider_parsing::*;
-
-use reader::FileReader;
+use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
