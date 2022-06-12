@@ -1,5 +1,3 @@
-use super::OSU_FILE_HEADER;
-
 use std::{
     error::Error as StdError,
     fmt,
@@ -41,7 +39,7 @@ impl fmt::Display for ParseError {
         match self {
             Self::IOError(_) => f.write_str("IO error"),
             Self::IncorrectFileHeader => {
-                write!(f, "expected `{}` at file begin", OSU_FILE_HEADER)
+                write!(f, "expected `osu file format v` at file begin")
             }
             Self::BadLine => f.write_str("line not in `Key:Value` pattern"),
             Self::InvalidCurvePoints => f.write_str("invalid curve point"),

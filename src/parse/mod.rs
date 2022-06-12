@@ -4,6 +4,7 @@ mod error;
 mod hitobject;
 mod hitsound;
 mod pos2;
+mod reader;
 mod sort;
 
 pub use attributes::BeatmapAttributes;
@@ -17,10 +18,7 @@ use sort::legacy_sort;
 use std::cmp::Ordering;
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
-use std::{
-    fs::File,
-    io::{BufRead, BufReader, Read},
-};
+use std::{fs::File, io::Read};
 
 #[cfg(feature = "async_tokio")]
 use tokio::{
@@ -39,6 +37,8 @@ use async_std::{
 };
 
 pub use slider_parsing::*;
+
+use reader::FileReader;
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
@@ -66,70 +66,50 @@ impl FloatExt for f64 {
     }
 }
 
-macro_rules! line_prepare {
-    ($buf:ident) => {{
-        let mut line = $buf.trim_end();
-
-        if skip_line(line) {
-            $buf.clear();
-            continue;
-        }
-
-        if let Some(idx) = line.find("//") {
-            line = &line[..idx];
-        }
-
-        line
-    }};
-}
-
 macro_rules! section {
-    ($map:ident, $func:ident, $reader:ident, $buf:ident, $section:ident) => {{
+    ($map:ident, $func:ident, $reader:ident, $section:ident) => {{
         #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
-        if $map.$func(&mut $reader, &mut $buf, &mut $section)? {
+        if $map.$func(&mut $reader, &mut $section)? {
             break;
         }
 
         #[cfg(any(feature = "async_std", feature = "async_tokio"))]
-        if $map.$func(&mut $reader, &mut $buf, &mut $section).await? {
+        if $map.$func(&mut $reader, &mut $section).await? {
             break;
         }
     }};
 }
 
-macro_rules! read_line {
-    ($reader:ident, $buf:expr) => {{
+macro_rules! next_line {
+    ($reader:ident) => {{
         #[cfg(any(feature = "async_std", feature = "async_tokio"))]
         {
-            $reader.read_line($buf).await
+            $reader.next_line().await
         }
 
         #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
         {
-            $reader.read_line($buf)
+            $reader.next_line()
         }
     }};
 }
 
 macro_rules! parse_general_body {
-    ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
+    ($self:ident, $reader:ident, $section:ident) => {{
         let mut mode = None;
         let mut empty = true;
         let mut stack_leniency = None;
 
-        while read_line!($reader, $buf)? != 0 {
-            let line = line_prepare!($buf);
-
-            if line.starts_with('[') && line.ends_with(']') {
-                *$section = Section::from_str(&line[1..line.len() - 1]);
+        while next_line!($reader)? != 0 {
+            if let Some(bytes) = $reader.get_section() {
+                *$section = Section::from_bytes(bytes);
                 empty = false;
-                $buf.clear();
                 break;
             }
 
-            let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
+            let (key, value) = $reader.split_colon().ok_or(ParseError::BadLine)?;
 
-            if key == "Mode" {
+            if key == b"Mode" {
                 mode = match value {
                     "0" => Some(GameMode::STD),
                     "1" => Some(GameMode::TKO),
@@ -139,11 +119,9 @@ macro_rules! parse_general_body {
                 };
             }
 
-            if key == "StackLeniency" {
+            if key == b"StackLeniency" {
                 stack_leniency = Some(value.parse()?);
             }
-
-            $buf.clear();
         }
 
         $self.mode = mode.unwrap_or(GameMode::STD);
@@ -157,28 +135,26 @@ macro_rules! parse_general {
     () => {
         fn parse_general<R: Read>(
             &mut self,
-            reader: &mut BufReader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_general_body!(self, reader, buf, section)
+            parse_general_body!(self, reader, section)
         }
     };
 
     (async $reader:ident<$inner:ident>) => {
         async fn parse_general<R: $inner + Unpin>(
             &mut self,
-            reader: &mut $reader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_general_body!(self, reader, buf, section)
+            parse_general_body!(self, reader, section)
         }
     };
 }
 
 macro_rules! parse_difficulty_body {
-    ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
+    ($self:ident, $reader:ident, $section:ident) => {{
         let mut ar = None;
         let mut od = None;
         let mut cs = None;
@@ -188,29 +164,24 @@ macro_rules! parse_difficulty_body {
 
         let mut empty = true;
 
-        while read_line!($reader, $buf)? != 0 {
-            let line = line_prepare!($buf);
-
-            if line.starts_with('[') && line.ends_with(']') {
-                *$section = Section::from_str(&line[1..line.len() - 1]);
+        while next_line!($reader)? != 0 {
+            if let Some(bytes) = $reader.get_section() {
+                *$section = Section::from_bytes(bytes);
                 empty = false;
-                $buf.clear();
                 break;
             }
 
-            let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
+            let (key, value) = $reader.split_colon().ok_or(ParseError::BadLine)?;
 
             match key {
-                "ApproachRate" => ar = Some(value.parse()?),
-                "OverallDifficulty" => od = Some(value.parse()?),
-                "CircleSize" => cs = Some(value.parse()?),
-                "HPDrainRate" => hp = Some(value.parse()?),
-                "SliderTickRate" => tick_rate = Some(value.parse()?),
-                "SliderMultiplier" => sv = Some(value.parse()?),
+                b"ApproachRate" => ar = Some(value.parse()?),
+                b"OverallDifficulty" => od = Some(value.parse()?),
+                b"CircleSize" => cs = Some(value.parse()?),
+                b"HPDrainRate" => hp = Some(value.parse()?),
+                b"SliderTickRate" => tick_rate = Some(value.parse()?),
+                b"SliderMultiplier" => sv = Some(value.parse()?),
                 _ => {}
             }
-
-            $buf.clear();
         }
 
         const DEFAULT_DIFFICULTY: f32 = 5.0;
@@ -230,28 +201,26 @@ macro_rules! parse_difficulty {
     () => {
         fn parse_difficulty<R: Read>(
             &mut self,
-            reader: &mut BufReader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_difficulty_body!(self, reader, buf, section)
+            parse_difficulty_body!(self, reader, section)
         }
     };
 
     (async $reader:ident<$inner:ident>) => {
         async fn parse_difficulty<R: $inner + Unpin>(
             &mut self,
-            reader: &mut $reader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_difficulty_body!(self, reader, buf, section)
+            parse_difficulty_body!(self, reader, section)
         }
     };
 }
 
 macro_rules! parse_timingpoints_body {
-    ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
+    ($self:ident, $reader:ident, $section:ident) => {{
         let mut unsorted_timings = false;
         let mut unsorted_difficulties = false;
 
@@ -260,16 +229,14 @@ macro_rules! parse_timingpoints_body {
 
         let mut empty = true;
 
-        while read_line!($reader, $buf)? != 0 {
-            let line = line_prepare!($buf);
-
-            if line.starts_with('[') && line.ends_with(']') {
-                *$section = Section::from_str(&line[1..line.len() - 1]);
+        while next_line!($reader)? != 0 {
+            if let Some(bytes) = $reader.get_section() {
+                *$section = Section::from_bytes(bytes);
                 empty = false;
-                $buf.clear();
                 break;
             }
 
+            let line = $reader.get_line();
             let mut split = line.split(',');
 
             let time = split
@@ -311,8 +278,6 @@ macro_rules! parse_timingpoints_body {
                     prev_diff = time;
                 }
             }
-
-            $buf.clear();
         }
 
         if unsorted_timings {
@@ -331,28 +296,26 @@ macro_rules! parse_timingpoints {
     () => {
         fn parse_timingpoints<R: Read>(
             &mut self,
-            reader: &mut BufReader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_timingpoints_body!(self, reader, buf, section)
+            parse_timingpoints_body!(self, reader, section)
         }
     };
 
     (async $reader:ident<$inner:ident>) => {
         async fn parse_timingpoints<R: $inner + Unpin>(
             &mut self,
-            reader: &mut $reader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_timingpoints_body!(self, reader, buf, section)
+            parse_timingpoints_body!(self, reader, section)
         }
     };
 }
 
 macro_rules! parse_hitobjects_body {
-    ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
+    ($self:ident, $reader:ident, $section:ident) => {{
         let mut unsorted = false;
         let mut prev_time = 0.0;
         let mut empty = true;
@@ -366,16 +329,14 @@ macro_rules! parse_hitobjects_body {
         // Buffer to re-use for all sliders
         let mut vertices = Vec::new();
 
-        while read_line!($reader, $buf)? != 0 {
-            let line = line_prepare!($buf);
-
-            if line.starts_with('[') && line.ends_with(']') {
-                *$section = Section::from_str(&line[1..line.len() - 1]);
+        while next_line!($reader)? != 0 {
+            if let Some(bytes) = $reader.get_section() {
+                *$section = Section::from_bytes(bytes);
                 empty = false;
-                $buf.clear();
                 break;
             }
 
+            let line = $reader.get_line();
             let mut split = line.split(',');
 
             let pos = Pos2 {
@@ -511,7 +472,6 @@ macro_rules! parse_hitobjects_body {
             $self.sounds.push(sound);
 
             prev_time = time;
-            $buf.clear();
         }
 
         // BUG: If [General] section comes after [HitObjects] then the mode
@@ -536,49 +496,35 @@ macro_rules! parse_hitobjects {
     () => {
         fn parse_hitobjects<R: Read>(
             &mut self,
-            reader: &mut BufReader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_hitobjects_body!(self, reader, buf, section)
+            parse_hitobjects_body!(self, reader, section)
         }
     };
 
     (async $reader:ident<$inner:ident>) => {
         async fn parse_hitobjects<R: $inner + Unpin>(
             &mut self,
-            reader: &mut $reader<R>,
-            buf: &mut String,
+            reader: &mut FileReader<R>,
             section: &mut Section,
         ) -> ParseResult<bool> {
-            parse_hitobjects_body!(self, reader, buf, section)
+            parse_hitobjects_body!(self, reader, section)
         }
     };
 }
 
 macro_rules! parse_body {
-    ($reader:ident<$inner:ident>: $input:ident) => {{
-        let mut reader = $reader::new($input);
-        let mut buf = String::new();
+    ($input:ident) => {{
+        let mut reader = FileReader::new($input);
 
-        while read_line!(reader, &mut buf)? != 0 {
-            // Check for character U+FEFF specifically thanks to map id 797130
-            if !buf
-                .trim_matches(|c: char| c.is_whitespace() || c == '﻿')
-                .is_empty()
-            {
+        while next_line!(reader)? != 0 {
+            if !reader.is_initial_empty_line() {
                 break;
             }
-
-            buf.clear();
         }
 
-        let version = match buf.find(OSU_FILE_HEADER) {
-            Some(idx) => buf[idx + OSU_FILE_HEADER.len()..].trim_end().parse()?,
-            None => return Err(ParseError::IncorrectFileHeader),
-        };
-
-        buf.clear();
+        let version = reader.version().ok_or(ParseError::IncorrectFileHeader)?;
 
         let mut map = Beatmap {
             version,
@@ -591,22 +537,18 @@ macro_rules! parse_body {
 
         loop {
             match section {
-                Section::General => section!(map, parse_general, reader, buf, section),
-                Section::Difficulty => section!(map, parse_difficulty, reader, buf, section),
-                Section::TimingPoints => section!(map, parse_timingpoints, reader, buf, section),
-                Section::HitObjects => section!(map, parse_hitobjects, reader, buf, section),
+                Section::General => section!(map, parse_general, reader, section),
+                Section::Difficulty => section!(map, parse_difficulty, reader, section),
+                Section::TimingPoints => section!(map, parse_timingpoints, reader, section),
+                Section::HitObjects => section!(map, parse_hitobjects, reader, section),
                 Section::None => {
-                    if read_line!(reader, &mut buf)? == 0 {
+                    if next_line!(reader)? == 0 {
                         break;
                     }
 
-                    let line = line_prepare!(buf);
-
-                    if line.starts_with('[') && line.ends_with(']') {
-                        section = Section::from_str(&line[1..line.len() - 1]);
+                    if let Some(bytes) = reader.get_section() {
+                        section = Section::from_bytes(bytes);
                     }
-
-                    buf.clear();
                 }
             }
         }
@@ -623,7 +565,7 @@ macro_rules! parse {
         /// You'll likely want to pass (a reference of) a [`File`](std::fs::File)
         /// or the file's content as a slice of bytes (`&[u8]`).
         pub fn parse<R: Read>(input: R) -> ParseResult<Self> {
-            parse_body!(BufReader<Read>: input)
+            parse_body!(input)
         }
     };
 
@@ -635,7 +577,7 @@ macro_rules! parse {
         /// You'll likely want to pass a `File`
         /// or the file's content as a slice of bytes (`&[u8]`).
         pub async fn parse<R: $inner + Unpin>(input: R) -> ParseResult<Self> {
-            parse_body!($reader<$inner>: input)
+            parse_body!(input)
         }
     };
 }
@@ -727,8 +669,6 @@ pub struct Beatmap {
     /// the stack offset for stacked positions.
     pub stack_leniency: f32,
 }
-
-pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
 
 impl Beatmap {
     const CIRCLE_FLAG: u8 = 1 << 0;
@@ -936,16 +876,6 @@ impl Beatmap {
     from_path!(async Path);
 }
 
-fn skip_line(line: &str) -> bool {
-    line.is_empty() || line.starts_with("//") || line.starts_with(' ') || line.starts_with('_')
-}
-
-fn split_colon(line: &str) -> Option<(&str, &str)> {
-    let (front, back) = line.split_once(':')?;
-
-    Some((front, back.trim()))
-}
-
 #[derive(Copy, Clone, Debug)]
 enum Section {
     None,
@@ -956,13 +886,12 @@ enum Section {
 }
 
 impl Section {
-    #[inline]
-    fn from_str(s: &str) -> Self {
-        match s {
-            "General" => Self::General,
-            "Difficulty" => Self::Difficulty,
-            "TimingPoints" => Self::TimingPoints,
-            "HitObjects" => Self::HitObjects,
+    fn from_bytes(bytes: &[u8]) -> Self {
+        match bytes {
+            b"General" => Self::General,
+            b"Difficulty" => Self::Difficulty,
+            b"TimingPoints" => Self::TimingPoints,
+            b"HitObjects" => Self::HitObjects,
             _ => Self::None,
         }
     }
