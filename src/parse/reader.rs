@@ -9,8 +9,15 @@ use tokio::io::{AsyncBufReadExt, AsyncRead as Read, BufReader};
 #[cfg(feature = "async_std")]
 use async_std::io::{prelude::BufReadExt, BufReader, Read};
 
+#[derive(Eq, PartialEq)]
+enum Encoding {
+    Utf8,
+    Utf16,
+}
+
 pub(crate) struct FileReader<R> {
     buf: Vec<u8>,
+    encoding: Encoding,
 
     #[cfg(feature = "async_std")]
     inner: BufReader<R>,
@@ -50,8 +57,9 @@ macro_rules! impl_reader {
     (@NEW) => {
             pub(crate) fn new(src: R) -> Self {
                 Self {
-                    inner: BufReader::new(src),
                     buf: Vec::with_capacity(32),
+                    encoding: Encoding::Utf8,
+                    inner: BufReader::new(src),
                 }
             }
     };
@@ -94,12 +102,30 @@ impl_reader!(async);
 
 impl<R> FileReader<R> {
     pub(crate) fn is_initial_empty_line(&mut self) -> bool {
-        // U+FEFF (BOM)
         if self.buf.starts_with(&[239, 187, 191]) {
+            // UTF-8
             self.buf.rotate_left(3);
 
             self.buf.len() == 3
         } else {
+            if self.buf.starts_with(&[255, 254]) {
+                // UTF-16
+                self.encoding = Encoding::Utf16;
+                // will rotate by 1 so this truncates `255`
+                let mut sub = 1;
+
+                if self.buf.len() >= 3 {
+                    // truncate one `0` that was left after truncating `\n` when reading the line.
+                    // additionally truncate `0\r` if possible.
+                    sub += 1 + 2
+                        * (self.buf.len() >= 4 && self.buf[self.buf.len() - 2] == b'\r') as usize;
+                }
+
+                self.buf.rotate_left(1);
+                self.buf.truncate(self.buf.len() - sub);
+                self.decode_utf16();
+            }
+
             self.buf.is_empty()
         }
     }
@@ -151,6 +177,10 @@ impl<R> FileReader<R> {
 
     /// Truncate away trailing `\r\n`, `\n`, content after `//` and whitespace
     fn truncate(&mut self) {
+        if self.encoding == Encoding::Utf16 {
+            self.decode_utf16();
+        }
+
         // necessary check for the edge case `//\r\n`
         if self.buf.starts_with(&[b'/', b'/']) {
             return self.buf.clear();
@@ -189,5 +219,23 @@ impl<R> FileReader<R> {
             .unwrap_or(0);
 
         self.buf.truncate(len);
+    }
+
+    /// Assumes the buffer is of the form `[_, a, 0, b, 0, c, ...]` so it removes
+    /// the first element and all the 0's, turning it into `[a, b, c, ...]`.
+    fn decode_utf16(&mut self) {
+        // remove the 0's
+        let limit = self.buf.len() / 2 + 1 + (self.buf.len() % 2);
+
+        for i in 2..limit {
+            self.buf.swap(i, i * 2 - 1);
+        }
+
+        self.buf.truncate(limit);
+
+        // remove the first element
+        // panics if buffer is empty
+        self.buf.rotate_left(1);
+        self.buf.truncate(self.buf.len() - 1);
     }
 }
