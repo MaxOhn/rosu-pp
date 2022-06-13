@@ -131,21 +131,27 @@ impl<R> FileReader<R> {
     }
 
     pub(crate) fn version(&self) -> Option<u8> {
-        if self.buf.starts_with(b"osu file format v") {
-            let mut n = 0;
+        self.buf
+            .iter()
+            .position(|&byte| byte == b'o')
+            .and_then(|idx| {
+                self.buf[idx..]
+                    .starts_with(b"osu file format v")
+                    .then(|| idx + 17)
+            })
+            .map(|idx| {
+                let mut n = 0;
 
-            for byte in &self.buf[17..] {
-                if !(b'0'..=b'9').contains(byte) {
-                    break;
+                for byte in &self.buf[idx..] {
+                    if !(b'0'..=b'9').contains(byte) {
+                        break;
+                    }
+
+                    n = 10 * n + (*byte & 0xF);
                 }
 
-                n = 10 * n + (*byte & 0xF);
-            }
-
-            Some(n)
-        } else {
-            None
-        }
+                n
+            })
     }
 
     /// Returns the bytes inbetween '[' and ']'.
