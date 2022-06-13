@@ -228,7 +228,7 @@ macro_rules! parse_timingpoints_body {
                 break;
             }
 
-            let line = $reader.get_line().ok_or(ParseError::InvalidUtf8)?;
+            let line = $reader.get_line()?;
             let mut split = line.split(',');
 
             let time = split
@@ -328,7 +328,7 @@ macro_rules! parse_hitobjects_body {
                 break;
             }
 
-            let line = $reader.get_line().ok_or(ParseError::InvalidUtf8)?;
+            let line = $reader.get_line()?;
             let mut split = line.split(',');
 
             let pos = Pos2 {
@@ -515,10 +515,8 @@ macro_rules! parse_body {
             next_line!(reader)?;
         }
 
-        let version = reader.version().ok_or(ParseError::IncorrectFileHeader)?;
-
         let mut map = Beatmap {
-            version,
+            version: reader.version()?,
             hit_objects: Vec::with_capacity(256),
             sounds: Vec::with_capacity(256),
             ..Default::default()

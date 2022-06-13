@@ -1,4 +1,4 @@
-use std::io::Error as IoError;
+use std::io::{Error as IoError, ErrorKind as IoErrorKind};
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::io::{BufRead, BufReader, Read};
@@ -8,6 +8,8 @@ use tokio::io::{AsyncBufReadExt, AsyncRead as Read, BufReader};
 
 #[cfg(feature = "async_std")]
 use async_std::io::{prelude::BufReadExt, BufReader, Read};
+
+use crate::ParseError;
 
 #[derive(Eq, PartialEq)]
 enum Encoding {
@@ -130,7 +132,7 @@ impl<R> FileReader<R> {
         }
     }
 
-    pub(crate) fn version(&self) -> Option<u8> {
+    pub(crate) fn version(&self) -> Result<u8, ParseError> {
         self.buf
             .iter()
             .position(|&byte| byte == b'o')
@@ -152,6 +154,7 @@ impl<R> FileReader<R> {
 
                 n
             })
+            .ok_or(ParseError::IncorrectFileHeader)
     }
 
     /// Returns the bytes inbetween '[' and ']'.
@@ -166,8 +169,9 @@ impl<R> FileReader<R> {
     }
 
     /// Parse the buffer into a string, returning `None` if the UTF-8 validation fails.
-    pub(crate) fn get_line(&self) -> Option<&str> {
-        std::str::from_utf8(&self.buf).ok()
+    pub(crate) fn get_line(&self) -> Result<&str, ParseError> {
+        std::str::from_utf8(&self.buf)
+            .map_err(|e| ParseError::IOError(IoError::new(IoErrorKind::InvalidData, Box::new(e))))
     }
 
     /// Split the buffer at the first ':', then parse the second half into a string.
