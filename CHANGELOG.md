@@ -1,10 +1,14 @@
 ## Upcoming
 
+Nothing as of now
+
+# v0.5.2 (2022-06-14)
+
 - __Fixes:__
   - Fixed parsing non-UTF-8 encoded files and improved parse performance overall ([#9])
   - Handle missing approach rate properly this time
 
-# v0.5.1 (2022-03-21)
+## v0.5.1 (2022-03-21)
 
 - __Fixes:__
   - Performance calculation for taiko & mania now considers custom clock rates properly
