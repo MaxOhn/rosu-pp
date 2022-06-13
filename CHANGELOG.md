@@ -1,6 +1,7 @@
 ## Upcoming
 
 - __Fixes:__
+  - Fixed parsing non-UTF-8 encoded files and improved parse performance overall ([#9])
   - Handle missing approach rate properly this time
 
 # v0.5.1 (2022-03-21)
@@ -112,3 +113,4 @@
 
 [#1]: https://github.com/MaxOhn/rosu-pp/pull/1
 [#2]: https://github.com/MaxOhn/rosu-pp/pull/2
+[#9]: https://github.com/MaxOhn/rosu-pp/pull/9
