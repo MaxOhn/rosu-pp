@@ -26,8 +26,6 @@ pub enum ParseError {
     InvalidInteger,
     /// Failed to parse game mode.
     InvalidMode,
-    /// Line contained invalid UTF-8
-    InvalidUtf8,
     /// Expected an additional field.
     MissingField(&'static str),
     /// Reject maps with too many repeat points.
@@ -48,7 +46,6 @@ impl fmt::Display for ParseError {
             Self::InvalidInteger => f.write_str("invalid integer"),
             Self::InvalidDecimalNumber => f.write_str("invalid float number"),
             Self::InvalidMode => f.write_str("invalid mode"),
-            Self::InvalidUtf8 => f.write_str("invalid UTF-8"),
             Self::MissingField(field) => write!(f, "missing field `{}`", field),
             Self::TooManyRepeats => f.write_str("repeat count is way too high"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
@@ -66,7 +63,6 @@ impl StdError for ParseError {
             Self::InvalidInteger => None,
             Self::InvalidDecimalNumber => None,
             Self::InvalidMode => None,
-            Self::InvalidUtf8 => None,
             Self::MissingField(_) => None,
             Self::TooManyRepeats => None,
             Self::UnknownHitObjectKind => None,
