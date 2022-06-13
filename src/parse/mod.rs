@@ -134,8 +134,8 @@ macro_rules! parse_general {
         }
     };
 
-    (async $reader:ident<$inner:ident>) => {
-        async fn parse_general<R: $inner + Unpin>(
+    (async) => {
+        async fn parse_general<R: AsyncRead + Unpin>(
             &mut self,
             reader: &mut FileReader<R>,
             section: &mut Section,
@@ -200,8 +200,8 @@ macro_rules! parse_difficulty {
         }
     };
 
-    (async $reader:ident<$inner:ident>) => {
-        async fn parse_difficulty<R: $inner + Unpin>(
+    (async) => {
+        async fn parse_difficulty<R: AsyncRead + Unpin>(
             &mut self,
             reader: &mut FileReader<R>,
             section: &mut Section,
@@ -295,8 +295,8 @@ macro_rules! parse_timingpoints {
         }
     };
 
-    (async $reader:ident<$inner:ident>) => {
-        async fn parse_timingpoints<R: $inner + Unpin>(
+    (async) => {
+        async fn parse_timingpoints<R: AsyncRead + Unpin>(
             &mut self,
             reader: &mut FileReader<R>,
             section: &mut Section,
@@ -495,8 +495,8 @@ macro_rules! parse_hitobjects {
         }
     };
 
-    (async $reader:ident<$inner:ident>) => {
-        async fn parse_hitobjects<R: $inner + Unpin>(
+    (async) => {
+        async fn parse_hitobjects<R: AsyncRead + Unpin>(
             &mut self,
             reader: &mut FileReader<R>,
             section: &mut Section,
@@ -558,14 +558,14 @@ macro_rules! parse {
         }
     };
 
-    (async $reader:ident<$inner:ident>) => {
+    (async) => {
         /// Parse a beatmap from a `.osu` file.
         ///
         /// As argument you can give anything that implements `tokio::io::AsyncRead`
         /// or `async_std::io::Read`, depending which feature you chose.
         /// You'll likely want to pass a `File`
         /// or the file's content as a slice of bytes (`&[u8]`).
-        pub async fn parse<R: $inner + Unpin>(input: R) -> ParseResult<Self> {
+        pub async fn parse<R: AsyncRead + Unpin>(input: R) -> ParseResult<Self> {
             parse_body!(input)
         }
     };
@@ -583,11 +583,11 @@ macro_rules! from_path {
         }
     };
 
-    (async $path:ident) => {
+    (async) => {
         /// Pass the path to a `.osu` file.
         ///
         /// Useful when you don't want to create the file manually.
-        pub async fn from_path<P: AsRef<$path>>(path: P) -> ParseResult<Self> {
+        pub async fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
             Self::parse(File::open(path).await?).await
         }
     };
@@ -845,24 +845,24 @@ impl Beatmap {
 
 #[cfg(feature = "async_tokio")]
 impl Beatmap {
-    parse!(async BufReader<AsyncRead>);
-    parse_general!(async BufReader<AsyncRead>);
-    parse_difficulty!(async BufReader<AsyncRead>);
-    parse_timingpoints!(async BufReader<AsyncRead>);
-    parse_hitobjects!(async BufReader<AsyncRead>);
+    parse!(async);
+    parse_general!(async);
+    parse_difficulty!(async);
+    parse_timingpoints!(async);
+    parse_hitobjects!(async);
 
-    from_path!(async Path);
+    from_path!(async);
 }
 
 #[cfg(feature = "async_std")]
 impl Beatmap {
-    parse!(async AsyncBufReader<AsyncRead>);
-    parse_general!(async AsyncBufReader<AsyncRead>);
-    parse_difficulty!(async AsyncBufReader<AsyncRead>);
-    parse_timingpoints!(async AsyncBufReader<AsyncRead>);
-    parse_hitobjects!(async AsyncBufReader<AsyncRead>);
+    parse!(async);
+    parse_general!(async);
+    parse_difficulty!(async);
+    parse_timingpoints!(async);
+    parse_hitobjects!(async);
 
-    from_path!(async Path);
+    from_path!(async);
 }
 
 #[derive(Copy, Clone, Debug)]
