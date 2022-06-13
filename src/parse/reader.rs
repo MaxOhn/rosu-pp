@@ -93,15 +93,21 @@ impl_reader!(async);
 impl_reader!(async);
 
 impl<R> FileReader<R> {
-    pub(crate) fn is_initial_empty_line(&self) -> bool {
-        self.buf == [239, 187, 191] // U+FEFF (BOM)
+    pub(crate) fn is_initial_empty_line(&mut self) -> bool {
+        // U+FEFF (BOM)
+        if self.buf.starts_with(&[239, 187, 191]) {
+            self.buf.rotate_left(3);
+
+            self.buf.len() == 3
+        } else {
+            self.buf.is_empty()
+        }
     }
 
     pub(crate) fn version(&self) -> Option<u8> {
         if self.buf.starts_with(b"osu file format v") {
             let mut n = 0;
 
-            // TODO: check if this panics on any ranked map
             for byte in &self.buf[17..] {
                 if !(b'0'..=b'9').contains(byte) {
                     break;
@@ -143,9 +149,7 @@ impl<R> FileReader<R> {
         Some((front, back.trim_start()))
     }
 
-    /// # Panics
-    ///
-    /// This method always assumes the line ends with '\n' so it panics if `self.buf` is empty.
+    /// Truncate away trailing `\r\n`, `\n`, content after `//` and whitespace
     fn truncate(&mut self) {
         // necessary check for the edge case `//\r\n`
         if self.buf.starts_with(&[b'/', b'/']) {
@@ -170,10 +174,10 @@ impl<R> FileReader<R> {
 
                 None
             })
-            .unwrap_or_else(|| {
-                self.buf.len()
-                    - 1
-                    - (self.buf.len() >= 2 && self.buf[self.buf.len() - 2] == b'\r') as usize
+            .unwrap_or_else(|| match &self.buf[..] {
+                [.., b'\r', b'\n'] => self.buf.len() - 2,
+                [.., b'\n'] => self.buf.len() - 1,
+                _ => self.buf.len(),
             });
 
         // trim whitespace
@@ -182,7 +186,7 @@ impl<R> FileReader<R> {
             .enumerate()
             .rev()
             .find_map(|(i, byte)| (!matches!(byte, b' ' | b'\t')).then(|| i + 1))
-            .unwrap_or(len);
+            .unwrap_or(0);
 
         self.buf.truncate(len);
     }
