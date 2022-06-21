@@ -32,6 +32,8 @@ use std::path::Path;
 #[cfg(feature = "async_std")]
 use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
+use crate::control_point_iter::ControlPointIter;
+
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 }
@@ -680,6 +682,12 @@ impl Beatmap {
             Some(point) => point.beat_len.recip() * 1000.0 * 60.0,
             None => 0.0,
         }
+    }
+
+    /// Create an iterator over the map's timing- and difficulty points sorted by timestamp.
+    #[inline]
+    pub fn control_points(&self) -> ControlPointIter<'_> {
+        ControlPointIter::new(self)
     }
 }
 

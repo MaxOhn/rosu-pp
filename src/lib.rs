@@ -206,9 +206,8 @@ pub use stars::AnyStars;
 mod curve;
 mod mods;
 
-pub(crate) mod control_point_iter;
-
-pub(crate) use control_point_iter::{ControlPoint, ControlPointIter};
+mod control_point_iter;
+pub use control_point_iter::{ControlPoint, ControlPointIter};
 
 pub use catch::{CatchPP, CatchStars};
 pub use mania::{ManiaPP, ManiaStars};

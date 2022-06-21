@@ -5,8 +5,9 @@ use crate::{
 
 use std::{iter::Copied, slice::Iter};
 
+/// Iterator for a [`Beatmap`]'s timing- and difficulty points sorted by timestamp
 #[derive(Clone, Debug)]
-pub(crate) struct ControlPointIter<'p> {
+pub struct ControlPointIter<'p> {
     timing_points: Copied<Iter<'p, TimingPoint>>,
     difficulty_points: Copied<Iter<'p, DifficultyPoint>>,
 
@@ -30,15 +31,19 @@ impl<'p> ControlPointIter<'p> {
     }
 }
 
+/// Control point for a [`Beatmap`].
 #[derive(Copy, Clone, Debug)]
-pub(crate) enum ControlPoint {
+pub enum ControlPoint {
+    /// A timing point containing the current beat length.
     Timing(TimingPoint),
+    /// A difficulty point containing the current speed multiplier.
     Difficulty(DifficultyPoint),
 }
 
 impl ControlPoint {
+    /// Provides the timestamp of the control point.
     #[inline]
-    pub(crate) fn time(&self) -> f64 {
+    pub fn time(&self) -> f64 {
         match self {
             Self::Timing(point) => point.time,
             Self::Difficulty(point) => point.time,
@@ -49,6 +54,7 @@ impl ControlPoint {
 impl<'p> Iterator for ControlPointIter<'p> {
     type Item = ControlPoint;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match (self.next_timing, self.next_difficulty) {
             (Some(timing), Some(difficulty)) if timing.time <= difficulty.time => {

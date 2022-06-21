@@ -1,6 +1,7 @@
 ## Upcoming
 
-Nothing as of now
+- __Additions__:
+  - Added the `ControlPoint` and `ControlPointerIter` types to the public interface, aswell as the `Beatmap::control_points` method
 
 # v0.5.2 (2022-06-14)
 
