@@ -14,10 +14,10 @@ pub(crate) struct CurveBuffers {
 
 #[derive(Clone, Debug, Default)]
 struct BezierBuffers {
-    buf1: Vec<Pos2>,
-    buf2: Vec<Pos2>,
-    buf3: Vec<Pos2>,
-    buf4: Vec<Pos2>,
+    left: Vec<Pos2>,
+    right: Vec<Pos2>,
+    midpoints: Vec<Pos2>,
+    left_child: Vec<Pos2>,
 }
 
 impl BezierBuffers {
@@ -25,19 +25,19 @@ impl BezierBuffers {
     /// length of `len` is reached. Does nothing if `len`
     /// is already smaller than the current buffer size.
     fn extend_exact(&mut self, len: usize) {
-        if len <= self.buf1.len() {
+        if len <= self.left.len() {
             return;
         }
 
-        let additional = len - self.buf1.len();
+        let additional = len - self.left.len();
 
-        self.buf1
+        self.left
             .extend(iter::repeat(Pos2::zero()).take(additional));
-        self.buf2
+        self.right
             .extend(iter::repeat(Pos2::zero()).take(additional));
-        self.buf3
+        self.midpoints
             .extend(iter::repeat(Pos2::zero()).take(additional));
-        self.buf4
+        self.left_child
             .extend(iter::repeat(Pos2::zero()).take(additional));
     }
 }
@@ -336,7 +336,12 @@ impl Curve {
         // * <a href="https://en.wikipedia.org/wiki/Depth-first_search">Depth-first search</a>
         // * over the tree resulting from the subdivisions we make.)
 
-        // bufs.buf4 will serve as left_child
+        let BezierBuffers {
+            left,
+            right,
+            midpoints,
+            left_child,
+        } = bufs;
 
         while let Some(mut parent) = to_flatten.pop() {
             if Self::bezier_is_flat_enough(&parent) {
@@ -344,7 +349,7 @@ impl Curve {
                 // * an extension to De Casteljau's algorithm to obtain a piecewise-linear approximation
                 // * of the bezier curve represented by our control points, consisting of the same amount
                 // * of points as there are control points.
-                Self::bezier_approximate(&parent, path, bufs);
+                Self::bezier_approximate(&parent, path, left, right, midpoints);
                 free_bufs.push(parent);
 
                 continue;
@@ -356,15 +361,10 @@ impl Curve {
                 .pop()
                 .unwrap_or_else(|| Cow::Owned(vec![Pos2::zero(); p]));
 
-            Self::bezier_subdivide(
-                &parent,
-                &mut bufs.buf4,
-                right_child.to_mut(),
-                &mut bufs.buf1,
-            );
+            Self::bezier_subdivide(&parent, left_child, right_child.to_mut(), midpoints);
 
             // * We re-use the buffer of the parent for one of the children, so that we save one allocation per iteration.
-            parent.to_mut().copy_from_slice(&bufs.buf4[..p]);
+            parent.to_mut().copy_from_slice(&left_child[..p]);
 
             to_flatten.push(right_child);
             to_flatten.push(parent);
@@ -401,15 +401,14 @@ impl Curve {
     }
 
     // * https://en.wikipedia.org/wiki/De_Casteljau%27s_algorithm
-    fn bezier_approximate(points: &[Pos2], path: &mut Vec<Pos2>, bufs: &mut BezierBuffers) {
+    fn bezier_approximate(
+        points: &[Pos2],
+        path: &mut Vec<Pos2>,
+        l: &mut [Pos2],
+        r: &mut [Pos2],
+        midpoints: &mut [Pos2],
+    ) {
         let count = points.len();
-
-        let BezierBuffers {
-            buf1: l,
-            buf2: r,
-            buf3: midpoints,
-            ..
-        } = bufs;
 
         Self::bezier_subdivide(points, l, r, midpoints);
         path.push(points[0]);
