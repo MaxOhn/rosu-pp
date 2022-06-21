@@ -116,7 +116,7 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
         clock_rate,
     } = params;
 
-    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+    let take = passed_objects.unwrap_or(map.hit_objects.len());
     let rounded_cs = map.cs.round();
 
     let columns = match map.mode {

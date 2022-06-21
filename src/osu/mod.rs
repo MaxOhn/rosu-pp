@@ -235,7 +235,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         clock_rate,
     } = params;
 
-    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+    let take = passed_objects.unwrap_or(map.hit_objects.len());
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
     let map_attributes = map.attributes().mods(mods);

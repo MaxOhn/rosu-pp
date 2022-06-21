@@ -176,9 +176,7 @@ impl<'map> OsuPP<'map> {
     /// Be sure to set `misses` beforehand!
     /// In case of a partial play, be also sure to set `passed_objects` beforehand!
     pub fn accuracy(mut self, acc: f64) -> Self {
-        let n_objects = self
-            .passed_objects
-            .unwrap_or_else(|| self.map.hit_objects.len());
+        let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
 
         let mut acc = acc / 100.0;
 
@@ -241,9 +239,7 @@ impl<'map> OsuPP<'map> {
         let mut n100 = self.n100;
         let mut n50 = self.n50;
 
-        let n_objects = self
-            .passed_objects
-            .unwrap_or_else(|| self.map.hit_objects.len());
+        let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
 
         if let Some(acc) = self.acc {
             let n300 = n300.unwrap_or(0);
@@ -267,9 +263,7 @@ impl<'map> OsuPP<'map> {
                 effective_misses,
             }
         } else {
-            let n_objects = self
-                .passed_objects
-                .unwrap_or_else(|| self.map.hit_objects.len());
+            let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
 
             let remaining = n_objects
                 .saturating_sub(n300.unwrap_or(0))

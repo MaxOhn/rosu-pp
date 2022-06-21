@@ -441,30 +441,28 @@ impl Curve {
 
         let catmull_detail = CATMULL_DETAIL as f32;
 
-        let subpath = (0..CATMULL_DETAIL)
-            .map(|c| {
-                let c = c as f32;
-                let t1 = c / catmull_detail;
-                let t2 = t1 * t1;
-                let t3 = t2 * t1;
+        let subpath = (0..CATMULL_DETAIL).flat_map(|c| {
+            let c = c as f32;
+            let t1 = c / catmull_detail;
+            let t2 = t1 * t1;
+            let t3 = t2 * t1;
 
-                let pos1 = Pos2 {
-                    x: 0.5 * (x1 + x2 * t1 + x3 * t2 + x4 * t3),
-                    y: 0.5 * (y1 + y2 * t1 + y3 * t2 + y4 * t3),
-                };
+            let pos1 = Pos2 {
+                x: 0.5 * (x1 + x2 * t1 + x3 * t2 + x4 * t3),
+                y: 0.5 * (y1 + y2 * t1 + y3 * t2 + y4 * t3),
+            };
 
-                let t1 = (c + 1.0) / catmull_detail;
-                let t2 = t1 * t1;
-                let t3 = t2 * t1;
+            let t1 = (c + 1.0) / catmull_detail;
+            let t2 = t1 * t1;
+            let t3 = t2 * t1;
 
-                let pos2 = Pos2 {
-                    x: 0.5 * (x1 + x2 * t1 + x3 * t2 + x4 * t3),
-                    y: 0.5 * (y1 + y2 * t1 + y3 * t2 + y4 * t3),
-                };
+            let pos2 = Pos2 {
+                x: 0.5 * (x1 + x2 * t1 + x3 * t2 + x4 * t3),
+                y: 0.5 * (y1 + y2 * t1 + y3 * t2 + y4 * t3),
+            };
 
-                iter::once(pos1).chain(iter::once(pos2))
-            })
-            .flatten();
+            iter::once(pos1).chain(iter::once(pos2))
+        });
 
         path.extend(subpath);
     }

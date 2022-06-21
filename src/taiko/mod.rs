@@ -169,7 +169,7 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Skills, usize) {
         clock_rate,
     } = params;
 
-    let take = passed_objects.unwrap_or_else(|| map.hit_objects.len());
+    let take = passed_objects.unwrap_or(map.hit_objects.len());
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
     // True if the object at that index is stamina cheese

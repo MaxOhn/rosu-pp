@@ -103,6 +103,7 @@ impl_reader!(async);
 impl_reader!(async);
 
 impl<R> FileReader<R> {
+    #[allow(clippy::wrong_self_convention)]
     pub(crate) fn is_initial_empty_line(&mut self) -> bool {
         if self.buf.starts_with(&[239, 187, 191]) {
             // UTF-8
