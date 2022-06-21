@@ -3,32 +3,26 @@ use crate::{
     Beatmap,
 };
 
-use std::slice::Iter;
-
-macro_rules! next_tuple {
-    ($iter:expr, ($first:ident, $second:ident)) => {
-        $iter.next().map(|e| (e.$first, e.$second))
-    };
-}
+use std::{iter::Copied, slice::Iter};
 
 #[derive(Clone, Debug)]
 pub(crate) struct ControlPointIter<'p> {
-    timing_points: Iter<'p, TimingPoint>,
-    difficulty_points: Iter<'p, DifficultyPoint>,
+    timing_points: Copied<Iter<'p, TimingPoint>>,
+    difficulty_points: Copied<Iter<'p, DifficultyPoint>>,
 
-    next_timing: Option<(f64, f64)>,
-    next_difficulty: Option<(f64, f64)>,
+    next_timing: Option<TimingPoint>,
+    next_difficulty: Option<DifficultyPoint>,
 }
 
 impl<'p> ControlPointIter<'p> {
     #[inline]
     pub(crate) fn new(map: &'p Beatmap) -> Self {
-        let mut timing_points = map.timing_points.iter();
-        let mut difficulty_points = map.difficulty_points.iter();
+        let mut timing_points = map.timing_points.iter().copied();
+        let mut difficulty_points = map.difficulty_points.iter().copied();
 
         Self {
-            next_timing: next_tuple!(timing_points, (time, beat_len)),
-            next_difficulty: next_tuple!(difficulty_points, (time, speed_multiplier)),
+            next_timing: timing_points.next(),
+            next_difficulty: difficulty_points.next(),
 
             timing_points,
             difficulty_points,
@@ -38,16 +32,16 @@ impl<'p> ControlPointIter<'p> {
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum ControlPoint {
-    Timing { time: f64, beat_len: f64 },
-    Difficulty { time: f64, slider_velocity: f64 },
+    Timing(TimingPoint),
+    Difficulty(DifficultyPoint),
 }
 
 impl ControlPoint {
     #[inline]
     pub(crate) fn time(&self) -> f64 {
         match self {
-            Self::Timing { time, .. } => *time,
-            Self::Difficulty { time, .. } => *time,
+            Self::Timing(point) => point.time,
+            Self::Difficulty(point) => point.time,
         }
     }
 }
@@ -57,24 +51,20 @@ impl<'p> Iterator for ControlPointIter<'p> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match (self.next_timing, self.next_difficulty) {
-            (Some((time, beat_len)), Some((d, _))) if time <= d => {
-                self.next_timing = next_tuple!(self.timing_points, (time, beat_len));
+            (Some(timing), Some(difficulty)) if timing.time <= difficulty.time => {
+                self.next_timing = self.timing_points.next();
 
-                Some(ControlPoint::Timing { time, beat_len })
+                Some(ControlPoint::Timing(timing))
             }
-            (_, Some((time, slider_velocity))) => {
-                self.next_difficulty =
-                    next_tuple!(self.difficulty_points, (time, speed_multiplier));
+            (_, Some(point)) => {
+                self.next_difficulty = self.difficulty_points.next();
 
-                Some(ControlPoint::Difficulty {
-                    time,
-                    slider_velocity,
-                })
+                Some(ControlPoint::Difficulty(point))
             }
-            (Some((time, beat_len)), None) => {
-                self.next_timing = next_tuple!(self.timing_points, (time, beat_len));
+            (Some(point), None) => {
+                self.next_timing = self.timing_points.next();
 
-                Some(ControlPoint::Timing { time, beat_len })
+                Some(ControlPoint::Timing(point))
             }
             (None, None) => None,
         }
@@ -120,11 +110,11 @@ mod test {
 
         let mut iter = ControlPointIter::new(&map);
 
-        assert!(matches!(iter.next(), Some(ControlPoint::Timing { .. })));
-        assert!(matches!(iter.next(), Some(ControlPoint::Difficulty { .. })));
-        assert!(matches!(iter.next(), Some(ControlPoint::Timing { .. })));
-        assert!(matches!(iter.next(), Some(ControlPoint::Timing { .. })));
-        assert!(matches!(iter.next(), Some(ControlPoint::Difficulty { .. })));
+        assert!(matches!(iter.next(), Some(ControlPoint::Timing(_))));
+        assert!(matches!(iter.next(), Some(ControlPoint::Difficulty(_))));
+        assert!(matches!(iter.next(), Some(ControlPoint::Timing(_))));
+        assert!(matches!(iter.next(), Some(ControlPoint::Timing(_))));
+        assert!(matches!(iter.next(), Some(ControlPoint::Difficulty(_))));
         assert!(matches!(iter.next(), None));
     }
 }

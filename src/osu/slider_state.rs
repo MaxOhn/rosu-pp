@@ -13,10 +13,8 @@ impl<'p> SliderState<'p> {
         let mut control_points = ControlPointIter::new(map);
 
         let (beat_len, slider_velocity) = match control_points.next() {
-            Some(ControlPoint::Timing { beat_len, .. }) => (beat_len, 1.0),
-            Some(ControlPoint::Difficulty {
-                slider_velocity, ..
-            }) => (1000.0, slider_velocity),
+            Some(ControlPoint::Timing(point)) => (point.beat_len, 1.0),
+            Some(ControlPoint::Difficulty(point)) => (1000.0, point.speed_multiplier),
             None => (1000.0, 1.0),
         };
 
@@ -32,13 +30,11 @@ impl<'p> SliderState<'p> {
     pub(crate) fn update(&mut self, time: f64) {
         while let Some(next) = self.next.as_ref().filter(|n| time >= n.time()) {
             match next {
-                ControlPoint::Timing { beat_len, .. } => {
-                    self.beat_len = *beat_len;
+                ControlPoint::Timing(point) => {
+                    self.beat_len = point.beat_len;
                     self.slider_velocity = 1.0;
                 }
-                ControlPoint::Difficulty {
-                    slider_velocity, ..
-                } => self.slider_velocity = *slider_velocity,
+                ControlPoint::Difficulty(point) => self.slider_velocity = point.speed_multiplier,
             }
 
             self.next = self.control_points.next();
