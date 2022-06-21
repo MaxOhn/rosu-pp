@@ -175,7 +175,7 @@ impl Evaluator {
     /// Plot all gathered differences
     fn plot(self) -> Result<(), Error> {
         let mode = self.mode;
-        let output_path = format!("{}_accuracy.svg", mode);
+        let output_path = format!("accuracy_{}.svg", mode);
         let dataset = self.to_quartiles();
         let kind_list: Vec<_> = dataset.iter().map(|(kind, _)| *kind).collect();
 

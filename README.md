@@ -179,7 +179,7 @@ osu!mania: (close to perfect values)
 <img src="./pp-plot/mania_accuracy.svg">
 
 osu!catch: (pretty accurate)
-<img src="./pp-plot/fruits_accuracy.svg">
+<img src="./pp-plot/catch_accuracy.svg">
 
 osu!taiko: (decently accurate, potentially more imprecise due to non-live changes in osu-tools)
 <img src="./pp-plot/taiko_accuracy.svg">
