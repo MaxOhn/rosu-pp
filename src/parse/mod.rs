@@ -1,5 +1,3 @@
-mod attributes;
-mod control_point;
 mod error;
 mod hitobject;
 mod hitsound;
@@ -7,8 +5,6 @@ mod pos2;
 mod reader;
 mod sort;
 
-pub use attributes::BeatmapAttributes;
-pub use control_point::{DifficultyPoint, TimingPoint};
 pub use error::{ParseError, ParseResult};
 pub use hitobject::{HitObject, HitObjectKind};
 pub use hitsound::HitSound;
@@ -32,7 +28,7 @@ use std::path::Path;
 #[cfg(feature = "async_std")]
 use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
-use crate::control_point_iter::ControlPointIter;
+use crate::beatmap::{Beatmap, DifficultyPoint, GameMode, TimingPoint};
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
@@ -595,72 +591,6 @@ macro_rules! from_path {
     };
 }
 
-/// The mode of a beatmap.
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-#[allow(clippy::upper_case_acronyms)]
-pub enum GameMode {
-    /// osu!standard
-    STD = 0,
-    /// osu!taiko
-    TKO = 1,
-    /// osu!catch
-    CTB = 2,
-    /// osu!mania
-    MNA = 3,
-}
-
-impl Default for GameMode {
-    #[inline]
-    fn default() -> Self {
-        Self::STD
-    }
-}
-
-/// The main beatmap struct containing all data relevant
-/// for difficulty and pp calculation
-#[derive(Clone, Default, Debug)]
-pub struct Beatmap {
-    /// The game mode.
-    pub mode: GameMode,
-    /// The version of the .osu file.
-    pub version: u8,
-
-    /// The amount of circles.
-    pub n_circles: u32,
-    /// The amount of sliders.
-    pub n_sliders: u32,
-    /// The amount of spinners.
-    pub n_spinners: u32,
-
-    /// The approach rate.
-    pub ar: f32,
-    /// The overall difficulty.
-    pub od: f32,
-    /// The circle size.
-    pub cs: f32,
-    /// The health drain rate.
-    pub hp: f32,
-    /// Base slider velocity in pixels per beat
-    pub slider_mult: f64,
-    /// Amount of slider ticks per beat.
-    pub tick_rate: f64,
-    /// All hitobjects of the beatmap.
-    pub hit_objects: Vec<HitObject>,
-    /// Store the sounds for all objects in their own Vec to minimize the struct size.
-    /// Hitsounds are only used in osu!taiko in which they represent color.
-    pub sounds: Vec<u8>,
-
-    /// Timing points that indicate a new timing section.
-    pub timing_points: Vec<TimingPoint>,
-
-    /// Timing point for the current timing section.
-    pub difficulty_points: Vec<DifficultyPoint>,
-
-    /// The stack leniency that is used to calculate
-    /// the stack offset for stacked positions.
-    pub stack_leniency: f32,
-}
-
 impl Beatmap {
     const CIRCLE_FLAG: u8 = 1 << 0;
     const SLIDER_FLAG: u8 = 1 << 1;
@@ -668,27 +598,6 @@ impl Beatmap {
     const SPINNER_FLAG: u8 = 1 << 3;
     // const COMBO_OFFSET_FLAG: u8 = (1 << 4) | (1 << 5) | (1 << 6);
     const HOLD_FLAG: u8 = 1 << 7;
-
-    /// Extract a beatmap's attributes into their own type.
-    #[inline]
-    pub fn attributes(&self) -> BeatmapAttributes {
-        BeatmapAttributes::new(self.ar, self.od, self.cs, self.hp)
-    }
-
-    /// The beats per minute of the map.
-    #[inline]
-    pub fn bpm(&self) -> f64 {
-        match self.timing_points.first() {
-            Some(point) => point.beat_len.recip() * 1000.0 * 60.0,
-            None => 0.0,
-        }
-    }
-
-    /// Create an iterator over the map's timing- and difficulty points sorted by timestamp.
-    #[inline]
-    pub fn control_points(&self) -> ControlPointIter<'_> {
-        ControlPointIter::new(self)
-    }
 }
 
 mod slider_parsing {
@@ -927,11 +836,11 @@ mod tests {
                     println!("map_id: {}", map_id);
 
                     let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
-                        Ok(map) => map,
+                        Ok(map) => beatmap,
                         Err(why) => panic!("Error while parsing map: {}", why),
                     };
 
-                    print_info(map);
+                    print_info(beatmap);
                     println!("---");
                 }
             });
@@ -945,11 +854,11 @@ mod tests {
                 println!("map_id: {}", map_id);
 
                 let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
-                    Ok(map) => map,
+                    Ok(map) => beatmap,
                     Err(why) => panic!("Error while parsing map: {}", why),
                 };
 
-                print_info(map);
+                print_info(beatmap);
                 println!("---");
             }
         });

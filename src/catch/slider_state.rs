@@ -1,4 +1,4 @@
-use crate::{Beatmap, ControlPoint, ControlPointIter};
+use crate::beatmap::{Beatmap, ControlPoint, ControlPointIter};
 
 #[derive(Clone, Debug)]
 pub(crate) struct SliderState<'p> {
@@ -45,10 +45,7 @@ impl<'p> SliderState<'p> {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        parse::{DifficultyPoint, TimingPoint},
-        Beatmap,
-    };
+    use crate::beatmap::{Beatmap, DifficultyPoint, TimingPoint};
 
     use super::SliderState;
 

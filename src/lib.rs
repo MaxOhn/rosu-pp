@@ -191,8 +191,12 @@ pub mod osu;
 /// Everything about osu!taiko.
 pub mod taiko;
 
-/// Beatmap parsing and the contained types.
+/// Beatmap parsing
 pub mod parse;
+
+/// Beatmap and contained types
+pub mod beatmap;
+pub use beatmap::{Beatmap, GameMode};
 
 mod gradual;
 pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes, ScoreState};
@@ -206,16 +210,13 @@ pub use stars::AnyStars;
 mod curve;
 mod mods;
 
-mod control_point_iter;
-pub use control_point_iter::{ControlPoint, ControlPointIter};
-
 pub use catch::{CatchPP, CatchStars};
 pub use mania::{ManiaPP, ManiaStars};
 pub use osu::{OsuPP, OsuStars};
 pub use taiko::{TaikoPP, TaikoStars};
 
 pub use mods::Mods;
-pub use parse::{Beatmap, BeatmapAttributes, GameMode, ParseError, ParseResult};
+pub use parse::{ParseError, ParseResult};
 
 /// Provides some additional methods on [`Beatmap`](crate::Beatmap).
 pub trait BeatmapExt {

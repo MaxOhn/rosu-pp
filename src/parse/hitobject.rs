@@ -1,6 +1,6 @@
-use super::Pos2;
-
 use std::cmp::Ordering;
+
+use super::{PathControlPoint, Pos2};
 
 /// "Intermediate" hitobject created through parsing.
 /// Each mode will handle them differently.
@@ -65,7 +65,7 @@ pub enum HitObjectKind {
         /// The amount of repeat points of the slider.
         repeats: usize,
         /// The control points of the slider.
-        control_points: Vec<super::PathControlPoint>,
+        control_points: Vec<PathControlPoint>,
     },
     /// A spinner object.
     Spinner {

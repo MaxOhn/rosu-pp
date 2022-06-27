@@ -2,6 +2,15 @@
 
 - __Additions__:
   - Added the `ControlPoint` and `ControlPointerIter` types to the public interface, aswell as the `Beatmap::control_points` method
+- __Breaking changes:__
+  - Moved some types to a different module. The following types can now be found in `rosu_pp::beatmap`:
+    - `Beatmap`
+    - `BeatmapAttributes`
+    - `ControlPoint`
+    - `ControlPointIter`
+    - `DifficultyPoint`
+    - `GameMode`
+    - `TimingPoint`
 
 # v0.5.2 (2022-06-14)
 
