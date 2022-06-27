@@ -17,6 +17,15 @@ impl PartialOrd for TimingPoint {
     }
 }
 
+impl Default for TimingPoint {
+    fn default() -> Self {
+        Self {
+            beat_len: 60_000.0 / 60.0,
+            time: 0.0,
+        }
+    }
+}
+
 /// [`TimingPoint`] that depends on a previous one.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DifficultyPoint {
@@ -29,6 +38,15 @@ pub struct DifficultyPoint {
 impl PartialOrd for DifficultyPoint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.time.partial_cmp(&other.time)
+    }
+}
+
+impl Default for DifficultyPoint {
+    fn default() -> Self {
+        Self {
+            time: 0.0,
+            speed_multiplier: 1.0,
+        }
     }
 }
 

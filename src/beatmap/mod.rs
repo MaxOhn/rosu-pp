@@ -1,3 +1,5 @@
+use std::{borrow::Cow, cmp::Ordering};
+
 use crate::parse::HitObject;
 
 pub use self::{
@@ -8,6 +10,7 @@ pub use self::{
 
 mod attributes;
 mod control_points;
+mod converts;
 mod mode;
 
 /// The main beatmap struct containing all data relevant
@@ -75,5 +78,65 @@ impl Beatmap {
     #[inline]
     pub fn control_points(&self) -> ControlPointIter<'_> {
         ControlPointIter::new(self)
+    }
+
+    /// Return the [`TimingPoint`] for the given timestamp.
+    ///
+    /// If `time` is before the first timing point, `None` is returned.
+    #[inline]
+    pub fn timing_point_at(&self, time: f64) -> Option<TimingPoint> {
+        self.timing_points
+            .binary_search_by(|probe| probe.time.partial_cmp(&time).unwrap_or(Ordering::Less))
+            .map_or_else(|i| i.checked_sub(1), Some)
+            .map(|i| self.timing_points[i])
+    }
+
+    /// Return the [`DifficultyPoint`] for the given timestamp.
+    ///
+    /// If `time` is before the first difficulty point, `None` is returned.
+    #[inline]
+    pub fn difficulty_point_at(&self, time: f64) -> Option<DifficultyPoint> {
+        self.difficulty_points
+            .binary_search_by(|probe| probe.time.partial_cmp(&time).unwrap_or(Ordering::Less))
+            .map_or_else(|i| i.checked_sub(1), Some)
+            .map(|i| self.difficulty_points[i])
+    }
+
+    /// Convert a [`Beatmap`] of some mode into a different mode.
+    #[inline]
+    pub fn convert_mode(&self, mode: GameMode) -> Cow<'_, Self> {
+        if mode == self.mode {
+            return Cow::Borrowed(self);
+        }
+
+        let converted = match mode {
+            GameMode::STD => todo!(),
+            GameMode::TKO => self.convert_to_taiko(),
+            GameMode::CTB => todo!(),
+            GameMode::MNA => todo!(),
+        };
+
+        Cow::Owned(converted)
+    }
+
+    fn clone_without_hit_objects(&self) -> Self {
+        Self {
+            mode: self.mode,
+            version: self.version,
+            n_circles: self.n_circles,
+            n_sliders: self.n_sliders,
+            n_spinners: self.n_spinners,
+            ar: self.ar,
+            od: self.od,
+            cs: self.cs,
+            hp: self.hp,
+            slider_mult: self.slider_mult,
+            tick_rate: self.tick_rate,
+            hit_objects: Vec::with_capacity(self.hit_objects.len()),
+            sounds: self.sounds.clone(),
+            timing_points: self.timing_points.clone(),
+            difficulty_points: self.difficulty_points.clone(),
+            stack_leniency: self.stack_leniency,
+        }
     }
 }

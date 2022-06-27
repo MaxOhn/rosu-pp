@@ -1,6 +1,7 @@
 /// Abstract type to define hitsounds.
 #[allow(missing_docs)]
 pub trait HitSound {
+    const HITSOUND_NORMAL: u8 = 1 << 0;
     const HITSOUND_WHISTLE: u8 = 1 << 1;
     const HITSOUND_FINISH: u8 = 1 << 2;
     const HITSOUND_CLAP: u8 = 1 << 3;
@@ -13,7 +14,7 @@ pub trait HitSound {
 
 impl HitSound for u8 {
     fn normal(self) -> bool {
-        self == 0
+        self & Self::HITSOUND_NORMAL > 0
     }
 
     fn whistle(self) -> bool {
