@@ -25,20 +25,21 @@ pub(crate) struct DistanceObjectPatternGenerator<'h> {
 }
 
 impl<'h> DistanceObjectPatternGenerator<'h> {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         random: &'h mut Random,
         hit_object: &'h HitObject,
         sample: u8,
-        map: &Beatmap,
+        total_columns: i32,
         prev_pattern: &'h Pattern,
         orig: &'h Beatmap,
         repeats: usize,
         curve: &Curve,
         edge_sounds: &'h [u8],
     ) -> Self {
-        let timing_point = map.timing_point_at(hit_object.start_time);
+        let timing_point = orig.timing_point_at(hit_object.start_time);
 
-        let difficulty_point = map
+        let difficulty_point = orig
             .difficulty_point_at(hit_object.start_time)
             .unwrap_or_default();
 
@@ -61,7 +62,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
 
         // * This matches stable's calculation.
         let end_time = (start_time as f64
-            + curve.dist() * beat_len * span_count as f64 * 0.01 / map.slider_mult)
+            + curve.dist() * beat_len * span_count as f64 * 0.01 / orig.slider_mult)
             .floor() as i32;
 
         let segment_duration = (end_time - start_time) / span_count;
@@ -69,7 +70,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         Self {
             hit_object,
             segment_duration,
-            total_columns: map.cs as i32,
+            total_columns,
             sample,
             start_time,
             end_time,
@@ -281,13 +282,11 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
                 } else {
                     column += 1;
                 }
+            } else if column <= self.random_start() {
+                increasing = true;
+                column += 1;
             } else {
-                if column <= self.random_start() {
-                    increasing = true;
-                    column += 1;
-                } else {
-                    column -= 1;
-                }
+                column -= 1;
             }
         }
 

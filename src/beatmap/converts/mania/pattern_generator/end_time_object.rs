@@ -24,11 +24,9 @@ impl<'h> EndTimeObjectPatternGenerator<'h> {
         hit_object: &'h HitObject,
         end_time: f64,
         sample: u8,
-        map: &Beatmap,
+        total_columns: i32,
         prev_pattern: &'h Pattern,
     ) -> Self {
-        let total_columns = map.cs as i32;
-
         let convert_type = if prev_pattern.column_with_objs() == total_columns {
             PatternType::default()
         } else {

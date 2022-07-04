@@ -77,10 +77,9 @@ impl Beatmap {
             }
         };
 
-        let mut last_time = 0.0;
-        let mut last_pos = Pos2::default();
-        let mut last_stair = PatternType::STAIR;
-        let mut last_pattern = Pattern::default();
+        let total_columns = map.cs as i32;
+
+        let mut last_values = PrevValues::default();
 
         let mut curve_bufs = CurveBuffers::default();
 
@@ -93,26 +92,23 @@ impl Beatmap {
                         &mut random,
                         obj,
                         *sound,
-                        &map,
-                        &last_pattern,
-                        last_time,
-                        last_pos,
+                        total_columns,
+                        &last_values,
                         density,
-                        last_stair,
                         self,
                     );
 
                     let new_pattern = gen.generate();
 
-                    last_time = obj.start_time;
-                    last_pos = obj.pos;
-                    last_stair = gen.stair_type;
+                    last_values.stair = gen.stair_type;
+                    last_values.time = obj.start_time;
+                    last_values.pos = obj.pos;
 
                     map.hit_objects
                         .extend(new_pattern.hit_objects.iter().cloned());
 
                     n_circles += new_pattern.hit_objects.len();
-                    last_pattern = new_pattern;
+                    last_values.pattern = new_pattern;
                 }
                 HitObjectKind::Slider {
                     pixel_len,
@@ -126,8 +122,8 @@ impl Beatmap {
                         &mut random,
                         obj,
                         *sound,
-                        &map,
-                        &last_pattern,
+                        total_columns,
+                        &last_values.pattern,
                         self,
                         repeats,
                         &curve,
@@ -139,8 +135,8 @@ impl Beatmap {
                     for i in 0..=repeats as i32 + 1 {
                         let time = obj.start_time + segment_duration * i as f64;
 
-                        last_time = time;
-                        last_pos = obj.pos;
+                        last_values.time = time;
+                        last_values.pos = obj.pos;
 
                         compute_density(time, &mut density);
                     }
@@ -158,7 +154,7 @@ impl Beatmap {
 
                         map.hit_objects.extend(new_objects);
 
-                        last_pattern = new_pattern;
+                        last_values.pattern = new_pattern;
                     }
                 }
                 HitObjectKind::Spinner { end_time } | HitObjectKind::Hold { end_time } => {
@@ -167,12 +163,12 @@ impl Beatmap {
                         obj,
                         end_time,
                         *sound,
-                        &map,
-                        &last_pattern,
+                        total_columns,
+                        &last_values.pattern,
                     );
 
-                    last_time = obj.start_time;
-                    last_pos = obj.pos;
+                    last_values.time = obj.start_time;
+                    last_values.pos = obj.pos;
 
                     compute_density(end_time, &mut density);
 
@@ -194,23 +190,29 @@ impl Beatmap {
         map.n_circles = n_circles as u32;
         map.n_sliders = n_sliders;
 
-        // println!("Pre-sort:");
-
-        // for h in map.hit_objects.iter() {
-        //     println!("[{}] {}", h.start_time, h.column(map.cs));
-        // }
-
         map.hit_objects
             .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 
         legacy_sort(&mut map.hit_objects);
 
-        // println!("Post-sort:");
-
-        // for h in map.hit_objects.iter() {
-        //     println!("[{}] {}", h.start_time, h.column(map.cs));
-        // }
-
         map
+    }
+}
+
+pub(crate) struct PrevValues {
+    time: f64,
+    pos: Pos2,
+    pattern: Pattern,
+    stair: PatternType,
+}
+
+impl Default for PrevValues {
+    fn default() -> Self {
+        Self {
+            time: 0.0,
+            pos: Pos2::default(),
+            pattern: Pattern::default(),
+            stair: PatternType::STAIR,
+        }
     }
 }

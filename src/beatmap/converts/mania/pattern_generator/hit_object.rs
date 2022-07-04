@@ -1,8 +1,8 @@
 use crate::{
     beatmap::converts::mania::{
-        legacy_random::Random, pattern::Pattern, pattern_type::PatternType,
+        legacy_random::Random, pattern::Pattern, pattern_type::PatternType, PrevValues,
     },
-    parse::{HitObject, HitSound, Pos2},
+    parse::{HitObject, HitSound},
     Beatmap,
 };
 
@@ -24,18 +24,15 @@ impl<'h> HitObjectPatternGenerator<'h> {
         random: &'h mut Random,
         hit_object: &'h HitObject,
         sample: u8,
-        map: &Beatmap,
-        prev_pattern: &'h Pattern,
-        prev_time: f64,
-        prev_pos: Pos2,
+        total_columns: i32,
+        prev: &'h PrevValues,
         density: f64,
-        last_stair: PatternType,
         orig: &'h Beatmap,
     ) -> Self {
-        let timing_point = map.timing_point_at(hit_object.start_time);
+        let timing_point = orig.timing_point_at(hit_object.start_time);
 
-        let pos_separation = (hit_object.pos - prev_pos).length();
-        let time_separation = hit_object.start_time - prev_time;
+        let pos_separation = (hit_object.pos - prev.pos).length();
+        let time_separation = hit_object.start_time - prev.time;
 
         let mut convert_type = PatternType::default();
 
@@ -44,7 +41,7 @@ impl<'h> HitObjectPatternGenerator<'h> {
             convert_type |= PatternType::FORCE_NOT_STACK | PatternType::KEEP_SINGLE;
         } else if time_separation <= 95.0 {
             // * More than 157 BPM
-            convert_type |= PatternType::FORCE_NOT_STACK | PatternType::KEEP_SINGLE | last_stair;
+            convert_type |= PatternType::FORCE_NOT_STACK | PatternType::KEEP_SINGLE | prev.stair;
         } else if time_separation <= 105.0 {
             // * More than 140 BPM
             convert_type |= PatternType::FORCE_NOT_STACK | PatternType::LOW_PROBABILITY;
@@ -63,7 +60,7 @@ impl<'h> HitObjectPatternGenerator<'h> {
         } else if density < timing_point.beat_len / 2.5 {
             // * High density
         } else {
-            let difficulty_point = map.difficulty_point_at(hit_object.start_time);
+            let difficulty_point = orig.difficulty_point_at(hit_object.start_time);
 
             let kiai = match difficulty_point {
                 Some(difficulty_point) => {
@@ -83,8 +80,6 @@ impl<'h> HitObjectPatternGenerator<'h> {
             }
         }
 
-        let total_columns = map.cs as i32;
-
         if !convert_type.contains(PatternType::KEEP_SINGLE) {
             if sample.finish() && total_columns != 8 {
                 convert_type |= PatternType::MIRROR;
@@ -95,11 +90,11 @@ impl<'h> HitObjectPatternGenerator<'h> {
 
         Self {
             hit_object,
-            stair_type: last_stair,
+            stair_type: prev.stair,
             convert_type,
             total_columns,
             sample,
-            prev_pattern,
+            prev_pattern: &prev.pattern,
             random,
             orig,
         }
