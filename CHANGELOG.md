@@ -2,6 +2,12 @@
 
 - __Additions__:
   - Added the `ControlPoint` and `ControlPointerIter` types to the public interface, aswell as the `Beatmap::control_points` method
+  - `TimingPoint` and `DifficultyPoint` now implement `Default`
+  - Added new methods to `Beatmap`:
+    - `convert_mode`: Convert a map into another mode. (doesn't do anything if the starting map is not osu!standard)
+    - `total_break_time`: Return the accumulated break time in milliseconds
+    - `timing_point_at`: Return the timing point for the given timestamp
+    - `difficulty_point_at`: Return the difficulty point for the given timestamp if available
 - __Breaking changes:__
   - Moved some types to a different module. The following types can now be found in `rosu_pp::beatmap`:
     - `Beatmap`
@@ -11,6 +17,8 @@
     - `DifficultyPoint`
     - `GameMode`
     - `TimingPoint`
+  - Added a new field `kiai: bool` to both `TimingPoint` and `DifficultyPoint` to denote whether the current timing section is in kiai mode
+  - Added a new field `breaks: Vec<Break>` to `Beatmap` that contains all breaks throughout the map
 
 # v0.5.2 (2022-06-14)
 

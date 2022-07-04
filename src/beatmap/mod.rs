@@ -85,7 +85,7 @@ impl Beatmap {
         ControlPointIter::new(self)
     }
 
-    /// Sum up the duration of all breaks.
+    /// Sum up the duration of all breaks (in milliseconds).
     #[inline]
     pub fn total_break_time(&self) -> f64 {
         self.breaks.iter().map(Break::duration).sum()
