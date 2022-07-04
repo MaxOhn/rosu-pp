@@ -224,9 +224,9 @@ macro_rules! parse_timingpoints_body {
 
             let beat_len: f64 = split.next().next_field("beat len")?.trim().parse()?;
             let timing_change = split.nth(4).and_then(|value| value.bytes().next());
-            let effect_flags = split.next();
+            let effect_flags = split.next().and_then(|value| value.bytes().next());
 
-            let kiai = matches!(effect_flags, Some("1"));
+            let kiai = matches!(effect_flags, Some(b'1'));
 
             if matches!(timing_change, Some(b'1') | None) {
                 let beat_len = beat_len.clamp(6.0, 60_000.0);

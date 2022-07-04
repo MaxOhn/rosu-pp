@@ -118,14 +118,6 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
         clock_rate,
     } = params;
 
-    // println!("---\nObjects in mania difficulty calculator:");
-
-    // for h in map.hit_objects.iter() {
-    //     println!("[{}] {}", h.start_time, h.column(map.cs));
-    // }
-
-    // println!("---");
-
     let take = passed_objects.unwrap_or(map.hit_objects.len());
     let rounded_cs = map.cs.round();
 

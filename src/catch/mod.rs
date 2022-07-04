@@ -17,8 +17,7 @@ pub use pp::*;
 use slider_state::SliderState;
 
 use crate::{
-    catch::fruit_or_juice::FruitParams, curve::CurveBuffers, Beatmap, GameMode, Mods, OsuStars,
-    Strains,
+    catch::fruit_or_juice::FruitParams, curve::CurveBuffers, Beatmap, Mods, OsuStars, Strains,
 };
 
 const SECTION_LENGTH: f64 = 750.0;
@@ -130,8 +129,6 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
         clock_rate,
     } = params;
 
-    let map = map.convert_mode(GameMode::CTB);
-
     let take = passed_objects.unwrap_or(usize::MAX);
     let map_attributes = map.attributes().mods(mods);
     let clock_rate = clock_rate.unwrap_or(map_attributes.clock_rate);
@@ -146,8 +143,8 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
         curve_bufs: CurveBuffers::default(),
         last_pos: None,
         last_time: 0.0,
-        map: map.as_ref(),
-        slider_state: SliderState::new(map.as_ref()),
+        map,
+        slider_state: SliderState::new(map),
         ticks: Vec::new(), // using the same buffer for all sliders
         with_hr: mods.hr(),
     };
