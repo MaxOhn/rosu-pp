@@ -113,10 +113,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let conversion_diff = self.conversion_difficulty();
 
         if self.total_columns == 1 {
-            let mut pattern = Pattern::default();
-            pattern.add_slider_note(self, 0, self.start_time, self.end_time);
-
-            pattern
+            return Pattern::new_slider_note(self, 0, self.start_time, self.end_time);
         } else if self.span_count > 1 {
             if self.segment_duration <= 90 {
                 self.generate_random_hold_notes(self.start_time, 1)
@@ -217,8 +214,6 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         // * - - - x
         // * x - - -
 
-        let mut pattern = Pattern::default();
-
         let mut next_column = self.get_column(Some(true));
 
         if self.convert_type.contains(PatternType::FORCE_NOT_STACK)
@@ -235,6 +230,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         }
 
         let mut last_column = next_column;
+        let mut pattern = Pattern::with_capacity(note_count as usize);
 
         for _ in 0..note_count {
             pattern.add_slider_note(self, next_column, start_time, start_time);
@@ -265,10 +261,9 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         // * - x - -
         // * x - - -
 
-        let mut pattern = Pattern::default();
-
         let mut column = self.get_column(Some(true)) as i32;
         let mut increasing = self.random.gen_double() > 0.5;
+        let mut pattern = Pattern::with_capacity(self.span_count as usize + 1);
 
         for _ in 0..=self.span_count as usize {
             pattern.add_slider_note(self, column as u8, start_time, start_time);
@@ -300,8 +295,6 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         // * - - - x
         // * x - x -
 
-        let mut pattern = Pattern::default();
-
         let legacy = (4..=8).contains(&self.total_columns);
         let interval = self
             .random
@@ -309,6 +302,9 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
 
         let mut next_column = self.get_column(Some(true)) as i32;
         let random_start = self.random_start();
+        let not_2k = self.total_columns > 2;
+        let mut pattern =
+            Pattern::with_capacity((self.span_count as usize + 1) * (1 + not_2k as usize));
 
         for _ in 0..=self.span_count as usize {
             pattern.add_slider_note(self, next_column as u8, start_time, start_time);
@@ -322,7 +318,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
             next_column += random_start;
 
             // * If we're in 2K, let's not add many consecutive doubles
-            if self.total_columns > 2 {
+            if not_2k {
                 pattern.add_slider_note(self, next_column as u8, start_time, start_time);
             }
 
@@ -394,9 +390,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         // * □ ■ - -
         // * ■ - - -
 
-        let mut pattern = Pattern::default();
-
-        let column_repeat = (self.span_count as usize).min(self.total_columns as usize);
+        let column_repeat = self.span_count.min(self.total_columns) as usize;
 
         // * Due to integer rounding, this is not guaranteed to be the same as EndTime (the class-level variable).
         let end_time = start_time + self.segment_duration * self.span_count;
@@ -415,6 +409,8 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
                 &[self.prev_pattern],
             );
         }
+
+        let mut pattern = Pattern::with_capacity(column_repeat);
 
         for _ in 0..column_repeat {
             next_column =
@@ -497,9 +493,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
                 }
             }
 
-            pattern.extend(row_pattern);
-            row_pattern = Pattern::default();
-
+            pattern.append(&mut row_pattern);
             start_time += self.segment_duration;
         }
 

@@ -121,13 +121,8 @@ impl<'h> HitObjectPatternGenerator<'h> {
     }
 
     fn generate_core(&mut self) -> Pattern {
-        let mut pattern = Pattern::default();
-
         if self.total_columns == 1 {
-            // TODO: optimize internal vec allocation
-            pattern.add_note(self, 0);
-
-            return pattern;
+            return Pattern::new_note(self, 0);
         }
 
         let last_column = self
@@ -141,6 +136,8 @@ impl<'h> HitObjectPatternGenerator<'h> {
         if self.convert_type.contains(PatternType::REVERSE)
             && !self.prev_pattern.hit_objects.is_empty()
         {
+            let mut pattern = Pattern::default();
+
             for i in random_start..self.total_columns as u8 {
                 if self.prev_pattern.column_has_obj(i) {
                     pattern.add_note(self, random_start + self.total_columns as u8 - i - 1);
@@ -159,14 +156,15 @@ impl<'h> HitObjectPatternGenerator<'h> {
         {
             // * Generate a new pattern by cycling backwards (similar to Reverse but for only one hit object)
             let column = random_start + self.total_columns as u8 - last_column - 1;
-            pattern.add_note(self, column);
 
-            return pattern;
+            return Pattern::new_note(self, column);
         }
 
         if self.convert_type.contains(PatternType::FORCE_STACK)
             && !self.prev_pattern.hit_objects.is_empty()
         {
+            let mut pattern = Pattern::default();
+
             // * Generate a new pattern by placing on the already filled columns
             for i in random_start..self.total_columns as u8 {
                 if self.prev_pattern.column_has_obj(i) {
@@ -187,9 +185,7 @@ impl<'h> HitObjectPatternGenerator<'h> {
                     target_column = random_start;
                 }
 
-                pattern.add_note(self, target_column);
-
-                return pattern;
+                return Pattern::new_note(self, target_column);
             }
 
             if self.convert_type.contains(PatternType::REVERSE_STAIR) {
@@ -201,9 +197,7 @@ impl<'h> HitObjectPatternGenerator<'h> {
                     target_column = self.total_columns as i8 - 1;
                 }
 
-                pattern.add_note(self, target_column as u8);
-
-                return pattern;
+                return Pattern::new_note(self, target_column as u8);
             }
         }
 
@@ -303,9 +297,8 @@ impl<'h> HitObjectPatternGenerator<'h> {
     }
 
     fn generate_random_pattern(&mut self, p2: f64, p3: f64, p4: f64, p5: f64) -> Pattern {
-        let mut pattern = Pattern::default();
         let random_note_count = self.get_random_note_count(p2, p3, p4, p5);
-        pattern.extend(self.generate_random_notes(random_note_count));
+        let mut pattern = self.generate_random_notes(random_note_count);
 
         if self.random_start() > 0 && self.has_special_column() {
             pattern.add_note(self, 0);

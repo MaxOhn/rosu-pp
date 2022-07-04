@@ -17,6 +17,34 @@ pub(crate) struct Pattern {
 }
 
 impl Pattern {
+    pub(crate) fn with_capacity(capacity: usize) -> Self {
+        Self {
+            hit_objects: Vec::with_capacity(capacity),
+            contained_columns: HashSet::with_hasher(BuildByteHasher),
+        }
+    }
+
+    fn new_single(hit_object: HitObject, column: u8) -> Self {
+        let mut contained_columns = HashSet::with_capacity_and_hasher(1, BuildByteHasher);
+        contained_columns.insert(column);
+        let hit_objects = vec![hit_object];
+
+        Self {
+            hit_objects,
+            contained_columns,
+        }
+    }
+
+    pub(crate) fn new_note(generator: &HitObjectPatternGenerator<'_>, column: u8) -> Self {
+        let hit_object = HitObject {
+            pos: Pos2::new(column_to_pos(column, generator.total_columns)),
+            start_time: generator.hit_object.start_time,
+            kind: HitObjectKind::Circle,
+        };
+
+        Self::new_single(hit_object, column)
+    }
+
     pub(crate) fn add_note(&mut self, generator: &HitObjectPatternGenerator<'_>, column: u8) {
         let hit_object = HitObject {
             pos: Pos2::new(column_to_pos(column, generator.total_columns)),
@@ -28,12 +56,11 @@ impl Pattern {
         self.hit_objects.push(hit_object);
     }
 
-    pub(crate) fn add_end_time_note(
-        &mut self,
+    pub(crate) fn new_end_time_note(
         generator: &EndTimeObjectPatternGenerator<'_>,
         column: u8,
         hold_note: bool,
-    ) {
+    ) -> Self {
         let pos = Pos2::new(column_to_pos(column, generator.total_columns));
 
         let hit_object = if hold_note {
@@ -52,8 +79,34 @@ impl Pattern {
             }
         };
 
-        self.contained_columns.insert(column);
-        self.hit_objects.push(hit_object);
+        Self::new_single(hit_object, column)
+    }
+
+    pub(crate) fn new_slider_note(
+        generator: &DistanceObjectPatternGenerator<'_>,
+        column: u8,
+        start_time: i32,
+        end_time: i32,
+    ) -> Self {
+        let pos = Pos2::new(column_to_pos(column, generator.total_columns));
+
+        let hit_object = if start_time == end_time {
+            HitObject {
+                pos,
+                start_time: start_time as f64,
+                kind: HitObjectKind::Circle,
+            }
+        } else {
+            HitObject {
+                pos,
+                start_time: start_time as f64,
+                kind: HitObjectKind::Hold {
+                    end_time: end_time as f64,
+                },
+            }
+        };
+
+        Self::new_single(hit_object, column)
     }
 
     pub(crate) fn add_slider_note(
@@ -98,7 +151,9 @@ impl Pattern {
         self.contained_columns.len() as i32
     }
 
-    pub(crate) fn extend(&mut self, mut other: Self) {
+    /// Moves all values of `other` into `self`,
+    /// leaving `other` empty but keeps the capacities.
+    pub(crate) fn append(&mut self, other: &mut Self) {
         self.hit_objects.append(&mut other.hit_objects);
         self.contained_columns
             .extend(other.contained_columns.drain());

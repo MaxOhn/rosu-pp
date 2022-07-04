@@ -45,25 +45,23 @@ impl<'h> EndTimeObjectPatternGenerator<'h> {
     }
 
     pub(crate) fn generate(&mut self) -> Pattern {
-        let mut pattern = Pattern::default();
-
         let generate_hold = self.end_time - self.hit_object.start_time >= 100.0;
 
         match self.total_columns {
             8 if self.sample.finish() && self.end_time - self.hit_object.start_time < 1000.0 => {
-                pattern.add_end_time_note(self, 0, generate_hold);
+                Pattern::new_end_time_note(self, 0, generate_hold)
             }
             8 => {
                 let column = self.get_random_column(self.random_start());
-                pattern.add_end_time_note(self, column, generate_hold);
+
+                Pattern::new_end_time_note(self, column, generate_hold)
             }
             _ => {
                 let column = self.get_random_column(0);
-                pattern.add_end_time_note(self, column, generate_hold);
+
+                Pattern::new_end_time_note(self, column, generate_hold)
             }
         }
-
-        pattern
     }
 
     fn get_random_column(&mut self, lower: i32) -> u8 {
