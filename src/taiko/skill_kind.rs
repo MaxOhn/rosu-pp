@@ -1,4 +1,6 @@
-use super::{DifficultyObject, HitObjectRhythm, LimitedQueue, Rim};
+use crate::limited_queue::LimitedQueue;
+
+use super::{DifficultyObject, HitObjectRhythm, Rim};
 
 use std::ops::Index;
 

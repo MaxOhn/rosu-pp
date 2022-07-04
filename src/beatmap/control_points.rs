@@ -9,11 +9,24 @@ pub struct TimingPoint {
     pub beat_len: f64,
     /// The start time of this timing section
     pub time: f64,
+    /// Whether the section between this and the
+    /// next timing points is a kiai section
+    pub kiai: bool,
 }
 
 impl PartialOrd for TimingPoint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.time.partial_cmp(&other.time)
+    }
+}
+
+impl Default for TimingPoint {
+    fn default() -> Self {
+        Self {
+            beat_len: 60_000.0 / 60.0,
+            time: 0.0,
+            kiai: false,
+        }
     }
 }
 
@@ -24,11 +37,24 @@ pub struct DifficultyPoint {
     pub time: f64,
     /// The speed multiplier until the next timing point
     pub speed_multiplier: f64,
+    /// Whether the section between this and the
+    /// next timing points is a kiai section
+    pub kiai: bool,
 }
 
 impl PartialOrd for DifficultyPoint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.time.partial_cmp(&other.time)
+    }
+}
+
+impl Default for DifficultyPoint {
+    fn default() -> Self {
+        Self {
+            time: 0.0,
+            speed_multiplier: 1.0,
+            kiai: false,
+        }
     }
 }
 
@@ -118,24 +144,29 @@ mod test {
                 TimingPoint {
                     time: 1.0,
                     beat_len: 10.0,
+                    kiai: false,
                 },
                 TimingPoint {
                     time: 3.0,
                     beat_len: 10.0,
+                    kiai: false,
                 },
                 TimingPoint {
                     time: 4.0,
                     beat_len: 10.0,
+                    kiai: false,
                 },
             ],
             difficulty_points: vec![
                 DifficultyPoint {
                     time: 2.0,
                     speed_multiplier: 10.0,
+                    kiai: false,
                 },
                 DifficultyPoint {
                     time: 5.0,
                     speed_multiplier: 10.0,
+                    kiai: false,
                 },
             ],
             ..Default::default()

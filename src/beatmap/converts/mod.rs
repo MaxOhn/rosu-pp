@@ -1,0 +1,2 @@
+mod mania;
+mod taiko;

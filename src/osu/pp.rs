@@ -1,5 +1,7 @@
 use super::{OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState};
-use crate::{Beatmap, DifficultyAttributes, Mods, OsuStars, PerformanceAttributes};
+use crate::{
+    AnyPP, Beatmap, DifficultyAttributes, GameMode, Mods, OsuStars, PerformanceAttributes,
+};
 
 /// Performance calculator on osu!standard maps.
 ///
@@ -33,10 +35,10 @@ use crate::{Beatmap, DifficultyAttributes, Mods, OsuStars, PerformanceAttributes
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct OsuPP<'map> {
-    map: &'map Beatmap,
-    attributes: Option<OsuDifficultyAttributes>,
-    mods: u32,
-    acc: Option<f64>,
+    pub(crate) map: &'map Beatmap,
+    pub(crate) attributes: Option<OsuDifficultyAttributes>,
+    pub(crate) mods: u32,
+    pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<usize>,
 
     pub(crate) n300: Option<usize>,
@@ -44,7 +46,7 @@ pub struct OsuPP<'map> {
     pub(crate) n50: Option<usize>,
     pub(crate) n_misses: usize,
     pub(crate) passed_objects: Option<usize>,
-    clock_rate: Option<f64>,
+    pub(crate) clock_rate: Option<f64>,
 }
 
 impl<'map> OsuPP<'map> {
@@ -64,6 +66,17 @@ impl<'map> OsuPP<'map> {
             n_misses: 0,
             passed_objects: None,
             clock_rate: None,
+        }
+    }
+
+    /// Convert the map into another mode.
+    #[inline]
+    pub fn mode(self, mode: GameMode) -> AnyPP<'map> {
+        match mode {
+            GameMode::STD => AnyPP::Osu(self),
+            GameMode::TKO => AnyPP::Taiko(self.into()),
+            GameMode::CTB => AnyPP::Catch(self.into()),
+            GameMode::MNA => AnyPP::Mania(self.into()),
         }
     }
 

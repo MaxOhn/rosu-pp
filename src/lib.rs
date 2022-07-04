@@ -1,7 +1,5 @@
 //! A standalone crate to calculate star ratings and performance points for all [osu!](https://osu.ppy.sh/home) gamemodes.
 //!
-//! Conversions between game modes (i.e. "converts") are generally not supported.
-//!
 //! Async is supported through features, see below.
 //!
 //! ## Usage
@@ -208,6 +206,7 @@ mod stars;
 pub use stars::AnyStars;
 
 mod curve;
+mod limited_queue;
 mod mods;
 
 pub use catch::{CatchPP, CatchStars};

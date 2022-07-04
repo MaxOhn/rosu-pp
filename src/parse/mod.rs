@@ -12,9 +12,9 @@ pub use pos2::Pos2;
 pub use slider_parsing::*;
 
 use reader::FileReader;
-use sort::legacy_sort;
+pub(crate) use sort::legacy_sort;
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, num::ParseIntError};
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::{fs::File, io::Read};
@@ -28,7 +28,7 @@ use std::path::Path;
 #[cfg(feature = "async_std")]
 use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
-use crate::beatmap::{Beatmap, DifficultyPoint, GameMode, TimingPoint};
+use crate::beatmap::{Beatmap, Break, DifficultyPoint, GameMode, TimingPoint};
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
@@ -121,28 +121,6 @@ macro_rules! parse_general_body {
     }};
 }
 
-macro_rules! parse_general {
-    () => {
-        fn parse_general<R: Read>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_general_body!(self, reader, section)
-        }
-    };
-
-    (async) => {
-        async fn parse_general<R: AsyncRead + Unpin>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_general_body!(self, reader, section)
-        }
-    };
-}
-
 macro_rules! parse_difficulty_body {
     ($self:ident, $reader:ident, $section:ident) => {{
         let mut ar = None;
@@ -187,26 +165,34 @@ macro_rules! parse_difficulty_body {
     }};
 }
 
-macro_rules! parse_difficulty {
-    () => {
-        fn parse_difficulty<R: Read>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_difficulty_body!(self, reader, section)
-        }
-    };
+macro_rules! parse_events_body {
+    ($self:ident, $reader:ident, $section:ident) => {{
+        let mut empty = true;
 
-    (async) => {
-        async fn parse_difficulty<R: AsyncRead + Unpin>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_difficulty_body!(self, reader, section)
+        while next_line!($reader)? != 0 {
+            if let Some(bytes) = $reader.get_section() {
+                *$section = Section::from_bytes(bytes);
+                empty = false;
+                break;
+            }
+
+            let line = $reader.get_line()?;
+            let mut split = line.split(',');
+
+            // We're only interested in breaks
+            if let Some(b'2') = split.next().and_then(|value| value.bytes().next()) {
+                let start_time = split.next().next_field("break start")?.parse()?;
+                let end_time = split.next().next_field("break end")?.parse()?;
+
+                $self.breaks.push(Break {
+                    start_time,
+                    end_time,
+                });
+            }
         }
-    };
+
+        Ok(empty)
+    }};
 }
 
 macro_rules! parse_timingpoints_body {
@@ -238,10 +224,20 @@ macro_rules! parse_timingpoints_body {
 
             let beat_len: f64 = split.next().next_field("beat len")?.trim().parse()?;
             let timing_change = split.nth(4).and_then(|value| value.bytes().next());
+            let effect_flags = split.next().and_then(|value| value.bytes().next());
+
+            let kiai = matches!(effect_flags, Some(b'1'));
 
             if matches!(timing_change, Some(b'1') | None) {
                 let beat_len = beat_len.clamp(6.0, 60_000.0);
-                $self.timing_points.push(TimingPoint { time, beat_len });
+
+                let point = TimingPoint {
+                    time,
+                    beat_len,
+                    kiai,
+                };
+
+                $self.timing_points.push(point);
 
                 if time < prev_time {
                     unsorted_timings = true;
@@ -258,6 +254,7 @@ macro_rules! parse_timingpoints_body {
                 let point = DifficultyPoint {
                     time,
                     speed_multiplier,
+                    kiai,
                 };
 
                 $self.difficulty_points.push(point);
@@ -280,28 +277,6 @@ macro_rules! parse_timingpoints_body {
 
         Ok(empty)
     }};
-}
-
-macro_rules! parse_timingpoints {
-    () => {
-        fn parse_timingpoints<R: Read>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_timingpoints_body!(self, reader, section)
-        }
-    };
-
-    (async) => {
-        async fn parse_timingpoints<R: AsyncRead + Unpin>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_timingpoints_body!(self, reader, section)
-        }
-    };
 }
 
 macro_rules! parse_hitobjects_body {
@@ -430,10 +405,25 @@ macro_rules! parse_hitobjects_body {
                         .max(0.0)
                         .min(MAX_COORDINATE_VALUE);
 
+                    let edge_sounds_opt = split.next().map(|sounds| {
+                        sounds
+                            .split('|')
+                            .take(repeats + 2)
+                            .map(str::parse)
+                            .collect::<Result<Vec<_>, _>>()
+                    });
+
+                    let edge_sounds = match edge_sounds_opt {
+                        None => Vec::new(),
+                        Some(Ok(sounds)) => sounds,
+                        Some(Err(err)) => return Err(ParseIntError::into(err)),
+                    };
+
                     HitObjectKind::Slider {
                         repeats,
                         pixel_len,
                         control_points,
+                        edge_sounds,
                     }
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {
@@ -482,28 +472,6 @@ macro_rules! parse_hitobjects_body {
     }};
 }
 
-macro_rules! parse_hitobjects {
-    () => {
-        fn parse_hitobjects<R: Read>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_hitobjects_body!(self, reader, section)
-        }
-    };
-
-    (async) => {
-        async fn parse_hitobjects<R: AsyncRead + Unpin>(
-            &mut self,
-            reader: &mut FileReader<R>,
-            section: &mut Section,
-        ) -> ParseResult<bool> {
-            parse_hitobjects_body!(self, reader, section)
-        }
-    };
-}
-
 macro_rules! parse_body {
     ($input:ident) => {{
         let mut reader = FileReader::new($input);
@@ -526,6 +494,7 @@ macro_rules! parse_body {
             match section {
                 Section::General => section!(map, parse_general, reader, section),
                 Section::Difficulty => section!(map, parse_difficulty, reader, section),
+                Section::Events => section!(map, parse_events, reader, section),
                 Section::TimingPoints => section!(map, parse_timingpoints, reader, section),
                 Section::HitObjects => section!(map, parse_hitobjects, reader, section),
                 Section::None => {
@@ -542,53 +511,6 @@ macro_rules! parse_body {
 
         Ok(map)
     }};
-}
-
-macro_rules! parse {
-    () => {
-        /// Parse a beatmap from a `.osu` file.
-        ///
-        /// As argument you can give anything that implements [`std::io::Read`].
-        /// You'll likely want to pass (a reference of) a [`File`](std::fs::File)
-        /// or the file's content as a slice of bytes (`&[u8]`).
-        pub fn parse<R: Read>(input: R) -> ParseResult<Self> {
-            parse_body!(input)
-        }
-    };
-
-    (async) => {
-        /// Parse a beatmap from a `.osu` file.
-        ///
-        /// As argument you can give anything that implements `tokio::io::AsyncRead`
-        /// or `async_std::io::Read`, depending which feature you chose.
-        /// You'll likely want to pass a `File`
-        /// or the file's content as a slice of bytes (`&[u8]`).
-        pub async fn parse<R: AsyncRead + Unpin>(input: R) -> ParseResult<Self> {
-            parse_body!(input)
-        }
-    };
-}
-
-macro_rules! from_path {
-    () => {
-        /// Pass the path to a `.osu` file.
-        ///
-        /// Useful when you don't want to create the [`File`](std::fs::File) manually.
-        /// If you have the file lying around already though (and plan on re-using it),
-        /// passing `&file` to [`parse`](Beatmap::parse) should be preferred.
-        pub fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
-            Self::parse(File::open(path)?)
-        }
-    };
-
-    (async) => {
-        /// Pass the path to a `.osu` file.
-        ///
-        /// Useful when you don't want to create the file manually.
-        pub async fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
-            Self::parse(File::open(path).await?).await
-        }
-    };
 }
 
 impl Beatmap {
@@ -751,35 +673,122 @@ mod slider_parsing {
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 impl Beatmap {
-    parse!();
-    parse_general!();
-    parse_difficulty!();
-    parse_timingpoints!();
-    parse_hitobjects!();
+    /// Parse a beatmap from a `.osu` file.
+    ///
+    /// As argument you can give anything that implements [`std::io::Read`].
+    /// You'll likely want to pass (a reference of) a [`File`](std::fs::File)
+    /// or the file's content as a slice of bytes (`&[u8]`).
+    pub fn parse<R: Read>(input: R) -> ParseResult<Self> {
+        parse_body!(input)
+    }
 
-    from_path!();
+    fn parse_general<R: Read>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_general_body!(self, reader, section)
+    }
+
+    fn parse_difficulty<R: Read>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_difficulty_body!(self, reader, section)
+    }
+
+    fn parse_events<R: Read>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_events_body!(self, reader, section)
+    }
+
+    fn parse_hitobjects<R: Read>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_hitobjects_body!(self, reader, section)
+    }
+
+    fn parse_timingpoints<R: Read>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_timingpoints_body!(self, reader, section)
+    }
+    /// Pass the path to a `.osu` file.
+    ///
+    /// Useful when you don't want to create the [`File`](std::fs::File) manually.
+    /// If you have the file lying around already though (and plan on re-using it),
+    /// passing `&file` to [`parse`](Beatmap::parse) should be preferred.
+    pub fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
+        Self::parse(File::open(path)?)
+    }
 }
 
-#[cfg(feature = "async_tokio")]
+#[cfg(any(feature = "async_tokio", feature = "async_std"))]
 impl Beatmap {
-    parse!(async);
-    parse_general!(async);
-    parse_difficulty!(async);
-    parse_timingpoints!(async);
-    parse_hitobjects!(async);
+    /// Parse a beatmap from a `.osu` file.
+    ///
+    /// As argument you can give anything that implements `tokio::io::AsyncRead`
+    /// or `async_std::io::Read`, depending which feature you chose.
+    /// You'll likely want to pass a `File`
+    /// or the file's content as a slice of bytes (`&[u8]`).
+    pub async fn parse<R: AsyncRead + Unpin>(input: R) -> ParseResult<Self> {
+        parse_body!(input)
+    }
 
-    from_path!(async);
-}
+    async fn parse_general<R: AsyncRead + Unpin>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_general_body!(self, reader, section)
+    }
 
-#[cfg(feature = "async_std")]
-impl Beatmap {
-    parse!(async);
-    parse_general!(async);
-    parse_difficulty!(async);
-    parse_timingpoints!(async);
-    parse_hitobjects!(async);
+    async fn parse_difficulty<R: AsyncRead + Unpin>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_difficulty_body!(self, reader, section)
+    }
 
-    from_path!(async);
+    async fn parse_events<R: AsyncRead + Unpin>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_events_body!(self, reader, section)
+    }
+
+    async fn parse_hitobjects<R: AsyncRead + Unpin>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_hitobjects_body!(self, reader, section)
+    }
+
+    async fn parse_timingpoints<R: AsyncRead + Unpin>(
+        &mut self,
+        reader: &mut FileReader<R>,
+        section: &mut Section,
+    ) -> ParseResult<bool> {
+        parse_timingpoints_body!(self, reader, section)
+    }
+
+    /// Pass the path to a `.osu` file.
+    ///
+    /// Useful when you don't want to create the file manually.
+    pub async fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
+        Self::parse(File::open(path).await?).await
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -789,6 +798,7 @@ enum Section {
     Difficulty,
     TimingPoints,
     HitObjects,
+    Events,
 }
 
 impl Section {
@@ -798,6 +808,7 @@ impl Section {
             b"Difficulty" => Self::Difficulty,
             b"TimingPoints" => Self::TimingPoints,
             b"HitObjects" => Self::HitObjects,
+            b"Events" => Self::Events,
             _ => Self::None,
         }
     }

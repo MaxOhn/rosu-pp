@@ -16,7 +16,9 @@ use movement::Movement;
 pub use pp::*;
 use slider_state::SliderState;
 
-use crate::{catch::fruit_or_juice::FruitParams, curve::CurveBuffers, Beatmap, Mods, Strains};
+use crate::{
+    catch::fruit_or_juice::FruitParams, curve::CurveBuffers, Beatmap, Mods, OsuStars, Strains,
+};
 
 const SECTION_LENGTH: f64 = 750.0;
 const STAR_SCALING_FACTOR: f64 = 0.153;
@@ -128,7 +130,6 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
     } = params;
 
     let take = passed_objects.unwrap_or(usize::MAX);
-
     let map_attributes = map.attributes().mods(mods);
     let clock_rate = clock_rate.unwrap_or(map_attributes.clock_rate);
 
@@ -274,7 +275,27 @@ impl CatchPerformanceAttributes {
 }
 
 impl From<CatchPerformanceAttributes> for CatchDifficultyAttributes {
+    #[inline]
     fn from(attributes: CatchPerformanceAttributes) -> Self {
         attributes.difficulty
+    }
+}
+
+impl<'map> From<OsuStars<'map>> for CatchStars<'map> {
+    #[inline]
+    fn from(osu: OsuStars<'map>) -> Self {
+        let OsuStars {
+            map,
+            mods,
+            passed_objects,
+            clock_rate,
+        } = osu;
+
+        Self {
+            map,
+            mods,
+            passed_objects,
+            clock_rate,
+        }
     }
 }

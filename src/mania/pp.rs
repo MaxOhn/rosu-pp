@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use super::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaStars};
-use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP, PerformanceAttributes};
 
 /// Performance calculator on osu!mania maps.
 ///
@@ -31,7 +33,7 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct ManiaPP<'map> {
-    map: &'map Beatmap,
+    map: Cow<'map, Beatmap>,
     stars: Option<f64>,
     mods: u32,
     pub(crate) score: Option<f64>,
@@ -44,7 +46,7 @@ impl<'map> ManiaPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map,
+            map: Cow::Borrowed(map),
             stars: None,
             mods: 0,
             score: None,
@@ -112,7 +114,7 @@ impl<'map> ManiaPP<'map> {
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(self) -> ManiaPerformanceAttributes {
         let stars = self.stars.unwrap_or_else(|| {
-            let mut calculator = ManiaStars::new(self.map).mods(self.mods);
+            let mut calculator = ManiaStars::new(self.map.as_ref()).mods(self.mods);
 
             if let Some(passed_objects) = self.passed_objects {
                 calculator = calculator.passed_objects(passed_objects);
@@ -154,7 +156,19 @@ impl<'map> ManiaPP<'map> {
             od *= 1.4;
         }
 
-        let hit_window = ((od * clock_rate).floor() / clock_rate).ceil();
+        let hit_window = {
+            let not_converted = matches!(self.map, Cow::Borrowed(_));
+
+            let value = if not_converted {
+                od
+            } else if self.map.od > 4.0 {
+                34.0
+            } else {
+                47.0
+            };
+
+            ((value * clock_rate).floor() / clock_rate).ceil()
+        };
 
         let strain_value = self.compute_strain(scaled_score, stars);
         let acc_value = self.compute_accuracy_value(scaled_score, strain_value, hit_window);
@@ -196,6 +210,28 @@ impl<'map> ManiaPP<'map> {
         (0.2 - (hit_window - 34.0) * 0.006667).max(0.0)
             * strain
             * ((score - 960_000.0).max(0.0) / 40_000.0).powf(1.1)
+    }
+}
+
+impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
+    #[inline]
+    fn from(osu: OsuPP<'map>) -> Self {
+        let OsuPP {
+            map,
+            mods,
+            passed_objects,
+            clock_rate,
+            ..
+        } = osu;
+
+        Self {
+            map: map.convert_mode(GameMode::MNA),
+            stars: None,
+            mods,
+            score: None,
+            passed_objects,
+            clock_rate,
+        }
     }
 }
 

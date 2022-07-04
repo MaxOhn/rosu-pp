@@ -44,6 +44,19 @@ impl<'map> AnyStars<'map> {
         }
     }
 
+    /// If the map is an osu!standard map, convert it to another mode.
+    pub fn mode(self, mode: GameMode) -> Self {
+        match self {
+            AnyStars::Osu(o) => match mode {
+                GameMode::STD => AnyStars::Osu(o),
+                GameMode::TKO => AnyStars::Taiko(o.into()),
+                GameMode::CTB => AnyStars::Catch(o.into()),
+                GameMode::MNA => AnyStars::Mania(o.into()),
+            },
+            other => other,
+        }
+    }
+
     /// Specify mods through their bit values.
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)

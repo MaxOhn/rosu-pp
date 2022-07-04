@@ -2,7 +2,6 @@ mod difficulty_object;
 mod gradual_difficulty;
 mod gradual_performance;
 mod hitobject_rhythm;
-mod limited_queue;
 mod pp;
 mod rim;
 mod skill;
@@ -14,7 +13,6 @@ use difficulty_object::DifficultyObject;
 pub use gradual_difficulty::*;
 pub use gradual_performance::*;
 use hitobject_rhythm::{closest_rhythm, HitObjectRhythm};
-use limited_queue::LimitedQueue;
 pub use pp::*;
 use rim::Rim;
 use skill_kind::SkillKind;
@@ -22,8 +20,9 @@ use stamina_cheese::StaminaCheeseDetector;
 use taiko_object::IntoTaikoObjectIter;
 
 use crate::taiko::skill::Skills;
-use crate::{Beatmap, Mods, Strains};
+use crate::{Beatmap, GameMode, Mods, OsuStars, Strains};
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::f64::consts::PI;
 
@@ -53,7 +52,7 @@ const STAMINA_SKILL_MULTIPLIER: f64 = 0.02;
 /// ```
 #[derive(Clone, Debug)]
 pub struct TaikoStars<'map> {
-    map: &'map Beatmap,
+    map: Cow<'map, Beatmap>,
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
@@ -64,7 +63,7 @@ impl<'map> TaikoStars<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map,
+            map: Cow::Borrowed(map),
             mods: 0,
             passed_objects: None,
             clock_rate: None,
@@ -331,7 +330,27 @@ impl TaikoPerformanceAttributes {
 }
 
 impl From<TaikoPerformanceAttributes> for TaikoDifficultyAttributes {
+    #[inline]
     fn from(attributes: TaikoPerformanceAttributes) -> Self {
         attributes.difficulty
+    }
+}
+
+impl<'map> From<OsuStars<'map>> for TaikoStars<'map> {
+    #[inline]
+    fn from(osu: OsuStars<'map>) -> Self {
+        let OsuStars {
+            map,
+            mods,
+            passed_objects,
+            clock_rate,
+        } = osu;
+
+        Self {
+            map: map.convert_mode(GameMode::TKO),
+            mods,
+            passed_objects,
+            clock_rate,
+        }
     }
 }

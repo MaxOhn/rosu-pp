@@ -55,24 +55,29 @@ mod test {
                 TimingPoint {
                     time: 1.0,
                     beat_len: 10.0,
+                    kiai: false,
                 },
                 TimingPoint {
                     time: 3.0,
                     beat_len: 20.0,
+                    kiai: false,
                 },
                 TimingPoint {
                     time: 4.0,
                     beat_len: 30.0,
+                    kiai: false,
                 },
             ],
             difficulty_points: vec![
                 DifficultyPoint {
                     time: 2.0,
                     speed_multiplier: 15.0,
+                    kiai: false,
                 },
                 DifficultyPoint {
                     time: 5.0,
                     speed_multiplier: 45.0,
+                    kiai: false,
                 },
             ],
             ..Default::default()

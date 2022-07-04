@@ -85,6 +85,20 @@ impl<'map> AnyPP<'map> {
         }
     }
 
+    /// If the map is an osu!standard map, convert it to another mode.
+    #[inline]
+    pub fn mode(self, mode: GameMode) -> Self {
+        match self {
+            AnyPP::Osu(o) => match mode {
+                GameMode::STD => AnyPP::Osu(o),
+                GameMode::TKO => AnyPP::Taiko(o.into()),
+                GameMode::CTB => AnyPP::Catch(o.into()),
+                GameMode::MNA => AnyPP::Mania(o.into()),
+            },
+            other => other,
+        }
+    }
+
     /// Specify mods through their bit values.
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)

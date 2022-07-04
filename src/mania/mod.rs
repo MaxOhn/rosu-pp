@@ -3,12 +3,14 @@ mod gradual_performance;
 mod pp;
 mod strain;
 
+use std::borrow::Cow;
+
 pub use gradual_difficulty::*;
 pub use gradual_performance::*;
 pub use pp::*;
 use strain::Strain;
 
-use crate::{parse::HitObject, Beatmap, GameMode, Mods, Strains};
+use crate::{parse::HitObject, Beatmap, GameMode, Mods, OsuStars, Strains};
 
 const SECTION_LEN: f64 = 400.0;
 const STAR_SCALING_FACTOR: f64 = 0.018;
@@ -33,7 +35,7 @@ const STAR_SCALING_FACTOR: f64 = 0.018;
 /// ```
 #[derive(Clone, Debug)]
 pub struct ManiaStars<'map> {
-    map: &'map Beatmap,
+    map: Cow<'map, Beatmap>,
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
@@ -44,7 +46,7 @@ impl<'map> ManiaStars<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map,
+            map: Cow::Borrowed(map),
             mods: 0,
             passed_objects: None,
             clock_rate: None,
@@ -189,12 +191,9 @@ pub(crate) struct DifficultyHitObject<'o> {
 impl<'o> DifficultyHitObject<'o> {
     #[inline]
     fn new(base: &'o HitObject, prev: &'o HitObject, columns: f32, clock_rate: f64) -> Self {
-        let x_divisor = 512.0 / columns;
-        let column = (base.pos.x / x_divisor).floor().min(columns - 1.0) as usize;
-
         Self {
             base,
-            column,
+            column: base.column(columns) as usize,
             delta: (base.start_time - prev.start_time) / clock_rate,
             start_time: base.start_time / clock_rate,
         }
@@ -236,7 +235,27 @@ impl ManiaPerformanceAttributes {
 }
 
 impl From<ManiaPerformanceAttributes> for ManiaDifficultyAttributes {
+    #[inline]
     fn from(attributes: ManiaPerformanceAttributes) -> Self {
         attributes.difficulty
+    }
+}
+
+impl<'map> From<OsuStars<'map>> for ManiaStars<'map> {
+    #[inline]
+    fn from(osu: OsuStars<'map>) -> Self {
+        let OsuStars {
+            map,
+            mods,
+            passed_objects,
+            clock_rate,
+        } = osu;
+
+        Self {
+            map: map.convert_mode(GameMode::MNA),
+            mods,
+            passed_objects,
+            clock_rate,
+        }
     }
 }

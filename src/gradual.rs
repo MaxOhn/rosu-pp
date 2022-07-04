@@ -268,6 +268,7 @@ impl From<ScoreState> for TaikoScoreState {
 /// assert!(gradual_perf.process_next_object(state).is_none());
 /// ```
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum GradualPerformanceAttributes<'map> {
     /// Gradual osu!catch performance attributes.
     Catch(CatchGradualPerformanceAttributes<'map>),

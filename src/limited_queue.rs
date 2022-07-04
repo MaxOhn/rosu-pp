@@ -3,6 +3,7 @@ use std::iter::{Cycle, Skip, Take};
 use std::ops::Index;
 use std::slice::Iter;
 
+// TODO: make generic over const size
 #[derive(Clone, Debug)]
 pub(crate) struct LimitedQueue<T> {
     queue: Vec<T>,
@@ -90,6 +91,7 @@ impl<T> Index<usize> for LimitedQueue<T> {
     }
 }
 
+// TODO: replace with simple type definition
 pub(crate) struct LimitedQueueIter<'a, T> {
     iter: Take<Skip<Cycle<Iter<'a, T>>>>,
 }

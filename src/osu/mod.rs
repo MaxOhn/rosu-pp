@@ -20,7 +20,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{curve::CurveBuffers, Beatmap, Mods, Strains};
+use crate::{curve::CurveBuffers, AnyStars, Beatmap, GameMode, Mods, Strains};
 
 use self::skill::Skills;
 
@@ -49,10 +49,10 @@ const STACK_DISTANCE: f32 = 3.0;
 /// ```
 #[derive(Clone, Debug)]
 pub struct OsuStars<'map> {
-    map: &'map Beatmap,
-    mods: u32,
-    passed_objects: Option<usize>,
-    clock_rate: Option<f64>,
+    pub(crate) map: &'map Beatmap,
+    pub(crate) mods: u32,
+    pub(crate) passed_objects: Option<usize>,
+    pub(crate) clock_rate: Option<f64>,
 }
 
 impl<'map> OsuStars<'map> {
@@ -64,6 +64,17 @@ impl<'map> OsuStars<'map> {
             mods: 0,
             passed_objects: None,
             clock_rate: None,
+        }
+    }
+
+    /// Convert the map into another mode.
+    #[inline]
+    pub fn mode(self, mode: GameMode) -> AnyStars<'map> {
+        match mode {
+            GameMode::STD => AnyStars::Osu(self),
+            GameMode::TKO => AnyStars::Taiko(self.into()),
+            GameMode::CTB => AnyStars::Catch(self.into()),
+            GameMode::MNA => AnyStars::Mania(self.into()),
         }
     }
 
@@ -578,6 +589,7 @@ impl OsuPerformanceAttributes {
 }
 
 impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {
+    #[inline]
     fn from(attributes: OsuPerformanceAttributes) -> Self {
         attributes.difficulty
     }
