@@ -88,6 +88,7 @@ impl OsuObject {
                 pixel_len,
                 repeats,
                 control_points,
+                ..
             } => {
                 attributes.n_sliders += 1;
 

@@ -49,10 +49,10 @@ const STACK_DISTANCE: f32 = 3.0;
 /// ```
 #[derive(Clone, Debug)]
 pub struct OsuStars<'map> {
-    map: &'map Beatmap,
-    mods: u32,
-    passed_objects: Option<usize>,
-    clock_rate: Option<f64>,
+    pub(crate) map: &'map Beatmap,
+    pub(crate) mods: u32,
+    pub(crate) passed_objects: Option<usize>,
+    pub(crate) clock_rate: Option<f64>,
 }
 
 impl<'map> OsuStars<'map> {
@@ -578,6 +578,7 @@ impl OsuPerformanceAttributes {
 }
 
 impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {
+    #[inline]
     fn from(attributes: OsuPerformanceAttributes) -> Self {
         attributes.difficulty
     }

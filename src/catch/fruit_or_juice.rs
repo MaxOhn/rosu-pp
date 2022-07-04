@@ -49,6 +49,7 @@ impl FruitOrJuice {
                 pixel_len,
                 repeats,
                 control_points,
+                ..
             } => {
                 // HR business
                 params.last_pos = Some(h.pos.x + control_points[control_points.len() - 1].pos.x);

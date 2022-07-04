@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use super::{TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState, TaikoStars};
-use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP, PerformanceAttributes};
 
 /// Performance calculator on osu!taiko maps.
 ///
@@ -33,7 +35,7 @@ use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'map> {
-    map: &'map Beatmap,
+    map: Cow<'map, Beatmap>,
     attributes: Option<TaikoDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
@@ -51,7 +53,7 @@ impl<'map> TaikoPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map,
+            map: Cow::Borrowed(map),
             attributes: None,
             mods: 0,
             combo: None,
@@ -171,7 +173,7 @@ impl<'map> TaikoPP<'map> {
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> TaikoPerformanceAttributes {
         let attributes = self.attributes.take().unwrap_or_else(|| {
-            let mut calculator = TaikoStars::new(self.map).mods(self.mods);
+            let mut calculator = TaikoStars::new(self.map.as_ref()).mods(self.mods);
 
             if let Some(passed_objects) = self.passed_objects {
                 calculator = calculator.passed_objects(passed_objects);
@@ -205,7 +207,7 @@ impl<'map> TaikoPP<'map> {
         }
 
         let inner = TaikoPPInner {
-            map: self.map,
+            map: self.map.as_ref(),
             attributes,
             mods: self.mods,
             acc: self.acc,
@@ -300,6 +302,37 @@ impl<'map> TaikoPPInner<'map> {
 #[inline]
 fn difficulty_range_od(od: f64) -> f64 {
     crate::difficulty_range(od, 20.0, 35.0, 50.0)
+}
+
+impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
+    #[inline]
+    fn from(osu: OsuPP<'map>) -> Self {
+        let OsuPP {
+            map,
+            mods,
+            acc,
+            combo,
+            n300,
+            n100,
+            n_misses,
+            passed_objects,
+            clock_rate,
+            ..
+        } = osu;
+
+        Self {
+            map: map.convert_mode(GameMode::TKO),
+            attributes: None,
+            mods,
+            combo,
+            acc: acc.unwrap_or(1.0),
+            passed_objects,
+            clock_rate,
+            n300,
+            n100,
+            n_misses,
+        }
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.

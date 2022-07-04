@@ -1,5 +1,5 @@
-use super::{LimitedQueue, Rim};
-use crate::Beatmap;
+use super::Rim;
+use crate::{limited_queue::LimitedQueue, Beatmap};
 
 const ROLL_MIN_REPETITIONS: usize = 12;
 const TL_MIN_REPETITIONS: isize = 16;

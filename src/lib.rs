@@ -208,6 +208,7 @@ mod stars;
 pub use stars::AnyStars;
 
 mod curve;
+mod limited_queue;
 mod mods;
 
 pub use catch::{CatchPP, CatchStars};

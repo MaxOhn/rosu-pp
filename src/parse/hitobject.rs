@@ -44,6 +44,14 @@ impl HitObject {
     pub fn is_spinner(&self) -> bool {
         matches!(self.kind, HitObjectKind::Spinner { .. })
     }
+
+    /// The column of this node for osu!mania
+    #[inline]
+    pub fn column(&self, total_columns: f32) -> u8 {
+        let x_divisor = 512.0 / total_columns;
+
+        (self.pos.x / x_divisor).floor().min(total_columns - 1.0) as u8
+    }
 }
 
 impl PartialOrd for HitObject {
@@ -66,6 +74,9 @@ pub enum HitObjectKind {
         repeats: usize,
         /// The control points of the slider.
         control_points: Vec<PathControlPoint>,
+        /// Sample sounds for the slider head, end, and repeat points.
+        /// Required for converts.
+        edge_sounds: Vec<u8>,
     },
     /// A spinner object.
     Spinner {

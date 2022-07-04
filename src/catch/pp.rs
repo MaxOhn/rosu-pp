@@ -1,5 +1,5 @@
 use super::{CatchDifficultyAttributes, CatchPerformanceAttributes, CatchScoreState, CatchStars};
-use crate::{Beatmap, DifficultyAttributes, Mods, PerformanceAttributes};
+use crate::{Beatmap, DifficultyAttributes, Mods, OsuPP, PerformanceAttributes};
 
 /// Performance calculator on osu!catch maps.
 ///
@@ -427,6 +427,43 @@ impl CatchPPInner {
             (self.successful_hits() as f64 / total_hits as f64)
                 .max(0.0)
                 .min(1.0)
+        }
+    }
+}
+
+impl<'map> From<OsuPP<'map>> for CatchPP<'map> {
+    fn from(osu: OsuPP<'map>) -> Self {
+        let OsuPP {
+            map,
+            mods,
+            acc,
+            combo,
+            n300,
+            n100,
+            n50,
+            n_misses,
+            passed_objects,
+            clock_rate,
+            ..
+        } = osu;
+
+        let res = Self {
+            map,
+            attributes: None,
+            mods,
+            combo,
+            n_fruits: n300,
+            n_droplets: n100,
+            n_tiny_droplets: n50,
+            n_tiny_droplet_misses: None,
+            n_misses,
+            passed_objects,
+            clock_rate,
+        };
+
+        match acc {
+            Some(acc) => res.accuracy(acc),
+            None => res,
         }
     }
 }

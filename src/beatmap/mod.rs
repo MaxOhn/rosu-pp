@@ -4,11 +4,13 @@ use crate::parse::HitObject;
 
 pub use self::{
     attributes::BeatmapAttributes,
+    breaks::Break,
     control_points::{ControlPoint, ControlPointIter, DifficultyPoint, TimingPoint},
     mode::GameMode,
 };
 
 mod attributes;
+mod breaks;
 mod control_points;
 mod converts;
 mod mode;
@@ -56,6 +58,9 @@ pub struct Beatmap {
     /// The stack leniency that is used to calculate
     /// the stack offset for stacked positions.
     pub stack_leniency: f32,
+
+    /// All break points of the beatmap.
+    pub breaks: Vec<Break>,
 }
 
 impl Beatmap {
@@ -80,15 +85,26 @@ impl Beatmap {
         ControlPointIter::new(self)
     }
 
+    /// Sum up the duration of all breaks.
+    #[inline]
+    pub fn total_break_time(&self) -> f64 {
+        self.breaks.iter().map(Break::duration).sum()
+    }
+
     /// Return the [`TimingPoint`] for the given timestamp.
     ///
     /// If `time` is before the first timing point, `None` is returned.
     #[inline]
-    pub fn timing_point_at(&self, time: f64) -> Option<TimingPoint> {
-        self.timing_points
-            .binary_search_by(|probe| probe.time.partial_cmp(&time).unwrap_or(Ordering::Less))
-            .map_or_else(|i| i.checked_sub(1), Some)
-            .map(|i| self.timing_points[i])
+    pub fn timing_point_at(&self, time: f64) -> TimingPoint {
+        let idx_result = self
+            .timing_points
+            .binary_search_by(|probe| probe.time.partial_cmp(&time).unwrap_or(Ordering::Less));
+
+        match idx_result {
+            Ok(idx) => self.timing_points[idx],
+            Err(0) => self.timing_points.first().copied().unwrap_or_default(),
+            Err(idx) => self.timing_points[idx - 1],
+        }
     }
 
     /// Return the [`DifficultyPoint`] for the given timestamp.
@@ -109,23 +125,20 @@ impl Beatmap {
             return Cow::Borrowed(self);
         }
 
-        let converted = match mode {
-            GameMode::STD => todo!(),
-            GameMode::TKO => self.convert_to_taiko(),
-            GameMode::CTB => todo!(),
-            GameMode::MNA => todo!(),
-        };
-
-        Cow::Owned(converted)
+        match mode {
+            GameMode::STD | GameMode::CTB => Cow::Borrowed(self),
+            GameMode::TKO => Cow::Owned(self.convert_to_taiko()),
+            GameMode::MNA => Cow::Owned(self.convert_to_mania()),
+        }
     }
 
-    fn clone_without_hit_objects(&self) -> Self {
+    fn clone_without_hit_objects(&self, with_sounds: bool) -> Self {
         Self {
             mode: self.mode,
             version: self.version,
-            n_circles: self.n_circles,
-            n_sliders: self.n_sliders,
-            n_spinners: self.n_spinners,
+            n_circles: 0,
+            n_sliders: 0,
+            n_spinners: 0,
             ar: self.ar,
             od: self.od,
             cs: self.cs,
@@ -133,10 +146,11 @@ impl Beatmap {
             slider_mult: self.slider_mult,
             tick_rate: self.tick_rate,
             hit_objects: Vec::with_capacity(self.hit_objects.len()),
-            sounds: self.sounds.clone(),
+            sounds: Vec::with_capacity((with_sounds as usize) * self.sounds.len()),
             timing_points: self.timing_points.clone(),
             difficulty_points: self.difficulty_points.clone(),
             stack_leniency: self.stack_leniency,
+            breaks: self.breaks.clone(),
         }
     }
 }

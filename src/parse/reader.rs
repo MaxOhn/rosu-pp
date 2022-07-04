@@ -43,6 +43,7 @@ macro_rules! read_until {
     }};
 }
 
+#[allow(unused_macro_rules)]
 macro_rules! impl_reader {
     () => {
         impl<R: Read> FileReader<R> {
@@ -96,10 +97,7 @@ macro_rules! impl_reader {
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 impl_reader!();
 
-#[cfg(feature = "async_tokio")]
-impl_reader!(async);
-
-#[cfg(feature = "async_std")]
+#[cfg(any(feature = "async_tokio", feature = "async_std"))]
 impl_reader!(async);
 
 impl<R> FileReader<R> {

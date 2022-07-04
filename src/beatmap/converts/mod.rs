@@ -1,1 +1,2 @@
+mod mania;
 mod taiko;
