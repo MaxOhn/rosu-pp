@@ -1,75 +1,101 @@
-use std::cmp::Ordering;
-use std::iter::{Cycle, Skip, Take};
-use std::ops::Index;
-use std::slice::Iter;
+use std::{
+    cmp::Ordering,
+    iter::{Cycle, Skip, Take},
+    ops::Index,
+    slice::Iter,
+};
 
-// TODO: make generic over const size
+/// Efficient counterpart to osu!'s [`LimitedCapacityQueue`]
+/// i.e. an indexed queue with limited capacity.
+///
+/// [`LimitedQueue`] will use an internal array as queue which
+/// is stored on the stack. Hence, if the size is very large,
+/// e.g. `size_of<T>() * N`, consider using a different type
+/// since heap allocation might be favorable.
+///
+/// [`LimitedCapacityQueue`]: https://github.com/ppy/osu/blob/b49a1aab8ac6e16e48dffd03f55635cdc1771adf/osu.Game/Rulesets/Difficulty/Utils/LimitedCapacityQueue.cs
 #[derive(Clone, Debug)]
-pub(crate) struct LimitedQueue<T> {
-    queue: Vec<T>,
-    start: usize,
+pub(crate) struct LimitedQueue<T, const N: usize> {
+    queue: [T; N],
+    /// If the queue is not empty, `end` is the index of the last element.
+    /// Otherwise, it has no meaning.
     end: usize,
+    /// Amount of elements in the queue. This is equal to `end + 1`
+    /// if the queue is not full, or `N` otherwise.
+    len: usize,
 }
 
-impl<T> LimitedQueue<T> {
+impl<T, const N: usize> Default for LimitedQueue<T, N>
+where
+    T: Copy + Clone + Default,
+{
     #[inline]
-    pub(crate) fn new(capacity: usize) -> Self {
+    fn default() -> Self {
         Self {
-            end: capacity - 1,
-            start: 0,
-            queue: Vec::with_capacity(capacity),
+            end: N - 1,
+            queue: [T::default(); N],
+            len: 0,
         }
     }
+}
 
-    #[inline]
+impl<T, const N: usize> LimitedQueue<T, N>
+where
+    T: Copy + Clone + Default,
+{
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl<T, const N: usize> LimitedQueue<T, N> {
     pub(crate) fn push(&mut self, elem: T) {
-        let capacity = self.queue.capacity();
-        self.end = (self.end + 1) % capacity;
+        self.end = (self.end + 1) % N;
+        self.queue[self.end] = elem;
+        self.len += (self.len < N) as usize;
+    }
 
-        if self.queue.len() == capacity {
-            self.start = (self.start + 1) % capacity;
-            self.queue[self.end] = elem;
+    pub(crate) fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.len
+    }
+
+    pub(crate) fn last(&self) -> Option<&T> {
+        if self.is_empty() {
+            None
         } else {
-            self.queue.push(elem);
+            Some(&self.queue[self.end])
         }
     }
 
-    #[inline]
-    pub(crate) fn len(&self) -> usize {
-        self.queue.len()
-    }
-
-    #[inline]
-    pub(crate) fn last(&self) -> Option<&T> {
-        self.queue.get(self.end)
-    }
-
-    #[inline]
     pub(crate) fn clear(&mut self) {
-        self.start = 0;
-        self.end = self.queue.capacity() - 1;
-        self.queue.clear();
+        self.end = N - 1;
+        self.len = 0;
     }
 
-    #[inline]
     pub(crate) fn full(&self) -> bool {
-        self.queue.len() == self.queue.capacity()
+        self.len == N
     }
 
-    #[inline]
     pub(crate) fn iter(&self) -> LimitedQueueIter<'_, T> {
         self.queue
             .iter()
             .cycle()
-            .skip(self.start)
-            .take(self.queue.len())
+            .skip((self.len == N) as usize * (self.end + 1))
+            .take(self.len)
     }
 }
 
-impl<T: PartialOrd> LimitedQueue<T> {
+pub(crate) type LimitedQueueIter<'a, T> = Take<Skip<Cycle<Iter<'a, T>>>>;
+
+impl<T: PartialOrd, const N: usize> LimitedQueue<T, N> {
     pub(crate) fn min(&self) -> Option<&T> {
         self.queue
             .iter()
+            .take(self.len)
             .reduce(|min, next| match min.partial_cmp(next) {
                 Some(Ordering::Less) => min,
                 Some(Ordering::Equal) => min,
@@ -79,13 +105,59 @@ impl<T: PartialOrd> LimitedQueue<T> {
     }
 }
 
-impl<T> Index<usize> for LimitedQueue<T> {
+impl<T, const N: usize> Index<usize> for LimitedQueue<T, N> {
     type Output = T;
 
     #[inline]
     fn index(&self, idx: usize) -> &Self::Output {
-        &self.queue[(self.start + idx) % self.queue.capacity()]
+        assert!(
+            idx < self.len,
+            "index out of bounds: the len is {} but the index is {idx}",
+            self.len
+        );
+
+        let idx = (idx + (self.len == N) as usize * (self.end + 1)) % N;
+
+        &self.queue[idx]
     }
 }
 
-pub(crate) type LimitedQueueIter<'a, T> = Take<Skip<Cycle<Iter<'a, T>>>>;
+#[cfg(test)]
+mod test {
+    use super::LimitedQueue;
+
+    #[test]
+    fn empty() {
+        let queue = LimitedQueue::<u8, 4>::default();
+        assert!(queue.is_empty());
+        assert_eq!(queue.last(), None);
+        assert_eq!(queue.iter().count(), 0);
+    }
+
+    #[test]
+    fn single_push() {
+        let mut queue = LimitedQueue::<u8, 4>::default();
+        let elem = 42;
+        queue.push(elem);
+        assert!(!queue.is_empty());
+        assert_eq!(queue.len(), 1);
+        assert_eq!(queue.last(), Some(&elem));
+        assert!(queue.iter().eq(vec![elem].iter()));
+        assert_eq!(queue[0], elem);
+    }
+
+    #[test]
+    fn overfull() {
+        let mut queue = LimitedQueue::<u8, 4>::default();
+
+        for i in 1..=5 {
+            queue.push(i as u8);
+            assert_eq!(i.min(4), queue.len());
+        }
+
+        assert_eq!(queue.last(), Some(&5));
+        assert!(queue.iter().eq(vec![2, 3, 4, 5].iter()));
+        assert_eq!(queue[0], 2);
+        assert_eq!(queue[3], 5);
+    }
+}

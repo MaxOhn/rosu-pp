@@ -57,6 +57,12 @@ pub(crate) struct HitObjectRhythm {
     pub(crate) difficulty: f64,
 }
 
+impl HitObjectRhythm {
+    pub(crate) fn static_ref() -> &'static Self {
+        &COMMON_RHYTHMS[0]
+    }
+}
+
 impl PartialEq for HitObjectRhythm {
     #[inline]
     fn eq(&self, other: &Self) -> bool {

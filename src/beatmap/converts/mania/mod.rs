@@ -65,7 +65,7 @@ impl Beatmap {
 
         map.cs = target_columns;
 
-        let mut prev_note_times = LimitedQueue::new(MAX_NOTES_FOR_DENSITY);
+        let mut prev_note_times: LimitedQueue<f64, MAX_NOTES_FOR_DENSITY> = LimitedQueue::new();
         let mut density = i32::MAX as f64;
 
         let mut compute_density = |new_note_time: f64, d: &mut f64| {

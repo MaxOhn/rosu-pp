@@ -2,8 +2,6 @@ use crate::limited_queue::LimitedQueue;
 
 use super::{DifficultyObject, HitObjectRhythm, Rim};
 
-use std::ops::Index;
-
 const RHYTHM_STRAIN_DECAY: f64 = 0.96;
 const MOST_RECENT_PATTERNS_TO_COMPARE: usize = 2;
 
@@ -11,20 +9,44 @@ const MONO_HISTORY_MAX_LEN: usize = 5;
 const RHYTHM_HISTORY_MAX_LEN: usize = 8;
 const STAMINA_HISTORY_MAX_LEN: usize = 2;
 
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct RhythmHistoryElement {
+    idx: usize,
+    rhythm: &'static HitObjectRhythm,
+}
+
+impl RhythmHistoryElement {
+    fn new(difficulty_object: &DifficultyObject<'_>) -> Self {
+        Self {
+            idx: difficulty_object.idx,
+            rhythm: difficulty_object.rhythm,
+        }
+    }
+}
+
+impl Default for RhythmHistoryElement {
+    fn default() -> Self {
+        Self {
+            idx: 0,
+            rhythm: HitObjectRhythm::static_ref(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) enum SkillKind {
     Color {
-        mono_history: LimitedQueue<usize>,
+        mono_history: LimitedQueue<usize, MONO_HISTORY_MAX_LEN>,
         prev_is_rim: Option<bool>,
         current_mono_len: usize,
     },
     Rhythm {
-        rhythm_history: LimitedQueue<(usize, &'static HitObjectRhythm)>, // (idx, rhythm)
+        rhythm_history: LimitedQueue<RhythmHistoryElement, RHYTHM_HISTORY_MAX_LEN>,
         notes_since_rhythm_change: usize,
         current_strain: f64,
     },
     Stamina {
-        note_pair_duration_history: LimitedQueue<f64>,
+        note_pair_duration_history: LimitedQueue<f64, STAMINA_HISTORY_MAX_LEN>,
         hand: u8,
         off_hand_object_duration: f64,
     },
@@ -34,7 +56,7 @@ impl SkillKind {
     #[inline]
     pub(crate) fn color() -> Self {
         Self::Color {
-            mono_history: LimitedQueue::new(MONO_HISTORY_MAX_LEN),
+            mono_history: LimitedQueue::new(),
             prev_is_rim: None,
             current_mono_len: 0,
         }
@@ -43,7 +65,7 @@ impl SkillKind {
     #[inline]
     pub(crate) fn rhythm() -> Self {
         Self::Rhythm {
-            rhythm_history: LimitedQueue::new(RHYTHM_HISTORY_MAX_LEN),
+            rhythm_history: LimitedQueue::new(),
             notes_since_rhythm_change: 0,
             current_strain: 0.0,
         }
@@ -52,7 +74,7 @@ impl SkillKind {
     #[inline]
     pub(crate) fn stamina(right_hand: bool) -> Self {
         Self::Stamina {
-            note_pair_duration_history: LimitedQueue::new(STAMINA_HISTORY_MAX_LEN),
+            note_pair_duration_history: LimitedQueue::new(),
             hand: right_hand as u8,
             off_hand_object_duration: f64::MAX,
         }
@@ -114,7 +136,7 @@ impl SkillKind {
                             let to_compare =
                                 mono_history.len() + i - MOST_RECENT_PATTERNS_TO_COMPARE;
 
-                            mono_history.index(start + i) != mono_history.index(to_compare)
+                            mono_history[start + i] != mono_history[to_compare]
                         });
 
                         if different_pattern {
@@ -166,7 +188,7 @@ impl SkillKind {
 
                 let mut strain = current.rhythm.difficulty;
 
-                rhythm_history.push((current.idx, current.rhythm));
+                rhythm_history.push(RhythmHistoryElement::new(current));
 
                 let mut reps_penalty = 1.0;
 
@@ -181,15 +203,14 @@ impl SkillKind {
                             let to_compare =
                                 rhythm_history.len() + i - most_recent_patterns_to_compare;
 
-                            rhythm_history.index(start + i).1 != rhythm_history.index(to_compare).1
+                            rhythm_history[start + i].rhythm != rhythm_history[to_compare].rhythm
                         });
 
                         if different_pattern {
                             continue;
                         }
 
-                        reps_penalty *=
-                            repetition_penalty(current.idx - rhythm_history.index(start).0);
+                        reps_penalty *= repetition_penalty(current.idx - rhythm_history[start].idx);
 
                         break;
                     }

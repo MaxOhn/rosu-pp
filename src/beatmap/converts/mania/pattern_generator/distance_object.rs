@@ -113,7 +113,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let conversion_diff = self.conversion_difficulty();
 
         if self.total_columns == 1 {
-            return Pattern::new_slider_note(self, 0, self.start_time, self.end_time);
+            Pattern::new_slider_note(self, 0, self.start_time, self.end_time)
         } else if self.span_count > 1 {
             if self.segment_duration <= 90 {
                 self.generate_random_hold_notes(self.start_time, 1)

@@ -37,6 +37,7 @@ use crate::{
 /// }
 /// ```
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum GradualDifficultyAttributes<'map> {
     /// Gradual osu!catch difficulty attributes.
     Catch(CatchGradualDifficultyAttributes<'map>),
