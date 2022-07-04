@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::{
     curve::{Curve, CurveBuffers},
     parse::{HitObject, HitObjectKind},
@@ -32,6 +34,8 @@ impl Beatmap {
                         let mut i = 0;
                         let mut j = obj.start_time;
 
+                        let edge_sound_count = edge_sounds.len().max(1);
+
                         while j <= obj.start_time + params.duration + params.tick_spacing / 8.0 {
                             let h = HitObject {
                                 pos: Default::default(),
@@ -48,10 +52,11 @@ impl Beatmap {
                             }
 
                             j += params.tick_spacing;
-                            i = (i + 1) % edge_sounds.len();
+                            i = (i + 1) % edge_sound_count;
                         }
                     } else {
-                        map.hit_objects.push(obj.to_owned())
+                        map.hit_objects.push(obj.to_owned());
+                        map.n_sliders += 1;
                     }
                 }
                 HitObjectKind::Spinner { .. } => {
@@ -60,16 +65,25 @@ impl Beatmap {
                     map.n_spinners += 1;
                 }
                 // Pathological case; shouldn't realistically happen
-                HitObjectKind::Hold { .. } => {
-                    map.hit_objects.push(obj.to_owned());
+                HitObjectKind::Hold { end_time } => {
+                    let obj = HitObject {
+                        pos: obj.pos,
+                        start_time: obj.start_time,
+                        kind: HitObjectKind::Spinner { end_time },
+                    };
+
+                    map.hit_objects.push(obj);
                     map.sounds.push(*sound);
-                    map.n_sliders += 1;
+                    map.n_spinners += 1;
                 }
             }
         }
 
         // We only convert STD to TKO so we don't need to remove objects
         // with the same timestamp that would appear only in MNA
+
+        map.hit_objects
+            .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 
         map
     }
