@@ -58,14 +58,11 @@ impl<T> LimitedQueue<T> {
 
     #[inline]
     pub(crate) fn iter(&self) -> LimitedQueueIter<'_, T> {
-        let iter = self
-            .queue
+        self.queue
             .iter()
             .cycle()
             .skip(self.start)
-            .take(self.queue.len());
-
-        LimitedQueueIter { iter }
+            .take(self.queue.len())
     }
 }
 
@@ -91,23 +88,4 @@ impl<T> Index<usize> for LimitedQueue<T> {
     }
 }
 
-// TODO: replace with simple type definition
-pub(crate) struct LimitedQueueIter<'a, T> {
-    iter: Take<Skip<Cycle<Iter<'a, T>>>>,
-}
-
-impl<'a, T> Iterator for LimitedQueueIter<'a, T> {
-    type Item = &'a T;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
-    }
-}
-
-impl<'a, T> ExactSizeIterator for LimitedQueueIter<'a, T> {}
+pub(crate) type LimitedQueueIter<'a, T> = Take<Skip<Cycle<Iter<'a, T>>>>;
