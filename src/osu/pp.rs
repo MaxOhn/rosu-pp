@@ -1,5 +1,7 @@
 use super::{OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState};
-use crate::{Beatmap, DifficultyAttributes, Mods, OsuStars, PerformanceAttributes};
+use crate::{
+    AnyPP, Beatmap, DifficultyAttributes, GameMode, Mods, OsuStars, PerformanceAttributes,
+};
 
 /// Performance calculator on osu!standard maps.
 ///
@@ -64,6 +66,17 @@ impl<'map> OsuPP<'map> {
             n_misses: 0,
             passed_objects: None,
             clock_rate: None,
+        }
+    }
+
+    /// Convert the map into another mode.
+    #[inline]
+    pub fn mode(self, mode: GameMode) -> AnyPP<'map> {
+        match mode {
+            GameMode::STD => AnyPP::Osu(self),
+            GameMode::TKO => AnyPP::Taiko(self.into()),
+            GameMode::CTB => AnyPP::Catch(self.into()),
+            GameMode::MNA => AnyPP::Mania(self.into()),
         }
     }
 

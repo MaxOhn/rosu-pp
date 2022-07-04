@@ -20,7 +20,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{curve::CurveBuffers, Beatmap, Mods, Strains};
+use crate::{curve::CurveBuffers, AnyStars, Beatmap, GameMode, Mods, Strains};
 
 use self::skill::Skills;
 
@@ -64,6 +64,17 @@ impl<'map> OsuStars<'map> {
             mods: 0,
             passed_objects: None,
             clock_rate: None,
+        }
+    }
+
+    /// Convert the map into another mode.
+    #[inline]
+    pub fn mode(self, mode: GameMode) -> AnyStars<'map> {
+        match mode {
+            GameMode::STD => AnyStars::Osu(self),
+            GameMode::TKO => AnyStars::Taiko(self.into()),
+            GameMode::CTB => AnyStars::Catch(self.into()),
+            GameMode::MNA => AnyStars::Mania(self.into()),
         }
     }
 
