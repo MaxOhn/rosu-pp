@@ -19,6 +19,7 @@
     - `TimingPoint`
   - Added a new field `kiai: bool` to both `TimingPoint` and `DifficultyPoint` to denote whether the current timing section is in kiai mode
   - Added a new field `breaks: Vec<Break>` to `Beatmap` that contains all breaks throughout the map
+  - Added a new field `edge_sounds: Vec<u8>` to the `Slider` variant of `HitObjectKind` to denote the sample played on slider heads, ends, and repeats
 
 # v0.5.2 (2022-06-14)
 
