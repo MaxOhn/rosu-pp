@@ -4,7 +4,7 @@ use crate::{
     curve::{Curve, CurveBuffers},
     limited_queue::LimitedQueue,
     parse::{legacy_sort, HitObjectKind, Pos2},
-    Beatmap,
+    Beatmap, GameMode,
 };
 
 use self::{
@@ -194,6 +194,8 @@ impl Beatmap {
             .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 
         legacy_sort(&mut map.hit_objects);
+
+        map.mode = GameMode::MNA;
 
         map
     }
