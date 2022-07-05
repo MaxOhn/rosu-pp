@@ -847,11 +847,11 @@ mod tests {
                     println!("map_id: {}", map_id);
 
                     let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
-                        Ok(map) => beatmap,
+                        Ok(map) => map,
                         Err(why) => panic!("Error while parsing map: {}", why),
                     };
 
-                    print_info(beatmap);
+                    print_info(map);
                     println!("---");
                 }
             });
@@ -865,11 +865,11 @@ mod tests {
                 println!("map_id: {}", map_id);
 
                 let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
-                    Ok(map) => beatmap,
+                    Ok(map) => map,
                     Err(why) => panic!("Error while parsing map: {}", why),
                 };
 
-                print_info(beatmap);
+                print_info(map);
                 println!("---");
             }
         });
