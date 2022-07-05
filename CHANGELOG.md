@@ -1,6 +1,7 @@
 ## Upcoming
 
-- Nothing as of now
+- __Fixes:__
+  - Slider velocity is now adjusted properly for taiko converts
 
 # v0.6.0 (2022-07-05)
 

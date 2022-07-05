@@ -14,6 +14,8 @@ impl Beatmap {
         let mut map = self.clone_without_hit_objects(true);
         let mut curve_bufs = CurveBuffers::default();
 
+        map.slider_mult *= LEGACY_TAIKO_VELOCITY_MULTIPLIER as f64;
+
         for (obj, sound) in self.hit_objects.iter().zip(self.sounds.iter()) {
             match obj.kind {
                 HitObjectKind::Circle => {
@@ -30,7 +32,7 @@ impl Beatmap {
                     let curve = Curve::new(control_points, pixel_len, &mut curve_bufs);
                     let mut params = SliderParams::new(obj.start_time, repeats, &curve);
 
-                    if self.should_convert_slider_to_taiko_hits(&mut params) {
+                    if map.should_convert_slider_to_taiko_hits(&mut params) {
                         let mut i = 0;
                         let mut j = obj.start_time;
 
