@@ -1,6 +1,6 @@
 [package]
 name = "rosu-pp"
-version = "0.5.2"
+version = "0.6.0"
 authors = ["MaxOhn <ohn.m@hotmail.de>"]
 edition = "2018"
 license = "MIT"

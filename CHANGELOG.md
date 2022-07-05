@@ -1,10 +1,15 @@
 ## Upcoming
 
+- Nothing as of now
+
+# v0.6.0 (2022-07-05)
+
 - __Additions__:
-  - Added the `ControlPoint` and `ControlPointerIter` types to the public interface, aswell as the `Beatmap::control_points` method
+  - Added the `ControlPoint` and `ControlPointerIter` types to the public interface
   - `TimingPoint` and `DifficultyPoint` now implement `Default`
   - Added new methods to `Beatmap`:
     - `convert_mode`: Convert a map into another mode. (doesn't do anything if the starting map is not osu!standard)
+    - `control_points`: Return an iterator over all control points of a map
     - `total_break_time`: Return the accumulated break time in milliseconds
     - `timing_point_at`: Return the timing point for the given timestamp
     - `difficulty_point_at`: Return the difficulty point for the given timestamp if available
@@ -23,7 +28,7 @@
 - __Other:__
   - Small performance improvements for osu!taiko calculations
 
-# v0.5.2 (2022-06-14)
+## v0.5.2 (2022-06-14)
 
 - __Fixes:__
   - Fixed parsing non-UTF-8 encoded files and improved parse performance overall ([#9])
