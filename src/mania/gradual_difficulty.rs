@@ -6,7 +6,7 @@ use std::{
 use crate::{
     mania::{strain::Strain, SECTION_LEN},
     parse::HitObject,
-    Beatmap, GameMode, Mods,
+    Beatmap, Mods,
 };
 
 use super::{DifficultyHitObject, ManiaDifficultyAttributes, STAR_SCALING_FACTOR};
@@ -53,29 +53,7 @@ pub struct ManiaGradualDifficultyAttributes<'map> {
 impl<'map> ManiaGradualDifficultyAttributes<'map> {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(map: &'map Beatmap, mods: impl Mods) -> Self {
-        let rounded_cs = map.cs.round();
-
-        let columns = match map.mode {
-            GameMode::Mania => rounded_cs.max(1.0) as u8,
-            GameMode::Osu => {
-                let rounded_od = map.od.round();
-
-                let n_objects = map.n_circles + map.n_sliders + map.n_spinners;
-                let slider_or_spinner_ratio = (n_objects - map.n_circles) as f32 / n_objects as f32;
-
-                if slider_or_spinner_ratio < 0.2 {
-                    7
-                } else if slider_or_spinner_ratio < 0.3 || rounded_cs >= 5.0 {
-                    6 + (rounded_od > 5.0) as u8
-                } else if slider_or_spinner_ratio > 0.6 {
-                    4 + (rounded_od > 4.0) as u8
-                } else {
-                    (rounded_od as u8 + 1).max(4).min(7)
-                }
-            }
-            other => panic!("can not calculate mania difficulty on a {:?} map", other),
-        };
-
+        let columns = map.cs.round().max(1.0) as u8;
         let clock_rate = mods.clock_rate();
         let strain = Strain::new(columns);
         let columns = columns as f32;
