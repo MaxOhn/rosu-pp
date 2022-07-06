@@ -362,7 +362,7 @@ impl<'map> From<OsuStars<'map>> for TaikoStars<'map> {
         } = osu;
 
         Self {
-            map: map.convert_mode(GameMode::TKO),
+            map: map.convert_mode(GameMode::Taiko),
             mods,
             passed_objects,
             clock_rate,

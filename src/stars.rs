@@ -37,10 +37,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         match map.mode {
-            GameMode::CTB => Self::Catch(CatchStars::new(map)),
-            GameMode::MNA => Self::Mania(ManiaStars::new(map)),
-            GameMode::STD => Self::Osu(OsuStars::new(map)),
-            GameMode::TKO => Self::Taiko(TaikoStars::new(map)),
+            GameMode::Catch => Self::Catch(CatchStars::new(map)),
+            GameMode::Mania => Self::Mania(ManiaStars::new(map)),
+            GameMode::Osu => Self::Osu(OsuStars::new(map)),
+            GameMode::Taiko => Self::Taiko(TaikoStars::new(map)),
         }
     }
 
@@ -49,10 +49,10 @@ impl<'map> AnyStars<'map> {
     pub fn mode(self, mode: GameMode) -> Self {
         match self {
             AnyStars::Osu(o) => match mode {
-                GameMode::STD => AnyStars::Osu(o),
-                GameMode::TKO => AnyStars::Taiko(o.into()),
-                GameMode::CTB => AnyStars::Catch(o.into()),
-                GameMode::MNA => AnyStars::Mania(o.into()),
+                GameMode::Osu => AnyStars::Osu(o),
+                GameMode::Taiko => AnyStars::Taiko(o.into()),
+                GameMode::Catch => AnyStars::Catch(o.into()),
+                GameMode::Mania => AnyStars::Mania(o.into()),
             },
             other => other,
         }

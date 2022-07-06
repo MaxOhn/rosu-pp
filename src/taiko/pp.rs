@@ -321,7 +321,7 @@ impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
         } = osu;
 
         Self {
-            map: map.convert_mode(GameMode::TKO),
+            map: map.convert_mode(GameMode::Taiko),
             attributes: None,
             mods,
             combo,

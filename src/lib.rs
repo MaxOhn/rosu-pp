@@ -80,7 +80,7 @@
 //! This could be done by using `passed_objects` as the amount of objects that were passed so far.
 //! However, this requires to recalculate the beginning again and again, we can be more efficient than that.
 //!
-//! Instead, you should use `GradualDifficultyAttributes` and `GradualPerformanceAttributes`:
+//! Instead, you should use [`GradualDifficultyAttributes`] and [`GradualPerformanceAttributes`]:
 //!
 //! ```no_run
 //! use rosu_pp::{
@@ -255,24 +255,24 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn stars(&self) -> AnyStars<'_> {
         match self.mode {
-            GameMode::STD => AnyStars::Osu(OsuStars::new(self)),
-            GameMode::MNA => AnyStars::Mania(ManiaStars::new(self)),
-            GameMode::TKO => AnyStars::Taiko(TaikoStars::new(self)),
-            GameMode::CTB => AnyStars::Catch(CatchStars::new(self)),
+            GameMode::Osu => AnyStars::Osu(OsuStars::new(self)),
+            GameMode::Mania => AnyStars::Mania(ManiaStars::new(self)),
+            GameMode::Taiko => AnyStars::Taiko(TaikoStars::new(self)),
+            GameMode::Catch => AnyStars::Catch(CatchStars::new(self)),
         }
     }
 
     #[inline]
     fn max_pp(&self, mods: u32) -> PerformanceAttributes {
         match self.mode {
-            GameMode::STD => PerformanceAttributes::Osu(OsuPP::new(self).mods(mods).calculate()),
-            GameMode::MNA => {
+            GameMode::Osu => PerformanceAttributes::Osu(OsuPP::new(self).mods(mods).calculate()),
+            GameMode::Mania => {
                 PerformanceAttributes::Mania(ManiaPP::new(self).mods(mods).calculate())
             }
-            GameMode::TKO => {
+            GameMode::Taiko => {
                 PerformanceAttributes::Taiko(TaikoPP::new(self).mods(mods).calculate())
             }
-            GameMode::CTB => {
+            GameMode::Catch => {
                 PerformanceAttributes::Catch(CatchPP::new(self).mods(mods).calculate())
             }
         }
@@ -286,10 +286,10 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn strains(&self, mods: u32) -> Strains {
         match self.mode {
-            GameMode::STD => Strains::Osu(OsuStars::new(self).mods(mods).strains()),
-            GameMode::MNA => Strains::Mania(ManiaStars::new(self).mods(mods).strains()),
-            GameMode::TKO => Strains::Taiko(TaikoStars::new(self).mods(mods).strains()),
-            GameMode::CTB => Strains::Catch(CatchStars::new(self).mods(mods).strains()),
+            GameMode::Osu => Strains::Osu(OsuStars::new(self).mods(mods).strains()),
+            GameMode::Mania => Strains::Mania(ManiaStars::new(self).mods(mods).strains()),
+            GameMode::Taiko => Strains::Taiko(TaikoStars::new(self).mods(mods).strains()),
+            GameMode::Catch => Strains::Catch(CatchStars::new(self).mods(mods).strains()),
         }
     }
 

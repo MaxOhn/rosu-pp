@@ -195,7 +195,7 @@ impl Beatmap {
 
         legacy_sort(&mut map.hit_objects);
 
-        map.mode = GameMode::MNA;
+        map.mode = GameMode::Mania;
 
         map
     }

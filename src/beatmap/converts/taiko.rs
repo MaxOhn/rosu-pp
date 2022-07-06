@@ -87,7 +87,7 @@ impl Beatmap {
         map.hit_objects
             .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 
-        map.mode = GameMode::TKO;
+        map.mode = GameMode::Taiko;
 
         map
     }

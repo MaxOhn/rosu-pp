@@ -73,10 +73,10 @@ impl<'map> OsuPP<'map> {
     #[inline]
     pub fn mode(self, mode: GameMode) -> AnyPP<'map> {
         match mode {
-            GameMode::STD => AnyPP::Osu(self),
-            GameMode::TKO => AnyPP::Taiko(self.into()),
-            GameMode::CTB => AnyPP::Catch(self.into()),
-            GameMode::MNA => AnyPP::Mania(self.into()),
+            GameMode::Osu => AnyPP::Osu(self),
+            GameMode::Taiko => AnyPP::Taiko(self.into()),
+            GameMode::Catch => AnyPP::Catch(self.into()),
+            GameMode::Mania => AnyPP::Mania(self.into()),
         }
     }
 

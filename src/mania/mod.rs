@@ -140,8 +140,8 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
     let rounded_cs = map.cs.round();
 
     let columns = match map.mode {
-        GameMode::MNA => rounded_cs.max(1.0) as u8,
-        GameMode::STD => {
+        GameMode::Mania => rounded_cs.max(1.0) as u8,
+        GameMode::Osu => {
             let rounded_od = map.od.round();
 
             let n_objects = map.n_circles + map.n_sliders + map.n_spinners;
@@ -270,7 +270,7 @@ impl<'map> From<OsuStars<'map>> for ManiaStars<'map> {
         } = osu;
 
         Self {
-            map: map.convert_mode(GameMode::MNA),
+            map: map.convert_mode(GameMode::Mania),
             mods,
             passed_objects,
             clock_rate,

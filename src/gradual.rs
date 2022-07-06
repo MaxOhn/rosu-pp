@@ -53,10 +53,10 @@ impl<'map> GradualDifficultyAttributes<'map> {
     /// Create a new gradual difficulty calculator for maps of any mode.
     pub fn new(map: &'map Beatmap, mods: impl Mods) -> Self {
         match map.mode {
-            GameMode::STD => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
-            GameMode::TKO => Self::Taiko(TaikoGradualDifficultyAttributes::new(map, mods)),
-            GameMode::CTB => Self::Catch(CatchGradualDifficultyAttributes::new(map, mods)),
-            GameMode::MNA => Self::Mania(ManiaGradualDifficultyAttributes::new(map, mods)),
+            GameMode::Osu => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualDifficultyAttributes::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchGradualDifficultyAttributes::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaGradualDifficultyAttributes::new(map, mods)),
         }
     }
 }
@@ -285,10 +285,10 @@ impl<'map> GradualPerformanceAttributes<'map> {
     /// Create a new gradual performance calculator for maps of any mode.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
-            GameMode::STD => Self::Osu(OsuGradualPerformanceAttributes::new(map, mods)),
-            GameMode::TKO => Self::Taiko(TaikoGradualPerformanceAttributes::new(map, mods)),
-            GameMode::CTB => Self::Catch(CatchGradualPerformanceAttributes::new(map, mods)),
-            GameMode::MNA => Self::Mania(ManiaGradualPerformanceAttributes::new(map, mods)),
+            GameMode::Osu => Self::Osu(OsuGradualPerformanceAttributes::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualPerformanceAttributes::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchGradualPerformanceAttributes::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaGradualPerformanceAttributes::new(map, mods)),
         }
     }
 

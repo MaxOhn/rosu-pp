@@ -71,10 +71,10 @@ impl<'map> OsuStars<'map> {
     #[inline]
     pub fn mode(self, mode: GameMode) -> AnyStars<'map> {
         match mode {
-            GameMode::STD => AnyStars::Osu(self),
-            GameMode::TKO => AnyStars::Taiko(self.into()),
-            GameMode::CTB => AnyStars::Catch(self.into()),
-            GameMode::MNA => AnyStars::Mania(self.into()),
+            GameMode::Osu => AnyStars::Osu(self),
+            GameMode::Taiko => AnyStars::Taiko(self.into()),
+            GameMode::Catch => AnyStars::Catch(self.into()),
+            GameMode::Mania => AnyStars::Mania(self.into()),
         }
     }
 

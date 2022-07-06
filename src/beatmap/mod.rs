@@ -132,9 +132,9 @@ impl Beatmap {
         }
 
         match mode {
-            GameMode::STD | GameMode::CTB => Cow::Borrowed(self),
-            GameMode::TKO => Cow::Owned(self.convert_to_taiko()),
-            GameMode::MNA => Cow::Owned(self.convert_to_mania()),
+            GameMode::Osu | GameMode::Catch => Cow::Borrowed(self),
+            GameMode::Taiko => Cow::Owned(self.convert_to_taiko()),
+            GameMode::Mania => Cow::Owned(self.convert_to_mania()),
         }
     }
 

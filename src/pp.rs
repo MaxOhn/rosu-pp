@@ -53,10 +53,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         match map.mode {
-            GameMode::CTB => Self::Catch(CatchPP::new(map)),
-            GameMode::MNA => Self::Mania(ManiaPP::new(map)),
-            GameMode::STD => Self::Osu(OsuPP::new(map)),
-            GameMode::TKO => Self::Taiko(TaikoPP::new(map)),
+            GameMode::Catch => Self::Catch(CatchPP::new(map)),
+            GameMode::Mania => Self::Mania(ManiaPP::new(map)),
+            GameMode::Osu => Self::Osu(OsuPP::new(map)),
+            GameMode::Taiko => Self::Taiko(TaikoPP::new(map)),
         }
     }
 
@@ -90,10 +90,10 @@ impl<'map> AnyPP<'map> {
     pub fn mode(self, mode: GameMode) -> Self {
         match self {
             AnyPP::Osu(o) => match mode {
-                GameMode::STD => AnyPP::Osu(o),
-                GameMode::TKO => AnyPP::Taiko(o.into()),
-                GameMode::CTB => AnyPP::Catch(o.into()),
-                GameMode::MNA => AnyPP::Mania(o.into()),
+                GameMode::Osu => AnyPP::Osu(o),
+                GameMode::Taiko => AnyPP::Taiko(o.into()),
+                GameMode::Catch => AnyPP::Catch(o.into()),
+                GameMode::Mania => AnyPP::Mania(o.into()),
             },
             other => other,
         }

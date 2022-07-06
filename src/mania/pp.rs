@@ -225,7 +225,7 @@ impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
         } = osu;
 
         Self {
-            map: map.convert_mode(GameMode::MNA),
+            map: map.convert_mode(GameMode::Mania),
             stars: None,
             mods,
             score: None,

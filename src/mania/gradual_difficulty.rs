@@ -56,8 +56,8 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
         let rounded_cs = map.cs.round();
 
         let columns = match map.mode {
-            GameMode::MNA => rounded_cs.max(1.0) as u8,
-            GameMode::STD => {
+            GameMode::Mania => rounded_cs.max(1.0) as u8,
+            GameMode::Osu => {
                 let rounded_od = map.od.round();
 
                 let n_objects = map.n_circles + map.n_sliders + map.n_spinners;

@@ -4,6 +4,7 @@
   - Slider velocity is now adjusted properly for taiko converts
 - __Breaking changes:__
   - Replaced the simple `Strains` struct with a new struct `{Mode}Strains` that contains more detail w.r.t. the mode.
+  - Renamed all `GameMode` variants to more idiomatic names
 
 # v0.6.0 (2022-07-05)
 

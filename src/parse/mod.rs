@@ -101,10 +101,10 @@ macro_rules! parse_general_body {
 
             if key == b"Mode" {
                 mode = match value {
-                    "0" => Some(GameMode::STD),
-                    "1" => Some(GameMode::TKO),
-                    "2" => Some(GameMode::CTB),
-                    "3" => Some(GameMode::MNA),
+                    "0" => Some(GameMode::Osu),
+                    "1" => Some(GameMode::Taiko),
+                    "2" => Some(GameMode::Catch),
+                    "3" => Some(GameMode::Mania),
                     _ => return Err(ParseError::InvalidMode),
                 };
             }
@@ -114,7 +114,7 @@ macro_rules! parse_general_body {
             }
         }
 
-        $self.mode = mode.unwrap_or(GameMode::STD);
+        $self.mode = mode.unwrap_or(GameMode::Osu);
         $self.stack_leniency = stack_leniency.unwrap_or(0.7);
 
         Ok(empty)
@@ -456,7 +456,7 @@ macro_rules! parse_hitobjects_body {
 
         // BUG: If [General] section comes after [HitObjects] then the mode
         // won't be set yet so mania objects won't be sorted properly
-        if $self.mode == GameMode::MNA {
+        if $self.mode == GameMode::Mania {
             // First a _stable_ sort by time
             $self
                 .hit_objects
