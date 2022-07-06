@@ -58,6 +58,7 @@ impl Beatmap {
                         }
                     } else {
                         map.hit_objects.push(obj.to_owned());
+                        map.sounds.push(*sound);
                         map.n_sliders += 1;
                     }
                 }

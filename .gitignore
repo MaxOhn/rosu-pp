@@ -1,6 +1,6 @@
 /target
 Cargo.lock
-output
+output*
 
 /pp-gen/.env
 /pp-gen/target
