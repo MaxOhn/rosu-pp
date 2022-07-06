@@ -10,7 +10,7 @@ pub use gradual_performance::*;
 pub use pp::*;
 use strain::Strain;
 
-use crate::{parse::HitObject, Beatmap, GameMode, Mods, OsuStars, Strains};
+use crate::{parse::HitObject, Beatmap, GameMode, Mods, OsuStars};
 
 const SECTION_LEN: f64 = 400.0;
 const STAR_SCALING_FACTOR: f64 = 0.018;
@@ -99,14 +99,32 @@ impl<'map> ManiaStars<'map> {
     ///
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
-    pub fn strains(self) -> Strains {
+    pub fn strains(self) -> ManiaStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let strain = calculate_strain(self);
 
-        Strains {
-            section_length: SECTION_LEN * clock_rate,
+        ManiaStrains {
+            section_len: SECTION_LEN * clock_rate,
             strains: strain.strain_peaks,
         }
+    }
+}
+
+/// The result of calculating the strains on a osu!taiko map.
+/// Suitable to plot the difficulty of a map over time.
+#[derive(Clone, Debug)]
+pub struct ManiaStrains {
+    /// Time in ms inbetween two strains.
+    pub section_len: f64,
+    /// Strain peaks of the strain skill.
+    pub strains: Vec<f64>,
+}
+
+impl ManiaStrains {
+    /// Returns the number of strain peaks per skill.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.strains.len()
     }
 }
 

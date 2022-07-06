@@ -16,9 +16,7 @@ use movement::Movement;
 pub use pp::*;
 use slider_state::SliderState;
 
-use crate::{
-    catch::fruit_or_juice::FruitParams, curve::CurveBuffers, Beatmap, Mods, OsuStars, Strains,
-};
+use crate::{catch::fruit_or_juice::FruitParams, curve::CurveBuffers, Beatmap, Mods, OsuStars};
 
 const SECTION_LENGTH: f64 = 750.0;
 const STAR_SCALING_FACTOR: f64 = 0.153;
@@ -110,14 +108,32 @@ impl<'map> CatchStars<'map> {
     ///
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
-    pub fn strains(self) -> Strains {
+    pub fn strains(self) -> CatchStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (movement, _) = calculate_movement(self);
 
-        Strains {
-            section_length: SECTION_LENGTH * clock_rate,
-            strains: movement.strain_peaks,
+        CatchStrains {
+            section_len: SECTION_LENGTH * clock_rate,
+            movement: movement.strain_peaks,
         }
+    }
+}
+
+/// The result of calculating the strains on a osu!catch map.
+/// Suitable to plot the difficulty of a map over time.
+#[derive(Clone, Debug)]
+pub struct CatchStrains {
+    /// Time in ms inbetween two strains.
+    pub section_len: f64,
+    /// Strain peaks of the movement skill.
+    pub movement: Vec<f64>,
+}
+
+impl CatchStrains {
+    /// Returns the number of strain peaks per skill.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.movement.len()
     }
 }
 

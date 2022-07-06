@@ -286,10 +286,10 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn strains(&self, mods: u32) -> Strains {
         match self.mode {
-            GameMode::STD => OsuStars::new(self).mods(mods).strains(),
-            GameMode::MNA => ManiaStars::new(self).mods(mods).strains(),
-            GameMode::TKO => TaikoStars::new(self).mods(mods).strains(),
-            GameMode::CTB => CatchStars::new(self).mods(mods).strains(),
+            GameMode::STD => Strains::Osu(OsuStars::new(self).mods(mods).strains()),
+            GameMode::MNA => Strains::Mania(ManiaStars::new(self).mods(mods).strains()),
+            GameMode::TKO => Strains::Taiko(TaikoStars::new(self).mods(mods).strains()),
+            GameMode::CTB => Strains::Catch(CatchStars::new(self).mods(mods).strains()),
         }
     }
 
@@ -306,24 +306,52 @@ impl BeatmapExt for Beatmap {
 
 /// The result of calculating the strains on a map.
 /// Suitable to plot the difficulty of a map over time.
-#[derive(Clone, Debug, Default)]
-pub struct Strains {
+#[derive(Clone, Debug)]
+pub enum Strains {
+    /// osu!catch strain values.
+    Catch(catch::CatchStrains),
+    /// osu!mania strain values.
+    Mania(mania::ManiaStrains),
+    /// osu!standard strain values.
+    Osu(osu::OsuStrains),
+    /// osu!taiko strain values.
+    Taiko(taiko::TaikoStrains),
+}
+
+impl Strains {
     /// Time in ms inbetween two strains.
-    pub section_length: f64,
-    /// Summed strains for each skill of the map's mode.
-    pub strains: Vec<f64>,
+    #[inline]
+    pub fn section_len(&self) -> f64 {
+        match self {
+            Strains::Catch(strains) => strains.section_len,
+            Strains::Mania(strains) => strains.section_len,
+            Strains::Osu(strains) => strains.section_len,
+            Strains::Taiko(strains) => strains.section_len,
+        }
+    }
+
+    /// Returns the number of strain peaks per skill.
+    #[inline]
+    pub fn len(&self) -> usize {
+        match self {
+            Strains::Catch(strains) => strains.len(),
+            Strains::Mania(strains) => strains.len(),
+            Strains::Osu(strains) => strains.len(),
+            Strains::Taiko(strains) => strains.len(),
+        }
+    }
 }
 
 /// The result of a difficulty calculation based on the mode.
 #[derive(Clone, Debug)]
 pub enum DifficultyAttributes {
-    /// osu!catch difficulty calculation reseult.
+    /// osu!catch difficulty calculation result.
     Catch(catch::CatchDifficultyAttributes),
-    /// osu!mania difficulty calculation reseult.
+    /// osu!mania difficulty calculation result.
     Mania(mania::ManiaDifficultyAttributes),
-    /// osu!standard difficulty calculation reseult.
+    /// osu!standard difficulty calculation result.
     Osu(osu::OsuDifficultyAttributes),
-    /// osu!taiko difficulty calculation reseult.
+    /// osu!taiko difficulty calculation result.
     Taiko(taiko::TaikoDifficultyAttributes),
 }
 
@@ -443,6 +471,7 @@ impl PerformanceAttributes {
 }
 
 impl From<PerformanceAttributes> for DifficultyAttributes {
+    #[inline]
     fn from(attributes: PerformanceAttributes) -> Self {
         match attributes {
             PerformanceAttributes::Catch(attributes) => Self::Catch(attributes.difficulty),

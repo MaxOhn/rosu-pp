@@ -45,6 +45,7 @@ impl<'map> AnyStars<'map> {
     }
 
     /// If the map is an osu!standard map, convert it to another mode.
+    #[inline]
     pub fn mode(self, mode: GameMode) -> Self {
         match self {
             AnyStars::Osu(o) => match mode {
@@ -117,10 +118,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn strains(self) -> Strains {
         match self {
-            Self::Catch(f) => f.strains(),
-            Self::Mania(m) => m.strains(),
-            Self::Osu(o) => o.strains(),
-            Self::Taiko(t) => t.strains(),
+            Self::Catch(f) => Strains::Catch(f.strains()),
+            Self::Mania(m) => Strains::Mania(m.strains()),
+            Self::Osu(o) => Strains::Osu(o.strains()),
+            Self::Taiko(t) => Strains::Taiko(t.strains()),
         }
     }
 }

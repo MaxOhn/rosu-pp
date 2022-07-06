@@ -20,7 +20,7 @@ use stamina_cheese::StaminaCheeseDetector;
 use taiko_object::IntoTaikoObjectIter;
 
 use crate::taiko::skill::Skills;
-use crate::{Beatmap, GameMode, Mods, OsuStars, Strains};
+use crate::{Beatmap, GameMode, Mods, OsuStars};
 
 use std::borrow::Cow;
 use std::cmp::Ordering;
@@ -137,26 +137,41 @@ impl<'map> TaikoStars<'map> {
     ///
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
-    pub fn strains(self) -> Strains {
+    pub fn strains(self) -> TaikoStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (skills, _) = calculate_skills(self);
 
-        let strains = skills
-            .color
-            .strain_peaks
-            .iter()
-            .zip(skills.rhythm.strain_peaks.iter())
-            .zip(skills.stamina_right.strain_peaks.iter())
-            .zip(skills.stamina_left.strain_peaks.iter())
-            .map(|(((color, rhythm), stamina_right), stamina_left)| {
-                color + rhythm + stamina_right + stamina_left
-            })
-            .collect();
-
-        Strains {
-            section_length: SECTION_LEN * clock_rate,
-            strains,
+        TaikoStrains {
+            section_len: SECTION_LEN * clock_rate,
+            color: skills.color.strain_peaks,
+            rhythm: skills.rhythm.strain_peaks,
+            stamina_right: skills.stamina_right.strain_peaks,
+            stamina_left: skills.stamina_left.strain_peaks,
         }
+    }
+}
+
+/// The result of calculating the strains on a osu!taiko map.
+/// Suitable to plot the difficulty of a map over time.
+#[derive(Clone, Debug)]
+pub struct TaikoStrains {
+    /// Time in ms inbetween two strains.
+    pub section_len: f64,
+    /// Strain peaks of the color skill.
+    pub color: Vec<f64>,
+    /// Strain peaks of the rhythm skill.
+    pub rhythm: Vec<f64>,
+    /// Strain peaks of the left-stamina skill.
+    pub stamina_right: Vec<f64>,
+    /// Strain peaks of the right-stamina skill.
+    pub stamina_left: Vec<f64>,
+}
+
+impl TaikoStrains {
+    /// Returns the number of strain peaks per skill.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.color.len()
     }
 }
 

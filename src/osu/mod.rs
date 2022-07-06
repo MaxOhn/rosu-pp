@@ -20,7 +20,7 @@ use skill::Skill;
 use skill_kind::SkillKind;
 use slider_state::SliderState;
 
-use crate::{curve::CurveBuffers, AnyStars, Beatmap, GameMode, Mods, Strains};
+use crate::{curve::CurveBuffers, AnyStars, Beatmap, GameMode, Mods};
 
 use self::skill::Skills;
 
@@ -173,39 +173,54 @@ impl<'map> OsuStars<'map> {
     ///
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
-    pub fn strains(self) -> Strains {
+    pub fn strains(self) -> OsuStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (mut skills, _) = calculate_skills(self);
 
-        let mut aim = mem::take(&mut skills.aim().strain_peaks);
-        let tuple = skills.speed_flashlight();
+        let len = skills.aim().strain_peaks.len();
+        let (speed, flashlight) = skills.speed_flashlight();
 
-        let strains = match tuple {
-            (Some(speed), Some(flashlight)) => {
-                for ((aim, speed), flashlight) in aim
-                    .iter_mut()
-                    .zip(&speed.strain_peaks)
-                    .zip(&flashlight.strain_peaks)
-                {
-                    *aim += speed + flashlight;
-                }
+        let speed = speed.map_or_else(
+            || vec![0.0; len],
+            |skill| mem::take(&mut skill.strain_peaks),
+        );
 
-                aim
-            }
-            (Some(strains), None) | (None, Some(strains)) => {
-                for (aim, strain) in aim.iter_mut().zip(&strains.strain_peaks) {
-                    *aim += strain;
-                }
+        let flashlight = flashlight.map_or_else(
+            || vec![0.0; len],
+            |skill| mem::take(&mut skill.strain_peaks),
+        );
 
-                aim
-            }
-            (None, None) => aim,
-        };
-
-        Strains {
-            section_length: SECTION_LEN * clock_rate,
-            strains,
+        OsuStrains {
+            section_len: SECTION_LEN * clock_rate,
+            aim: mem::take(&mut skills.aim().strain_peaks),
+            aim_no_sliders: mem::take(&mut skills.aim_no_sliders().strain_peaks),
+            speed,
+            flashlight,
         }
+    }
+}
+
+/// The result of calculating the strains on a osu!taiko map.
+/// Suitable to plot the difficulty of a map over time.
+#[derive(Clone, Debug)]
+pub struct OsuStrains {
+    /// Time in ms inbetween two strains.
+    pub section_len: f64,
+    /// Strain peaks of the aim skill.
+    pub aim: Vec<f64>,
+    /// Strain peaks of the aim skill without sliders.
+    pub aim_no_sliders: Vec<f64>,
+    /// Strain peaks of the speed skill.
+    pub speed: Vec<f64>,
+    /// Strain peaks of the flashlight skill.
+    pub flashlight: Vec<f64>,
+}
+
+impl OsuStrains {
+    /// Returns the number of strain peaks per skill.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.aim.len()
     }
 }
 
