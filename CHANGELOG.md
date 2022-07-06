@@ -1,5 +1,9 @@
 ## Upcoming
 
+Nothing as of now
+
+# v0.7.0 (2022-07-06)
+
 - __Fixes:__
   - Slider velocity is now adjusted properly for taiko converts
   - Fixed missing slider sounds for taiko converts
@@ -8,7 +12,7 @@
   - Renamed all `GameMode` variants to more idiomatic names
   - Renamed `ParseError::IOError` to `ParseError::IoError`
 
-# v0.6.0 (2022-07-05)
+## v0.6.0 (2022-07-05)
 
 - __Additions__:
   - Added the `ControlPoint` and `ControlPointerIter` types to the public interface
