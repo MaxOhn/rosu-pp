@@ -181,3 +181,9 @@ osu!catch: (pretty accurate)
 
 osu!taiko: (decently accurate, potentially more imprecise due to non-live changes in osu-tools)
 <img src="./pp-plot/taiko_accuracy.svg">
+
+### Bindings
+
+Using rosu-pp from other languages than Rust:
+- JavaScript: [rosu-pp-js](https://github.com/MaxOhn/rosu-pp-js)
+- Python: [rosu-pp-py](https://github.com/MaxOhn/rosu-pp-py)
