@@ -233,18 +233,18 @@ pub trait BeatmapExt {
     fn pp(&self) -> AnyPP<'_>;
 
     /// Calculate the strains of a map.
-    /// This essentially performs the same calculation as a `stars` function but
+    /// This essentially performs the same calculation as [`BeatmapExt::stars`] but
     /// instead of evaluating the final strains, they are just returned as is.
     ///
     /// Suitable to plot the difficulty of a map over time.
     fn strains(&self, mods: u32) -> Strains;
 
-    /// Return an iterator that gives you the `DifficultyAttributes` after each hit object.
+    /// Return an iterator that gives you the [`DifficultyAttributes`] after each hit object.
     ///
     /// Suitable to efficiently get the map's star rating after multiple different locations.
     fn gradual_difficulty(&self, mods: impl Mods) -> GradualDifficultyAttributes<'_>;
 
-    /// Return a struct that gives you the `PerformanceAttributes` after every (few) hit object(s).
+    /// Return a struct that gives you the [`PerformanceAttributes`] after every (few) hit object(s).
     ///
     /// Suitable to efficiently get a score's performance after multiple different locations,
     /// i.e. live update a score's pp.
