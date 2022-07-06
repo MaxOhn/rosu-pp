@@ -143,7 +143,7 @@ impl Beatmap {
 
                     for new_pattern in gen.generate() {
                         let new_objects = new_pattern.hit_objects.iter().map(|h| {
-                            if obj.is_circle() {
+                            if h.is_circle() {
                                 n_circles += 1;
                             } else {
                                 n_sliders += 1;
