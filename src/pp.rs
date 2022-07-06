@@ -157,7 +157,6 @@ impl<'map> AnyPP<'map> {
     /// Be sure to call this last before calling `calculate`.
     ///
     /// Irrelevant for osu!mania.
-    #[allow(unused_variables)]
     #[inline]
     pub fn accuracy(self, acc: f64) -> Self {
         match self {
@@ -171,7 +170,6 @@ impl<'map> AnyPP<'map> {
     /// Specify the amount of misses of a play.
     ///
     /// Irrelevant for osu!mania.
-    #[allow(unused_variables)]
     #[inline]
     pub fn misses(self, misses: usize) -> Self {
         match self {
@@ -185,7 +183,6 @@ impl<'map> AnyPP<'map> {
     /// Specify the max combo of the play.
     ///
     /// Irrelevant for osu!mania.
-    #[allow(unused_variables)]
     #[inline]
     pub fn combo(self, combo: usize) -> Self {
         match self {
@@ -199,7 +196,6 @@ impl<'map> AnyPP<'map> {
     /// Specify the amount of 300s of a play.
     ///
     /// Irrelevant for osu!mania.
-    #[allow(unused_variables)]
     #[inline]
     pub fn n300(self, n300: usize) -> Self {
         match self {
@@ -213,7 +209,6 @@ impl<'map> AnyPP<'map> {
     /// Specify the amount of 100s of a play.
     ///
     /// Irrelevant for osu!mania.
-    #[allow(unused_variables)]
     #[inline]
     pub fn n100(self, n100: usize) -> Self {
         match self {
@@ -227,7 +222,6 @@ impl<'map> AnyPP<'map> {
     /// Specify the amount of 50s of a play.
     ///
     /// Irrelevant for osu!mania and osu!taiko.
-    #[allow(unused_variables)]
     #[inline]
     pub fn n50(self, n50: usize) -> Self {
         match self {
@@ -242,7 +236,6 @@ impl<'map> AnyPP<'map> {
     ///
     /// This value is only relevant for osu!catch for which it represents
     /// the amount of tiny droplet misses.
-    #[allow(unused_variables)]
     #[inline]
     pub fn n_katu(self, n_katu: usize) -> Self {
         match self {
