@@ -1,7 +1,7 @@
 use std::{
     error::Error as StdError,
     fmt,
-    io::Error as IOError,
+    io::Error as IoError,
     num::{ParseFloatError, ParseIntError},
 };
 
@@ -13,7 +13,7 @@ pub type ParseResult<T> = Result<T, ParseError>;
 #[allow(clippy::upper_case_acronyms)]
 pub enum ParseError {
     /// Some IO operation failed.
-    IOError(IOError),
+    IoError(IoError),
     /// The initial data of an `.osu` file was incorrect.
     IncorrectFileHeader,
     /// Line in `.osu` was unexpectedly not of the form `key:value`.
@@ -37,7 +37,7 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::IOError(_) => f.write_str("IO error"),
+            Self::IoError(_) => f.write_str("IO error"),
             Self::IncorrectFileHeader => {
                 write!(f, "expected `osu file format v` at file begin")
             }
@@ -56,7 +56,7 @@ impl fmt::Display for ParseError {
 impl StdError for ParseError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            Self::IOError(inner) => Some(inner),
+            Self::IoError(inner) => Some(inner),
             Self::IncorrectFileHeader => None,
             Self::BadLine => None,
             Self::InvalidCurvePoints => None,
@@ -70,9 +70,9 @@ impl StdError for ParseError {
     }
 }
 
-impl From<IOError> for ParseError {
-    fn from(other: IOError) -> Self {
-        Self::IOError(other)
+impl From<IoError> for ParseError {
+    fn from(other: IoError) -> Self {
+        Self::IoError(other)
     }
 }
 

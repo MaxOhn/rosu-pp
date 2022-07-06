@@ -170,7 +170,7 @@ impl<R> FileReader<R> {
     /// Parse the buffer into a string, returning `None` if the UTF-8 validation fails.
     pub(crate) fn get_line(&self) -> Result<&str, ParseError> {
         std::str::from_utf8(&self.buf)
-            .map_err(|e| ParseError::IOError(IoError::new(IoErrorKind::InvalidData, Box::new(e))))
+            .map_err(|e| ParseError::IoError(IoError::new(IoErrorKind::InvalidData, Box::new(e))))
     }
 
     /// Split the buffer at the first ':', then parse the second half into a string.

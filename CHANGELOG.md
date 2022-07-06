@@ -5,6 +5,7 @@
 - __Breaking changes:__
   - Replaced the simple `Strains` struct with a new struct `{Mode}Strains` that contains more detail w.r.t. the mode.
   - Renamed all `GameMode` variants to more idiomatic names
+  - Renamed `ParseError::IOError` to `ParseError::IoError`
 
 # v0.6.0 (2022-07-05)
 
