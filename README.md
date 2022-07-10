@@ -95,7 +95,7 @@ let map = match Beatmap::from_path("/path/to/file.osu") {
 let mods = 8 + 64; // HDDT
 
 // If you're only interested in the star rating or other difficulty value,
-// use `GradualDifficultyAttribtes`, either through its function `new`
+// use `GradualDifficultyAttributes`, either through its function `new`
 // or through the method `BeatmapExt::gradual_difficulty`.
 let gradual_difficulty = map.gradual_difficulty(mods);
 
