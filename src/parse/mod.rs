@@ -14,7 +14,7 @@ pub use slider_parsing::*;
 use reader::FileReader;
 pub(crate) use sort::legacy_sort;
 
-use std::{cmp::Ordering, num::ParseIntError};
+use std::cmp::Ordering;
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::{fs::File, io::Read};
@@ -409,14 +409,14 @@ macro_rules! parse_hitobjects_body {
                         sounds
                             .split('|')
                             .take(repeats + 2)
-                            .map(str::parse)
+                            .map(parse_custom_sound)
                             .collect::<Result<Vec<_>, _>>()
                     });
 
                     let edge_sounds = match edge_sounds_opt {
                         None => Vec::new(),
                         Some(Ok(sounds)) => sounds,
-                        Some(Err(err)) => return Err(ParseIntError::into(err)),
+                        Some(Err(err)) => return Err(err),
                     };
 
                     HitObjectKind::Slider {
@@ -470,6 +470,14 @@ macro_rules! parse_hitobjects_body {
 
         Ok(empty)
     }};
+}
+
+// Required for maps with slider edge sound values above 255 e.g. map id 80799
+fn parse_custom_sound(sound: &str) -> ParseResult<u8> {
+    sound.bytes().try_fold(0_u8, |sound, byte| match byte {
+        b'0'..=b'9' => Ok(sound.wrapping_mul(10).wrapping_add((byte & 0xF) as u8)),
+        _ => Err(ParseError::InvalidInteger),
+    })
 }
 
 macro_rules! parse_body {
