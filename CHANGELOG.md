@@ -2,7 +2,13 @@
 
 Nothing as of now
 
-# v0.7.0 (2022-07-06)
+# v0.7.1 (2022-07-12)
+
+- __Fixes:__
+  - Parsing edge sounds is now mindful about overflowing a byte (ref. ranked map id 80799)
+  - Parsing the event section now attempts to read non-ASCII before eventually failing (ref. ranked map id 49374)
+
+## v0.7.0 (2022-07-06)
 
 - __Fixes:__
   - Slider velocity is now adjusted properly for taiko converts
