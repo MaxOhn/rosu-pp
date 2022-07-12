@@ -173,6 +173,17 @@ impl<R> FileReader<R> {
             .map_err(|e| ParseError::IoError(IoError::new(IoErrorKind::InvalidData, Box::new(e))))
     }
 
+    pub(crate) fn get_line_ascii(&mut self) -> Result<&str, ParseError> {
+        self.buf.iter_mut().for_each(|byte| {
+            if *byte >= 128 {
+                *byte = b'?';
+            }
+        });
+
+        std::str::from_utf8(&self.buf)
+            .map_err(|e| ParseError::IoError(IoError::new(IoErrorKind::InvalidData, Box::new(e))))
+    }
+
     /// Split the buffer at the first ':', then parse the second half into a string.
     ///
     /// Returns `None` if there is no ':' or if the second half is invalid UTF-8.

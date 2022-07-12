@@ -176,7 +176,11 @@ macro_rules! parse_events_body {
                 break;
             }
 
-            let line = $reader.get_line()?;
+            let line = match $reader.get_line() {
+                Ok(line) => line,
+                Err(_) => $reader.get_line_ascii()?, // see ranked map id 49374
+            };
+
             let mut split = line.split(',');
 
             // We're only interested in breaks
