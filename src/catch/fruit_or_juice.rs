@@ -95,64 +95,66 @@ impl FruitOrJuice {
 
                 let target = *pixel_len - tick_dist / 8.0;
 
-                params.ticks.reserve((target / tick_dist) as usize);
+                let mut slider_objects = vec![(h.pos, h.start_time)];
 
-                // Tick of the first span
-                while curr_dist < len - min_dist_from_end {
-                    let progress = curr_dist / len;
-                    let pos = h.pos + curve.position_at(progress);
-                    let time = h.start_time + progress * span_duration;
-                    params.ticks.push((pos, time));
-                    curr_dist += tick_dist;
-                }
+                if tick_dist > 0.0 {
+                    params.ticks.reserve((target / tick_dist) as usize);
 
-                params.attributes.n_tiny_droplets += tiny_droplet_count(
-                    h.start_time,
-                    time_add,
-                    duration,
-                    span_count as usize,
-                    &params.ticks,
-                );
-
-                let mut slider_objects =
-                    Vec::with_capacity(span_count as usize * (params.ticks.len() + 1));
-                slider_objects.push((h.pos, h.start_time));
-
-                // Other spans
-                if *repeats == 0 {
-                    slider_objects.append(&mut params.ticks); // automatically empties buffer for next slider
-                } else {
-                    slider_objects.extend(&params.ticks);
-
-                    for span_idx in 1..=*repeats {
-                        let progress = (span_idx % 2 == 1) as u8 as f64;
+                    // Tick of the first span
+                    while curr_dist < len - min_dist_from_end {
+                        let progress = curr_dist / len;
                         let pos = h.pos + curve.position_at(progress);
-                        let time_offset = span_duration * span_idx as f64;
-
-                        // Reverse tick
-                        slider_objects.push((pos, h.start_time + time_offset));
-
-                        // Actual ticks
-                        if span_idx & 1 == 1 {
-                            let tick_iter = params
-                                .ticks
-                                .iter()
-                                .rev()
-                                .zip(params.ticks.iter())
-                                .map(|((pos, _), (_, time))| (*pos, *time + time_offset));
-
-                            slider_objects.extend(tick_iter);
-                        } else {
-                            let tick_iter = params
-                                .ticks
-                                .iter()
-                                .map(|(pos, time)| (*pos, *time + time_offset));
-
-                            slider_objects.extend(tick_iter);
-                        }
+                        let time = h.start_time + progress * span_duration;
+                        params.ticks.push((pos, time));
+                        curr_dist += tick_dist;
                     }
 
-                    params.ticks.clear();
+                    params.attributes.n_tiny_droplets += tiny_droplet_count(
+                        h.start_time,
+                        time_add,
+                        duration,
+                        span_count as usize,
+                        &params.ticks,
+                    );
+
+                    slider_objects.reserve(span_count as usize * (params.ticks.len()));
+
+                    // Other spans
+                    if *repeats == 0 {
+                        slider_objects.append(&mut params.ticks); // automatically empties buffer for next slider
+                    } else {
+                        slider_objects.extend(&params.ticks);
+
+                        for span_idx in 1..=*repeats {
+                            let progress = (span_idx % 2 == 1) as u8 as f64;
+                            let pos = h.pos + curve.position_at(progress);
+                            let time_offset = span_duration * span_idx as f64;
+
+                            // Reverse tick
+                            slider_objects.push((pos, h.start_time + time_offset));
+
+                            // Actual ticks
+                            if span_idx & 1 == 1 {
+                                let tick_iter = params
+                                    .ticks
+                                    .iter()
+                                    .rev()
+                                    .zip(params.ticks.iter())
+                                    .map(|((pos, _), (_, time))| (*pos, *time + time_offset));
+
+                                slider_objects.extend(tick_iter);
+                            } else {
+                                let tick_iter = params
+                                    .ticks
+                                    .iter()
+                                    .map(|(pos, time)| (*pos, *time + time_offset));
+
+                                slider_objects.extend(tick_iter);
+                            }
+                        }
+
+                        params.ticks.clear();
+                    }
                 }
 
                 // Slider tail
@@ -160,7 +162,7 @@ impl FruitOrJuice {
                 let pos = h.pos + curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + duration));
 
-                let new_fruits = *repeats + 2;
+                let new_fruits = 2 + (tick_dist > 0.0) as usize * *repeats;
                 params.attributes.n_fruits += new_fruits;
                 params.attributes.n_droplets += slider_objects.len() - new_fruits;
 
