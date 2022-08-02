@@ -332,6 +332,7 @@ impl Strains {
 
     /// Returns the number of strain peaks per skill.
     #[inline]
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         match self {
             Strains::Catch(strains) => strains.len(),
