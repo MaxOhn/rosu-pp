@@ -1,7 +1,7 @@
-use crate::Mods;
+use crate::{Beatmap, GameMode, Mods};
 
-/// Summary struct for a [`Beatmap`](crate::Beatmap)'s attributes.
-#[derive(Clone, Debug)]
+/// Summary struct for a [`Beatmap`]'s attributes.
+#[derive(Clone, Debug, PartialEq)]
 pub struct BeatmapAttributes {
     /// The approach rate.
     pub ar: f64,
@@ -13,75 +13,238 @@ pub struct BeatmapAttributes {
     pub hp: f64,
     /// The clock rate with respect to mods.
     pub clock_rate: f64,
+    /// The hit windows for approach rate and overall difficulty.
+    pub hit_windows: BeatmapHitWindows,
 }
 
-impl BeatmapAttributes {
-    const AR0_MS: f64 = 1800.0;
-    const AR5_MS: f64 = 1200.0;
-    const AR10_MS: f64 = 450.0;
-    const AR_MS_STEP_1: f64 = (Self::AR0_MS - Self::AR5_MS) / 5.0;
-    const AR_MS_STEP_2: f64 = (Self::AR5_MS - Self::AR10_MS) / 5.0;
+#[derive(Copy, Clone, Debug, PartialEq)]
+/// AR and OD hit windows
+pub struct BeatmapHitWindows {
+    /// Hit window for approach rate i.e. TimePreempt in milliseconds.
+    pub ar: f64,
+    /// Hit window for overall difficulty i.e. time to hit a 300 ("Great") in milliseconds.
+    pub od: f64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+/// Specify values for this builder to get [`BeatmapAttributes`] or [`BeatmapHitWindows`] based on
+/// mods & co.
+pub struct BeatmapAttributesBuilder {
+    mode: GameMode,
+    ar: f64,
+    od: f64,
+    cs: f64,
+    hp: f64,
+    mods: Option<u32>,
+    clock_rate: Option<f64>,
+    converted: bool,
+}
+
+impl BeatmapAttributesBuilder {
+    const OSU_MIN: f64 = 80.0;
+    const OSU_AVG: f64 = 50.0;
+    const OSU_MAX: f64 = 20.0;
+
+    const TAIKO_MIN: f64 = 50.0;
+    const TAIKO_AVG: f64 = 35.0;
+    const TAIKO_MAX: f64 = 20.0;
 
     #[inline]
-    pub(crate) fn new(ar: f32, od: f32, cs: f32, hp: f32) -> Self {
-        Self {
-            ar: ar as f64,
-            od: od as f64,
-            cs: cs as f64,
-            hp: hp as f64,
-            clock_rate: 1.0,
+    /// Create a new [`BeatmapAttributesBuilder`].
+    pub fn new(map: &Beatmap) -> Self {
+        Self::from(map)
+    }
+
+    #[inline]
+    /// Specify the mode.
+    pub fn mode(&mut self, mode: GameMode) -> &mut Self {
+        self.mode = mode;
+
+        self
+    }
+
+    #[inline]
+    /// Specify the approach rate.
+    pub fn ar(&mut self, ar: f64) -> &mut Self {
+        self.ar = ar;
+
+        self
+    }
+
+    #[inline]
+    /// Specify the overall difficulty.
+    pub fn od(&mut self, od: f64) -> &mut Self {
+        self.od = od;
+
+        self
+    }
+
+    #[inline]
+    /// Specify the circle size.
+    pub fn cs(&mut self, cs: f64) -> &mut Self {
+        self.cs = cs;
+
+        self
+    }
+
+    #[inline]
+    /// Specify the drain rate.
+    pub fn hp(&mut self, hp: f64) -> &mut Self {
+        self.hp = hp;
+
+        self
+    }
+
+    #[inline]
+    /// Specify the mods.
+    pub fn mods(&mut self, mods: u32) -> &mut Self {
+        self.mods = Some(mods);
+
+        self
+    }
+
+    #[inline]
+    /// Specify a custom clock rate.
+    pub fn clock_rate(&mut self, clock_rate: f64) -> &mut Self {
+        self.clock_rate = Some(clock_rate);
+
+        self
+    }
+
+    #[inline]
+    /// Specify whether it's a converted map.
+    /// Only relevant for mania.
+    pub fn converted(&mut self, converted: bool) -> &mut Self {
+        self.converted = converted;
+
+        self
+    }
+
+    #[inline]
+    /// Calculate the AR and OD hit windows.
+    pub fn hit_windows(&self) -> BeatmapHitWindows {
+        let mods = self.mods.unwrap_or(0);
+        let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
+
+        let mod_mult = |val: f64| {
+            if mods.hr() {
+                (val * 1.4).min(10.0)
+            } else if mods.ez() {
+                val * 0.5
+            } else {
+                val
+            }
+        };
+
+        let raw_ar = mod_mult(self.ar);
+        let preempt = difficulty_range(raw_ar, 1800.0, 1200.0, 450.0) / clock_rate;
+
+        // OD
+        let hit_window = match self.mode {
+            GameMode::Osu | GameMode::Catch => {
+                let raw_od = mod_mult(self.od);
+
+                difficulty_range(raw_od, Self::OSU_MIN, Self::OSU_AVG, Self::OSU_MAX) / clock_rate
+            }
+            GameMode::Taiko => {
+                let raw_od = mod_mult(self.od);
+
+                difficulty_range(raw_od, Self::TAIKO_MIN, Self::TAIKO_AVG, Self::TAIKO_MAX).floor()
+                    / clock_rate
+            }
+            GameMode::Mania => {
+                let mut value = if !self.converted {
+                    34.0 + 3.0 * (10.0 - self.od).clamp(0.0, 10.0)
+                } else if self.od > 4.0 {
+                    34.0
+                } else {
+                    47.0
+                };
+
+                if mods.hr() {
+                    value /= 1.4;
+                } else if mods.ez() {
+                    value *= 1.4;
+                }
+
+                ((value * clock_rate).floor() / clock_rate).ceil()
+            }
+        };
+
+        BeatmapHitWindows {
+            ar: preempt,
+            od: hit_window,
         }
     }
 
-    /// Adjusts attributes w.r.t. mods.
-    /// AR is further adjusted by its hitwindow.
-    /// OD is __not__ adjusted by its hitwindow.
-    pub fn mods(self, mods: impl Mods) -> Self {
-        if !mods.change_map() {
-            return self;
-        }
-
-        let clock_rate = mods.clock_rate();
+    /// Calculate the [`BeatmapAttributes`].
+    pub fn build(&self) -> BeatmapAttributes {
+        let mods = self.mods.unwrap_or(0);
+        let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
         let multiplier = mods.od_ar_hp_multiplier();
-
-        // AR
-        let mut ar = (self.ar * multiplier) as f64;
-        let mut ar_ms = if ar <= 5.0 {
-            Self::AR0_MS - Self::AR_MS_STEP_1 * ar
-        } else {
-            Self::AR5_MS - Self::AR_MS_STEP_2 * (ar - 5.0)
-        };
-
-        ar_ms = ar_ms.max(Self::AR10_MS).min(Self::AR0_MS);
-        ar_ms /= clock_rate;
-
-        ar = if ar_ms > Self::AR5_MS {
-            (Self::AR0_MS - ar_ms) / Self::AR_MS_STEP_1
-        } else {
-            5.0 + (Self::AR5_MS - ar_ms) / Self::AR_MS_STEP_2
-        };
-
-        // OD
-        let od = (self.od * multiplier).min(10.0);
-
-        // CS
-        let mut cs = self.cs;
-        if mods.hr() {
-            cs *= 1.3;
-        } else if mods.ez() {
-            cs *= 0.5;
-        }
-        cs = cs.min(10.0);
 
         // HP
         let hp = (self.hp * multiplier).min(10.0);
 
-        Self {
+        // CS
+        let mut cs = self.cs;
+
+        if mods.hr() {
+            cs = (cs * 1.3).min(10.);
+        } else if mods.ez() {
+            cs *= 0.5;
+        }
+
+        let hit_windows = self.hit_windows();
+        let BeatmapHitWindows { ar, od } = hit_windows;
+
+        // AR
+        let ar = if ar > 1200.0 {
+            (1800.0 - ar) / 120.0
+        } else {
+            (1200.0 - ar) / 150.0 + 5.0
+        };
+
+        // OD
+        let od = match self.mode {
+            GameMode::Osu => (Self::OSU_MIN - od) / (Self::OSU_MIN - Self::OSU_AVG) * 5.0,
+            GameMode::Taiko => (Self::TAIKO_MIN - od) / (Self::TAIKO_MIN - Self::TAIKO_AVG) * 5.0,
+            GameMode::Catch | GameMode::Mania => self.od,
+        };
+
+        BeatmapAttributes {
             ar,
             od,
             cs,
             hp,
             clock_rate,
+            hit_windows,
         }
+    }
+}
+
+impl From<&Beatmap> for BeatmapAttributesBuilder {
+    #[inline]
+    fn from(map: &Beatmap) -> Self {
+        Self {
+            mode: map.mode,
+            ar: map.ar as f64,
+            od: map.od as f64,
+            cs: map.cs as f64,
+            hp: map.hp as f64,
+            mods: None,
+            clock_rate: None,
+            converted: false,
+        }
+    }
+}
+
+fn difficulty_range(difficulty: f64, min: f64, mid: f64, max: f64) -> f64 {
+    if difficulty > 5.0 {
+        mid + (max - mid) * (difficulty - 5.0) / 5.0
+    } else if difficulty < 5.0 {
+        mid - (mid - min) * (5.0 - difficulty) / 5.0
+    } else {
+        mid
     }
 }

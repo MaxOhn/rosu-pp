@@ -66,8 +66,8 @@ pub struct CatchGradualDifficultyAttributes<'map> {
 
 impl<'map> CatchGradualDifficultyAttributes<'map> {
     /// Create a new difficulty attributes iterator for osu!catch maps.
-    pub fn new(map: &'map Beatmap, mods: impl Mods) -> Self {
-        let map_attributes = map.attributes().mods(mods);
+    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
+        let map_attributes = map.attributes().mods(mods).build();
 
         let attributes = CatchDifficultyAttributes {
             ar: map_attributes.ar,

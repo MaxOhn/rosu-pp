@@ -146,8 +146,8 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
     } = params;
 
     let take = passed_objects.unwrap_or(usize::MAX);
-    let map_attributes = map.attributes().mods(mods);
-    let clock_rate = clock_rate.unwrap_or(map_attributes.clock_rate);
+    let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
+    let map_attributes = map.attributes().mods(mods).clock_rate(clock_rate).build();
 
     let attributes = CatchDifficultyAttributes {
         ar: map_attributes.ar,
