@@ -1,6 +1,12 @@
 ## Upcoming
 
-Nothing as of now
+- __Fixes:__
+  - Fixed stack overflow bug when allocating ticks for some sliders on converted catch maps ([#14])
+- __Breaking changes:__
+  - `Beatmap::attributes` now returns a new type `BeatmapAttributesBuilder` to allow for more
+  fine-grained calculations. `BeatmapAttributes` now contains expected values and also includes
+  a `BeatmapHitWindows` field containing the AR (preempt) and OD (great) hit windows in 
+  milliseconds. ([#15])
 
 # v0.7.1 (2022-07-12)
 
@@ -160,3 +166,5 @@ Nothing as of now
 [#1]: https://github.com/MaxOhn/rosu-pp/pull/1
 [#2]: https://github.com/MaxOhn/rosu-pp/pull/2
 [#9]: https://github.com/MaxOhn/rosu-pp/pull/9
+[#14]: https://github.com/MaxOhn/rosu-pp/pull/14
+[#15]: https://github.com/MaxOhn/rosu-pp/pull/15
