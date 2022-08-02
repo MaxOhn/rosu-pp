@@ -3,7 +3,7 @@ use crate::{
     mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes},
     osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
     taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
-    Beatmap, DifficultyAttributes, GameMode, Mods, PerformanceAttributes,
+    Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes,
 };
 
 /// Gradually calculate the difficulty attributes on maps of any mode.
@@ -51,7 +51,7 @@ pub enum GradualDifficultyAttributes<'map> {
 
 impl<'map> GradualDifficultyAttributes<'map> {
     /// Create a new gradual difficulty calculator for maps of any mode.
-    pub fn new(map: &'map Beatmap, mods: impl Mods) -> Self {
+    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
             GameMode::Osu => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
             GameMode::Taiko => Self::Taiko(TaikoGradualDifficultyAttributes::new(map, mods)),

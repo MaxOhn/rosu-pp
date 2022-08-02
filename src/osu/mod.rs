@@ -265,26 +265,16 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     let take = passed_objects.unwrap_or(map.hit_objects.len());
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
-    let map_attributes = map.attributes().mods(mods);
-    let hit_window = difficulty_range_od(map_attributes.od) / clock_rate;
-    let od = (80.0 - hit_window) / 6.0;
-
-    let mut raw_ar = map.ar as f64;
-    let hr = mods.hr();
-
-    if hr {
-        raw_ar = (raw_ar * 1.4).min(10.0);
-    } else if mods.ez() {
-        raw_ar *= 0.5;
-    }
-
-    let time_preempt = difficulty_range_ar(raw_ar);
+    let map_attributes = map.attributes().mods(mods).clock_rate(clock_rate).build();
     let scaling_factor = ScalingFactor::new(map_attributes.cs);
+    let hr = mods.hr();
+    let time_preempt = map_attributes.hit_windows.ar;
+    let hit_window = map_attributes.hit_windows.od;
 
     let mut attributes = OsuDifficultyAttributes {
         ar: map_attributes.ar,
         hp: map_attributes.hp,
-        od,
+        od: map_attributes.od,
         ..Default::default()
     };
 
@@ -521,11 +511,6 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
     }
 }
 
-#[inline]
-fn difficulty_range_ar(ar: f64) -> f64 {
-    crate::difficulty_range(ar, 450.0, 1200.0, 1800.0)
-}
-
 fn lerp(start: f64, end: f64, percent: f64) -> f64 {
     start + (end - start) * percent
 }
@@ -609,9 +594,4 @@ impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {
     fn from(attributes: OsuPerformanceAttributes) -> Self {
         attributes.difficulty
     }
-}
-
-#[inline]
-fn difficulty_range_od(od: f64) -> f64 {
-    super::difficulty_range(od, 20.0, 50.0, 80.0)
 }

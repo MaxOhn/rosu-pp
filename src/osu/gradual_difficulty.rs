@@ -5,7 +5,7 @@ use crate::{
 };
 
 use super::{
-    calculate_star_rating, difficulty_range_ar, difficulty_range_od, old_stacking,
+    calculate_star_rating, old_stacking,
     osu_object::{ObjectParameters, OsuObject, OsuObjectKind},
     scaling_factor::ScalingFactor,
     skill::{Skill, Skills},
@@ -58,27 +58,17 @@ pub struct OsuGradualDifficultyAttributes {
 
 impl OsuGradualDifficultyAttributes {
     /// Create a new difficulty attributes iterator for osu!standard maps.
-    pub fn new(map: &Beatmap, mods: impl Mods) -> Self {
-        let map_attributes = map.attributes().mods(mods);
-        let hit_window = difficulty_range_od(map_attributes.od) / map_attributes.clock_rate;
-        let od = (80.0 - hit_window) / 6.0;
-
-        let mut raw_ar = map.ar as f64;
+    pub fn new(map: &Beatmap, mods: u32) -> Self {
+        let map_attributes = map.attributes().mods(mods).build();
+        let hit_window = map_attributes.hit_windows.od;
+        let time_preempt = map_attributes.hit_windows.ar;
         let hr = mods.hr();
-
-        if hr {
-            raw_ar = (raw_ar * 1.4).min(10.0);
-        } else if mods.ez() {
-            raw_ar *= 0.5;
-        }
-
-        let time_preempt = difficulty_range_ar(raw_ar);
         let scaling_factor = ScalingFactor::new(map_attributes.cs);
 
         let mut attributes = OsuDifficultyAttributes {
             ar: map_attributes.ar,
             hp: map_attributes.hp,
-            od,
+            od: map_attributes.od,
             ..Default::default()
         };
 

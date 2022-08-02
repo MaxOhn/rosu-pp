@@ -1,7 +1,10 @@
 use std::borrow::Cow;
 
 use super::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaStars};
-use crate::{Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP, PerformanceAttributes};
+use crate::{
+    beatmap::BeatmapHitWindows, Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP,
+    PerformanceAttributes,
+};
 
 /// Performance calculator on osu!mania maps.
 ///
@@ -142,8 +145,15 @@ impl<'map> ManiaPP<'map> {
             scaled_score /= percent_passed;
         }
 
-        let mut od = 34.0 + 3.0 * (10.0 - self.map.od as f64).max(0.0).min(10.0);
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
+
+        let BeatmapHitWindows { od: hit_window, .. } = self
+            .map
+            .attributes()
+            .mods(self.mods)
+            .clock_rate(clock_rate)
+            .converted(matches!(self.map, Cow::Owned(_)))
+            .hit_windows();
 
         let mut multiplier = 0.8;
 
@@ -153,22 +163,7 @@ impl<'map> ManiaPP<'map> {
 
         if ez {
             multiplier *= 0.5;
-            od *= 1.4;
         }
-
-        let hit_window = {
-            let not_converted = matches!(self.map, Cow::Borrowed(_));
-
-            let value = if not_converted {
-                od
-            } else if self.map.od > 4.0 {
-                34.0
-            } else {
-                47.0
-            };
-
-            ((value * clock_rate).floor() / clock_rate).ceil()
-        };
 
         let strain_value = self.compute_strain(scaled_score, stars);
         let acc_value = self.compute_accuracy_value(scaled_score, strain_value, hit_window);

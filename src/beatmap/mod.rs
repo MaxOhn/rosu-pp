@@ -3,7 +3,7 @@ use std::{borrow::Cow, cmp::Ordering};
 use crate::parse::HitObject;
 
 pub use self::{
-    attributes::BeatmapAttributes,
+    attributes::{BeatmapAttributes, BeatmapAttributesBuilder, BeatmapHitWindows},
     breaks::Break,
     control_points::{ControlPoint, ControlPointIter, DifficultyPoint, TimingPoint},
     mode::GameMode,
@@ -66,8 +66,8 @@ pub struct Beatmap {
 impl Beatmap {
     /// Extract a beatmap's attributes into their own type.
     #[inline]
-    pub fn attributes(&self) -> BeatmapAttributes {
-        BeatmapAttributes::new(self.ar, self.od, self.cs, self.hp)
+    pub fn attributes(&self) -> BeatmapAttributesBuilder {
+        BeatmapAttributesBuilder::new(self)
     }
 
     /// The beats per minute of the map.

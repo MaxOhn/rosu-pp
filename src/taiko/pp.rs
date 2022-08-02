@@ -1,7 +1,10 @@
 use std::borrow::Cow;
 
 use super::{TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState, TaikoStars};
-use crate::{Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP, PerformanceAttributes};
+use crate::{
+    beatmap::BeatmapHitWindows, Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP,
+    PerformanceAttributes,
+};
 
 /// Performance calculator on osu!taiko maps.
 ///
@@ -281,15 +284,13 @@ impl<'map> TaikoPPInner<'map> {
 
     #[inline]
     fn compute_accuracy_value(&self) -> f64 {
-        let mut od = self.map.od as f64;
+        let BeatmapHitWindows { od: hit_window, .. } = self
+            .map
+            .attributes()
+            .mods(self.mods)
+            .clock_rate(self.clock_rate)
+            .hit_windows();
 
-        if self.mods.hr() {
-            od *= 1.4;
-        } else if self.mods.ez() {
-            od *= 0.5;
-        }
-
-        let hit_window = difficulty_range_od(od).floor() / self.clock_rate;
         let max_combo = self.attributes.max_combo;
 
         (150.0 / hit_window).powf(1.1)
@@ -297,11 +298,6 @@ impl<'map> TaikoPPInner<'map> {
             * 22.0
             * (max_combo as f64 / 1500.0).powf(0.3).min(1.15)
     }
-}
-
-#[inline]
-fn difficulty_range_od(od: f64) -> f64 {
-    crate::difficulty_range(od, 20.0, 35.0, 50.0)
 }
 
 impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
