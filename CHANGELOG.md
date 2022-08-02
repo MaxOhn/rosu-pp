@@ -1,5 +1,9 @@
 ## Upcoming
 
+Nothing as of now
+
+# v0.8.0 (2022-08-02)
+
 - __Fixes:__
   - Fixed stack overflow bug when allocating ticks for some sliders on converted catch maps ([#14])
 - __Breaking changes:__
@@ -8,7 +12,7 @@
   a `BeatmapHitWindows` field containing the AR (preempt) and OD (great) hit windows in 
   milliseconds. ([#15])
 
-# v0.7.1 (2022-07-12)
+## v0.7.1 (2022-07-12)
 
 - __Fixes:__
   - Parsing edge sounds is now mindful about overflowing a byte (ref. ranked map id 80799)
