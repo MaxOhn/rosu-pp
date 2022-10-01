@@ -2,10 +2,22 @@ use std::slice::Iter;
 
 use crate::{parse::HitObject, Beatmap};
 
+use super::rim::Rim;
+
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct TaikoObject<'h> {
     pub(crate) h: &'h HitObject,
     pub(crate) sound: u8,
+}
+
+impl TaikoObject<'_> {
+    pub(crate) fn is_rim(&self) -> bool {
+        self.sound.is_rim()
+    }
+
+    pub(crate) fn is_hit(&self) -> bool {
+        self.h.is_circle()
+    }
 }
 
 pub(crate) trait IntoTaikoObjectIter {

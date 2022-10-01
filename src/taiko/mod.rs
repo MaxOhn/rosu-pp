@@ -1,36 +1,31 @@
+mod colours;
 mod difficulty_object;
 mod gradual_difficulty;
 mod gradual_performance;
-mod hitobject_rhythm;
 mod pp;
 mod rim;
-mod skill;
-mod skill_kind;
+mod skills;
 mod stamina_cheese;
 mod taiko_object;
 
-use difficulty_object::DifficultyObject;
 pub use gradual_difficulty::*;
 pub use gradual_performance::*;
-use hitobject_rhythm::{closest_rhythm, HitObjectRhythm};
 pub use pp::*;
 use rim::Rim;
-use skill_kind::SkillKind;
-use stamina_cheese::StaminaCheeseDetector;
 use taiko_object::IntoTaikoObjectIter;
 
-use crate::taiko::skill::Skills;
+use crate::beatmap::BeatmapHitWindows;
 use crate::{Beatmap, GameMode, Mods, OsuStars};
 
-use std::borrow::Cow;
-use std::cmp::Ordering;
-use std::f64::consts::PI;
+use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
-const SECTION_LEN: f64 = 400.0;
+use self::colours::ColourDifficultyPreprocessor;
+use self::difficulty_object::{MonoIndex, ObjectLists, TaikoDifficultyObject};
+use self::skills::{Peaks, PeaksDifficultyValues, PeaksRaw, Skill};
 
-const COLOR_SKILL_MULTIPLIER: f64 = 0.01;
-const RHYTHM_SKILL_MULTIPLIER: f64 = 0.014;
-const STAMINA_SKILL_MULTIPLIER: f64 = 0.02;
+const SECTION_LEN: usize = 400;
+
+const DIFFICULTY_MULTIPLIER: f64 = 1.35;
 
 /// Difficulty calculator on osu!taiko maps.
 ///
@@ -56,6 +51,7 @@ pub struct TaikoStars<'map> {
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
+    is_convert: bool,
 }
 
 impl<'map> TaikoStars<'map> {
@@ -67,6 +63,7 @@ impl<'map> TaikoStars<'map> {
             mods: 0,
             passed_objects: None,
             clock_rate: None,
+            is_convert: false,
         }
     }
 
@@ -102,35 +99,65 @@ impl<'map> TaikoStars<'map> {
         self
     }
 
+    /// Specify whether the map is a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(mut self, is_convert: bool) -> Self {
+        self.is_convert = is_convert;
+
+        self
+    }
+
     /// Calculate all difficulty related values, including stars.
     #[inline]
     pub fn calculate(self) -> TaikoDifficultyAttributes {
-        let (skills, max_combo) = calculate_skills(self);
-        let mut buf = vec![0.0; skills.strain_peaks_len()];
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
 
-        skills.color.copy_strain_peaks(&mut buf);
-        let color_rating = skills.color.difficulty_value(&mut buf) * COLOR_SKILL_MULTIPLIER;
+        let BeatmapHitWindows { od: hit_window, .. } = self
+            .map
+            .attributes()
+            .mods(self.mods)
+            .clock_rate(clock_rate)
+            .hit_windows();
 
-        skills.rhythm.copy_strain_peaks(&mut buf);
-        let rhythm_rating = skills.rhythm.difficulty_value(&mut buf) * RHYTHM_SKILL_MULTIPLIER;
+        let is_convert = self.is_convert || matches!(self.map, Cow::Owned(_));
 
-        skills.stamina_right.copy_strain_peaks(&mut buf);
-        let stamina_right = skills.stamina_right.difficulty_value(&mut buf);
+        let (peaks, max_combo) = calculate_skills(self);
 
-        skills.stamina_left.copy_strain_peaks(&mut buf);
-        let stamina_left = skills.stamina_left.difficulty_value(&mut buf);
+        let PeaksDifficultyValues {
+            mut colour_rating,
+            mut rhythm_rating,
+            mut stamina_rating,
+            mut combined_rating,
+        } = peaks.difficulty_values();
 
-        let mut stamina_rating = (stamina_right + stamina_left) * STAMINA_SKILL_MULTIPLIER;
+        colour_rating *= DIFFICULTY_MULTIPLIER;
+        rhythm_rating *= DIFFICULTY_MULTIPLIER;
+        stamina_rating *= DIFFICULTY_MULTIPLIER;
+        combined_rating *= DIFFICULTY_MULTIPLIER;
 
-        let stamina_penalty = simple_color_penalty(stamina_rating, color_rating);
-        stamina_rating *= stamina_penalty;
+        let mut star_rating = rescale(combined_rating * 1.4);
 
-        let combined_rating = locally_combined_difficulty(&mut buf, &skills, stamina_penalty);
-        let separate_rating = norm(1.5, color_rating, rhythm_rating, stamina_rating);
+        // * TODO: This is temporary measure as we don't detect abuse of multiple-input
+        // * playstyles of converts within the current system.
+        if is_convert {
+            star_rating *= 0.925;
 
-        let stars = rescale(1.4 * separate_rating + 0.5 * combined_rating);
+            // * For maps with low colour variance and high stamina requirement,
+            // * multiple inputs are more likely to be abused.
+            if colour_rating < 2.0 && stamina_rating > 8.0 {
+                star_rating *= 0.8;
+            }
+        }
 
-        TaikoDifficultyAttributes { stars, max_combo }
+        TaikoDifficultyAttributes {
+            stamina: stamina_rating,
+            rhythm: rhythm_rating,
+            colour: colour_rating,
+            peak: combined_rating,
+            hit_window,
+            stars: star_rating,
+            max_combo,
+        }
     }
 
     /// Calculate the skill strains.
@@ -139,14 +166,19 @@ impl<'map> TaikoStars<'map> {
     #[inline]
     pub fn strains(self) -> TaikoStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
-        let (skills, _) = calculate_skills(self);
+        let (peaks, _) = calculate_skills(self);
+
+        let PeaksRaw {
+            colour,
+            rhythm,
+            stamina,
+        } = peaks.into_raw();
 
         TaikoStrains {
-            section_len: SECTION_LEN * clock_rate,
-            color: skills.color.strain_peaks,
-            rhythm: skills.rhythm.strain_peaks,
-            stamina_right: skills.stamina_right.strain_peaks,
-            stamina_left: skills.stamina_left.strain_peaks,
+            section_len: SECTION_LEN as f64 * clock_rate,
+            color: colour,
+            rhythm,
+            stamina,
         }
     }
 }
@@ -161,10 +193,8 @@ pub struct TaikoStrains {
     pub color: Vec<f64>,
     /// Strain peaks of the rhythm skill.
     pub rhythm: Vec<f64>,
-    /// Strain peaks of the left-stamina skill.
-    pub stamina_right: Vec<f64>,
-    /// Strain peaks of the right-stamina skill.
-    pub stamina_left: Vec<f64>,
+    /// Strain peaks of the stamina skill.
+    pub stamina: Vec<f64>,
 }
 
 impl TaikoStrains {
@@ -176,67 +206,68 @@ impl TaikoStrains {
     }
 }
 
-fn calculate_skills(params: TaikoStars<'_>) -> (Skills, usize) {
+fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
     let TaikoStars {
         map,
         mods,
         passed_objects,
         clock_rate,
+        ..
     } = params;
 
     let take = passed_objects.unwrap_or(map.hit_objects.len());
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
-    // True if the object at that index is stamina cheese
-    let cheese = map.find_cheese();
-    let mut skills = Skills::new();
+    let mut peaks = Peaks::new();
     let mut max_combo = 0;
 
     match map.hit_objects.get(0) {
         Some(h) => max_combo += h.is_circle() as usize,
-        None => return (skills, max_combo),
+        None => return (peaks, max_combo),
     }
 
     match map.hit_objects.get(1) {
         Some(h) => max_combo += h.is_circle() as usize,
-        None => return (skills, max_combo),
+        None => return (peaks, max_combo),
     }
 
-    let mut hit_objects = map
+    let mut diff_objects = map
         .taiko_objects()
         .take(take)
-        .enumerate()
         .skip(2)
         .zip(map.taiko_objects().skip(1))
         .zip(map.taiko_objects())
-        .inspect(|(((_, base), _), _)| max_combo += base.h.is_circle() as usize)
-        .map(|(((idx, base), prev), prev_prev)| {
-            DifficultyObject::new(idx, base, prev, prev_prev, clock_rate)
-        });
+        .enumerate()
+        .inspect(|(_, ((base, _), _))| max_combo += base.h.is_circle() as usize)
+        .fold(
+            ObjectLists::default(),
+            |mut lists, (idx, ((base, last), last_last))| {
+                let diff_obj =
+                    TaikoDifficultyObject::new(base, last, last_last, clock_rate, &lists, idx);
 
-    // Handle first element distinctly
-    let h = match hit_objects.next() {
-        Some(h) => h,
-        None => return (skills, max_combo),
-    };
+                match &diff_obj.mono_idx {
+                    MonoIndex::Centre(_) => lists.centres.push(idx),
+                    MonoIndex::Rim(_) => lists.rims.push(idx),
+                    MonoIndex::None => {}
+                }
 
-    // No strain for first object
-    let mut curr_section_end = (h.start_time / SECTION_LEN).ceil() * SECTION_LEN;
-    skills.process(&h, &cheese);
+                if diff_obj.note_idx.is_some() {
+                    lists.notes.push(idx);
+                }
 
-    // Handle all other objects
-    for h in hit_objects {
-        while h.start_time > curr_section_end {
-            skills.save_peak_and_start_new_section(curr_section_end);
-            curr_section_end += SECTION_LEN;
-        }
+                lists.all.push(Rc::new(RefCell::new(diff_obj)));
 
-        skills.process(&h, &cheese);
+                lists
+            },
+        );
+
+    ColourDifficultyPreprocessor::process_and_assign(&mut diff_objects);
+
+    for hit_object in diff_objects.all.iter() {
+        peaks.process(&hit_object.borrow(), &diff_objects);
     }
 
-    skills.save_current_peak();
-
-    (skills, max_combo)
+    (peaks, max_combo)
 }
 
 #[inline]
@@ -248,56 +279,19 @@ fn rescale(stars: f64) -> f64 {
     }
 }
 
-#[inline]
-fn simple_color_penalty(stamina: f64, color: f64) -> f64 {
-    if color <= 0.0 {
-        0.79 - 0.25
-    } else {
-        0.79 - (stamina / color - 12.0).atan() / PI / 2.0
-    }
-}
-
-fn locally_combined_difficulty(peaks: &mut Vec<f64>, skills: &Skills, stamina_penalty: f64) -> f64 {
-    peaks.clear();
-
-    let iter = skills
-        .color
-        .strain_peaks
-        .iter()
-        .zip(skills.rhythm.strain_peaks.iter())
-        .zip(skills.stamina_right.strain_peaks.iter())
-        .zip(skills.stamina_left.strain_peaks.iter())
-        .map(|(((&color, &rhythm), &stamina_right), &stamina_left)| {
-            norm(
-                2.0,
-                color * COLOR_SKILL_MULTIPLIER,
-                rhythm * RHYTHM_SKILL_MULTIPLIER,
-                (stamina_right + stamina_left) * STAMINA_SKILL_MULTIPLIER * stamina_penalty,
-            )
-        });
-
-    peaks.extend(iter);
-    peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
-
-    let mut difficulty = 0.0;
-    let mut weight = 1.0;
-
-    for strain in peaks {
-        difficulty += *strain * weight;
-        weight *= 0.9;
-    }
-
-    difficulty
-}
-
-#[inline]
-fn norm(p: f64, a: f64, b: f64, c: f64) -> f64 {
-    (a.powf(p) + b.powf(p) + c.powf(p)).powf(p.recip())
-}
-
 /// The result of a difficulty calculation on an osu!taiko map.
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct TaikoDifficultyAttributes {
+    /// The difficulty corresponding to the stamina skill.
+    pub stamina: f64,
+    /// The difficulty corresponding to the rhythm skill.
+    pub rhythm: f64,
+    /// The difficulty corresponding to the colour skill.
+    pub colour: f64,
+    /// The difficulty corresponding to the hardest parts of the map.
+    pub peak: f64,
+    /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc)
+    pub hit_window: f64,
     /// The final star rating.
     pub stars: f64,
     /// The maximum combo.
@@ -322,7 +316,9 @@ pub struct TaikoPerformanceAttributes {
     /// The accuracy portion of the final pp.
     pub pp_acc: f64,
     /// The strain portion of the final pp.
-    pub pp_strain: f64,
+    pub pp_difficulty: f64,
+    /// Scaled miss count based on total hits.
+    pub effective_miss_count: f64,
 }
 
 impl TaikoPerformanceAttributes {
@@ -367,6 +363,7 @@ impl<'map> From<OsuStars<'map>> for TaikoStars<'map> {
             mods,
             passed_objects,
             clock_rate,
+            is_convert: true,
         }
     }
 }

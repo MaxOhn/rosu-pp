@@ -38,7 +38,7 @@ use crate::{
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'map> {
-    map: Cow<'map, Beatmap>,
+    pub(crate) map: Cow<'map, Beatmap>,
     attributes: Option<TaikoDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
@@ -176,7 +176,9 @@ impl<'map> TaikoPP<'map> {
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> TaikoPerformanceAttributes {
         let attributes = self.attributes.take().unwrap_or_else(|| {
-            let mut calculator = TaikoStars::new(self.map.as_ref()).mods(self.mods);
+            let mut calculator = TaikoStars::new(self.map.as_ref())
+                .mods(self.mods)
+                .is_convert(matches!(self.map, Cow::Owned(_)));
 
             if let Some(passed_objects) = self.passed_objects {
                 calculator = calculator.passed_objects(passed_objects);
@@ -189,36 +191,65 @@ impl<'map> TaikoPP<'map> {
             calculator.calculate()
         });
 
-        if self.n300.or(self.n100).is_some() {
-            let total = self.map.n_circles as usize;
-            let misses = self.n_misses;
+        self.assert_hitresults(attributes).calculate()
+    }
 
-            let mut n300 = self.n300.unwrap_or(0).min(total - misses);
-            let mut n100 = self.n100.unwrap_or(0).min(total - n300 - misses);
+    fn assert_hitresults(&'map self, attributes: TaikoDifficultyAttributes) -> TaikoPPInner<'map> {
+        let total_result_count = attributes.max_combo();
+        let misses = self.n_misses;
 
-            let given = n300 + n100 + misses;
-            let missing = total - given;
+        let (n300, n100) = match (self.n300, self.n100) {
+            (Some(n300), Some(n100)) => {
+                let n300 = n300.min(total_result_count - misses);
+                let n100 = n100.min(total_result_count - n300 - misses);
 
-            match (self.n300, self.n100) {
-                (Some(_), Some(_)) => n300 += missing,
-                (Some(_), None) => n100 += missing,
-                (None, Some(_)) => n300 += missing,
-                (None, None) => unreachable!(),
-            };
+                let given = n300 + n100 + misses;
+                let missing = total_result_count - given;
 
-            self.acc = (2 * n300 + n100) as f64 / (2 * (n300 + n100 + misses)) as f64;
-        }
+                (n300 + missing, n100)
+            }
+            (Some(n300), None) => {
+                let n300 = n300.min(total_result_count - misses);
 
-        let inner = TaikoPPInner {
-            map: self.map.as_ref(),
-            attributes,
-            mods: self.mods,
-            acc: self.acc,
-            n_misses: self.n_misses,
-            clock_rate: self.clock_rate.unwrap_or_else(|| self.mods.clock_rate()),
+                let n100 = total_result_count
+                    .saturating_sub(n300)
+                    .saturating_sub(misses);
+
+                (n300, n100)
+            }
+            (None, Some(n100)) => {
+                let n100 = n100.min(total_result_count - misses);
+
+                let n300 = total_result_count
+                    .saturating_sub(n100)
+                    .saturating_sub(misses);
+
+                (n300, n100)
+            }
+            (None, None) => {
+                let target_total = (self.acc * (total_result_count * 2) as f64) as usize;
+
+                let n300 = target_total - total_result_count.saturating_sub(misses);
+                let n100 = total_result_count
+                    .saturating_sub(n300)
+                    .saturating_sub(misses);
+
+                (n300, n100)
+            }
         };
 
-        inner.calculate()
+        let acc = (2 * n300 + n100) as f64 / (2 * (n300 + n100 + misses)) as f64;
+
+        TaikoPPInner {
+            map: self.map.as_ref(),
+            attributes,
+            acc,
+            n300,
+            n100,
+            mods: self.mods,
+            n_misses: misses,
+            clock_rate: self.clock_rate.unwrap_or_else(|| self.mods.clock_rate()),
+        }
     }
 }
 
@@ -229,57 +260,73 @@ struct TaikoPPInner<'map> {
     acc: f64,
     n_misses: usize,
     clock_rate: f64,
+    n300: usize,
+    n100: usize,
 }
 
 impl<'map> TaikoPPInner<'map> {
     fn calculate(self) -> TaikoPerformanceAttributes {
-        let mut multiplier = 1.1;
+        // * The effectiveMissCount is calculated by gaining a ratio for totalSuccessfulHits
+        // * and increasing the miss penalty for shorter object counts lower than 1000.
+        let total_successful_hits = self.total_successful_hits();
 
-        if self.mods.nf() {
-            multiplier *= 0.9;
-        }
+        let effective_miss_count = if total_successful_hits > 0 {
+            (1000.0 / (total_successful_hits as f64)).max(1.0) * self.n_misses as f64
+        } else {
+            0.0
+        };
+
+        let mut multiplier = 1.13;
 
         if self.mods.hd() {
-            multiplier *= 1.1;
+            multiplier *= 1.075;
         }
 
-        let strain_value = self.compute_strain_value();
+        if self.mods.ez() {
+            multiplier *= 0.975;
+        }
+
+        let diff_value = self.compute_difficulty_value(effective_miss_count);
         let acc_value = self.compute_accuracy_value();
 
-        let pp = (strain_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
+        let pp = (diff_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
         TaikoPerformanceAttributes {
             difficulty: self.attributes,
             pp,
             pp_acc: acc_value,
-            pp_strain: strain_value,
+            pp_difficulty: diff_value,
+            effective_miss_count,
         }
     }
 
-    fn compute_strain_value(&self) -> f64 {
-        let attributes = &self.attributes;
-        let exp_base = 5.0 * (attributes.stars / 0.0075).max(1.0) - 4.0;
-        let mut strain = exp_base * exp_base / 100_000.0;
+    fn compute_difficulty_value(&self, effective_miss_count: f64) -> f64 {
+        let attrs = &self.attributes;
+        let exp_base = 5.0 * (attrs.stars / 0.115).max(1.0) - 4.0;
+        let mut diff_value = exp_base.powf(2.25) / 1150.0;
 
-        // Longer maps are worth more
-        let len_bonus = 1.0 + 0.1 * (attributes.max_combo as f64 / 1500.0).min(1.0);
-        strain *= len_bonus;
+        let len_bonus = 1.0 + 0.1 * (attrs.max_combo as f64 / 1500.0).min(1.0);
+        diff_value *= len_bonus;
 
-        // Penalize misses exponentially
-        strain *= 0.985_f64.powi(self.n_misses as i32);
+        diff_value *= 0.986_f64.powf(effective_miss_count);
 
-        // HD bonus
+        if self.mods.ez() {
+            diff_value *= 0.985;
+        }
+
         if self.mods.hd() {
-            strain *= 1.025;
+            diff_value *= 1.025;
         }
 
-        // FL bonus
+        if self.mods.hr() {
+            diff_value *= 1.05;
+        }
+
         if self.mods.fl() {
-            strain *= 1.05 * len_bonus;
+            diff_value *= 1.05 * len_bonus;
         }
 
-        // Scale with accuracy
-        strain * self.acc
+        diff_value * self.acc * self.acc
     }
 
     #[inline]
@@ -291,12 +338,32 @@ impl<'map> TaikoPPInner<'map> {
             .clock_rate(self.clock_rate)
             .hit_windows();
 
-        let max_combo = self.attributes.max_combo;
+        if hit_window <= 0.0 {
+            return 0.0;
+        }
 
-        (150.0 / hit_window).powf(1.1)
-            * self.acc.powi(15)
-            * 22.0
-            * (max_combo as f64 / 1500.0).powf(0.3).min(1.15)
+        let mut acc_value = (60.0 / hit_window).powf(1.1)
+            * self.acc.powi(8)
+            * self.attributes.stars.powf(0.4)
+            * 27.0;
+
+        let len_bonus = (self.total_hits() as f64 / 1500.0).powf(0.3).min(1.15);
+        acc_value *= len_bonus;
+
+        // * Slight HDFL Bonus for accuracy. A clamp is used to prevent against negative values
+        if self.mods.hd() && self.mods.fl() {
+            acc_value *= (1.075 * len_bonus).max(1.05);
+        }
+
+        acc_value
+    }
+
+    fn total_hits(&self) -> usize {
+        self.n300 + self.n100 + self.n_misses
+    }
+
+    fn total_successful_hits(&self) -> usize {
+        self.n300 + self.n100
     }
 }
 

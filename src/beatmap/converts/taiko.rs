@@ -38,7 +38,9 @@ impl Beatmap {
 
                         let edge_sound_count = edge_sounds.len().max(1);
 
-                        while j <= obj.start_time + params.duration + params.tick_spacing / 8.0 {
+                        while j
+                            <= obj.start_time + params.duration as f64 + params.tick_spacing / 8.0
+                        {
                             let h = HitObject {
                                 pos: Default::default(),
                                 start_time: j,
@@ -109,6 +111,8 @@ impl Beatmap {
         let timing_point = self.timing_point_at(*start_time);
         let difficulty_point = self.difficulty_point_at(*start_time).unwrap_or_default();
 
+        // ! BUG: Since `LegacyDifficultyControlPoint` are not considered while parsing,
+        // ! this value can be slightly off due to float arithmetics.
         let mut beat_len = timing_point.beat_len / difficulty_point.speed_multiplier;
 
         let slider_scoring_point_dist =
@@ -116,7 +120,7 @@ impl Beatmap {
 
         // * The velocity and duration of the taiko hit object - calculated as the velocity of a drum roll.
         let taiko_vel = slider_scoring_point_dist * self.tick_rate;
-        *duration = (dist / taiko_vel * beat_len).floor();
+        *duration = (dist / taiko_vel * beat_len) as u32;
 
         let osu_vel = taiko_vel * (1000.0_f32 as f64 / beat_len);
 
@@ -126,7 +130,7 @@ impl Beatmap {
         }
 
         // * If the drum roll is to be split into hit circles, assume the ticks are 1/8 spaced within the duration of one beat
-        *tick_spacing = (beat_len / self.tick_rate).min(*duration / spans);
+        *tick_spacing = (beat_len / self.tick_rate).min(*duration as f64 / spans);
 
         *tick_spacing > 0.0 && dist / osu_vel * 1000.0 < 2.0 * beat_len
     }
@@ -134,7 +138,7 @@ impl Beatmap {
 
 struct SliderParams<'c> {
     curve: &'c Curve,
-    duration: f64,
+    duration: u32,
     repeats: usize,
     start_time: f64,
     tick_spacing: f64,
@@ -146,7 +150,7 @@ impl<'c> SliderParams<'c> {
             curve,
             repeats,
             start_time,
-            duration: 0.0,
+            duration: 0,
             tick_spacing: 0.0,
         }
     }

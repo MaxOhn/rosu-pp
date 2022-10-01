@@ -1,5 +1,4 @@
 use std::{
-    cmp::Ordering,
     iter::{Cycle, Skip, Take},
     ops::Index,
     slice::Iter,
@@ -71,11 +70,6 @@ impl<T, const N: usize> LimitedQueue<T, N> {
         }
     }
 
-    pub(crate) fn clear(&mut self) {
-        self.end = N - 1;
-        self.len = 0;
-    }
-
     pub(crate) fn full(&self) -> bool {
         self.len == N
     }
@@ -90,20 +84,6 @@ impl<T, const N: usize> LimitedQueue<T, N> {
 }
 
 pub(crate) type LimitedQueueIter<'a, T> = Take<Skip<Cycle<Iter<'a, T>>>>;
-
-impl<T: PartialOrd, const N: usize> LimitedQueue<T, N> {
-    pub(crate) fn min(&self) -> Option<&T> {
-        self.queue
-            .iter()
-            .take(self.len)
-            .reduce(|min, next| match min.partial_cmp(next) {
-                Some(Ordering::Less) => min,
-                Some(Ordering::Equal) => min,
-                Some(Ordering::Greater) => next,
-                None => min,
-            })
-    }
-}
 
 impl<T, const N: usize> Index<usize> for LimitedQueue<T, N> {
     type Output = T;
