@@ -7,6 +7,7 @@ pub use self::{
     breaks::Break,
     control_points::{ControlPoint, ControlPointIter, DifficultyPoint, TimingPoint},
     mode::GameMode,
+    sorted_vec::SortedVec,
 };
 
 mod attributes;
@@ -14,6 +15,7 @@ mod breaks;
 mod control_points;
 mod converts;
 mod mode;
+mod sorted_vec;
 
 /// The main beatmap struct containing all data relevant
 /// for difficulty and performance calculation
@@ -50,10 +52,10 @@ pub struct Beatmap {
     pub sounds: Vec<u8>,
 
     /// Timing points that indicate a new timing section.
-    pub timing_points: Vec<TimingPoint>,
+    pub timing_points: SortedVec<TimingPoint>,
 
     /// Timing point for the current timing section.
-    pub difficulty_points: Vec<DifficultyPoint>,
+    pub difficulty_points: SortedVec<DifficultyPoint>,
 
     /// The stack leniency that is used to calculate
     /// the stack offset for stacked positions.

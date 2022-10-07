@@ -138,7 +138,7 @@ impl<R> FileReader<R> {
             .and_then(|idx| {
                 self.buf[idx..]
                     .starts_with(b"osu file format v")
-                    .then(|| idx + 17)
+                    .then_some(idx + 17)
             })
             .map(|idx| {
                 let mut n = 0;
@@ -235,7 +235,7 @@ impl<R> FileReader<R> {
             .iter()
             .enumerate()
             .rev()
-            .find_map(|(i, byte)| (!matches!(byte, b' ' | b'\t')).then(|| i + 1))
+            .find_map(|(i, byte)| (!matches!(byte, b' ' | b'\t')).then_some(i + 1))
             .unwrap_or(0);
 
         self.buf.truncate(len);

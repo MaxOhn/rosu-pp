@@ -114,7 +114,7 @@ impl OsuScoreState {
 /// // attempting to process further objects will return `None`.
 /// assert!(gradual_perf.process_next_object(state).is_none());
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct OsuGradualPerformanceAttributes<'map> {
     difficulty: OsuGradualDifficultyAttributes,
     performance: OsuPP<'map>,

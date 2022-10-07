@@ -513,3 +513,18 @@ impl From<taiko::TaikoPerformanceAttributes> for PerformanceAttributes {
 
 #[cfg(all(feature = "async_tokio", feature = "async_std"))]
 compile_error!("Only one of the features `async_tokio` and `async_std` should be enabled");
+
+#[cfg(test)]
+mod tests {
+    use crate::{Beatmap, OsuPP};
+
+    #[test]
+    fn custom() {
+        let path = "F:\\osu!\\beatmaps\\2536330.osu";
+        let map = Beatmap::from_path(path).unwrap();
+
+        let attrs = OsuPP::new(&map).calculate();
+
+        println!("{:#?}", attrs);
+    }
+}

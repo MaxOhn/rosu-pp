@@ -5,23 +5,20 @@ mod gradual_performance;
 mod pp;
 mod rim;
 mod skills;
-mod stamina_cheese;
 mod taiko_object;
-
-pub use gradual_difficulty::*;
-pub use gradual_performance::*;
-pub use pp::*;
-use rim::Rim;
-use taiko_object::IntoTaikoObjectIter;
-
-use crate::beatmap::BeatmapHitWindows;
-use crate::{Beatmap, GameMode, Mods, OsuStars};
 
 use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
-use self::colours::ColourDifficultyPreprocessor;
-use self::difficulty_object::{MonoIndex, ObjectLists, TaikoDifficultyObject};
-use self::skills::{Peaks, PeaksDifficultyValues, PeaksRaw, Skill};
+pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
+
+use crate::{beatmap::BeatmapHitWindows, Beatmap, GameMode, Mods, OsuStars};
+
+use self::{
+    colours::ColourDifficultyPreprocessor,
+    difficulty_object::{MonoIndex, ObjectLists, TaikoDifficultyObject},
+    skills::{Peaks, PeaksDifficultyValues, PeaksRaw, Skill},
+    taiko_object::IntoTaikoObjectIter,
+};
 
 const SECTION_LEN: usize = 400;
 

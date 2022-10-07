@@ -1,9 +1,4 @@
-use std::{
-    error::Error as StdError,
-    fmt,
-    io::Error as IoError,
-    num::{ParseFloatError, ParseIntError},
-};
+use std::{error::Error as StdError, fmt, io::Error as IoError, num::ParseFloatError};
 
 /// `Result<_, ParseError>`
 pub type ParseResult<T> = Result<T, ParseError>;
@@ -22,14 +17,10 @@ pub enum ParseError {
     InvalidCurvePoints,
     /// Expected a decimal number, got something else.
     InvalidDecimalNumber,
-    /// Expected an integer, got something else.
-    InvalidInteger,
     /// Failed to parse game mode.
     InvalidMode,
     /// Expected an additional field.
     MissingField(&'static str),
-    /// Reject maps with too many repeat points.
-    TooManyRepeats,
     /// Failed to recognized specified type for hitobjects.
     UnknownHitObjectKind,
 }
@@ -43,11 +34,9 @@ impl fmt::Display for ParseError {
             }
             Self::BadLine => f.write_str("line not in `Key:Value` pattern"),
             Self::InvalidCurvePoints => f.write_str("invalid curve point"),
-            Self::InvalidInteger => f.write_str("invalid integer"),
             Self::InvalidDecimalNumber => f.write_str("invalid float number"),
             Self::InvalidMode => f.write_str("invalid mode"),
             Self::MissingField(field) => write!(f, "missing field `{}`", field),
-            Self::TooManyRepeats => f.write_str("repeat count is way too high"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
         }
     }
@@ -60,11 +49,9 @@ impl StdError for ParseError {
             Self::IncorrectFileHeader => None,
             Self::BadLine => None,
             Self::InvalidCurvePoints => None,
-            Self::InvalidInteger => None,
             Self::InvalidDecimalNumber => None,
             Self::InvalidMode => None,
             Self::MissingField(_) => None,
-            Self::TooManyRepeats => None,
             Self::UnknownHitObjectKind => None,
         }
     }
@@ -73,12 +60,6 @@ impl StdError for ParseError {
 impl From<IoError> for ParseError {
     fn from(other: IoError) -> Self {
         Self::IoError(other)
-    }
-}
-
-impl From<ParseIntError> for ParseError {
-    fn from(_: ParseIntError) -> Self {
-        Self::InvalidInteger
     }
 }
 

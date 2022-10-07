@@ -6,7 +6,7 @@ use crate::{
     Beatmap,
 };
 
-use super::{catch_object::CatchObject, slider_state::SliderState, CatchDifficultyAttributes};
+use super::{catch_object::CatchObject, CatchDifficultyAttributes};
 
 const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
 const BASE_SCORING_DISTANCE: f64 = 100.0;
@@ -18,7 +18,6 @@ pub(crate) struct FruitParams<'a> {
     pub(crate) last_pos: Option<f32>,
     pub(crate) last_time: f64,
     pub(crate) map: &'a Beatmap,
-    pub(crate) slider_state: SliderState<'a>,
     pub(crate) ticks: Vec<(Pos2, f64)>,
     pub(crate) with_hr: bool,
 }
@@ -55,31 +54,29 @@ impl FruitOrJuice {
                 params.last_pos = Some(h.pos.x + control_points[control_points.len() - 1].pos.x);
                 params.last_time = h.start_time;
 
-                // Responsible for timing point values
-                params.slider_state.update(h.start_time);
+                let timing_point = params.map.timing_point_at(h.start_time);
+
+                let difficulty_point = params
+                    .map
+                    .difficulty_point_at(h.start_time)
+                    .unwrap_or_default();
+
+                let vel_factor =
+                    BASE_SCORING_DISTANCE * params.map.slider_mult / timing_point.beat_len;
+                let tick_dist_factor =
+                    BASE_SCORING_DISTANCE * params.map.slider_mult / params.map.tick_rate;
+
+                let vel = vel_factor * difficulty_point.slider_vel;
+
+                let mut tick_dist = tick_dist_factor * difficulty_point.slider_vel;
 
                 let span_count = (*repeats + 1) as f64;
-
-                let mut tick_dist = 100.0 * params.map.slider_mult / params.map.tick_rate;
-
-                if params.map.version >= 8 {
-                    tick_dist /= (100.0 / params.slider_state.slider_velocity)
-                        .max(10.0)
-                        .min(1000.0)
-                        / 100.0;
-                }
 
                 // Build the curve w.r.t. the control points
                 let curve = Curve::new(control_points, *pixel_len, &mut params.curve_bufs);
 
-                let velocity = (BASE_SCORING_DISTANCE
-                    * params.map.slider_mult
-                    * params.slider_state.slider_velocity)
-                    / params.slider_state.beat_len;
-
-                let end_time = h.start_time + span_count * curve.dist() / velocity;
-                let duration = end_time - h.start_time;
-                let span_duration = duration / span_count;
+                let total_duration = span_count * curve.dist() / vel;
+                let span_duration = total_duration / span_count;
 
                 // * A very lenient maximum length of a slider for ticks to be generated.
                 // * This exists for edge cases such as /b/1573664 where the beatmap has
@@ -88,12 +85,13 @@ impl FruitOrJuice {
 
                 let len = curve.dist().min(max_len);
                 tick_dist = tick_dist.clamp(0.0, len);
-                let min_dist_from_end = velocity * 10.0;
+                let min_dist_from_end = vel * 10.0;
 
                 let mut curr_dist = tick_dist;
-                let time_add = duration * tick_dist / (*pixel_len * span_count);
+                let pixel_len = pixel_len.unwrap_or(0.0);
+                let time_add = total_duration * tick_dist / (pixel_len * span_count);
 
-                let target = *pixel_len - tick_dist / 8.0;
+                let target = pixel_len - tick_dist / 8.0;
 
                 let mut slider_objects = vec![(h.pos, h.start_time)];
 
@@ -112,7 +110,7 @@ impl FruitOrJuice {
                     params.attributes.n_tiny_droplets += tiny_droplet_count(
                         h.start_time,
                         time_add,
-                        duration,
+                        total_duration,
                         span_count as usize,
                         &params.ticks,
                     );
@@ -160,7 +158,7 @@ impl FruitOrJuice {
                 // Slider tail
                 let progress = (*repeats % 2 == 0) as u8 as f64;
                 let pos = h.pos + curve.position_at(progress);
-                slider_objects.push((pos, h.start_time + duration));
+                slider_objects.push((pos, h.start_time + total_duration));
 
                 let new_fruits = 2 + (tick_dist > 0.0) as usize * *repeats;
                 params.attributes.n_fruits += new_fruits;

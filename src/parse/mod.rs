@@ -14,7 +14,10 @@ pub use slider_parsing::*;
 use reader::FileReader;
 pub(crate) use sort::legacy_sort;
 
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    ops::{ControlFlow, Neg},
+};
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::{fs::File, io::Read};
@@ -44,17 +47,32 @@ impl<T> OptionExt<T> for Option<T> {
     }
 }
 
-trait FloatExt: Sized {
-    fn validate(self) -> Result<Self, ParseError>;
-}
+trait InRange: Sized + Copy + Neg<Output = Self> + PartialOrd {
+    const LIMIT: Self;
 
-impl FloatExt for f64 {
-    fn validate(self) -> Result<Self, ParseError> {
-        self.is_finite()
-            .then(|| self)
-            .ok_or(ParseError::InvalidDecimalNumber)
+    fn is_in_range(&self) -> bool {
+        (-Self::LIMIT..=Self::LIMIT).contains(self)
+    }
+
+    fn is_in_custom_range(&self, limit: Self) -> bool {
+        (-limit..=limit).contains(self)
     }
 }
+
+impl InRange for i32 {
+    const LIMIT: Self = i32::MAX;
+}
+
+impl InRange for f32 {
+    const LIMIT: Self = i32::MAX as f32;
+}
+
+impl InRange for f64 {
+    const LIMIT: Self = i32::MAX as f64;
+}
+
+const MAX_COORDINATE_VALUE: i32 = 131_072;
+const KIAI_FLAG: i32 = 1 << 0;
 
 macro_rules! section {
     ($map:ident, $func:ident, $reader:ident, $section:ident) => {{
@@ -201,13 +219,10 @@ macro_rules! parse_events_body {
 
 macro_rules! parse_timingpoints_body {
     ($self:ident, $reader:ident, $section:ident) => {{
-        let mut unsorted_timings = false;
-        let mut unsorted_difficulties = false;
-
-        let mut prev_diff = 0.0;
-        let mut prev_time = 0.0;
-
         let mut empty = true;
+
+        let mut pending_diff_points_time = 0.0;
+        let mut pending_diff_point = None;
 
         while next_line!($reader)? != 0 {
             if let Some(bytes) = $reader.get_section() {
@@ -219,65 +234,125 @@ macro_rules! parse_timingpoints_body {
             let line = $reader.get_line()?;
             let mut split = line.split(',');
 
-            let time = split
+            let time: f64 = split
                 .next()
                 .next_field("timing point time")?
                 .trim()
-                .parse::<f64>()?
-                .validate()?;
+                .parse()?;
 
+            if !time.is_in_range() {
+                continue;
+            }
+
+            // * beatLength is allowed to be NaN to handle an edge case in which
+            // * some beatmaps use NaN slider velocity to disable slider tick
+            // * generation (see LegacyDifficultyControlPoint).
             let beat_len: f64 = split.next().next_field("beat len")?.trim().parse()?;
-            let timing_change = split.nth(4).and_then(|value| value.bytes().next());
-            let effect_flags = split.next().and_then(|value| value.bytes().next());
 
-            let kiai = matches!(effect_flags, Some(b'1'));
+            if !(beat_len.is_in_range() || beat_len.is_nan()) {
+                continue;
+            }
 
-            if matches!(timing_change, Some(b'1') | None) {
-                let beat_len = beat_len.clamp(6.0, 60_000.0);
+            let mut timing_change = true;
+            let mut kiai = false;
 
+            enum Status {
+                Ok,
+                Err,
+            }
+
+            fn parse_remaining<'s, I>(
+                mut split: I,
+                timing_change: &mut bool,
+                kiai: &mut bool,
+            ) -> Status
+            where
+                I: Iterator<Item = &'s str>,
+            {
+                match split
+                    .next()
+                    .filter(|&sig| !sig.starts_with('0'))
+                    .map(str::parse::<i32>)
+                {
+                    Some(Ok(time_sig)) if !time_sig.is_in_range() || time_sig < 1 => {
+                        return Status::Err
+                    }
+                    Some(Ok(_)) => {}
+                    None => return Status::Ok,
+                    Some(Err(_)) => return Status::Err,
+                }
+
+                match split.next().map(str::parse::<i32>) {
+                    Some(Ok(sample_set)) if !sample_set.is_in_range() => return Status::Err,
+                    Some(Ok(_)) => {}
+                    None => return Status::Ok,
+                    Some(Err(_)) => return Status::Err,
+                }
+
+                match split.next().map(str::parse::<i32>) {
+                    Some(Ok(custom_sample)) if !custom_sample.is_in_range() => return Status::Err,
+                    Some(Ok(_)) => {}
+                    None => return Status::Ok,
+                    Some(Err(_)) => return Status::Err,
+                }
+
+                match split.next().map(str::parse::<i32>) {
+                    Some(Ok(sample_volume)) if !sample_volume.is_in_range() => return Status::Err,
+                    Some(Ok(_)) => {}
+                    None => return Status::Ok,
+                    Some(Err(_)) => return Status::Err,
+                }
+
+                if let Some(byte) = split.next().and_then(|value| value.bytes().next()) {
+                    *timing_change = byte == b'1';
+                } else {
+                    return Status::Ok;
+                }
+
+                match split.next().map(str::parse::<i32>) {
+                    Some(Ok(effect_flags)) if !effect_flags.is_in_range() => return Status::Err,
+                    Some(Ok(effect_flags)) => *kiai = (effect_flags & KIAI_FLAG) > 0,
+                    None => return Status::Ok,
+                    Some(Err(_)) => return Status::Err,
+                }
+
+                Status::Ok
+            }
+
+            if let Status::Err = parse_remaining(split, &mut timing_change, &mut kiai) {
+                continue;
+            }
+
+            if timing_change {
                 let point = TimingPoint {
                     time,
-                    beat_len,
+                    beat_len: beat_len.clamp(6.0, 60_000.0),
                     kiai,
                 };
 
                 $self.timing_points.push(point);
+            }
 
-                if time < prev_time {
-                    unsorted_timings = true;
-                } else {
-                    prev_time = time;
-                }
+            // * If beatLength is NaN, speedMultiplier should still be 1
+            // * because all comparisons against NaN are false.
+            let speed_multiplier = if beat_len < 0.0 {
+                (100.0 / -beat_len)
             } else {
-                let speed_multiplier = if beat_len < 0.0 {
-                    (-100.0 / beat_len).clamp(0.1, 10.0)
-                } else {
-                    1.0
-                };
+                1.0
+            };
 
-                let point = DifficultyPoint {
-                    time,
-                    speed_multiplier,
-                    kiai,
-                };
-
-                $self.difficulty_points.push(point);
-
-                if time < prev_diff {
-                    unsorted_difficulties = true;
-                } else {
-                    prev_diff = time;
+            if time != pending_diff_points_time {
+                if let Some(point) = pending_diff_point.take() {
+                    $self.difficulty_points.push_if_not_redundant(point);
                 }
             }
+
+            pending_diff_point = Some(DifficultyPoint::new(time, beat_len, speed_multiplier, kiai));
+            pending_diff_points_time = time;
         }
 
-        if unsorted_timings {
-            sort_unstable(&mut $self.timing_points);
-        }
-
-        if unsorted_difficulties {
-            sort_unstable(&mut $self.difficulty_points);
-        }
+        $self.timing_points.dedup_by_key(|point| point.time);
+        $self.difficulty_points.dedup_by_key(|point| point.time);
 
         Ok(empty)
     }};
@@ -308,24 +383,36 @@ macro_rules! parse_hitobjects_body {
             let line = $reader.get_line()?;
             let mut split = line.split(',');
 
-            let pos = Pos2 {
-                x: split.next().next_field("x pos")?.parse()?,
-                y: split.next().next_field("y pos")?.parse()?,
-            };
+            let x: f32 = split.next().next_field("x pos")?.parse()?;
+            let y: f32 = split.next().next_field("y pos")?.parse()?;
 
-            let time = split
-                .next()
-                .next_field("hitobject time")?
-                .trim()
-                .parse::<f64>()?
-                .validate()?;
+            if !(x.is_in_custom_range(MAX_COORDINATE_VALUE as f32)
+                && y.is_in_custom_range(MAX_COORDINATE_VALUE as f32))
+            {
+                continue;
+            }
+
+            let pos = Pos2 { x, y };
+
+            let time: f64 = split.next().next_field("hitobject time")?.trim().parse()?;
+
+            if !time.is_in_range() {
+                continue;
+            }
 
             if !$self.hit_objects.is_empty() && time < prev_time {
                 unsorted = true;
             }
 
-            let kind: u8 = split.next().next_field("hitobject kind")?.parse()?;
-            let sound = split.next().map(str::parse).transpose()?.unwrap_or(0);
+            let kind: u8 = match split.next().next_field("hitobject kind")?.parse() {
+                Ok(kind) => kind,
+                Err(_) => continue,
+            };
+
+            let sound: u8 = match split.next().next_field("sound")?.parse() {
+                Ok(sound) => sound,
+                Err(_) => continue,
+            };
 
             let kind = if kind & Self::CIRCLE_FLAG > 0 {
                 $self.n_circles += 1;
@@ -337,15 +424,13 @@ macro_rules! parse_hitobjects_body {
                 let mut control_points = Vec::new();
 
                 let control_point_iter = split.next().next_field("control points")?.split('|');
-                let mut repeats: usize = split.next().next_field("repeats")?.parse()?;
 
-                if repeats > 9000 {
-                    return Err(ParseError::TooManyRepeats);
-                }
-
-                // * osu-stable treated the first span of the slider
-                // * as a repeat, but no repeats are happening
-                repeats = repeats.saturating_sub(1);
+                let repeats = match split.next().next_field("repeats")?.parse::<usize>() {
+                    // * osu-stable treated the first span of the slider
+                    // * as a repeat, but no repeats are happening
+                    Ok(repeats @ 0..=9000) => repeats.saturating_sub(1),
+                    Ok(_) | Err(_) => continue,
+                };
 
                 let mut start_idx = 0;
                 let mut end_idx = 0;
@@ -402,25 +487,25 @@ macro_rules! parse_hitobjects_body {
                 if control_points.is_empty() {
                     HitObjectKind::Circle
                 } else {
-                    let pixel_len = split
-                        .next()
-                        .next_field("pixel len")?
-                        .parse::<f64>()?
-                        .max(0.0)
-                        .min(MAX_COORDINATE_VALUE);
+                    let pixel_len = match split.next().map(str::parse::<f64>) {
+                        Some(Ok(len)) if len.is_in_custom_range(MAX_COORDINATE_VALUE as f64) => {
+                            (len != 0.0).then_some(len)
+                        }
+                        Some(_) => continue,
+                        None => None,
+                    };
 
                     let edge_sounds_opt = split.next().map(|sounds| {
                         sounds
                             .split('|')
                             .take(repeats + 2)
                             .map(parse_custom_sound)
-                            .collect::<Result<Vec<_>, _>>()
+                            .collect()
                     });
 
                     let edge_sounds = match edge_sounds_opt {
                         None => Vec::new(),
-                        Some(Ok(sounds)) => sounds,
-                        Some(Err(err)) => return Err(err),
+                        Some(sounds) => sounds,
                     };
 
                     HitObjectKind::Slider {
@@ -432,18 +517,27 @@ macro_rules! parse_hitobjects_body {
                 }
             } else if kind & Self::SPINNER_FLAG > 0 {
                 $self.n_spinners += 1;
-                let end_time = split.next().next_field("spinner endtime")?.parse()?;
+
+                let end_time = match split.next().next_field("spinner endtime")?.parse::<f64>() {
+                    Ok(end_time) => end_time.max(0.0),
+                    Err(_) => continue,
+                };
 
                 HitObjectKind::Spinner { end_time }
             } else if kind & Self::HOLD_FLAG > 0 {
                 $self.n_sliders += 1;
-                let mut end = time;
 
-                if let Some(next) = split.next() {
-                    end = end.max(next.split(':').next().next_field("hold endtime")?.parse()?);
-                }
+                let end_time = match split
+                    .next()
+                    .and_then(|next| next.split(':').next())
+                    .map(str::parse::<f64>)
+                {
+                    Some(Ok(time_)) if time_.is_in_range() => time_.max(time),
+                    Some(_) => continue,
+                    None => time,
+                };
 
-                HitObjectKind::Hold { end_time: end }
+                HitObjectKind::Hold { end_time }
             } else {
                 return Err(ParseError::UnknownHitObjectKind);
             };
@@ -453,6 +547,7 @@ macro_rules! parse_hitobjects_body {
                 start_time: time,
                 kind,
             });
+
             $self.sounds.push(sound);
 
             prev_time = time;
@@ -476,12 +571,21 @@ macro_rules! parse_hitobjects_body {
     }};
 }
 
-// Required for maps with slider edge sound values above 255 e.g. map id 80799
-fn parse_custom_sound(sound: &str) -> ParseResult<u8> {
-    sound.bytes().try_fold(0_u8, |sound, byte| match byte {
-        b'0'..=b'9' => Ok(sound.wrapping_mul(10).wrapping_add((byte & 0xF) as u8)),
-        _ => Err(ParseError::InvalidInteger),
-    })
+// Required for maps with slider edge sound values above 255 e.g. map /b/80799
+fn parse_custom_sound(sound: &str) -> u8 {
+    fn fold_str(sound: &str) -> ControlFlow<u8, u8> {
+        sound.bytes().try_fold(0_u8, |sound, byte| match byte {
+            b'0'..=b'9' => {
+                ControlFlow::Continue(sound.wrapping_mul(10).wrapping_add((byte & 0xF) as u8))
+            }
+            _ => ControlFlow::Break(0),
+        })
+    }
+
+    match fold_str(sound) {
+        ControlFlow::Continue(n) => n,
+        ControlFlow::Break(n) => n,
+    }
 }
 
 macro_rules! parse_body {
@@ -538,8 +642,6 @@ mod slider_parsing {
     use crate::ParseError;
 
     use super::Pos2;
-
-    pub(super) const MAX_COORDINATE_VALUE: f64 = 131_072.0;
 
     pub(super) fn convert_points(
         points: &[&str],

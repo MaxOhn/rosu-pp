@@ -1,16 +1,19 @@
-use std::{iter, mem, vec::IntoIter};
-
-use crate::{
-    curve::CurveBuffers, osu::difficulty_object::DifficultyObject, parse::Pos2, Beatmap, Mods,
+use std::{
+    fmt::{Debug, Formatter, Result as FmtResult},
+    mem,
+    vec::IntoIter,
 };
 
+use crate::{curve::CurveBuffers, Beatmap, Mods};
+
 use super::{
-    calculate_star_rating, old_stacking,
+    create_skills,
+    difficulty_object::{Distances, OsuDifficultyObject},
+    old_stacking,
     osu_object::{ObjectParameters, OsuObject, OsuObjectKind},
     scaling_factor::ScalingFactor,
-    skill::{Skill, Skills},
-    slider_state::SliderState,
-    stacking, OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, SECTION_LEN,
+    skills::{Aim, Flashlight, Skill, Speed},
+    stacking, OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, PERFORMANCE_BASE_MULTIPLIER,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!standard map.
@@ -43,39 +46,47 @@ use super::{
 ///     // ...
 /// }
 /// ```
-#[derive(Clone, Debug)]
 pub struct OsuGradualDifficultyAttributes {
     pub(crate) idx: usize,
+    mods: u32,
     attributes: OsuDifficultyAttributes,
-    clock_rate: f64,
-    hit_objects: OsuObjectIter,
-    skills: Skills,
-    prev_prev: Option<OsuObject>,
-    prev: OsuObject,
-    curr_section_end: f64,
-    strain_peak_buf: Vec<f64>,
+    hit_objects: Vec<OsuObject>,
+    diff_objects: Vec<OsuDifficultyObject<'static>>,
+    skills: [Box<dyn Skill>; 4],
+    hit_window: f64,
+}
+
+impl Debug for OsuGradualDifficultyAttributes {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.debug_struct("OsuGradualDifficultyAttributes")
+            .field("idx", &self.idx)
+            .field("attributes", &self.attributes)
+            .field("hit_objects", &self.hit_objects)
+            .field("skills", &"<cannot be displayed>")
+            .finish()
+    }
 }
 
 impl OsuGradualDifficultyAttributes {
     /// Create a new difficulty attributes iterator for osu!standard maps.
     pub fn new(map: &Beatmap, mods: u32) -> Self {
-        let map_attributes = map.attributes().mods(mods).build();
-        let hit_window = map_attributes.hit_windows.od;
-        let time_preempt = map_attributes.hit_windows.ar;
+        let clock_rate = mods.clock_rate();
+        let map_attrs = map.attributes().mods(mods).build();
+        let scaling_factor = ScalingFactor::new(map_attrs.cs);
         let hr = mods.hr();
-        let scaling_factor = ScalingFactor::new(map_attributes.cs);
+        let time_preempt = map_attrs.hit_windows.ar;
+        let hit_window = 2.0 * map_attrs.hit_windows.od;
 
-        let mut attributes = OsuDifficultyAttributes {
-            ar: map_attributes.ar,
-            hp: map_attributes.hp,
-            od: map_attributes.od,
+        let mut attrs = OsuDifficultyAttributes {
+            ar: map_attrs.ar,
+            hp: map_attrs.hp,
+            od: map_attrs.od,
             ..Default::default()
         };
 
         let mut params = ObjectParameters {
             map,
-            attributes: &mut attributes,
-            slider_state: SliderState::new(map),
+            attributes: &mut attrs,
             ticks: Vec::new(),
             curve_bufs: CurveBuffers::default(),
         };
@@ -88,10 +99,10 @@ impl OsuGradualDifficultyAttributes {
         let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
         hit_objects.extend(hit_objects_iter);
 
-        attributes.n_circles = 0;
-        attributes.n_sliders = 0;
-        attributes.n_spinners = 0;
-        attributes.max_combo = 0;
+        attrs.n_circles = 0;
+        attrs.n_sliders = 0;
+        attrs.n_spinners = 0;
+        attrs.max_combo = 0;
 
         let stack_threshold = time_preempt * map.stack_leniency as f64;
 
@@ -101,162 +112,200 @@ impl OsuGradualDifficultyAttributes {
             old_stacking(&mut hit_objects, stack_threshold);
         }
 
-        let skills = Skills::new(hit_window, mods.rx(), scaling_factor.radius(), mods.fl());
+        let mut hit_objects_iter = hit_objects.iter_mut().map(|h| {
+            let stack_offset = scaling_factor.stack_offset(h.stack_height);
+            h.pos += stack_offset;
 
-        let hit_objects = OsuObjectIter {
-            hit_objects: hit_objects.into_iter(),
-            scaling_factor,
+            h
+        });
+
+        let skills = create_skills(mods, scaling_factor.radius);
+
+        let last = match hit_objects_iter.next() {
+            Some(prev) => prev,
+            None => {
+                return Self {
+                    idx: 0,
+                    mods,
+                    attributes: attrs,
+                    hit_objects: Vec::new(),
+                    diff_objects: Vec::new(),
+                    skills,
+                    hit_window,
+                }
+            }
         };
 
-        let prev_prev = None;
+        let mut last_last = None;
 
-        let prev = OsuObject {
-            time: 0.0,
-            pos: Pos2::zero(),
-            stack_height: 0.0,
-            kind: OsuObjectKind::Circle,
-        };
+        // Prepare `lazy_travel_dist` and `lazy_end_pos` for `last` manually
+        if let OsuObjectKind::Slider {
+            lazy_travel_time,
+            lazy_end_pos,
+            nested_objects,
+            ..
+        } = &mut last.kind
+        {
+            Distances::compute_slider_cursor_pos(
+                last.pos,
+                last.start_time,
+                lazy_end_pos,
+                lazy_travel_time,
+                nested_objects,
+                &scaling_factor,
+            );
+        }
+
+        let mut last = &*last;
+        let mut diff_objects = Vec::with_capacity(map.hit_objects.len().saturating_sub(2));
+
+        for (i, curr) in hit_objects_iter.enumerate() {
+            let delta_time = (curr.start_time - last.start_time) / clock_rate;
+
+            // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
+            let strain_time = delta_time.max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
+
+            let dists = Distances::new(
+                curr,
+                last,
+                last_last,
+                clock_rate,
+                strain_time,
+                &scaling_factor,
+            );
+
+            let diff_obj = OsuDifficultyObject::new(curr, last, clock_rate, i, dists);
+            diff_objects.push(diff_obj);
+
+            last_last = Some(last);
+            last = &*curr;
+        }
 
         Self {
             idx: 0,
-            attributes,
-            clock_rate: map_attributes.clock_rate,
+            mods,
+            attributes: attrs,
+            diff_objects: extend_lifetime(diff_objects),
             hit_objects,
             skills,
-            curr_section_end: 0.0,
-            prev_prev,
-            prev,
-            strain_peak_buf: Vec::new(),
+            hit_window,
         }
     }
+}
+
+fn extend_lifetime(
+    diff_objects: Vec<OsuDifficultyObject<'_>>,
+) -> Vec<OsuDifficultyObject<'static>> {
+    // SAFETY: Owned values of the references will be contained
+    // in the same struct and hence live just as long as this vec.
+    unsafe { mem::transmute(diff_objects) }
 }
 
 impl Iterator for OsuGradualDifficultyAttributes {
     type Item = OsuDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.hit_objects.next()?;
-        self.attributes.max_combo += 1;
-
-        match &curr.kind {
-            OsuObjectKind::Circle => self.attributes.n_circles += 1,
-            OsuObjectKind::Slider { nested_objects, .. } => {
-                self.attributes.max_combo += nested_objects.len();
-                self.attributes.n_sliders += 1
-            }
-            OsuObjectKind::Spinner { .. } => self.attributes.n_spinners += 1,
-        };
-
+        let curr = self.diff_objects.get(self.idx)?;
         self.idx += 1;
 
-        if self.idx == 1 {
-            self.prev = curr;
-            self.curr_section_end =
-                (self.prev.time / self.clock_rate / SECTION_LEN).ceil() * SECTION_LEN;
-
-            return Some(self.attributes.clone());
+        for skill in self.skills.iter_mut() {
+            skill.process(curr, &self.diff_objects, self.hit_window);
         }
 
-        let h = DifficultyObject::new(
-            &curr,
-            &mut self.prev,
-            self.prev_prev.as_ref(),
-            &self.hit_objects.scaling_factor,
-            self.clock_rate,
-        );
+        let mut attrs = self.attributes.clone();
 
-        let base_time = h.base.time / self.clock_rate;
+        attrs.max_combo += 1;
 
-        if self.idx == 2 {
-            while base_time > self.curr_section_end {
-                self.skills.start_new_section_from(self.curr_section_end);
-                self.curr_section_end += SECTION_LEN;
+        match &curr.base.kind {
+            OsuObjectKind::Circle => attrs.n_circles += 1,
+            OsuObjectKind::Slider { nested_objects, .. } => {
+                attrs.n_sliders += 1;
+                attrs.max_combo += nested_objects.len();
             }
-        } else {
-            while base_time > self.curr_section_end {
-                self.skills
-                    .save_peak_and_start_new_section(self.curr_section_end);
-                self.curr_section_end += SECTION_LEN;
-            }
+            OsuObjectKind::Spinner { .. } => attrs.n_spinners += 1,
         }
 
-        self.skills.process(&h);
-        self.prev_prev = Some(mem::replace(&mut self.prev, curr));
+        let [aim, aim_no_sliders, speed, flashlight] = &self.skills;
 
-        let missing = self.skills.aim().strain_peaks.len() + 1 - self.strain_peak_buf.len();
-        self.strain_peak_buf.extend(iter::repeat(0.0).take(missing));
+        let mut aim = aim.as_any().downcast_ref::<Aim>().unwrap().clone();
 
-        let aim_rating = {
-            let aim = self.skills.aim();
-            self.strain_peak_buf[..aim.strain_peaks.len()].copy_from_slice(&aim.strain_peaks);
+        let mut aim_no_sliders = aim_no_sliders
+            .as_any()
+            .downcast_ref::<Aim>()
+            .unwrap()
+            .clone();
 
-            if let Some(last) = self.strain_peak_buf.last_mut() {
-                *last = aim.curr_section_peak;
-            }
+        let mut aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+        let aim_rating_no_sliders =
+            aim_no_sliders.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
-            Skill::difficulty_value(&mut self.strain_peak_buf, aim).sqrt() * DIFFICULTY_MULTIPLIER
-        };
+        let mut speed = speed.as_any().downcast_ref::<Speed>().unwrap().clone();
+        let speed_notes = speed.relevant_note_count();
+        let mut speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+
+        let mut flashlight = flashlight
+            .as_any()
+            .downcast_ref::<Flashlight>()
+            .unwrap()
+            .clone();
+
+        let mut flashlight_rating = flashlight.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
         let slider_factor = if aim_rating > 0.0 {
-            let aim_no_sliders = self.skills.aim_no_sliders();
-            self.strain_peak_buf[..aim_no_sliders.strain_peaks.len()]
-                .copy_from_slice(&aim_no_sliders.strain_peaks);
-
-            if let Some(last) = self.strain_peak_buf.last_mut() {
-                *last = aim_no_sliders.curr_section_peak;
-            }
-
-            let aim_rating_no_sliders =
-                Skill::difficulty_value(&mut self.strain_peak_buf, aim_no_sliders).sqrt()
-                    * DIFFICULTY_MULTIPLIER;
-
             aim_rating_no_sliders / aim_rating
         } else {
             1.0
         };
 
-        let (speed, flashlight) = self.skills.speed_flashlight();
+        if self.mods.td() {
+            aim_rating = aim_rating.powf(0.8);
+            flashlight_rating = flashlight_rating.powf(0.8);
+        }
 
-        let speed_rating = if let Some(speed) = speed {
-            self.strain_peak_buf[..speed.strain_peaks.len()].copy_from_slice(&speed.strain_peaks);
+        if self.mods.rx() {
+            aim_rating *= 0.9;
+            speed_rating = 0.0;
+            flashlight_rating *= 0.7;
+        }
 
-            if let Some(last) = self.strain_peak_buf.last_mut() {
-                *last = speed.curr_section_peak;
-            }
+        let base_aim_performance = (5.0 * (aim_rating / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
+        let base_speed_performance =
+            (5.0 * (speed_rating / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
 
-            Skill::difficulty_value(&mut self.strain_peak_buf, speed).sqrt() * DIFFICULTY_MULTIPLIER
+        let base_flashlight_performance = if self.mods.fl() {
+            flashlight_rating * flashlight_rating * 25.0
         } else {
             0.0
         };
 
-        let flashlight_rating = if let Some(flashlight) = flashlight {
-            self.strain_peak_buf[..flashlight.strain_peaks.len()]
-                .copy_from_slice(&flashlight.strain_peaks);
+        let base_performance = ((base_aim_performance).powf(1.1)
+            + (base_speed_performance).powf(1.1)
+            + (base_flashlight_performance).powf(1.1))
+        .powf(1.0 / 1.1);
 
-            if let Some(last) = self.strain_peak_buf.last_mut() {
-                *last = flashlight.curr_section_peak;
-            }
-
-            Skill::difficulty_value(&mut self.strain_peak_buf, flashlight).sqrt()
-                * DIFFICULTY_MULTIPLIER
+        let star_rating = if base_performance > 0.00001 {
+            PERFORMANCE_BASE_MULTIPLIER.cbrt()
+                * 0.027
+                * ((100_000.0 / 2.0_f64.powf(1.0 / 1.1) * base_performance).cbrt() + 4.0)
         } else {
             0.0
         };
 
-        let star_rating = calculate_star_rating(aim_rating, speed_rating, flashlight_rating);
+        attrs.aim = aim_rating;
+        attrs.speed = speed_rating;
+        attrs.flashlight = flashlight_rating;
+        attrs.slider_factor = slider_factor;
+        attrs.stars = star_rating;
+        attrs.speed_note_count = speed_notes;
 
-        self.attributes.aim_strain = aim_rating;
-        self.attributes.speed_strain = speed_rating;
-        self.attributes.flashlight_rating = flashlight_rating;
-        self.attributes.slider_factor = slider_factor;
-        self.attributes.stars = star_rating;
-
-        Some(self.attributes.clone())
+        Some(attrs)
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.hit_objects.size_hint()
+        let len = self.hit_objects.len() - self.idx;
+
+        (len, Some(len))
     }
 }
 

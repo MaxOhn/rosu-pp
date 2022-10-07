@@ -131,7 +131,7 @@ impl Skill {
     pub(crate) fn process(&mut self, curr: &DifficultyObject<'_>) {
         self.kind.pre_process();
         self.curr_section_peak = self.strain_value_at(curr).max(self.curr_section_peak);
-        self.prev_time = Some(curr.base.time / curr.clock_rate);
+        self.prev_time = Some(curr.base.start_time / curr.clock_rate);
         self.kind.post_process(curr);
     }
 

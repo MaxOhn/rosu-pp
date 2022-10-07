@@ -70,10 +70,6 @@ impl<T, const N: usize> LimitedQueue<T, N> {
         }
     }
 
-    pub(crate) fn full(&self) -> bool {
-        self.len == N
-    }
-
     pub(crate) fn iter(&self) -> LimitedQueueIter<'_, T> {
         self.queue
             .iter()

@@ -57,7 +57,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
 
         // ! BUG: Since `LegacyDifficultyControlPoint` are not considered while parsing,
         // ! this value can be slightly off due to float arithmetics.
-        let beat_len = timing_point.beat_len / difficulty_point.speed_multiplier;
+        let beat_len = timing_point.beat_len * difficulty_point.bpm_mult;
 
         let span_count = (repeats + 1) as i32;
         let start_time = hit_object.start_time.round() as i32;

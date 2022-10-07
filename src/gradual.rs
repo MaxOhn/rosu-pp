@@ -36,7 +36,7 @@ use crate::{
 ///     // ...
 /// }
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum GradualDifficultyAttributes<'map> {
     /// Gradual osu!catch difficulty attributes.
@@ -268,7 +268,7 @@ impl From<ScoreState> for TaikoScoreState {
 /// // attempting to process further objects will return `None`.
 /// assert!(gradual_perf.process_next_object(state).is_none());
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum GradualPerformanceAttributes<'map> {
     /// Gradual osu!catch performance attributes.

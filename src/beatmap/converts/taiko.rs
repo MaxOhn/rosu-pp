@@ -111,9 +111,7 @@ impl Beatmap {
         let timing_point = self.timing_point_at(*start_time);
         let difficulty_point = self.difficulty_point_at(*start_time).unwrap_or_default();
 
-        // ! BUG: Since `LegacyDifficultyControlPoint` are not considered while parsing,
-        // ! this value can be slightly off due to float arithmetics.
-        let mut beat_len = timing_point.beat_len / difficulty_point.speed_multiplier;
+        let mut beat_len = timing_point.beat_len * difficulty_point.bpm_mult;
 
         let slider_scoring_point_dist =
             OSU_BASE_SCORING_DIST as f64 * self.slider_mult / self.tick_rate;

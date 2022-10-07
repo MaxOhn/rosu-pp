@@ -32,13 +32,13 @@ impl Pos2 {
     /// Return the position's length.
     #[inline]
     pub fn length(&self) -> f32 {
-        self.x.hypot(self.y)
+        ((self.x * self.x + self.y * self.y) as f64).sqrt() as f32
     }
 
     /// Return the dot product.
     #[inline]
     pub fn dot(&self, other: Self) -> f32 {
-        self.x.mul_add(other.x, self.y * other.y)
+        (self.x * other.x) + (self.y * other.y)
     }
 
     /// Return the distance to another position.
@@ -49,8 +49,12 @@ impl Pos2 {
 
     /// Normalize the coordinates with respect to the vector's length.
     #[inline]
-    pub fn normalize(self) -> Pos2 {
-        self / self.length()
+    pub fn normalize(mut self) -> Pos2 {
+        let scale = self.length().recip();
+        self.x *= scale;
+        self.y *= scale;
+
+        self
     }
 }
 

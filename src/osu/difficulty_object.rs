@@ -3,248 +3,284 @@ use crate::{
     parse::Pos2,
 };
 
-use super::{OsuObject, ScalingFactor, NORMALIZED_RADIUS};
+use super::{osu_object::NestedObject, OsuObject, ScalingFactor};
 
-const MIN_DELTA_TIME: f64 = 25.0;
-const MAXIMUM_SLIDER_RADIUS: f32 = NORMALIZED_RADIUS * 2.4;
-const ASSUMED_SLIDER_RADIUS: f32 = NORMALIZED_RADIUS * 1.8;
-
-pub(crate) struct DifficultyObject<'h> {
+#[derive(Clone, Debug)]
+pub(crate) struct OsuDifficultyObject<'h> {
+    pub(crate) start_time: f64,
+    pub(crate) delta_time: f64,
     pub(crate) base: &'h OsuObject,
-    pub(crate) clock_rate: f64,
-
-    pub(crate) delta: f64,
     pub(crate) strain_time: f64,
-
-    pub(crate) angle: Option<f64>,
-    pub(crate) jump_dist: f64,
-
-    pub(crate) movement_dist: f64,
-    pub(crate) movement_time: f64,
-
-    pub(crate) travel_dist: f64,
-    pub(crate) travel_time: f64,
+    pub(crate) dists: Distances,
+    pub(crate) idx: usize,
 }
 
-impl<'h> DifficultyObject<'h> {
-    pub(super) fn new(
+impl<'h> OsuDifficultyObject<'h> {
+    pub(crate) const MIN_DELTA_TIME: u32 = 25;
+
+    pub(crate) fn new(
         base: &'h OsuObject,
-        prev: &mut OsuObject,
-        prev_prev: Option<&OsuObject>,
-        scaling_factor: &ScalingFactor,
+        last: &'h OsuObject,
         clock_rate: f64,
+        idx: usize,
+        dists: Distances,
     ) -> Self {
-        let delta = (base.time - prev.time) / clock_rate;
+        let start_time = base.start_time / clock_rate;
+        let delta_time = (base.start_time - last.start_time) / clock_rate;
 
-        // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects
-        let strain_time = delta.max(MIN_DELTA_TIME);
+        // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
+        let strain_time = delta_time.max(Self::MIN_DELTA_TIME as f64);
 
-        // * We don't need to calculate either angle or distances
-        // * when one of the last->curr objects is a spinner
-        let (travel_dist, travel_time, movement_dist, movement_time, jump_dist, angle) =
-            if base.is_spinner() || prev.is_spinner() {
-                (0.0, 0.0, 0.0, 0.0, 0.0, None)
-            } else {
-                let prev_stack_offset = scaling_factor.stack_offset(prev.stack_height);
-
-                // Important to call `Self::compute_slider_cursor_pos` before using `prev.lazy_end_pos`
-                // because the lazy end position is being calculated in that function
-                let (travel_dist, travel_time) = Self::compute_slider_cursor_pos(
-                    prev,
-                    prev_stack_offset,
-                    scaling_factor.raw(),
-                    clock_rate,
-                );
-
-                let prev_cursor_pos = prev.lazy_end_pos(prev_stack_offset);
-
-                let jump_dist =
-                    ((base.pos - prev_cursor_pos) * scaling_factor.adjusted()).length() as f64;
-
-                let angle =
-                    prev_prev
-                        .filter(|prev_prev| !prev_prev.is_spinner())
-                        .map(|prev_prev| {
-                            let prev_prev_cursor_pos = prev_prev
-                                .lazy_end_pos(scaling_factor.stack_offset(prev_prev.stack_height));
-
-                            let v1 = prev_prev_cursor_pos - prev.pos;
-                            let v2 = base.pos - prev_cursor_pos;
-
-                            let dot = (v1.dot(v2)) as f64;
-                            let det = (v1.x * v2.y - v1.y * v2.x) as f64;
-
-                            det.atan2(dot).abs()
-                        });
-
-                let (movement_dist, movement_time) = Self::compute_movement_values(
-                    prev,
-                    base.pos,
-                    jump_dist,
-                    strain_time,
-                    travel_time,
-                    scaling_factor.adjusted(),
-                );
-
-                (
-                    travel_dist,
-                    travel_time,
-                    movement_dist,
-                    movement_time,
-                    jump_dist,
-                    angle,
-                )
-            };
-
-        // ? Common values to debug
-        // println!("travel_dist={} | travel_time={}", travel_dist, travel_time);
+        // TODO: remove
         // println!(
-        //     "movement_dist={} | movement_time={}",
-        //     movement_dist, movement_time
+        //     "[{}] lazy_jump_dist={} | lazy_travel_dist={} | \
+        //     min_jump_dist={} | min_jump_time={} \
+        //     | travel_dist={} | travel_time={} | angle={:?}",
+        //     base.start_time,
+        //     dists.lazy_jump_dist,
+        //     dists.lazy_travel_dist,
+        //     dists.min_jump_dist,
+        //     dists.min_jump_time,
+        //     dists.travel_dist,
+        //     dists.travel_time,
+        //     dists.angle,
         // );
-        // println!(
-        //     "jump_dist={} | strain_time={} | angle={:?}",
-        //     jump_dist, strain_time, angle
-        // );
-        // println!("--");
 
         Self {
+            start_time,
+            delta_time,
             base,
-            clock_rate,
-            delta,
             strain_time,
-            jump_dist,
-            angle,
-            movement_dist,
-            movement_time,
-            travel_dist,
-            travel_time,
+            dists,
+            idx,
         }
     }
 
-    fn compute_slider_cursor_pos(
-        prev: &mut OsuObject,
-        stack_offset: Pos2,
-        scaling_factor: f64,
+    pub(crate) fn opacity_at(&self, time: f64, hidden: bool) -> f64 {
+        if time > self.base.start_time {
+            // * Consider a hitobject as being invisible when its start time is passed.
+            // * In reality the hitobject will be visible beyond its start time up until its hittable window has passed,
+            // * but this is an approximation and such a case is unlikely to be hit where this function is used.
+            return 0.0;
+        }
+
+        let fade_in_start_time = self.base.start_time - self.base.time_preempt;
+        let fade_in_duration = self.base.time_fade_in;
+
+        if hidden {
+            // * Taken from OsuModHidden.
+            let fade_out_start_time =
+                self.base.start_time - self.base.time_preempt + self.base.time_fade_in;
+            const FADE_OUT_DURATION_MULTIPLIER: f64 = 0.3;
+            let fade_out_duration = self.base.time_preempt * FADE_OUT_DURATION_MULTIPLIER;
+
+            (((time - fade_in_start_time) / fade_in_duration).clamp(0.0, 1.0))
+                .min(1.0 - ((time - fade_out_start_time) / fade_out_duration).clamp(0.0, 1.0))
+        } else {
+            ((time - fade_in_start_time) / fade_in_duration).clamp(0.0, 1.0)
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Distances {
+    pub(crate) lazy_jump_dist: f64,
+    pub(crate) lazy_travel_dist: f32,
+    pub(crate) min_jump_dist: f64,
+    pub(crate) min_jump_time: f64,
+    pub(crate) travel_dist: f64,
+    pub(crate) travel_time: f64,
+    pub(crate) angle: Option<f64>,
+}
+
+impl Distances {
+    pub(crate) const NORMALISED_RADIUS: f32 = 50.0;
+
+    const MAXIMUM_SLIDER_RADIUS: f32 = Self::NORMALISED_RADIUS * 2.4;
+    const ASSUMED_SLIDER_RADIUS: f32 = Self::NORMALISED_RADIUS * 1.8;
+
+    pub(crate) fn new(
+        base: &mut OsuObject,
+        last: &OsuObject,
+        last_last: Option<&OsuObject>,
         clock_rate: f64,
-    ) -> (f64, f64) {
-        match &mut prev.kind {
-            OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => (0.0, 0.0),
-            OsuObjectKind::Slider {
+        strain_time: f64,
+        scaling_factor_: &ScalingFactor,
+    ) -> Self {
+        let mut this = if let OsuObjectKind::Slider {
+            lazy_end_pos,
+            lazy_travel_time,
+            nested_objects,
+            ..
+        } = &mut base.kind
+        {
+            let lazy_travel_dist = Self::compute_slider_cursor_pos(
+                base.pos,
+                base.start_time,
                 lazy_end_pos,
+                lazy_travel_time,
                 nested_objects,
-                ..
-            } => {
-                let mut travel_dist = 0.0;
-                let pos = prev.pos - stack_offset; // stack offset is ignored everywhere
-                let mut curr_cursor_pos = pos;
+                scaling_factor_,
+            );
 
-                let last_idx = nested_objects.len() - 1;
+            let repeat_count = nested_objects.iter().fold(0, |repeats, nested| {
+                repeats + matches!(nested.kind, NestedObjectKind::Repeat) as usize
+            });
 
-                for (i, nested) in nested_objects.iter_mut().enumerate() {
-                    let mut curr_movement = nested.pos - curr_cursor_pos;
-                    let mut curr_movement_len = scaling_factor * curr_movement.length() as f64;
+            Self {
+                // * Bonus for repeat sliders until a better per nested object strain system can be achieved.
+                travel_dist: (lazy_travel_dist
+                    * (1.0 + repeat_count as f64 / 2.5).powf(1.0 / 2.5) as f32)
+                    as f64,
+                travel_time: lazy_travel_time.max(OsuDifficultyObject::MIN_DELTA_TIME as f64),
+                lazy_travel_dist,
+                ..Default::default()
+            }
+        } else {
+            Self::default()
+        };
 
-                    // * Amount of movement required so that the cursor position needs to be updated.
-                    let mut required_movement = ASSUMED_SLIDER_RADIUS as f64;
+        // * We don't need to calculate either angle or distance when
+        // * one of the last->curr objects is a spinner
+        if base.is_spinner() || last.is_spinner() {
+            return this;
+        }
 
-                    if i == last_idx {
-                        // * The end of a slider has special aim rules due
-                        // * to the relaxed time constraint on position.
-                        // * There is both a lazy end position as well as the actual end slider position.
-                        // * We assume the player takes the simpler movement.
-                        // * For sliders that are circular, the lazy end position
-                        // * may actually be farther away than the sliders true end.
-                        // * This code is designed to prevent buffing situations
-                        // * where lazy end is actually a less efficient movement.
-                        let lazy_movement = *lazy_end_pos - curr_cursor_pos;
+        // * We will scale distances by this factor, so we can assume a uniform CircleSize among beatmaps.
+        let scaling_factor = scaling_factor_.factor;
 
-                        if lazy_movement.length() < curr_movement.length() {
-                            curr_movement = lazy_movement;
-                        }
+        let last_cursor_pos = Self::get_end_cursor_pos(last, scaling_factor_);
 
-                        curr_movement_len = scaling_factor * curr_movement.length() as f64;
-                    } else if let NestedObjectKind::Repeat = nested.kind {
-                        // * For a slider repeat, assume a tighter movement
-                        // * threshold to better assess repeat sliders.
-                        required_movement = NORMALIZED_RADIUS as f64;
-                    }
+        this.lazy_jump_dist =
+            (base.pos * scaling_factor - last_cursor_pos * scaling_factor).length() as f64;
+        this.min_jump_time = strain_time;
+        this.min_jump_dist = this.lazy_jump_dist;
 
-                    if curr_movement_len > required_movement {
-                        // * this finds the positional delta from the required
-                        // * radius and the current position, and updates the
-                        // * currCursorPosition accordingly, as well as rewarding distance.
-                        curr_cursor_pos += curr_movement
-                            * ((curr_movement_len - required_movement) / curr_movement_len) as f32;
+        if let OsuObjectKind::Slider {
+            end_pos,
+            lazy_travel_time,
+            ..
+        } = &last.kind
+        {
+            let last_travel_dist =
+                (lazy_travel_time / clock_rate).max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
+            this.min_jump_time =
+                (strain_time - last_travel_dist).max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
 
-                        curr_movement_len *=
-                            (curr_movement_len - required_movement) / curr_movement_len;
+            // * There are two types of slider-to-object patterns to consider in order
+            // * to better approximate the real movement a player will take to jump between the hitobjects.
+            // *
+            // * 1. The anti-flow pattern, where players cut the slider short in order to move to the next hitobject.
+            // *
+            // *     <======o==>  ← slider
+            // *            |     ← most natural jump path
+            // *            o     ← a follow-up hitcircle
+            // *
+            // * In this case the most natural jump path is approximated by LazyJumpDistance.
+            // *
+            // * 2. The flow pattern, where players follow through the slider to its
+            // * visual extent into the next hitobject.
+            // *
+            // *     <======o==>---o
+            // *                 ↑
+            // *       most natural jump path
+            // *
+            // * In this case the most natural jump path is better approximated by a new distance
+            // * called "tailJumpDistance" - the distance between the slider's tail and the next hitobject.
+            // *
+            // * Thus, the player is assumed to jump the minimum of these two distances in all cases.
 
-                        travel_dist += curr_movement_len;
-                    }
+            let tail_jump_dist = (*end_pos - base.pos).length() * scaling_factor;
 
-                    if i == last_idx {
-                        *lazy_end_pos = curr_cursor_pos;
-                    }
+            this.min_jump_dist = ((this.lazy_jump_dist
+                - (Self::MAXIMUM_SLIDER_RADIUS - Self::ASSUMED_SLIDER_RADIUS) as f64)
+                .min((tail_jump_dist - Self::MAXIMUM_SLIDER_RADIUS) as f64))
+            .max(0.0);
+        }
+
+        if let Some(last_last) = last_last.filter(|obj| !obj.is_spinner()) {
+            let last_last_cursor_pos = Self::get_end_cursor_pos(last_last, scaling_factor_);
+
+            let v1 = last_last_cursor_pos - last.pos;
+            let v2 = base.pos - last_cursor_pos;
+
+            let dot = v1.dot(v2) as f64;
+            let det = (v1.x * v2.y - v1.y * v2.x) as f64;
+
+            this.angle = Some(det.atan2(dot).abs());
+        }
+
+        this
+    }
+
+    pub(crate) fn compute_slider_cursor_pos(
+        stacked_pos: Pos2,
+        start_time: f64,
+        lazy_end_pos: &mut Pos2,
+        lazy_travel_time: &mut f64,
+        nested_objects: &[NestedObject],
+        scaling_factor_: &ScalingFactor,
+    ) -> f32 {
+        let mut curr_cursor_pos = stacked_pos;
+        let scaling_factor = Self::NORMALISED_RADIUS as f64 / scaling_factor_.radius as f64;
+
+        let mut lazy_travel_dist: f32 = 0.0;
+
+        for (curr_movement_obj, i) in nested_objects.iter().zip(1..) {
+            let mut curr_movement = curr_movement_obj.pos - curr_cursor_pos;
+            let mut curr_movement_len = scaling_factor * curr_movement.length() as f64;
+
+            // * Amount of movement required so that the cursor position needs to be updated.
+            let mut required_movement = Self::ASSUMED_SLIDER_RADIUS as f64;
+
+            if i == nested_objects.len() {
+                // * The end of a slider has special aim rules due
+                // * to the relaxed time constraint on position.
+                // * There is both a lazy end position as well as the actual end slider position.
+                // * We assume the player takes the simpler movement.
+                // * For sliders that are circular, the lazy end position
+                // * may actually be farther away than the sliders true end.
+                // * This code is designed to prevent buffing situations
+                // * where lazy end is actually a less efficient movement.
+                let lazy_movement = *lazy_end_pos - curr_cursor_pos;
+
+                if lazy_movement.length() < curr_movement.length() {
+                    curr_movement = lazy_movement;
                 }
 
-                let repeats = nested_objects
-                    .iter()
-                    .filter(|nested| matches!(nested.kind, NestedObjectKind::Repeat))
-                    .count();
+                curr_movement_len = scaling_factor * curr_movement.length() as f64;
+            } else if let NestedObjectKind::Repeat = curr_movement_obj.kind {
+                // * For a slider repeat, assume a tighter movement threshold to better assess repeat sliders.
+                required_movement = Self::NORMALISED_RADIUS as f64;
+            }
 
-                // * Bonus for repeat sliders until a better per
-                // * nested object strain system can be achieved.
-                travel_dist *= (1.0 + repeats as f64 / 2.5).powf(1.0 / 2.5);
-                let prev_time = prev.time;
+            if curr_movement_len > required_movement {
+                // * this finds the positional delta from the required radius and the current position, and updates the currCursorPosition accordingly, as well as rewarding distance.
+                curr_cursor_pos += curr_movement
+                    * ((curr_movement_len - required_movement) / curr_movement_len) as f32;
+                curr_movement_len *= (curr_movement_len - required_movement) / curr_movement_len;
+                lazy_travel_dist += curr_movement_len as f32;
+            }
 
-                let lazy_travel_time = nested_objects
-                    .last()
-                    .map_or(0.0, |nested| nested.time - prev_time);
-
-                let travel_time = MIN_DELTA_TIME.max(lazy_travel_time / clock_rate);
-
-                (travel_dist, travel_time)
+            if i == nested_objects.len() {
+                *lazy_end_pos = curr_cursor_pos;
             }
         }
+
+        *lazy_travel_time = nested_objects
+            .last()
+            .map_or(0.0, |nested| nested.start_time - start_time);
+
+        lazy_travel_dist
     }
 
-    fn compute_movement_values(
-        prev: &OsuObject,
-        base_pos: Pos2,
-        jump_dist: f64,
-        strain_time: f64,
-        travel_time: f64,
-        scaling_factor: f32,
-    ) -> (f64, f64) {
-        match &prev.kind {
-            OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => (jump_dist, strain_time),
-            OsuObjectKind::Slider { end_pos, .. } => {
-                let movement_time = MIN_DELTA_TIME.max(strain_time - travel_time);
+    fn get_end_cursor_pos(hit_object: &OsuObject, scaling_factor: &ScalingFactor) -> Pos2 {
+        if hit_object.is_slider() {
+            let stack_offset = scaling_factor.stack_offset(hit_object.stack_height);
 
-                // * Jump distance from the slider tail to the next object,
-                // * as opposed to the lazy position of JumpDistance.
-                let tail_jump_dist = (*end_pos - base_pos).length() * scaling_factor;
-
-                // * For hitobjects which continue in the direction of the slider,
-                // * the player will normally follow through the slider,
-                // * such that they're not jumping from the lazy position but
-                // * rather from very close to (or the end of) the slider.
-                // * In such cases, a leniency is applied by also considering the
-                // * jump distance from the tail of the slider,
-                // * and taking the minimum jump distance.
-                // * Additional distance is removed based on position of jump
-                // * relative to slider follow circle radius.
-                // * JumpDistance is the leniency distance beyond the assumed_slider_radius.
-                // * tailJumpDistance is maximum_slider_radius since
-                // * the full distance of radial leniency is still possible.
-                let movement_dist = (jump_dist
-                    - (MAXIMUM_SLIDER_RADIUS - ASSUMED_SLIDER_RADIUS) as f64)
-                    .min((tail_jump_dist - MAXIMUM_SLIDER_RADIUS) as f64)
-                    .max(0.0);
-
-                (movement_dist, movement_time)
-            }
+            hit_object.lazy_end_pos(stack_offset)
+        } else {
+            hit_object.pos
         }
     }
 }

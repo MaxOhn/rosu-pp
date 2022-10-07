@@ -33,13 +33,52 @@ impl Default for TimingPoint {
 /// [`TimingPoint`] that depends on a previous one.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DifficultyPoint {
-    /// The start time for the current speed multiplier
+    /// The time at which the control point takes effect.
     pub time: f64,
-    /// The speed multiplier until the next timing point
-    pub speed_multiplier: f64,
+    /// The slider velocity at this control point.
+    pub slider_vel: f64,
     /// Whether the section between this and the
     /// next timing points is a kiai section
     pub kiai: bool,
+    /// Legacy BPM multiplier that introduces floating-point errors for rulesets that depend on it.
+    pub bpm_mult: f64,
+    /// Whether or not slider ticks should be generated at this control point.
+    /// This exists for backwards compatibility with maps that abuse NaN
+    /// slider velocity behavior on osu!stable (e.g. /b/2628991).
+    pub generate_ticks: bool,
+}
+
+impl DifficultyPoint {
+    /// The default slider velocity for a [`DifficultyPoint`]
+    pub const DEFAULT_SLIDER_VEL: f64 = 1.0;
+    /// The default BPM multipler for a [`DifficultyPoint`]
+    pub const DEFAULT_BPM_MULT: f64 = 1.0;
+    /// The default for generating ticks of a [`DifficultyPoint`]
+    pub const DEFAULT_GENERATE_TICKS: bool = true;
+
+    /// Create a new [`DifficultyPoint`]
+    pub fn new(time: f64, beat_len: f64, speed_multiplier: f64, kiai: bool) -> Self {
+        // * Note: In stable, the division occurs on floats, but with compiler optimisations
+        // * turned on actually seems to occur on doubles via some .NET black magic (possibly inlining?).
+        let bpm_multiplier = if beat_len < 0.0 {
+            ((-beat_len) as f32).clamp(10.0, 10_000.0)
+        } else {
+            1.0
+        };
+
+        Self {
+            time,
+            slider_vel: speed_multiplier.clamp(0.1, 10.0),
+            kiai,
+            bpm_mult: bpm_multiplier as f64,
+            generate_ticks: !beat_len.is_nan(),
+        }
+    }
+
+    pub(crate) fn is_redundant(&self, existing: &DifficultyPoint) -> bool {
+        (self.slider_vel - existing.slider_vel).abs() <= f64::EPSILON
+            && self.generate_ticks == existing.generate_ticks
+    }
 }
 
 impl PartialOrd for DifficultyPoint {
@@ -52,8 +91,10 @@ impl Default for DifficultyPoint {
     fn default() -> Self {
         Self {
             time: 0.0,
-            speed_multiplier: 1.0,
             kiai: false,
+            slider_vel: Self::DEFAULT_SLIDER_VEL,
+            bpm_mult: Self::DEFAULT_BPM_MULT,
+            generate_ticks: Self::DEFAULT_GENERATE_TICKS,
         }
     }
 }
@@ -139,38 +180,30 @@ mod test {
 
     #[test]
     fn control_point_iter() {
-        let map = Beatmap {
-            timing_points: vec![
-                TimingPoint {
-                    time: 1.0,
-                    beat_len: 10.0,
-                    kiai: false,
-                },
-                TimingPoint {
-                    time: 3.0,
-                    beat_len: 10.0,
-                    kiai: false,
-                },
-                TimingPoint {
-                    time: 4.0,
-                    beat_len: 10.0,
-                    kiai: false,
-                },
-            ],
-            difficulty_points: vec![
-                DifficultyPoint {
-                    time: 2.0,
-                    speed_multiplier: 10.0,
-                    kiai: false,
-                },
-                DifficultyPoint {
-                    time: 5.0,
-                    speed_multiplier: 10.0,
-                    kiai: false,
-                },
-            ],
-            ..Default::default()
-        };
+        let mut map = Beatmap::default();
+
+        map.timing_points.push(TimingPoint {
+            time: 1.0,
+            beat_len: 10.0,
+            kiai: false,
+        });
+
+        map.timing_points.push(TimingPoint {
+            time: 3.0,
+            beat_len: 10.0,
+            kiai: false,
+        });
+
+        map.timing_points.push(TimingPoint {
+            time: 4.0,
+            beat_len: 10.0,
+            kiai: false,
+        });
+
+        map.difficulty_points
+            .push(DifficultyPoint::new(2.0, 10.0, 10.0, false));
+        map.difficulty_points
+            .push(DifficultyPoint::new(5.0, 10.0, 10.0, false));
 
         let mut iter = ControlPointIter::new(&map);
 

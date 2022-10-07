@@ -69,7 +69,7 @@ pub enum HitObjectKind {
     /// A full slider object.
     Slider {
         /// Total length of the slider in pixels.
-        pixel_len: f64,
+        pixel_len: Option<f64>,
         /// The amount of repeat points of the slider.
         repeats: usize,
         /// The control points of the slider.

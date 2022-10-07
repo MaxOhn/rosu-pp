@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::Ordering, convert::identity, f32::consts::PI, iter};
+use std::{borrow::Cow, cmp::Ordering, convert::identity, f64::consts::PI, iter};
 
 use crate::parse::{PathControlPoint, PathType, Pos2};
 
@@ -58,7 +58,7 @@ pub(crate) struct Curve {
 impl Curve {
     pub(crate) fn new(
         points: &[PathControlPoint],
-        expected_len: f64,
+        expected_len: Option<f64>,
         bufs: &mut CurveBuffers,
     ) -> Self {
         let mut path = Self::calculate_path(points, bufs);
@@ -153,7 +153,7 @@ impl Curve {
     fn calculate_length(
         points: &[PathControlPoint],
         path: &mut Vec<Pos2>,
-        expected_len: f64,
+        expected_len: Option<f64>,
     ) -> Vec<f64> {
         let mut calculated_len = 0.0;
         let mut cumulative_len = Vec::with_capacity(path.len());
@@ -167,7 +167,7 @@ impl Curve {
 
         cumulative_len.extend(length_iter);
 
-        if (expected_len - calculated_len).abs() > f64::EPSILON {
+        if let Some(expected_len) = expected_len.filter(|&len| calculated_len != len) {
             // * In osu-stable, if the last two control points of a slider are equal, extension is not performed
             let condition_opt = points
                 .len()
@@ -490,8 +490,8 @@ impl Curve {
 
         let radius = d_a.length();
 
-        let theta_start = d_a.y.atan2(d_a.x);
-        let mut theta_end = d_c.y.atan2(d_c.x);
+        let theta_start = (d_a.y as f64).atan2(d_a.x as f64);
+        let mut theta_end = (d_c.y as f64).atan2(d_c.x as f64);
 
         while theta_end < theta_start {
             theta_end += 2.0 * PI;
@@ -515,8 +515,8 @@ impl Curve {
         }
 
         Some(CircularArcProperties {
-            theta_start: theta_start as f64,
-            theta_range: theta_range as f64,
+            theta_start,
+            theta_range,
             direction,
             radius,
             centre,

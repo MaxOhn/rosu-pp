@@ -1,10 +1,7 @@
 use std::{iter, slice::Iter};
 
 use crate::{
-    catch::{
-        difficulty_object::DifficultyObject, slider_state::SliderState, SECTION_LENGTH,
-        STAR_SCALING_FACTOR,
-    },
+    catch::{difficulty_object::DifficultyObject, SECTION_LENGTH, STAR_SCALING_FACTOR},
     curve::CurveBuffers,
     parse::{HitObject, Pos2},
     Beatmap, Mods,
@@ -179,7 +176,6 @@ impl<'map> CatchObjectIter<'map> {
             last_pos: None,
             last_time: 0.0,
             map,
-            slider_state: SliderState::new(map),
             ticks: Vec::new(),
             with_hr: mods.hr(),
         };
