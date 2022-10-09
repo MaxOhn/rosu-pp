@@ -3,6 +3,7 @@ use crate::{
         legacy_random::Random, pattern::Pattern, pattern_type::PatternType,
     },
     curve::Curve,
+    mania::ManiaObject,
     parse::{HitObject, HitSound},
     Beatmap,
 };
@@ -99,7 +100,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let mut end_time_pattern = Pattern::default();
 
         for obj in orig_pattern.hit_objects {
-            let column = obj.column(self.total_columns as f32);
+            let column = ManiaObject::new(&obj).column(self.total_columns as f32) as u8;
 
             if self.end_time != obj.end_time().round() as i32 {
                 intermediate_pattern.add_object(obj, column);

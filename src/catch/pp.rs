@@ -168,7 +168,7 @@ impl<'map> CatchPP<'map> {
             n_droplets,
             n_tiny_droplets,
             n_tiny_droplet_misses,
-            misses,
+            n_misses,
         } = state;
 
         self.combo = Some(max_combo);
@@ -176,7 +176,7 @@ impl<'map> CatchPP<'map> {
         self.n_droplets = Some(n_droplets);
         self.n_tiny_droplets = Some(n_tiny_droplets);
         self.n_tiny_droplet_misses = Some(n_tiny_droplet_misses);
-        self.n_misses = misses;
+        self.n_misses = n_misses;
 
         self
     }

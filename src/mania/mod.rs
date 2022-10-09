@@ -1,16 +1,22 @@
+mod difficulty_object;
 mod gradual_difficulty;
 mod gradual_performance;
+mod mania_object;
 mod pp;
-mod strain;
+mod skills;
 
 use std::borrow::Cow;
 
-pub use gradual_difficulty::*;
-pub use gradual_performance::*;
-pub use pp::*;
-use strain::Strain;
+use crate::{beatmap::BeatmapHitWindows, parse::HitObjectKind, Beatmap, GameMode, Mods, OsuStars};
 
-use crate::{parse::HitObject, Beatmap, GameMode, Mods, OsuStars};
+pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
+
+pub(crate) use self::mania_object::ManiaObject;
+
+use self::{
+    difficulty_object::ManiaDifficultyObject,
+    skills::{Skill, Strain},
+};
 
 const SECTION_LEN: f64 = 400.0;
 const STAR_SCALING_FACTOR: f64 = 0.018;
@@ -88,11 +94,23 @@ impl<'map> ManiaStars<'map> {
     /// Calculate all difficulty related values, including stars.
     #[inline]
     pub fn calculate(self) -> ManiaDifficultyAttributes {
-        let mut strain = calculate_strain(self);
+        let is_convert = matches!(self.map, Cow::Owned(_));
+        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
 
-        ManiaDifficultyAttributes {
-            stars: Strain::difficulty_value(&mut strain.strain_peaks) * STAR_SCALING_FACTOR,
-        }
+        let BeatmapHitWindows { od: hit_window, .. } = self
+            .map
+            .attributes()
+            .mods(self.mods)
+            .converted(is_convert)
+            .clock_rate(clock_rate)
+            .hit_windows();
+
+        let (strain, mut attrs) = calculate_strain(self);
+
+        attrs.stars = strain.difficulty_value() * STAR_SCALING_FACTOR;
+        attrs.hit_window = hit_window;
+
+        attrs
     }
 
     /// Calculate the skill strains.
@@ -101,10 +119,10 @@ impl<'map> ManiaStars<'map> {
     #[inline]
     pub fn strains(self) -> ManiaStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
-        let strain = calculate_strain(self);
+        let (strain, _) = calculate_strain(self);
 
         ManiaStrains {
-            section_len: SECTION_LEN * clock_rate,
+            section_len: SECTION_LEN * clock_rate, // TODO: clock_rate correct here?
             strains: strain.strain_peaks,
         }
     }
@@ -129,7 +147,7 @@ impl ManiaStrains {
     }
 }
 
-fn calculate_strain(params: ManiaStars<'_>) -> Strain {
+fn calculate_strain(params: ManiaStars<'_>) -> (Strain, ManiaDifficultyAttributes) {
     let ManiaStars {
         map,
         mods,
@@ -138,64 +156,37 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
     } = params;
 
     let take = passed_objects.unwrap_or(map.hit_objects.len());
-    let columns = map.cs.round().max(1.0) as u8;
+    let total_columns = map.cs.round().max(1.0) as usize;
 
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
-    let mut strain = Strain::new(columns);
-    let columns = columns as f32;
+    let mut strain = Strain::new(total_columns);
 
-    let mut hit_objects = map
+    let mut attrs = ManiaDifficultyAttributes::default();
+
+    let diff_objects_iter = map
         .hit_objects
         .iter()
         .take(take)
+        .inspect(|h| match &h.kind {
+            HitObjectKind::Hold { end_time } => {
+                attrs.max_combo += 1 + ((*end_time - h.start_time) / 100.0) as usize
+            }
+            _ => attrs.max_combo += 1,
+        })
         .skip(1)
-        .zip(map.hit_objects.iter())
-        .map(|(base, prev)| DifficultyHitObject::new(base, prev, columns, clock_rate));
+        .map(ManiaObject::new)
+        .enumerate()
+        .zip(map.hit_objects.iter().map(ManiaObject::new))
+        .map(|((i, base), prev)| ManiaDifficultyObject::new(base, prev, clock_rate, i));
 
-    // Handle first object distinctly
-    let h = match hit_objects.next() {
-        Some(h) => h,
-        None => return strain,
-    };
+    let mut diff_objects = Vec::with_capacity(map.hit_objects.len().min(take).saturating_sub(1));
+    diff_objects.extend(diff_objects_iter);
 
-    // No strain for first object
-    let mut curr_section_end = (h.start_time / SECTION_LEN).ceil() * SECTION_LEN;
-    strain.process(&h);
-
-    // Handle all other objects
-    for h in hit_objects {
-        while h.start_time > curr_section_end {
-            strain.save_current_peak();
-            strain.start_new_section_from(curr_section_end);
-            curr_section_end += SECTION_LEN;
-        }
-
-        strain.process(&h);
+    for curr in diff_objects.iter() {
+        strain.process(curr, &diff_objects);
     }
 
-    strain.save_current_peak();
-
-    strain
-}
-
-#[derive(Debug)]
-pub(crate) struct DifficultyHitObject<'o> {
-    base: &'o HitObject,
-    column: usize,
-    delta: f64,
-    start_time: f64,
-}
-
-impl<'o> DifficultyHitObject<'o> {
-    #[inline]
-    fn new(base: &'o HitObject, prev: &'o HitObject, columns: f32, clock_rate: f64) -> Self {
-        Self {
-            base,
-            column: base.column(columns) as usize,
-            delta: (base.start_time - prev.start_time) / clock_rate,
-            start_time: base.start_time / clock_rate,
-        }
-    }
+    (strain, attrs)
 }
 
 /// The result of a difficulty calculation on an osu!mania map.
@@ -203,19 +194,21 @@ impl<'o> DifficultyHitObject<'o> {
 pub struct ManiaDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,
+    /// The maximum achievable combo.
+    pub max_combo: usize,
+    /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc).
+    pub hit_window: f64,
 }
 
 /// The result of a performance calculation on an osu!mania map.
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct ManiaPerformanceAttributes {
-    /// The difficulty attributes that were used for the performance calculation
+    /// The difficulty attributes that were used for the performance calculation.
     pub difficulty: ManiaDifficultyAttributes,
     /// The final performance points.
     pub pp: f64,
-    /// The accuracy portion of the final pp.
-    pub pp_acc: f64,
-    /// The strain portion of the final pp.
-    pub pp_strain: f64,
+    /// The difficulty portion of the final pp.
+    pub pp_difficulty: f64,
 }
 
 impl ManiaPerformanceAttributes {

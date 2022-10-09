@@ -138,7 +138,7 @@ impl<'map> OsuPP<'map> {
 
     /// Specify the amount of misses of a play.
     #[inline]
-    pub fn misses(mut self, n_misses: usize) -> Self {
+    pub fn n_misses(mut self, n_misses: usize) -> Self {
         self.n_misses = n_misses;
 
         self
@@ -174,14 +174,14 @@ impl<'map> OsuPP<'map> {
             n300,
             n100,
             n50,
-            misses,
+            n_misses,
         } = state;
 
         self.combo = Some(max_combo);
         self.n300 = Some(n300);
         self.n100 = Some(n100);
         self.n50 = Some(n50);
-        self.n_misses = misses;
+        self.n_misses = n_misses;
 
         self
     }

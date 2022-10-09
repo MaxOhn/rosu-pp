@@ -22,7 +22,7 @@ pub struct CatchScoreState {
     /// Amount of current tiny droplet misses (katus).
     pub n_tiny_droplet_misses: usize,
     /// Amount of current misses (fruits and droplets).
-    pub misses: usize,
+    pub n_misses: usize,
 }
 
 impl CatchScoreState {

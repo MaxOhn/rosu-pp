@@ -73,9 +73,9 @@ impl<'map> TaikoPP<'map> {
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
-    pub fn attributes(mut self, attributes: impl TaikoAttributeProvider) -> Self {
-        if let Some(attributes) = attributes.attributes() {
-            self.attributes.replace(attributes);
+    pub fn attributes(mut self, attrs: impl TaikoAttributeProvider) -> Self {
+        if let Some(attrs) = attrs.attributes() {
+            self.attributes = Some(attrs);
         }
 
         self
@@ -94,7 +94,7 @@ impl<'map> TaikoPP<'map> {
     /// Specify the max combo of the play.
     #[inline]
     pub fn combo(mut self, combo: usize) -> Self {
-        self.combo.replace(combo);
+        self.combo = Some(combo);
 
         self
     }
@@ -102,7 +102,7 @@ impl<'map> TaikoPP<'map> {
     /// Specify the amount of 300s of a play.
     #[inline]
     pub fn n300(mut self, n300: usize) -> Self {
-        self.n300.replace(n300);
+        self.n300 = Some(n300);
 
         self
     }
@@ -110,14 +110,14 @@ impl<'map> TaikoPP<'map> {
     /// Specify the amount of 100s of a play.
     #[inline]
     pub fn n100(mut self, n100: usize) -> Self {
-        self.n100.replace(n100);
+        self.n100 = Some(n100);
 
         self
     }
 
     /// Specify the amount of misses of the play.
     #[inline]
-    pub fn misses(mut self, n_misses: usize) -> Self {
+    pub fn n_misses(mut self, n_misses: usize) -> Self {
         self.n_misses = n_misses.min(self.map.n_circles as usize);
 
         self
@@ -162,13 +162,13 @@ impl<'map> TaikoPP<'map> {
             max_combo,
             n300,
             n100,
-            misses,
+            n_misses,
         } = state;
 
         self.combo = Some(max_combo);
         self.n300 = Some(n300);
         self.n100 = Some(n100);
-        self.n_misses = misses;
+        self.n_misses = n_misses;
 
         self
     }

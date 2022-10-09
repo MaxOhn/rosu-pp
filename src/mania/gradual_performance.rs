@@ -2,6 +2,36 @@ use crate::{Beatmap, ManiaPP};
 
 use super::{ManiaGradualDifficultyAttributes, ManiaPerformanceAttributes};
 
+/// TODO: docs
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ManiaScoreState {
+    /// Amount of current 320s.
+    pub n320: usize,
+    /// Amount of current 300s.
+    pub n300: usize,
+    /// Amount of current 200s.
+    pub n200: usize,
+    /// Amount of current 100s.
+    pub n100: usize,
+    /// Amount of current 50s.
+    pub n50: usize,
+    /// Amount of current misses.
+    pub n_misses: usize,
+}
+
+impl ManiaScoreState {
+    pub fn total_hits(&self) -> usize {
+        self.n320 + self.n300 + self.n200 + self.n100 + self.n50 + self.n_misses
+    }
+}
+
+impl ManiaScoreState {
+    /// Create a new empty score state.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// Gradually calculate the performance attributes of an osu!mania map.
 ///
 /// After each hit object you can call

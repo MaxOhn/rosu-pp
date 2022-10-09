@@ -1,6 +1,6 @@
 use crate::{
     catch::{CatchGradualDifficultyAttributes, CatchGradualPerformanceAttributes, CatchScoreState},
-    mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes},
+    mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes, ManiaScoreState},
     osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
     taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
     Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes,
@@ -99,30 +99,18 @@ pub struct ScoreState {
     ///
     /// Irrelevant for osu!mania.
     pub max_combo: usize,
-    /// Amount of current katus (tiny droplet misses for osu!catch).
-    ///
-    /// Only relevant for osu!catch.
+    /// Amount of current gekis (n320 for osu!mania).
+    pub n_geki: usize,
+    /// Amount of current katus (tiny droplet misses for osu!catch / n200 for osu!mania).
     pub n_katu: usize,
     /// Amount of current 300s (fruits for osu!catch).
-    ///
-    /// Irrelevant for osu!mania.
     pub n300: usize,
     /// Amount of current 100s (droplets for osu!catch).
-    ///
-    /// Irrelevant for osu!mania.
     pub n100: usize,
     /// Amount of current 50s (tiny droplets for osu!catch).
-    ///
-    /// Irrelevant for osu!taiko and osu!mania.
     pub n50: usize,
     /// Amount of current misses (fruits + droplets for osu!catch).
-    ///
-    /// Irrelevant for osu!mania.
-    pub misses: usize,
-    /// The current score.
-    ///
-    /// Only relevant for osu!mania.
-    pub score: u32,
+    pub n_misses: usize,
 }
 
 impl ScoreState {
@@ -141,7 +129,7 @@ impl From<ScoreState> for CatchScoreState {
             n_droplets: state.n100,
             n_tiny_droplets: state.n50,
             n_tiny_droplet_misses: state.n_katu,
-            misses: state.misses,
+            n_misses: state.n_misses,
         }
     }
 }
@@ -154,7 +142,7 @@ impl From<ScoreState> for OsuScoreState {
             n300: state.n300,
             n100: state.n100,
             n50: state.n50,
-            misses: state.misses,
+            n_misses: state.n_misses,
         }
     }
 }
@@ -166,7 +154,21 @@ impl From<ScoreState> for TaikoScoreState {
             max_combo: state.max_combo,
             n300: state.n300,
             n100: state.n100,
-            misses: state.misses,
+            n_misses: state.n_misses,
+        }
+    }
+}
+
+impl From<ScoreState> for ManiaScoreState {
+    #[inline]
+    fn from(state: ScoreState) -> Self {
+        Self {
+            n320: state.n_geki,
+            n300: state.n300,
+            n200: state.n_katu,
+            n100: state.n100,
+            n50: state.n50,
+            n_misses: state.n_misses,
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{parse::HitObject, Beatmap};
+use crate::{mania::ManiaObject, parse::HitObject, Beatmap};
 
 use super::{legacy_random::Random, pattern::Pattern};
 
@@ -26,7 +26,7 @@ trait PatternGenerator {
 
             ((self.hit_object().pos.x / LOCAL_X_DIVISOR).floor() as u8).clamp(0, 6) + 1
         } else {
-            self.hit_object().column(self.total_columns() as f32)
+            ManiaObject::new(self.hit_object()).column(self.total_columns() as f32) as u8
         };
 
         res

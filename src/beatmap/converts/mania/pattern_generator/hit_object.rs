@@ -2,6 +2,7 @@ use crate::{
     beatmap::converts::mania::{
         legacy_random::Random, pattern::Pattern, pattern_type::PatternType, PrevValues,
     },
+    mania::ManiaObject,
     parse::{HitObject, HitSound},
     Beatmap,
 };
@@ -103,7 +104,7 @@ impl<'h> HitObjectPatternGenerator<'h> {
     pub(crate) fn generate(&mut self) -> Pattern {
         let pattern = self.generate_core();
 
-        for obj in pattern.hit_objects.iter() {
+        for obj in pattern.hit_objects.iter().map(ManiaObject::new) {
             if self.convert_type.contains(PatternType::STAIR)
                 && obj.column(self.total_columns as f32) as i32 == self.total_columns - 1
             {
@@ -129,7 +130,8 @@ impl<'h> HitObjectPatternGenerator<'h> {
             .prev_pattern
             .hit_objects
             .last()
-            .map_or(0, |h| h.column(self.total_columns as f32));
+            .map(ManiaObject::new)
+            .map_or(0, |h| h.column(self.total_columns as f32) as u8);
 
         let random_start = self.random_start() as u8;
 

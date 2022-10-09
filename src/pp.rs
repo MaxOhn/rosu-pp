@@ -145,7 +145,7 @@ impl<'map> AnyPP<'map> {
     pub fn state(self, state: ScoreState) -> Self {
         match self {
             Self::Catch(f) => Self::Catch(f.state(state.into())),
-            Self::Mania(m) => Self::Mania(m.score(state.score)),
+            Self::Mania(m) => Self::Mania(m.state(state.into())),
             Self::Osu(o) => Self::Osu(o.state(state.into())),
             Self::Taiko(t) => Self::Taiko(t.state(state.into())),
         }
@@ -155,28 +155,24 @@ impl<'map> AnyPP<'map> {
     ///
     /// For some modes this method depends on previously set values.
     /// Be sure to call this last before calling `calculate`.
-    ///
-    /// Irrelevant for osu!mania.
     #[inline]
     pub fn accuracy(self, acc: f64) -> Self {
         match self {
             Self::Catch(f) => Self::Catch(f.accuracy(acc)),
-            Self::Mania(_) => self,
+            Self::Mania(m) => Self::Mania(m.accuracy(acc)),
             Self::Osu(o) => Self::Osu(o.accuracy(acc)),
             Self::Taiko(t) => Self::Taiko(t.accuracy(acc)),
         }
     }
 
     /// Specify the amount of misses of a play.
-    ///
-    /// Irrelevant for osu!mania.
     #[inline]
-    pub fn misses(self, misses: usize) -> Self {
+    pub fn n_misses(self, n_misses: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.misses(misses)),
-            Self::Mania(_) => self,
-            Self::Osu(o) => Self::Osu(o.misses(misses)),
-            Self::Taiko(t) => Self::Taiko(t.misses(misses)),
+            Self::Catch(f) => Self::Catch(f.misses(n_misses)),
+            Self::Mania(m) => Self::Mania(m.n_misses(n_misses)),
+            Self::Osu(o) => Self::Osu(o.n_misses(n_misses)),
+            Self::Taiko(t) => Self::Taiko(t.n_misses(n_misses)),
         }
     }
 
@@ -194,26 +190,22 @@ impl<'map> AnyPP<'map> {
     }
 
     /// Specify the amount of 300s of a play.
-    ///
-    /// Irrelevant for osu!mania.
     #[inline]
     pub fn n300(self, n300: usize) -> Self {
         match self {
             Self::Catch(f) => Self::Catch(f.fruits(n300)),
-            Self::Mania(_) => self,
+            Self::Mania(m) => Self::Mania(m.n300(n300)),
             Self::Osu(o) => Self::Osu(o.n300(n300)),
             Self::Taiko(t) => Self::Taiko(t.n300(n300)),
         }
     }
 
     /// Specify the amount of 100s of a play.
-    ///
-    /// Irrelevant for osu!mania.
     #[inline]
     pub fn n100(self, n100: usize) -> Self {
         match self {
             Self::Catch(f) => Self::Catch(f.droplets(n100)),
-            Self::Mania(_) => self,
+            Self::Mania(m) => Self::Mania(m.n100(n100)),
             Self::Osu(o) => Self::Osu(o.n100(n100)),
             Self::Taiko(t) => Self::Taiko(t.n100(n100)),
         }
@@ -221,12 +213,12 @@ impl<'map> AnyPP<'map> {
 
     /// Specify the amount of 50s of a play.
     ///
-    /// Irrelevant for osu!mania and osu!taiko.
+    /// Irrelevant for osu!taiko.
     #[inline]
     pub fn n50(self, n50: usize) -> Self {
         match self {
             Self::Catch(f) => Self::Catch(f.tiny_droplets(n50)),
-            Self::Mania(_) => self,
+            Self::Mania(m) => Self::Mania(m.n50(n50)),
             Self::Osu(o) => Self::Osu(o.n50(n50)),
             Self::Taiko(_) => self,
         }
@@ -235,29 +227,29 @@ impl<'map> AnyPP<'map> {
     /// Specify the amount of katus of a play.
     ///
     /// This value is only relevant for osu!catch for which it represents
-    /// the amount of tiny droplet misses.
+    /// the amount of tiny droplet misses and osu!mania for which it.
+    /// repesents the amount of n200.
     #[inline]
     pub fn n_katu(self, n_katu: usize) -> Self {
         match self {
             Self::Catch(f) => Self::Catch(f.tiny_droplet_misses(n_katu)),
-            Self::Mania(_) => self,
+            Self::Mania(m) => Self::Mania(m.n200(n_katu)),
             Self::Osu(_) => self,
             Self::Taiko(_) => self,
         }
     }
 
-    /// Specify the score of a play.
+    /// Specify the amount of gekis of a play.
     ///
-    /// This value is only relevant for osu!mania.
-    ///
-    /// On `NoMod` its between 0 and 1,000,000, on `Easy` between 0 and 500,000, etc.
+    /// This value is only relevant for osu!mania for which it.
+    /// repesents the amount of n320.
     #[inline]
-    pub fn score(self, score: u32) -> Self {
+    pub fn n_geki(self, n_geki: usize) -> Self {
         match self {
-            Self::Catch(_) => self,
-            Self::Mania(m) => Self::Mania(m.score(score)),
+            Self::Mania(m) => Self::Mania(m.n320(n_geki)),
             Self::Osu(_) => self,
             Self::Taiko(_) => self,
+            Self::Catch(_) => self,
         }
     }
 }

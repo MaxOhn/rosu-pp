@@ -18,7 +18,7 @@ pub struct OsuScoreState {
     /// Amount of current 50s.
     pub n50: usize,
     /// Amount of current misses.
-    pub misses: usize,
+    pub n_misses: usize,
 }
 
 impl OsuScoreState {

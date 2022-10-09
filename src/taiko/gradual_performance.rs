@@ -16,7 +16,7 @@ pub struct TaikoScoreState {
     /// Amount of current 100s.
     pub n100: usize,
     /// Amount of current misses.
-    pub misses: usize,
+    pub n_misses: usize,
 }
 
 impl TaikoScoreState {
