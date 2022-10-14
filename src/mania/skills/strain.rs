@@ -2,6 +2,7 @@ use crate::mania::difficulty_object::ManiaDifficultyObject;
 
 use super::{previous, Skill, StrainDecaySkill, StrainSkill};
 
+#[derive(Clone, Debug)]
 pub(crate) struct Strain {
     start_times: Vec<f64>,
     end_times: Vec<f64>,
@@ -15,8 +16,6 @@ pub(crate) struct Strain {
     curr_section_end: f64,
 
     pub(crate) strain_peaks: Vec<f64>,
-
-    total_columns: f32,
 }
 
 impl Strain {
@@ -35,7 +34,6 @@ impl Strain {
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
             strain_peaks: Vec::new(),
-            total_columns: total_columns as f32,
         }
     }
 
@@ -45,11 +43,7 @@ impl Strain {
 }
 
 impl Skill for Strain {
-    fn process(
-        &mut self,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
-    ) {
+    fn process(&mut self, curr: &ManiaDifficultyObject, diff_objects: &[ManiaDifficultyObject]) {
         <Self as StrainSkill>::process(self, curr, diff_objects)
     }
 
@@ -81,15 +75,15 @@ impl StrainSkill for Strain {
         &mut self.strain_peaks
     }
 
-    fn strain_value_at(&mut self, curr: &ManiaDifficultyObject<'_>) -> f64 {
+    fn strain_value_at(&mut self, curr: &ManiaDifficultyObject) -> f64 {
         <Self as StrainDecaySkill>::strain_value_at(self, curr)
     }
 
     fn calculate_initial_strain(
         &self,
         time: f64,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
+        curr: &ManiaDifficultyObject,
+        diff_objects: &[ManiaDifficultyObject],
     ) -> f64 {
         <Self as StrainDecaySkill>::calculate_initial_strain(self, time, curr, diff_objects)
     }
@@ -107,11 +101,11 @@ impl StrainDecaySkill for Strain {
         &mut self.curr_strain
     }
 
-    fn strain_value_of(&mut self, curr: &ManiaDifficultyObject<'_>) -> f64 {
+    fn strain_value_of(&mut self, curr: &ManiaDifficultyObject) -> f64 {
         let mania_curr = curr;
         let start_time = mania_curr.start_time;
         let end_time = mania_curr.end_time;
-        let col = mania_curr.base.column(self.total_columns);
+        let col = mania_curr.base_column;
         let mut is_overlapping = false;
 
         // Lowest value we can assume with the current information
@@ -183,8 +177,8 @@ impl StrainDecaySkill for Strain {
     fn calculate_initial_strain(
         &self,
         offset: f64,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
+        curr: &ManiaDifficultyObject,
+        diff_objects: &[ManiaDifficultyObject],
     ) -> f64 {
         let prev_start = previous(diff_objects, curr.idx, 0).map_or(0.0, |h| h.start_time);
 

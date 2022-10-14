@@ -3,7 +3,7 @@ use crate::{
     parse::Pos2,
 };
 
-use super::{osu_object::NestedObject, OsuObject, ScalingFactor};
+use super::{osu_object::OsuSlider, OsuObject, ScalingFactor};
 
 #[derive(Clone, Debug)]
 pub(crate) struct OsuDifficultyObject<'h> {
@@ -31,21 +31,6 @@ impl<'h> OsuDifficultyObject<'h> {
         // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
         let strain_time = delta_time.max(Self::MIN_DELTA_TIME as f64);
 
-        // TODO: remove
-        // println!(
-        //     "[{}] lazy_jump_dist={} | lazy_travel_dist={} | \
-        //     min_jump_dist={} | min_jump_time={} \
-        //     | travel_dist={} | travel_time={} | angle={:?}",
-        //     base.start_time,
-        //     dists.lazy_jump_dist,
-        //     dists.lazy_travel_dist,
-        //     dists.min_jump_dist,
-        //     dists.min_jump_time,
-        //     dists.travel_dist,
-        //     dists.travel_time,
-        //     dists.angle,
-        // );
-
         Self {
             start_time,
             delta_time,
@@ -56,7 +41,13 @@ impl<'h> OsuDifficultyObject<'h> {
         }
     }
 
-    pub(crate) fn opacity_at(&self, time: f64, hidden: bool) -> f64 {
+    pub(crate) fn opacity_at(
+        &self,
+        time: f64,
+        hidden: bool,
+        time_preempt: f64,
+        time_fade_in: f64,
+    ) -> f64 {
         if time > self.base.start_time {
             // * Consider a hitobject as being invisible when its start time is passed.
             // * In reality the hitobject will be visible beyond its start time up until its hittable window has passed,
@@ -64,15 +55,14 @@ impl<'h> OsuDifficultyObject<'h> {
             return 0.0;
         }
 
-        let fade_in_start_time = self.base.start_time - self.base.time_preempt;
-        let fade_in_duration = self.base.time_fade_in;
+        let fade_in_start_time = self.base.start_time - time_preempt;
+        let fade_in_duration = time_fade_in;
 
         if hidden {
             // * Taken from OsuModHidden.
-            let fade_out_start_time =
-                self.base.start_time - self.base.time_preempt + self.base.time_fade_in;
+            let fade_out_start_time = self.base.start_time - time_preempt + time_fade_in;
             const FADE_OUT_DURATION_MULTIPLIER: f64 = 0.3;
-            let fade_out_duration = self.base.time_preempt * FADE_OUT_DURATION_MULTIPLIER;
+            let fade_out_duration = time_preempt * FADE_OUT_DURATION_MULTIPLIER;
 
             (((time - fade_in_start_time) / fade_in_duration).clamp(0.0, 1.0))
                 .min(1.0 - ((time - fade_out_start_time) / fade_out_duration).clamp(0.0, 1.0))
@@ -107,38 +97,28 @@ impl Distances {
         strain_time: f64,
         scaling_factor_: &ScalingFactor,
     ) -> Self {
-        let mut this = if let OsuObjectKind::Slider {
-            lazy_end_pos,
-            lazy_travel_time,
-            nested_objects,
-            ..
-        } = &mut base.kind
-        {
-            let lazy_travel_dist = Self::compute_slider_cursor_pos(
-                base.pos,
-                base.start_time,
-                lazy_end_pos,
-                lazy_travel_time,
-                nested_objects,
-                scaling_factor_,
-            );
+        let mut this =
+            if let Some(slider_values) = Self::compute_slider_cursor_pos(base, scaling_factor_) {
+                let SliderValues {
+                    lazy_travel_dist,
+                    slider,
+                } = slider_values;
 
-            let repeat_count = nested_objects.iter().fold(0, |repeats, nested| {
-                repeats + matches!(nested.kind, NestedObjectKind::Repeat) as usize
-            });
+                let repeat_count = slider.repeat_count();
 
-            Self {
-                // * Bonus for repeat sliders until a better per nested object strain system can be achieved.
-                travel_dist: (lazy_travel_dist
-                    * (1.0 + repeat_count as f64 / 2.5).powf(1.0 / 2.5) as f32)
-                    as f64,
-                travel_time: lazy_travel_time.max(OsuDifficultyObject::MIN_DELTA_TIME as f64),
-                lazy_travel_dist,
-                ..Default::default()
-            }
-        } else {
-            Self::default()
-        };
+                Self {
+                    // * Bonus for repeat sliders until a better per nested object strain system can be achieved.
+                    travel_dist: (lazy_travel_dist
+                        * (1.0 + repeat_count as f64 / 2.5).powf(1.0 / 2.5) as f32)
+                        as f64,
+                    travel_time: (base.lazy_travel_time() / clock_rate)
+                        .max(OsuDifficultyObject::MIN_DELTA_TIME as f64),
+                    lazy_travel_dist,
+                    ..Default::default()
+                }
+            } else {
+                Self::default()
+            };
 
         // * We don't need to calculate either angle or distance when
         // * one of the last->curr objects is a spinner
@@ -149,23 +129,19 @@ impl Distances {
         // * We will scale distances by this factor, so we can assume a uniform CircleSize among beatmaps.
         let scaling_factor = scaling_factor_.factor;
 
-        let last_cursor_pos = Self::get_end_cursor_pos(last, scaling_factor_);
+        let last_cursor_pos = Self::get_end_cursor_pos(last);
 
-        this.lazy_jump_dist =
-            (base.pos * scaling_factor - last_cursor_pos * scaling_factor).length() as f64;
+        this.lazy_jump_dist = (base.stacked_pos() * scaling_factor
+            - last_cursor_pos * scaling_factor)
+            .length() as f64;
         this.min_jump_time = strain_time;
         this.min_jump_dist = this.lazy_jump_dist;
 
-        if let OsuObjectKind::Slider {
-            end_pos,
-            lazy_travel_time,
-            ..
-        } = &last.kind
-        {
-            let last_travel_dist =
-                (lazy_travel_time / clock_rate).max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
+        if let OsuObjectKind::Slider(slider) = &last.kind {
+            let last_travel_time = (last.lazy_travel_time() / clock_rate)
+                .max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
             this.min_jump_time =
-                (strain_time - last_travel_dist).max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
+                (strain_time - last_travel_time).max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
 
             // * There are two types of slider-to-object patterns to consider in order
             // * to better approximate the real movement a player will take to jump between the hitobjects.
@@ -190,19 +166,22 @@ impl Distances {
             // *
             // * Thus, the player is assumed to jump the minimum of these two distances in all cases.
 
-            let tail_jump_dist = (*end_pos - base.pos).length() * scaling_factor;
+            let stacked_tail_pos =
+                slider.tail().map_or_else(|| last.pos(), |tail| tail.pos) + last.stack_offset;
 
-            this.min_jump_dist = ((this.lazy_jump_dist
+            let tail_jump_dist = (stacked_tail_pos - base.stacked_pos()).length() * scaling_factor;
+
+            this.min_jump_dist = (this.lazy_jump_dist
                 - (Self::MAXIMUM_SLIDER_RADIUS - Self::ASSUMED_SLIDER_RADIUS) as f64)
-                .min((tail_jump_dist - Self::MAXIMUM_SLIDER_RADIUS) as f64))
-            .max(0.0);
+                .min((tail_jump_dist - Self::MAXIMUM_SLIDER_RADIUS) as f64)
+                .max(0.0);
         }
 
         if let Some(last_last) = last_last.filter(|obj| !obj.is_spinner()) {
-            let last_last_cursor_pos = Self::get_end_cursor_pos(last_last, scaling_factor_);
+            let last_last_cursor_pos = Self::get_end_cursor_pos(last_last);
 
-            let v1 = last_last_cursor_pos - last.pos;
-            let v2 = base.pos - last_cursor_pos;
+            let v1 = last_last_cursor_pos - last.stacked_pos();
+            let v2 = base.stacked_pos() - last_cursor_pos;
 
             let dot = v1.dot(v2) as f64;
             let det = (v1.x * v2.y - v1.y * v2.x) as f64;
@@ -213,27 +192,32 @@ impl Distances {
         this
     }
 
-    pub(crate) fn compute_slider_cursor_pos(
-        stacked_pos: Pos2,
-        start_time: f64,
-        lazy_end_pos: &mut Pos2,
-        lazy_travel_time: &mut f64,
-        nested_objects: &[NestedObject],
+    pub(crate) fn compute_slider_cursor_pos<'h>(
+        hit_object: &'h mut OsuObject,
         scaling_factor_: &ScalingFactor,
-    ) -> f32 {
-        let mut curr_cursor_pos = stacked_pos;
+    ) -> Option<SliderValues<'h>> {
+        let pos = hit_object.pos();
+
+        let slider = if let OsuObjectKind::Slider(slider) = &mut hit_object.kind {
+            slider
+        } else {
+            return None;
+        };
+
+        let mut curr_cursor_pos = pos + hit_object.stack_offset;
         let scaling_factor = Self::NORMALISED_RADIUS as f64 / scaling_factor_.radius as f64;
 
         let mut lazy_travel_dist: f32 = 0.0;
 
-        for (curr_movement_obj, i) in nested_objects.iter().zip(1..) {
-            let mut curr_movement = curr_movement_obj.pos - curr_cursor_pos;
+        for (curr_movement_obj, i) in slider.nested_iter().zip(1..) {
+            let mut curr_movement =
+                (curr_movement_obj.pos + hit_object.stack_offset) - curr_cursor_pos;
             let mut curr_movement_len = scaling_factor * curr_movement.length() as f64;
 
             // * Amount of movement required so that the cursor position needs to be updated.
             let mut required_movement = Self::ASSUMED_SLIDER_RADIUS as f64;
 
-            if i == nested_objects.len() {
+            if i == slider.nested_len() {
                 // * The end of a slider has special aim rules due
                 // * to the relaxed time constraint on position.
                 // * There is both a lazy end position as well as the actual end slider position.
@@ -242,7 +226,7 @@ impl Distances {
                 // * may actually be farther away than the sliders true end.
                 // * This code is designed to prevent buffing situations
                 // * where lazy end is actually a less efficient movement.
-                let lazy_movement = *lazy_end_pos - curr_cursor_pos;
+                let lazy_movement = slider.lazy_end_pos - curr_cursor_pos;
 
                 if lazy_movement.length() < curr_movement.length() {
                     curr_movement = lazy_movement;
@@ -261,26 +245,22 @@ impl Distances {
                 curr_movement_len *= (curr_movement_len - required_movement) / curr_movement_len;
                 lazy_travel_dist += curr_movement_len as f32;
             }
-
-            if i == nested_objects.len() {
-                *lazy_end_pos = curr_cursor_pos;
-            }
         }
 
-        *lazy_travel_time = nested_objects
-            .last()
-            .map_or(0.0, |nested| nested.start_time - start_time);
+        slider.lazy_end_pos = curr_cursor_pos;
 
-        lazy_travel_dist
+        Some(SliderValues {
+            lazy_travel_dist,
+            slider,
+        })
     }
 
-    fn get_end_cursor_pos(hit_object: &OsuObject, scaling_factor: &ScalingFactor) -> Pos2 {
-        if hit_object.is_slider() {
-            let stack_offset = scaling_factor.stack_offset(hit_object.stack_height);
-
-            hit_object.lazy_end_pos(stack_offset)
-        } else {
-            hit_object.pos
-        }
+    fn get_end_cursor_pos(hit_object: &OsuObject) -> Pos2 {
+        hit_object.lazy_end_pos()
     }
+}
+
+pub(crate) struct SliderValues<'s> {
+    lazy_travel_dist: f32,
+    slider: &'s OsuSlider,
 }

@@ -1,6 +1,6 @@
 use std::{
     any::Any,
-    f64::consts::{FRAC_PI_2, FRAC_PI_6, PI},
+    f64::consts::{FRAC_PI_2, PI},
     mem,
 };
 
@@ -262,7 +262,7 @@ impl AimEvaluator {
     }
 
     fn calc_wide_angle_bonus(angle: f64) -> f64 {
-        let base = (3.0 / 4.0 * ((5.0 / 6.0 * PI).min(angle.max(FRAC_PI_6)) - FRAC_PI_6)).sin();
+        let base = (3.0 / 4.0 * ((5.0 / 6.0 * PI).min(angle.max(PI / 6.0)) - PI / 6.0)).sin();
 
         base * base
     }

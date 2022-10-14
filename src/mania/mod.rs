@@ -7,7 +7,7 @@ mod skills;
 
 use std::borrow::Cow;
 
-use crate::{beatmap::BeatmapHitWindows, parse::HitObjectKind, Beatmap, GameMode, Mods, OsuStars};
+use crate::{beatmap::BeatmapHitWindows, Beatmap, GameMode, Mods, OsuStars};
 
 pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
 
@@ -105,12 +105,12 @@ impl<'map> ManiaStars<'map> {
             .clock_rate(clock_rate)
             .hit_windows();
 
-        let (strain, mut attrs) = calculate_strain(self);
+        let strain = calculate_strain(self);
 
-        attrs.stars = strain.difficulty_value() * STAR_SCALING_FACTOR;
-        attrs.hit_window = hit_window;
-
-        attrs
+        ManiaDifficultyAttributes {
+            stars: strain.difficulty_value() * STAR_SCALING_FACTOR,
+            hit_window,
+        }
     }
 
     /// Calculate the skill strains.
@@ -119,7 +119,7 @@ impl<'map> ManiaStars<'map> {
     #[inline]
     pub fn strains(self) -> ManiaStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
-        let (strain, _) = calculate_strain(self);
+        let strain = calculate_strain(self);
 
         ManiaStrains {
             section_len: SECTION_LEN * clock_rate, // TODO: clock_rate correct here?
@@ -147,7 +147,7 @@ impl ManiaStrains {
     }
 }
 
-fn calculate_strain(params: ManiaStars<'_>) -> (Strain, ManiaDifficultyAttributes) {
+fn calculate_strain(params: ManiaStars<'_>) -> Strain {
     let ManiaStars {
         map,
         mods,
@@ -156,28 +156,22 @@ fn calculate_strain(params: ManiaStars<'_>) -> (Strain, ManiaDifficultyAttribute
     } = params;
 
     let take = passed_objects.unwrap_or(map.hit_objects.len());
-    let total_columns = map.cs.round().max(1.0) as usize;
+    let total_columns = map.cs.round().max(1.0);
 
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
-    let mut strain = Strain::new(total_columns);
-
-    let mut attrs = ManiaDifficultyAttributes::default();
+    let mut strain = Strain::new(total_columns as usize);
 
     let diff_objects_iter = map
         .hit_objects
         .iter()
         .take(take)
-        .inspect(|h| match &h.kind {
-            HitObjectKind::Hold { end_time } => {
-                attrs.max_combo += 1 + ((*end_time - h.start_time) / 100.0) as usize
-            }
-            _ => attrs.max_combo += 1,
-        })
         .skip(1)
         .map(ManiaObject::new)
         .enumerate()
         .zip(map.hit_objects.iter().map(ManiaObject::new))
-        .map(|((i, base), prev)| ManiaDifficultyObject::new(base, prev, clock_rate, i));
+        .map(|((i, base), prev)| {
+            ManiaDifficultyObject::new(base, prev, clock_rate, total_columns, i)
+        });
 
     let mut diff_objects = Vec::with_capacity(map.hit_objects.len().min(take).saturating_sub(1));
     diff_objects.extend(diff_objects_iter);
@@ -186,7 +180,7 @@ fn calculate_strain(params: ManiaStars<'_>) -> (Strain, ManiaDifficultyAttribute
         strain.process(curr, &diff_objects);
     }
 
-    (strain, attrs)
+    strain
 }
 
 /// The result of a difficulty calculation on an osu!mania map.
@@ -194,8 +188,6 @@ fn calculate_strain(params: ManiaStars<'_>) -> (Strain, ManiaDifficultyAttribute
 pub struct ManiaDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,
-    /// The maximum achievable combo.
-    pub max_combo: usize,
     /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc).
     pub hit_window: f64,
 }

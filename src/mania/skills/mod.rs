@@ -7,11 +7,7 @@ pub(crate) use self::strain::Strain;
 mod strain;
 
 pub(crate) trait Skill {
-    fn process(
-        &mut self,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
-    );
+    fn process(&mut self, curr: &ManiaDifficultyObject, diff_objects: &[ManiaDifficultyObject]);
     fn difficulty_value(self) -> f64;
 }
 
@@ -26,13 +22,9 @@ pub(crate) trait StrainSkill: Sized + Skill {
 
     fn strain_peaks_mut(&mut self) -> &mut Vec<f64>;
 
-    fn strain_value_at(&mut self, curr: &ManiaDifficultyObject<'_>) -> f64;
+    fn strain_value_at(&mut self, curr: &ManiaDifficultyObject) -> f64;
 
-    fn process(
-        &mut self,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
-    ) {
+    fn process(&mut self, curr: &ManiaDifficultyObject, diff_objects: &[ManiaDifficultyObject]) {
         // The first object doesn't generate a strain, so we begin with an incremented section end
         if curr.idx == 0 {
             // currentSectionEnd = Math.Ceiling(current.StartTime / SectionLength) * SectionLength;
@@ -56,8 +48,8 @@ pub(crate) trait StrainSkill: Sized + Skill {
     fn start_new_section_from(
         &mut self,
         time: f64,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
+        curr: &ManiaDifficultyObject,
+        diff_objects: &[ManiaDifficultyObject],
     ) {
         *self.curr_section_peak_mut() = self.calculate_initial_strain(time, curr, diff_objects);
     }
@@ -65,8 +57,8 @@ pub(crate) trait StrainSkill: Sized + Skill {
     fn calculate_initial_strain(
         &self,
         time: f64,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
+        curr: &ManiaDifficultyObject,
+        diff_objects: &[ManiaDifficultyObject],
     ) -> f64;
 
     fn get_curr_strain_peaks(mut self) -> Vec<f64> {
@@ -104,16 +96,16 @@ pub(crate) trait StrainDecaySkill: StrainSkill {
     fn curr_strain(&self) -> f64;
     fn curr_strain_mut(&mut self) -> &mut f64;
 
-    fn strain_value_of(&mut self, curr: &ManiaDifficultyObject<'_>) -> f64;
+    fn strain_value_of(&mut self, curr: &ManiaDifficultyObject) -> f64;
 
     fn calculate_initial_strain(
         &self,
         time: f64,
-        curr: &ManiaDifficultyObject<'_>,
-        diff_objects: &[ManiaDifficultyObject<'_>],
+        curr: &ManiaDifficultyObject,
+        diff_objects: &[ManiaDifficultyObject],
     ) -> f64;
 
-    fn strain_value_at(&mut self, curr: &ManiaDifficultyObject<'_>) -> f64 {
+    fn strain_value_at(&mut self, curr: &ManiaDifficultyObject) -> f64 {
         *self.curr_strain_mut() *= self.strain_decay(curr.delta_time);
         *self.curr_strain_mut() += self.strain_value_of(curr) * Self::SKILL_MULTIPLIER;
 
@@ -125,11 +117,11 @@ pub(crate) trait StrainDecaySkill: StrainSkill {
     }
 }
 
-fn previous<'map, 'objects>(
-    diff_objects: &'objects [ManiaDifficultyObject<'map>],
+fn previous(
+    diff_objects: &[ManiaDifficultyObject],
     curr: usize,
     backwards_idx: usize,
-) -> Option<&'objects ManiaDifficultyObject<'map>> {
+) -> Option<&ManiaDifficultyObject> {
     curr.checked_sub(backwards_idx + 1)
         .and_then(|idx| diff_objects.get(idx))
 }

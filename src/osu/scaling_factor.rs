@@ -27,11 +27,11 @@ impl ScalingFactor {
         Self {
             factor,
             radius,
-            scale: scale * -6.4,
+            scale,
         }
     }
 
     pub(crate) fn stack_offset(&self, stack_height: f32) -> Pos2 {
-        Pos2::new(stack_height * self.scale)
+        Pos2::new(stack_height * self.scale * -6.4)
     }
 }

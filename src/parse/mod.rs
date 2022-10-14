@@ -14,10 +14,7 @@ pub use slider_parsing::*;
 use reader::FileReader;
 pub(crate) use sort::legacy_sort;
 
-use std::{
-    cmp::Ordering,
-    ops::{ControlFlow, Neg},
-};
+use std::{cmp::Ordering, ops::Neg};
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::{fs::File, io::Read};
@@ -128,7 +125,9 @@ macro_rules! parse_general_body {
             }
 
             if key == b"StackLeniency" {
-                stack_leniency = Some(value.parse()?);
+                if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                    stack_leniency = Some(val);
+                }
             }
         }
 
@@ -160,12 +159,36 @@ macro_rules! parse_difficulty_body {
             let (key, value) = $reader.split_colon().ok_or(ParseError::BadLine)?;
 
             match key {
-                b"ApproachRate" => ar = Some(value.parse()?),
-                b"OverallDifficulty" => od = Some(value.parse()?),
-                b"CircleSize" => cs = Some(value.parse()?),
-                b"HPDrainRate" => hp = Some(value.parse()?),
-                b"SliderTickRate" => tick_rate = Some(value.parse()?),
-                b"SliderMultiplier" => sv = Some(value.parse()?),
+                b"ApproachRate" => {
+                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                        ar = Some(val);
+                    }
+                }
+                b"OverallDifficulty" => {
+                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                        od = Some(val);
+                    }
+                }
+                b"CircleSize" => {
+                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                        cs = Some(val);
+                    }
+                }
+                b"HPDrainRate" => {
+                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                        hp = Some(val);
+                    }
+                }
+                b"SliderTickRate" => {
+                    if let Some(val) = value.parse().ok().filter(f64::is_in_range) {
+                        tick_rate = Some(val);
+                    }
+                }
+                b"SliderMultiplier" => {
+                    if let Some(val) = value.parse().ok().filter(f64::is_in_range) {
+                        sv = Some(val);
+                    }
+                }
                 _ => {}
             }
         }
@@ -176,8 +199,8 @@ macro_rules! parse_difficulty_body {
         $self.cs = cs.unwrap_or(DEFAULT_DIFFICULTY);
         $self.hp = hp.unwrap_or(DEFAULT_DIFFICULTY);
         $self.ar = ar.unwrap_or($self.od);
-        $self.slider_mult = sv.next_field("sv")?;
-        $self.tick_rate = tick_rate.next_field("tick rate")?;
+        $self.slider_mult = sv.unwrap_or(1.0);
+        $self.tick_rate = tick_rate.unwrap_or(1.0);
 
         Ok(empty)
     }};
@@ -203,13 +226,26 @@ macro_rules! parse_events_body {
 
             // We're only interested in breaks
             if let Some(b'2') = split.next().and_then(|value| value.bytes().next()) {
-                let start_time = split.next().next_field("break start")?.parse()?;
-                let end_time = split.next().next_field("break end")?.parse()?;
+                let start_time = split
+                    .next()
+                    .next_field("break start")?
+                    .parse()
+                    .ok()
+                    .filter(f64::is_in_range);
 
-                $self.breaks.push(Break {
-                    start_time,
-                    end_time,
-                });
+                let end_time = split
+                    .next()
+                    .next_field("break end")?
+                    .parse()
+                    .ok()
+                    .filter(f64::is_in_range);
+
+                if let (Some(start_time), Some(end_time)) = (start_time, end_time) {
+                    $self.breaks.push(Break {
+                        start_time,
+                        end_time,
+                    });
+                }
             }
         }
 
@@ -323,16 +359,6 @@ macro_rules! parse_timingpoints_body {
                 continue;
             }
 
-            if timing_change {
-                let point = TimingPoint {
-                    time,
-                    beat_len: beat_len.clamp(6.0, 60_000.0),
-                    kiai,
-                };
-
-                $self.timing_points.push(point);
-            }
-
             // * If beatLength is NaN, speedMultiplier should still be 1
             // * because all comparisons against NaN are false.
             let speed_multiplier = if beat_len < 0.0 {
@@ -347,8 +373,26 @@ macro_rules! parse_timingpoints_body {
                 }
             }
 
-            pending_diff_point = Some(DifficultyPoint::new(time, beat_len, speed_multiplier, kiai));
+            if timing_change {
+                let point = TimingPoint {
+                    time,
+                    beat_len: beat_len.clamp(6.0, 60_000.0),
+                    kiai,
+                };
+
+                $self.timing_points.push(point);
+            }
+
+            if !timing_change || pending_diff_point.is_none() {
+                pending_diff_point =
+                    Some(DifficultyPoint::new(time, beat_len, speed_multiplier, kiai));
+            }
+
             pending_diff_points_time = time;
+        }
+
+        if let Some(point) = pending_diff_point {
+            $self.difficulty_points.push_if_not_redundant(point);
         }
 
         $self.timing_points.dedup_by_key(|point| point.time);
@@ -367,8 +411,8 @@ macro_rules! parse_hitobjects_body {
         // `point_split` will be of type `Vec<&str>
         // with each element having its lifetime bound to `buf`.
         // To circumvent this, `point_split_raw` will contain
-        // the actual `&str` elements transmuted into `usize`.
-        let mut point_split_raw: Vec<usize> = Vec::new();
+        // the actual `&str` elements transmuted into `(usize, usize)`.
+        let mut point_split_raw: Vec<(usize, usize)> = Vec::new();
 
         // Buffer to re-use for all sliders
         let mut vertices = Vec::new();
@@ -383,22 +427,40 @@ macro_rules! parse_hitobjects_body {
             let line = $reader.get_line()?;
             let mut split = line.split(',');
 
-            let x: f32 = split.next().next_field("x pos")?.parse()?;
-            let y: f32 = split.next().next_field("y pos")?.parse()?;
+            let x = split
+                .next()
+                .next_field("x pos")?
+                .parse()
+                .ok()
+                .filter(|x| f32::is_in_custom_range(x, MAX_COORDINATE_VALUE as f32))
+                .map(|x| x as i32 as f32);
 
-            if !(x.is_in_custom_range(MAX_COORDINATE_VALUE as f32)
-                && y.is_in_custom_range(MAX_COORDINATE_VALUE as f32))
-            {
+            let y = split
+                .next()
+                .next_field("y pos")?
+                .parse()
+                .ok()
+                .filter(|x| f32::is_in_custom_range(x, MAX_COORDINATE_VALUE as f32))
+                .map(|x| x as i32 as f32);
+
+            let pos = if let (Some(x), Some(y)) = (x, y) {
+                Pos2 { x, y }
+            } else {
                 continue;
-            }
+            };
 
-            let pos = Pos2 { x, y };
+            let time_opt = split
+                .next()
+                .next_field("hitobject time")?
+                .trim()
+                .parse()
+                .ok()
+                .filter(f64::is_in_range);
 
-            let time: f64 = split.next().next_field("hitobject time")?.trim().parse()?;
-
-            if !time.is_in_range() {
-                continue;
-            }
+            let time = match time_opt {
+                Some(time) => time,
+                None => continue,
+            };
 
             if !$self.hit_objects.is_empty() && time < prev_time {
                 unsorted = true;
@@ -436,7 +498,7 @@ macro_rules! parse_hitobjects_body {
                 let mut end_idx = 0;
                 let mut first = true;
 
-                // SAFETY: `Vec<usize>` and `Vec<&str>` have the same size and layout.
+                // SAFETY: `Vec<(usize, usize)>` and `Vec<&str>` have the same size and layout.
                 let point_split: &mut Vec<&str> =
                     unsafe { std::mem::transmute(&mut point_split_raw) };
 
@@ -489,7 +551,7 @@ macro_rules! parse_hitobjects_body {
                 } else {
                     let pixel_len = match split.next().map(str::parse::<f64>) {
                         Some(Ok(len)) if len.is_in_custom_range(MAX_COORDINATE_VALUE as f64) => {
-                            (len != 0.0).then_some(len)
+                            (len > 0.0).then_some(len)
                         }
                         Some(_) => continue,
                         None => None,
@@ -573,19 +635,13 @@ macro_rules! parse_hitobjects_body {
 
 // Required for maps with slider edge sound values above 255 e.g. map /b/80799
 fn parse_custom_sound(sound: &str) -> u8 {
-    fn fold_str(sound: &str) -> ControlFlow<u8, u8> {
-        sound.bytes().try_fold(0_u8, |sound, byte| match byte {
-            b'0'..=b'9' => {
-                ControlFlow::Continue(sound.wrapping_mul(10).wrapping_add((byte & 0xF) as u8))
-            }
-            _ => ControlFlow::Break(0),
+    sound
+        .bytes()
+        .try_fold(0_u8, |sound, byte| match byte {
+            b'0'..=b'9' => Some(sound.wrapping_mul(10).wrapping_add((byte & 0xF) as u8)),
+            _ => None,
         })
-    }
-
-    match fold_str(sound) {
-        ControlFlow::Continue(n) => n,
-        ControlFlow::Break(n) => n,
-    }
+        .unwrap_or(0)
 }
 
 macro_rules! parse_body {
@@ -599,7 +655,7 @@ macro_rules! parse_body {
 
         let mut map = Beatmap {
             version: reader.version()?,
-            hit_objects: Vec::with_capacity(256),
+            hit_objects: Vec::with_capacity(256), // TODO: test avg length, same for control points
             sounds: Vec::with_capacity(256),
             ..Default::default()
         };
@@ -707,6 +763,15 @@ mod slider_parsing {
         } {
             // * Keep incrementing while an implicit segment doesn't need to be started
             if vertices[end_idx].pos != vertices[end_idx - 1].pos {
+                continue;
+            }
+
+            // * Legacy Catmull sliders don't support multiple segments,
+            // * so adjacent Catmull segments should be treated as a single one.
+            // * Importantly, this is not applied to the first control point,
+            // * which may duplicate the slider path's position
+            // * resulting in a duplicate (0,0) control point in the resultant list.
+            if path_kind == PathType::Catmull && end_idx > 1 {
                 continue;
             }
 

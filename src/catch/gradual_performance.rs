@@ -235,7 +235,7 @@ mod tests {
             n_droplets: 2,
             n_tiny_droplets: 68,
             n_tiny_droplet_misses: 0,
-            misses: 0,
+            n_misses: 0,
         };
 
         let next = gradual1.process_next_object(state.clone());
@@ -259,7 +259,7 @@ mod tests {
             n_droplets: 2,
             n_tiny_droplets: 291,
             n_tiny_droplet_misses: 0,
-            misses: 0,
+            n_misses: 0,
         };
 
         let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
@@ -283,7 +283,7 @@ mod tests {
             n_droplets: 2,
             n_tiny_droplets: 68,
             n_tiny_droplet_misses: 0,
-            misses: 0,
+            n_misses: 0,
         };
 
         let gradual = gradual.process_next_n_objects(state, n).unwrap();

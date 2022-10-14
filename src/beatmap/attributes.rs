@@ -31,10 +31,10 @@ pub struct BeatmapHitWindows {
 /// mods & co.
 pub struct BeatmapAttributesBuilder {
     mode: GameMode,
-    ar: f64,
-    od: f64,
-    cs: f64,
-    hp: f64,
+    ar: f32,
+    od: f32,
+    cs: f32,
+    hp: f32,
     mods: Option<u32>,
     clock_rate: Option<f64>,
     converted: bool,
@@ -65,7 +65,7 @@ impl BeatmapAttributesBuilder {
 
     #[inline]
     /// Specify the approach rate.
-    pub fn ar(&mut self, ar: f64) -> &mut Self {
+    pub fn ar(&mut self, ar: f32) -> &mut Self {
         self.ar = ar;
 
         self
@@ -73,7 +73,7 @@ impl BeatmapAttributesBuilder {
 
     #[inline]
     /// Specify the overall difficulty.
-    pub fn od(&mut self, od: f64) -> &mut Self {
+    pub fn od(&mut self, od: f32) -> &mut Self {
         self.od = od;
 
         self
@@ -81,7 +81,7 @@ impl BeatmapAttributesBuilder {
 
     #[inline]
     /// Specify the circle size.
-    pub fn cs(&mut self, cs: f64) -> &mut Self {
+    pub fn cs(&mut self, cs: f32) -> &mut Self {
         self.cs = cs;
 
         self
@@ -89,7 +89,7 @@ impl BeatmapAttributesBuilder {
 
     #[inline]
     /// Specify the drain rate.
-    pub fn hp(&mut self, hp: f64) -> &mut Self {
+    pub fn hp(&mut self, hp: f32) -> &mut Self {
         self.hp = hp;
 
         self
@@ -126,7 +126,7 @@ impl BeatmapAttributesBuilder {
         let mods = self.mods.unwrap_or(0);
         let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
 
-        let mod_mult = |val: f64| {
+        let mod_mult = |val: f32| {
             if mods.hr() {
                 (val * 1.4).min(10.0)
             } else if mods.ez() {
@@ -137,20 +137,27 @@ impl BeatmapAttributesBuilder {
         };
 
         let raw_ar = mod_mult(self.ar);
-        let preempt = difficulty_range(raw_ar, 1800.0, 1200.0, 450.0) / clock_rate;
+        let preempt = difficulty_range(raw_ar as f64, 1800.0, 1200.0, 450.0) / clock_rate;
 
         // OD
         let hit_window = match self.mode {
             GameMode::Osu | GameMode::Catch => {
                 let raw_od = mod_mult(self.od);
 
-                difficulty_range(raw_od, Self::OSU_MIN, Self::OSU_AVG, Self::OSU_MAX) / clock_rate
+                difficulty_range(raw_od as f64, Self::OSU_MIN, Self::OSU_AVG, Self::OSU_MAX)
+                    / clock_rate
             }
             GameMode::Taiko => {
                 let raw_od = mod_mult(self.od);
 
-                difficulty_range(raw_od, Self::TAIKO_MIN, Self::TAIKO_AVG, Self::TAIKO_MAX).floor()
-                    / clock_rate
+                let diff_range = difficulty_range(
+                    raw_od as f64,
+                    Self::TAIKO_MIN,
+                    Self::TAIKO_AVG,
+                    Self::TAIKO_MAX,
+                );
+
+                diff_range.floor() / clock_rate
             }
             GameMode::Mania => {
                 let mut value = if !self.converted {
@@ -167,7 +174,7 @@ impl BeatmapAttributesBuilder {
                     value *= 1.4;
                 }
 
-                ((value * clock_rate).floor() / clock_rate).ceil()
+                ((value as f64 * clock_rate).floor() / clock_rate).ceil()
             }
         };
 
@@ -181,10 +188,9 @@ impl BeatmapAttributesBuilder {
     pub fn build(&self) -> BeatmapAttributes {
         let mods = self.mods.unwrap_or(0);
         let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
-        let multiplier = mods.od_ar_hp_multiplier();
 
         // HP
-        let hp = (self.hp * multiplier).min(10.0);
+        let hp = (self.hp * mods.od_ar_hp_multiplier() as f32).min(10.0);
 
         // CS
         let mut cs = self.cs;
@@ -207,16 +213,16 @@ impl BeatmapAttributesBuilder {
 
         // OD
         let od = match self.mode {
-            GameMode::Osu => (Self::OSU_MIN - od) / (Self::OSU_MIN - Self::OSU_AVG) * 5.0,
+            GameMode::Osu => (Self::OSU_MIN - od) / 6.0,
             GameMode::Taiko => (Self::TAIKO_MIN - od) / (Self::TAIKO_MIN - Self::TAIKO_AVG) * 5.0,
-            GameMode::Catch | GameMode::Mania => self.od,
+            GameMode::Catch | GameMode::Mania => self.od as f64,
         };
 
         BeatmapAttributes {
             ar,
             od,
-            cs,
-            hp,
+            cs: cs as f64,
+            hp: hp as f64,
             clock_rate,
             hit_windows,
         }
@@ -228,10 +234,10 @@ impl From<&Beatmap> for BeatmapAttributesBuilder {
     fn from(map: &Beatmap) -> Self {
         Self {
             mode: map.mode,
-            ar: map.ar as f64,
-            od: map.od as f64,
-            cs: map.cs as f64,
-            hp: map.hp as f64,
+            ar: map.ar,
+            od: map.od,
+            cs: map.cs,
+            hp: map.hp,
             mods: None,
             clock_rate: None,
             converted: false,

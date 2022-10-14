@@ -1,10 +1,7 @@
 use std::{any::Any, mem};
 
 use crate::{
-    osu::{
-        difficulty_object::OsuDifficultyObject,
-        osu_object::{NestedObjectKind, OsuObjectKind},
-    },
+    osu::{difficulty_object::OsuDifficultyObject, osu_object::OsuObjectKind},
     Mods,
 };
 
@@ -18,13 +15,15 @@ pub(crate) struct Flashlight {
     strain_peaks: Vec<f64>,
     has_hidden_mod: bool,
     scaling_factor: f64,
+    time_preempt: f64,
+    time_fade_in: f64,
 }
 
 impl Flashlight {
     const SKILL_MULTIPLIER: f64 = 0.052;
     const STRAIN_DECAY_BASE: f64 = 0.15;
 
-    pub(crate) fn new(mods: u32, radius: f32) -> Self {
+    pub(crate) fn new(mods: u32, radius: f32, time_preempt: f64, time_fade_in: f64) -> Self {
         Self {
             curr_strain: 0.0,
             curr_section_peak: 0.0,
@@ -32,6 +31,8 @@ impl Flashlight {
             strain_peaks: Vec::new(),
             has_hidden_mod: mods.hd(),
             scaling_factor: 52.0 / radius as f64,
+            time_preempt,
+            time_fade_in,
         }
     }
 
@@ -94,6 +95,8 @@ impl StrainSkill for Flashlight {
             diff_objects,
             self.has_hidden_mod,
             self.scaling_factor,
+            self.time_preempt,
+            self.time_fade_in,
         ) * Self::SKILL_MULTIPLIER;
 
         self.curr_strain
@@ -131,6 +134,8 @@ impl FlashlightEvaluator {
         diff_objects: &[OsuDifficultyObject<'_>],
         hidden: bool,
         scaling_factor: f64,
+        time_preempt: f64,
+        time_fade_in: f64,
     ) -> f64 {
         if curr.base.is_spinner() {
             return 0.0;
@@ -159,7 +164,8 @@ impl FlashlightEvaluator {
             let curr_hit_obj = curr_obj.base;
 
             if !curr_obj.base.is_spinner() {
-                let jump_dist = (osu_hit_obj.pos - curr_hit_obj.end_pos()).length() as f64;
+                let jump_dist =
+                    (osu_hit_obj.stacked_pos() - curr_hit_obj.stacked_end_pos()).length() as f64;
                 cumulative_strain_time += last_obj.strain_time;
 
                 // * We want to nerf objects that can be easily seen within the Flashlight circle radius.
@@ -173,7 +179,13 @@ impl FlashlightEvaluator {
                 // * Bonus based on how visible the object is.
                 let opacity_bonus = 1.0
                     + Self::MAX_OPACITY_BONUS
-                        * (1.0 - osu_curr.opacity_at(curr_hit_obj.start_time, hidden));
+                        * (1.0
+                            - osu_curr.opacity_at(
+                                curr_hit_obj.start_time,
+                                hidden,
+                                time_preempt,
+                                time_fade_in,
+                            ));
 
                 result += stack_nerf * opacity_bonus * scaling_factor * jump_dist
                     / cumulative_strain_time;
@@ -205,7 +217,7 @@ impl FlashlightEvaluator {
 
         let mut slider_bonus = 0.0;
 
-        if let OsuObjectKind::Slider { nested_objects, .. } = &osu_curr.base.kind {
+        if let OsuObjectKind::Slider(slider) = &osu_curr.base.kind {
             // * Invert the scaling factor to determine the true travel distance independent of circle size.
             let pixel_travel_dist = osu_curr.dists.lazy_travel_dist as f64 / scaling_factor;
 
@@ -219,9 +231,7 @@ impl FlashlightEvaluator {
             slider_bonus *= pixel_travel_dist;
 
             // * Nerf sliders with repeats, as less memorisation is required.
-            let repeat_count = nested_objects.iter().fold(0, |count, nested| {
-                count + matches!(nested.kind, NestedObjectKind::Repeat) as usize
-            });
+            let repeat_count = slider.repeat_count();
 
             if repeat_count > 0 {
                 slider_bonus /= (repeat_count + 1) as f64;

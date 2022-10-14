@@ -40,12 +40,12 @@ pub struct ManiaPP<'map> {
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
 
-    n320: Option<usize>,
-    n300: Option<usize>,
-    n200: Option<usize>,
-    n100: Option<usize>,
-    n50: Option<usize>,
-    n_misses: Option<usize>,
+    pub(crate) n320: Option<usize>,
+    pub(crate) n300: Option<usize>,
+    pub(crate) n200: Option<usize>,
+    pub(crate) n100: Option<usize>,
+    pub(crate) n50: Option<usize>,
+    pub(crate) n_misses: Option<usize>,
 
     acc: Option<f64>,
     hitresult_priority: Option<ManiaHitResultPriority>,
@@ -120,6 +120,8 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify the accuracy of a play.
+    /// This will be used to generate matching hitresults.
     #[inline]
     pub fn accuracy(mut self, acc: f64) -> Self {
         self.acc = Some(acc);
@@ -127,6 +129,9 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify how hitresults should be generated.
+    ///
+    /// Defauls to [`ManiaHitResultPriority::BestCase`].
     #[inline]
     pub fn hitresult_priority(mut self, priority: ManiaHitResultPriority) -> Self {
         self.hitresult_priority = Some(priority);
@@ -134,6 +139,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify the amount of 320s of a play.
     #[inline]
     pub fn n320(mut self, n320: usize) -> Self {
         self.n320 = Some(n320);
@@ -141,6 +147,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify the amount of 300s of a play.
     #[inline]
     pub fn n300(mut self, n300: usize) -> Self {
         self.n300 = Some(n300);
@@ -148,6 +155,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify the amount of 200s of a play.
     #[inline]
     pub fn n200(mut self, n200: usize) -> Self {
         self.n200 = Some(n200);
@@ -155,6 +163,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify the amount of 100s of a play.
     #[inline]
     pub fn n100(mut self, n100: usize) -> Self {
         self.n100 = Some(n100);
@@ -162,6 +171,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify the amount of 50s of a play.
     #[inline]
     pub fn n50(mut self, n50: usize) -> Self {
         self.n50 = Some(n50);
@@ -169,6 +179,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Specify the amount of misses of a play.
     #[inline]
     pub fn n_misses(mut self, n_misses: usize) -> Self {
         self.n_misses = Some(n_misses);
@@ -176,6 +187,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
+    /// Provide parameters through an [`ManiaScoreState`].
     #[inline]
     pub fn state(mut self, state: ManiaScoreState) -> Self {
         let ManiaScoreState {
@@ -217,7 +229,6 @@ impl<'map> ManiaPP<'map> {
         let inner = ManiaPpInner {
             attrs,
             mods: self.mods,
-            clock_rate: self.clock_rate.unwrap_or_else(|| self.mods.clock_rate()),
             state: self.generate_hitresults(),
         };
 
@@ -337,7 +348,6 @@ impl<'map> ManiaPP<'map> {
 struct ManiaPpInner {
     attrs: ManiaDifficultyAttributes,
     mods: u32,
-    clock_rate: f64,
     state: ManiaScoreState,
 }
 
@@ -385,7 +395,7 @@ impl ManiaPpInner {
             n200,
             n100,
             n50,
-            n_misses,
+            n_misses: _,
         } = &self.state;
 
         let numerator = *n320 * 320 + *n300 * 300 + *n200 * 200 + *n100 * 100 + *n50 * 50;

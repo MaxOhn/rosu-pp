@@ -249,12 +249,12 @@ impl RhythmEvaluator {
             let base = (PI / (prev_delta.min(curr_delta) / prev_delta.max(curr_delta))).sin();
             let curr_ratio = 1.0 + 6.0 * (base * base).min(0.5);
 
+            let hit_window = !curr_obj.base.is_spinner() as u64 as f64 * hit_window;
+
             let mut window_penalty = ((((prev_delta - curr_delta).abs() - hit_window * 0.3)
                 .max(0.0))
                 / (hit_window * 0.3))
                 .min(1.0);
-
-            println!("window_penalty: prev={prev_delta} | curr={curr_delta} | window={hit_window} => {window_penalty}");
 
             window_penalty = window_penalty.min(1.0);
 
@@ -322,10 +322,6 @@ impl RhythmEvaluator {
         }
 
         // * produces multiplier that can be applied to strain. range [1, infinity) (not really though)
-        let res = (4.0 + rhythm_complexity_sum * Self::RHYTHM_MULTIPLIER).sqrt() / 2.0;
-
-        println!("res={res}");
-
-        res
+        (4.0 + rhythm_complexity_sum * Self::RHYTHM_MULTIPLIER).sqrt() / 2.0
     }
 }

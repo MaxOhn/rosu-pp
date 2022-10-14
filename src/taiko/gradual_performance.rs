@@ -208,7 +208,7 @@ mod tests {
             max_combo: 246,
             n300: 200,
             n100: 40,
-            misses: 6,
+            n_misses: 6,
         };
 
         let next = gradual1.process_next_object(state.clone());
@@ -230,7 +230,7 @@ mod tests {
             max_combo: 289,
             n300: 289,
             n100: 0,
-            misses: 0,
+            n_misses: 0,
         };
 
         let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
@@ -252,7 +252,7 @@ mod tests {
             max_combo: 246,
             n300: 246,
             n100: 0,
-            misses: 0,
+            n_misses: 0,
         };
 
         let gradual = gradual.process_next_n_objects(state, n).unwrap();

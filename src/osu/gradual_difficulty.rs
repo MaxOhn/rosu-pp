@@ -1,7 +1,6 @@
 use std::{
     fmt::{Debug, Formatter, Result as FmtResult},
     mem,
-    vec::IntoIter,
 };
 
 use crate::{curve::CurveBuffers, Beatmap, Mods};
@@ -13,7 +12,8 @@ use super::{
     osu_object::{ObjectParameters, OsuObject, OsuObjectKind},
     scaling_factor::ScalingFactor,
     skills::{Aim, Flashlight, Skill, Speed},
-    stacking, OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, PERFORMANCE_BASE_MULTIPLIER,
+    stacking, OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, FADE_IN_DURATION_MULTIPLIER,
+    PERFORMANCE_BASE_MULTIPLIER, PREEMPT_MIN,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!standard map.
@@ -74,8 +74,22 @@ impl OsuGradualDifficultyAttributes {
         let map_attrs = map.attributes().mods(mods).build();
         let scaling_factor = ScalingFactor::new(map_attrs.cs);
         let hr = mods.hr();
-        let time_preempt = map_attrs.hit_windows.ar;
         let hit_window = 2.0 * map_attrs.hit_windows.od;
+        let time_preempt = map_attrs.hit_windows.ar;
+
+        // * Preempt time can go below 450ms. Normally, this is achieved via the DT mod
+        // * which uniformly speeds up all animations game wide regardless of AR.
+        // * This uniform speedup is hard to match 1:1, however we can at least make
+        // * AR>10 (via mods) feel good by extending the upper linear function above.
+        // * Note that this doesn't exactly match the AR>10 visuals as they're
+        // * classically known, but it feels good.
+        // * This adjustment is necessary for AR>10, otherwise TimePreempt can
+        // * become smaller leading to hitcircles not fully fading in.
+        let time_fade_in = if mods.hd() {
+            time_preempt * FADE_IN_DURATION_MULTIPLIER
+        } else {
+            400.0 * (time_preempt / PREEMPT_MIN).min(1.0)
+        };
 
         let mut attrs = OsuDifficultyAttributes {
             ar: map_attrs.ar,
@@ -94,7 +108,7 @@ impl OsuGradualDifficultyAttributes {
         let hit_objects_iter = map
             .hit_objects
             .iter()
-            .filter_map(|h| OsuObject::new(h, hr, &mut params));
+            .filter_map(|h| OsuObject::new(h, &mut params));
 
         let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
         hit_objects.extend(hit_objects_iter);
@@ -113,13 +127,12 @@ impl OsuGradualDifficultyAttributes {
         }
 
         let mut hit_objects_iter = hit_objects.iter_mut().map(|h| {
-            let stack_offset = scaling_factor.stack_offset(h.stack_height);
-            h.pos += stack_offset;
+            h.post_process(hr, &scaling_factor);
 
             h
         });
 
-        let skills = create_skills(mods, scaling_factor.radius);
+        let skills = create_skills(mods, scaling_factor.radius, time_preempt, time_fade_in);
 
         let last = match hit_objects_iter.next() {
             Some(prev) => prev,
@@ -139,22 +152,7 @@ impl OsuGradualDifficultyAttributes {
         let mut last_last = None;
 
         // Prepare `lazy_travel_dist` and `lazy_end_pos` for `last` manually
-        if let OsuObjectKind::Slider {
-            lazy_travel_time,
-            lazy_end_pos,
-            nested_objects,
-            ..
-        } = &mut last.kind
-        {
-            Distances::compute_slider_cursor_pos(
-                last.pos,
-                last.start_time,
-                lazy_end_pos,
-                lazy_travel_time,
-                nested_objects,
-                &scaling_factor,
-            );
-        }
+        Distances::compute_slider_cursor_pos(last, &scaling_factor);
 
         let mut last = &*last;
         let mut diff_objects = Vec::with_capacity(map.hit_objects.len().saturating_sub(2));
@@ -218,9 +216,9 @@ impl Iterator for OsuGradualDifficultyAttributes {
 
         match &curr.base.kind {
             OsuObjectKind::Circle => attrs.n_circles += 1,
-            OsuObjectKind::Slider { nested_objects, .. } => {
+            OsuObjectKind::Slider(slider) => {
                 attrs.n_sliders += 1;
-                attrs.max_combo += nested_objects.len();
+                attrs.max_combo += slider.nested_len();
             }
             OsuObjectKind::Spinner { .. } => attrs.n_spinners += 1,
         }
@@ -310,37 +308,6 @@ impl Iterator for OsuGradualDifficultyAttributes {
 }
 
 impl ExactSizeIterator for OsuGradualDifficultyAttributes {
-    #[inline]
-    fn len(&self) -> usize {
-        self.hit_objects.len()
-    }
-}
-
-#[derive(Clone, Debug)]
-struct OsuObjectIter {
-    hit_objects: IntoIter<OsuObject>,
-    scaling_factor: ScalingFactor,
-}
-
-impl Iterator for OsuObjectIter {
-    type Item = OsuObject;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut h = self.hit_objects.next()?;
-        let stack_offset = self.scaling_factor.stack_offset(h.stack_height);
-        h.pos += stack_offset;
-
-        Some(h)
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.hit_objects.size_hint()
-    }
-}
-
-impl ExactSizeIterator for OsuObjectIter {
     #[inline]
     fn len(&self) -> usize {
         self.hit_objects.len()

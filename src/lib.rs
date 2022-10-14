@@ -520,11 +520,32 @@ mod tests {
 
     #[test]
     fn custom() {
-        let path = "F:\\osu!\\beatmaps\\2536330.osu";
+        let path = "F:\\osu!\\beatmaps\\1529760.osu";
         let map = Beatmap::from_path(path).unwrap();
 
-        let attrs = OsuPP::new(&map).calculate();
+        let attrs = OsuPP::new(&map).mods(16).calculate();
 
-        println!("{:#?}", attrs);
+        println!(
+            "difficulty:\n\
+            aim={}\n\
+            speed={}\n\
+            flashlight={}\n\
+            stars={}\n\
+            performance:\n\
+            aim={}\n\
+            speed={}\n\
+            acc={}\n\
+            flashlight={}\n\
+            pp={}\n",
+            attrs.difficulty.aim,
+            attrs.difficulty.speed,
+            attrs.difficulty.flashlight,
+            attrs.difficulty.stars,
+            attrs.pp_aim,
+            attrs.pp_speed,
+            attrs.pp_acc,
+            attrs.pp_flashlight,
+            attrs.pp,
+        );
     }
 }

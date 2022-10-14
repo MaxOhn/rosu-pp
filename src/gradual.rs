@@ -42,7 +42,7 @@ pub enum GradualDifficultyAttributes<'map> {
     /// Gradual osu!catch difficulty attributes.
     Catch(CatchGradualDifficultyAttributes<'map>),
     /// Gradual osu!mania difficulty attributes.
-    Mania(ManiaGradualDifficultyAttributes<'map>),
+    Mania(ManiaGradualDifficultyAttributes),
     /// Gradual osu!standard difficulty attributes.
     Osu(OsuGradualDifficultyAttributes),
     /// Gradual osu!taiko difficulty attributes.
@@ -316,7 +316,7 @@ impl<'map> GradualPerformanceAttributes<'map> {
                 .process_next_n_objects(state.into(), n)
                 .map(PerformanceAttributes::Catch),
             GradualPerformanceAttributes::Mania(m) => m
-                .process_next_n_objects(state.score, n)
+                .process_next_n_objects(state.into(), n)
                 .map(PerformanceAttributes::Mania),
             GradualPerformanceAttributes::Osu(o) => o
                 .process_next_n_objects(state.into(), n)

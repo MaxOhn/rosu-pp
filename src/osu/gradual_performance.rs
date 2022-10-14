@@ -213,7 +213,7 @@ mod tests {
             n300: 88,
             n100: 8,
             n50: 2,
-            misses: 2,
+            n_misses: 2,
         };
 
         let next = gradual1.process_next_object(state.clone());
@@ -236,7 +236,7 @@ mod tests {
             n300: 601,
             n100: 0,
             n50: 0,
-            misses: 0,
+            n_misses: 0,
         };
 
         let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
@@ -259,7 +259,7 @@ mod tests {
             n300: 100,
             n100: 0,
             n50: 0,
-            misses: 0,
+            n_misses: 0,
         };
 
         let gradual = gradual.process_next_n_objects(state, n).unwrap();

@@ -6,11 +6,11 @@ mod pp;
 mod scaling_factor;
 mod skills;
 
-use crate::{curve::CurveBuffers, AnyStars, Beatmap, GameMode, Mods};
+use crate::{curve::CurveBuffers, parse::Pos2, AnyStars, Beatmap, GameMode, Mods};
 
 use self::{
     difficulty_object::{Distances, OsuDifficultyObject},
-    osu_object::{ObjectParameters, OsuObject, OsuObjectKind},
+    osu_object::{ObjectParameters, OsuObject},
     scaling_factor::ScalingFactor,
     skills::{Aim, Flashlight, Skill, Speed},
 };
@@ -24,6 +24,9 @@ const NORMALIZED_RADIUS: f32 = 50.0;
 const STACK_DISTANCE: f32 = 3.0;
 // * This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.14;
+const PREEMPT_MIN: f64 = 450.0;
+const FADE_IN_DURATION_MULTIPLIER: f64 = 0.4;
+const PLAYFIELD_BASE_SIZE: Pos2 = Pos2 { x: 512.0, y: 384.0 };
 
 /// Difficulty calculator on osu!standard maps.
 ///
@@ -237,16 +240,30 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
     let take = passed_objects.unwrap_or(map.hit_objects.len());
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
-    let map_attributes = map.attributes().mods(mods).clock_rate(clock_rate).build();
-    let scaling_factor = ScalingFactor::new(map_attributes.cs);
+    let map_attrs = map.attributes().mods(mods).clock_rate(clock_rate).build();
+    let scaling_factor = ScalingFactor::new(map_attrs.cs);
     let hr = mods.hr();
-    let time_preempt = map_attributes.hit_windows.ar;
-    let hit_window = 2.0 * map_attributes.hit_windows.od;
+    let hit_window = 2.0 * map_attrs.hit_windows.od;
+    let time_preempt = (map_attrs.hit_windows.ar * clock_rate) as f32 as f64;
+
+    // * Preempt time can go below 450ms. Normally, this is achieved via the DT mod
+    // * which uniformly speeds up all animations game wide regardless of AR.
+    // * This uniform speedup is hard to match 1:1, however we can at least make
+    // * AR>10 (via mods) feel good by extending the upper linear function above.
+    // * Note that this doesn't exactly match the AR>10 visuals as they're
+    // * classically known, but it feels good.
+    // * This adjustment is necessary for AR>10, otherwise TimePreempt can
+    // * become smaller leading to hitcircles not fully fading in.
+    let time_fade_in = if mods.hd() {
+        time_preempt * FADE_IN_DURATION_MULTIPLIER
+    } else {
+        400.0 * (time_preempt / PREEMPT_MIN).min(1.0)
+    };
 
     let mut attributes = OsuDifficultyAttributes {
-        ar: map_attributes.ar,
-        hp: map_attributes.hp,
-        od: map_attributes.od,
+        ar: map_attrs.ar,
+        hp: map_attrs.hp,
+        od: map_attrs.od,
         ..Default::default()
     };
 
@@ -261,7 +278,7 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
         .hit_objects
         .iter()
         .take(take)
-        .filter_map(|h| OsuObject::new(h, hr, &mut params));
+        .filter_map(|h| OsuObject::new(h, &mut params));
 
     let mut hit_objects = Vec::with_capacity(take.min(map.hit_objects.len()));
     hit_objects.extend(hit_objects_iter);
@@ -275,13 +292,12 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
     }
 
     let mut hit_objects = hit_objects.iter_mut().map(|h| {
-        let stack_offset = scaling_factor.stack_offset(h.stack_height);
-        h.pos += stack_offset;
+        h.post_process(hr, &scaling_factor);
 
         h
     });
 
-    let mut skills = create_skills(mods, scaling_factor.radius);
+    let mut skills = create_skills(mods, scaling_factor.radius, time_preempt, time_fade_in);
 
     let last = match hit_objects.next() {
         Some(prev) => prev,
@@ -291,25 +307,10 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
     let mut last_last = None;
 
     // Prepare `lazy_travel_dist` and `lazy_end_pos` for `last` manually
-    if let OsuObjectKind::Slider {
-        lazy_travel_time,
-        lazy_end_pos,
-        nested_objects,
-        ..
-    } = &mut last.kind
-    {
-        Distances::compute_slider_cursor_pos(
-            last.pos,
-            last.start_time,
-            lazy_end_pos,
-            lazy_travel_time,
-            nested_objects,
-            &scaling_factor,
-        );
-    }
+    Distances::compute_slider_cursor_pos(last, &scaling_factor);
 
     let mut last = &*last;
-    let mut diff_objects = Vec::with_capacity(hit_objects.len().saturating_sub(2));
+    let mut diff_objects = Vec::with_capacity(hit_objects.len());
 
     for (i, curr) in hit_objects.enumerate() {
         let delta_time = (curr.start_time - last.start_time) / clock_rate;
@@ -399,8 +400,8 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
                 // *         o <- hitCircle has stack of -2
                 if hit_objects[n].is_slider()
                     && hit_objects[n]
-                        .end_pos()
-                        .distance(hit_objects[obj_i_idx].pos)
+                        .pre_stacked_end_pos()
+                        .distance(hit_objects[obj_i_idx].pos())
                         < STACK_DISTANCE
                 {
                     let offset =
@@ -409,7 +410,11 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
                     for j in n + 1..=i {
                         // * For each object which was declared under this slider, we will offset
                         // * it to appear *below* the slider end (rather than above).
-                        if hit_objects[n].end_pos().distance(hit_objects[j].pos) < STACK_DISTANCE {
+                        if hit_objects[n]
+                            .pre_stacked_end_pos()
+                            .distance(hit_objects[j].pos())
+                            < STACK_DISTANCE
+                        {
                             hit_objects[j].stack_height -= offset;
                         }
                     }
@@ -420,7 +425,7 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
                     break;
                 }
 
-                if hit_objects[n].pos.distance(hit_objects[obj_i_idx].pos) < STACK_DISTANCE {
+                if hit_objects[n].pos().distance(hit_objects[obj_i_idx].pos()) < STACK_DISTANCE {
                     // * Keep processing as if there are no sliders.
                     // * If we come across a slider, this gets cancelled out.
                     // * NOTE: Sliders with start positions stacking
@@ -441,15 +446,15 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
 
                 if hit_objects[n].is_spinner() {
                     continue;
-                } else if hit_objects[obj_i_idx].start_time - hit_objects[n].start_time
-                    > stack_threshold
-                {
+                }
+
+                if hit_objects[obj_i_idx].start_time - hit_objects[n].start_time > stack_threshold {
                     break; // * We are no longer within stacking range of the previous object.
                 }
 
                 if hit_objects[n]
-                    .end_pos()
-                    .distance(hit_objects[obj_i_idx].pos)
+                    .pre_stacked_end_pos()
+                    .distance(hit_objects[obj_i_idx].pos())
                     < STACK_DISTANCE
                 {
                     hit_objects[n].stack_height = hit_objects[obj_i_idx].stack_height + 1.0;
@@ -467,7 +472,7 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
         }
 
         let mut start_time = hit_objects[i].end_time();
-        let end_pos = hit_objects[i].end_pos();
+        let pos2 = hit_objects[i].old_stacking_pos2();
 
         let mut slider_stack = 0.0;
 
@@ -476,10 +481,10 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
                 break;
             }
 
-            if hit_objects[j].pos.distance(hit_objects[i].pos) < STACK_DISTANCE {
+            if hit_objects[j].pos().distance(hit_objects[i].pos()) < STACK_DISTANCE {
                 hit_objects[i].stack_height += 1.0;
                 start_time = hit_objects[j].end_time();
-            } else if hit_objects[j].pos.distance(end_pos) < STACK_DISTANCE {
+            } else if hit_objects[j].pos().distance(pos2) < STACK_DISTANCE {
                 slider_stack += 1.0;
                 hit_objects[j].stack_height -= slider_stack;
                 start_time = hit_objects[j].end_time();
@@ -488,12 +493,17 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
     }
 }
 
-fn create_skills(mods: u32, radius: f32) -> [Box<dyn Skill>; 4] {
+fn create_skills(
+    mods: u32,
+    radius: f32,
+    time_preempt: f64,
+    time_fade_in: f64,
+) -> [Box<dyn Skill>; 4] {
     [
         Box::new(Aim::new(true)) as Box<dyn Skill>,
         Box::new(Aim::new(false)) as Box<dyn Skill>,
         Box::new(Speed::new()) as Box<dyn Skill>,
-        Box::new(Flashlight::new(mods, radius)) as Box<dyn Skill>,
+        Box::new(Flashlight::new(mods, radius, time_preempt, time_fade_in)) as Box<dyn Skill>,
     ]
 }
 
