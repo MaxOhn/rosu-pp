@@ -50,7 +50,7 @@ pub struct OsuPP<'map> {
     pub(crate) n_misses: Option<usize>,
     pub(crate) passed_objects: Option<usize>,
     pub(crate) clock_rate: Option<f64>,
-    hitresult_priority: Option<HitResultPriority>,
+    pub(crate) hitresult_priority: Option<HitResultPriority>,
 }
 
 impl<'map> OsuPP<'map> {
@@ -201,6 +201,7 @@ impl<'map> OsuPP<'map> {
 
     /// Specify the accuracy of a play between `0` and `100`.
     /// This will be used to generate matching hitresults.
+    #[inline]
     pub fn accuracy(mut self, acc: f64) -> Self {
         self.acc = Some(acc / 100.0);
 

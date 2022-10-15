@@ -2,8 +2,7 @@ use std::borrow::Cow;
 
 use super::{TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState, TaikoStars};
 use crate::{
-    beatmap::BeatmapHitWindows, Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP,
-    PerformanceAttributes,
+    Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP, PerformanceAttributes,
 };
 
 /// Performance calculator on osu!taiko maps.
@@ -42,9 +41,10 @@ pub struct TaikoPP<'map> {
     attributes: Option<TaikoDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
-    acc: f64,
+    acc: Option<f64>,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
+    hitresult_priority: Option<HitResultPriority>,
 
     pub(crate) n300: Option<usize>,
     pub(crate) n100: Option<usize>,
@@ -60,12 +60,13 @@ impl<'map> TaikoPP<'map> {
             attributes: None,
             mods: 0,
             combo: None,
-            acc: 1.0,
+            acc: None,
             n_misses: None,
             passed_objects: None,
             clock_rate: None,
             n300: None,
             n100: None,
+            hitresult_priority: None,
         }
     }
 
@@ -99,6 +100,16 @@ impl<'map> TaikoPP<'map> {
         self
     }
 
+    /// Specify how hitresults should be generated.
+    ///
+    /// Defauls to [`HitResultPriority::BestCase`].
+    #[inline]
+    pub fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
+        self.hitresult_priority = Some(priority);
+
+        self
+    }
+
     /// Specify the amount of 300s of a play.
     #[inline]
     pub fn n300(mut self, n300: usize) -> Self {
@@ -123,12 +134,11 @@ impl<'map> TaikoPP<'map> {
         self
     }
 
-    /// Set the accuracy between 0.0 and 100.0.
+    /// Specify the accuracy of a play between `0` and `100`.
+    /// This will be used to generate matching hitresults.
     #[inline]
     pub fn accuracy(mut self, acc: f64) -> Self {
-        self.acc = acc / 100.0;
-        self.n300.take();
-        self.n100.take();
+        self.acc = Some(acc / 100.0);
 
         self
     }
@@ -140,7 +150,7 @@ impl<'map> TaikoPP<'map> {
     /// [`TaikoGradualPerformanceAttributes`](crate::taiko::TaikoGradualPerformanceAttributes).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
-        self.passed_objects.replace(passed_objects);
+        self.passed_objects = Some(passed_objects);
 
         self
     }
@@ -175,7 +185,7 @@ impl<'map> TaikoPP<'map> {
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> TaikoPerformanceAttributes {
-        let attributes = self.attributes.take().unwrap_or_else(|| {
+        let attrs = self.attributes.take().unwrap_or_else(|| {
             let mut calculator = TaikoStars::new(self.map.as_ref())
                 .mods(self.mods)
                 .is_convert(matches!(self.map, Cow::Owned(_)));
@@ -191,87 +201,79 @@ impl<'map> TaikoPP<'map> {
             calculator.calculate()
         });
 
-        self.assert_hitresults(attributes).calculate()
-    }
-
-    fn assert_hitresults(&'map self, attributes: TaikoDifficultyAttributes) -> TaikoPPInner<'map> {
-        let total_result_count = attributes.max_combo();
-        let misses = self.n_misses.unwrap_or(0);
-
-        let (n300, n100) = match (self.n300, self.n100) {
-            (Some(n300), Some(n100)) => {
-                let n300 = n300.min(total_result_count - misses);
-                let n100 = n100.min(total_result_count - n300 - misses);
-
-                let given = n300 + n100 + misses;
-                let missing = total_result_count - given;
-
-                (n300 + missing, n100)
-            }
-            (Some(n300), None) => {
-                let n300 = n300.min(total_result_count - misses);
-
-                let n100 = total_result_count
-                    .saturating_sub(n300)
-                    .saturating_sub(misses);
-
-                (n300, n100)
-            }
-            (None, Some(n100)) => {
-                let n100 = n100.min(total_result_count - misses);
-
-                let n300 = total_result_count
-                    .saturating_sub(n100)
-                    .saturating_sub(misses);
-
-                (n300, n100)
-            }
-            (None, None) => {
-                let target_total = (self.acc * (total_result_count * 2) as f64) as usize;
-
-                let n300 = target_total - total_result_count.saturating_sub(misses);
-                let n100 = total_result_count
-                    .saturating_sub(n300)
-                    .saturating_sub(misses);
-
-                (n300, n100)
-            }
+        let inner = TaikoPpInner {
+            mods: self.mods,
+            state: self.generate_hitresults(attrs.max_combo),
+            attrs,
         };
 
-        let acc = (2 * n300 + n100) as f64 / (2 * (n300 + n100 + misses)) as f64;
+        inner.calculate()
+    }
 
-        TaikoPPInner {
-            map: self.map.as_ref(),
-            attributes,
-            acc,
-            n300,
-            n100,
-            mods: self.mods,
-            n_misses: misses,
-            clock_rate: self.clock_rate.unwrap_or_else(|| self.mods.clock_rate()),
+    fn generate_hitresults(&self, max_combo: usize) -> TaikoScoreState {
+        // TODO: consider passed_objects
+        let total_result_count = max_combo;
+
+        let mut state = TaikoScoreState {
+            max_combo,
+            n300: self.n300.unwrap_or(0),
+            n100: self.n100.unwrap_or(0),
+            n_misses: self.n_misses.unwrap_or(0),
+        };
+
+        if let Some(acc) = self.acc {
+            // TODO: test
+            let target_total = (acc * (total_result_count * 2) as f64).round() as usize;
+
+            let mut delta =
+                target_total.saturating_sub(total_result_count.saturating_sub(state.n_misses));
+
+            if self.n100.is_some() {
+                delta /= 2;
+            }
+
+            if let Some(n300) = self.n300 {
+                delta = delta.saturating_sub(n300 * 2);
+            } else {
+                state.n300 = delta / 2;
+                delta %= 2;
+            }
+
+            state.n100 += delta;
+        } else {
+            let priority = self.hitresult_priority.unwrap_or_default();
+            let remaining = total_result_count.saturating_sub(state.total_hits());
+
+            match priority {
+                HitResultPriority::BestCase => match (self.n300, self.n100) {
+                    (Some(_), None) => state.n100 = remaining,
+                    _ => state.n300 = remaining,
+                },
+                HitResultPriority::WorstCase => match (self.n300, self.n100) {
+                    (None, Some(_)) => state.n300 = remaining,
+                    _ => state.n100 = remaining,
+                },
+            }
         }
+
+        state
     }
 }
 
-struct TaikoPPInner<'map> {
-    map: &'map Beatmap,
-    attributes: TaikoDifficultyAttributes,
+struct TaikoPpInner {
+    attrs: TaikoDifficultyAttributes,
     mods: u32,
-    acc: f64,
-    n_misses: usize,
-    clock_rate: f64,
-    n300: usize,
-    n100: usize,
+    state: TaikoScoreState,
 }
 
-impl<'map> TaikoPPInner<'map> {
+impl TaikoPpInner {
     fn calculate(self) -> TaikoPerformanceAttributes {
         // * The effectiveMissCount is calculated by gaining a ratio for totalSuccessfulHits
         // * and increasing the miss penalty for shorter object counts lower than 1000.
         let total_successful_hits = self.total_successful_hits();
 
         let effective_miss_count = if total_successful_hits > 0 {
-            (1000.0 / (total_successful_hits as f64)).max(1.0) * self.n_misses as f64
+            (1000.0 / (total_successful_hits as f64)).max(1.0) * self.state.n_misses as f64
         } else {
             0.0
         };
@@ -292,7 +294,7 @@ impl<'map> TaikoPPInner<'map> {
         let pp = (diff_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
 
         TaikoPerformanceAttributes {
-            difficulty: self.attributes,
+            difficulty: self.attrs,
             pp,
             pp_acc: acc_value,
             pp_difficulty: diff_value,
@@ -301,7 +303,7 @@ impl<'map> TaikoPPInner<'map> {
     }
 
     fn compute_difficulty_value(&self, effective_miss_count: f64) -> f64 {
-        let attrs = &self.attributes;
+        let attrs = &self.attrs;
         let exp_base = 5.0 * (attrs.stars / 0.115).max(1.0) - 4.0;
         let mut diff_value = exp_base.powf(2.25) / 1150.0;
 
@@ -326,28 +328,23 @@ impl<'map> TaikoPPInner<'map> {
             diff_value *= 1.05 * len_bonus;
         }
 
-        diff_value * self.acc * self.acc
+        let acc = self.state.accuracy();
+
+        diff_value * acc * acc
     }
 
     #[inline]
     fn compute_accuracy_value(&self) -> f64 {
-        let BeatmapHitWindows { od: hit_window, .. } = self
-            .map
-            .attributes()
-            .mods(self.mods)
-            .clock_rate(self.clock_rate)
-            .hit_windows();
-
-        if hit_window <= 0.0 {
+        if self.attrs.hit_window <= 0.0 {
             return 0.0;
         }
 
-        let mut acc_value = (60.0 / hit_window).powf(1.1)
-            * self.acc.powi(8)
-            * self.attributes.stars.powf(0.4)
+        let mut acc_value = (60.0 / self.attrs.hit_window).powf(1.1)
+            * self.state.accuracy().powi(8)
+            * self.attrs.stars.powf(0.4)
             * 27.0;
 
-        let len_bonus = (self.total_hits() as f64 / 1500.0).powf(0.3).min(1.15);
+        let len_bonus = (self.total_hits() / 1500.0).powf(0.3).min(1.15);
         acc_value *= len_bonus;
 
         // * Slight HDFL Bonus for accuracy. A clamp is used to prevent against negative values
@@ -358,12 +355,12 @@ impl<'map> TaikoPPInner<'map> {
         acc_value
     }
 
-    fn total_hits(&self) -> usize {
-        self.n300 + self.n100 + self.n_misses
+    fn total_hits(&self) -> f64 {
+        self.state.total_hits() as f64
     }
 
     fn total_successful_hits(&self) -> usize {
-        self.n300 + self.n100
+        self.state.n300 + self.state.n100
     }
 }
 
@@ -372,15 +369,17 @@ impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
     fn from(osu: OsuPP<'map>) -> Self {
         let OsuPP {
             map,
+            attributes: _,
             mods,
             acc,
             combo,
             n300,
             n100,
+            n50: _,
             n_misses,
             passed_objects,
             clock_rate,
-            ..
+            hitresult_priority,
         } = osu;
 
         Self {
@@ -388,9 +387,10 @@ impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
             attributes: None,
             mods,
             combo,
-            acc: acc.unwrap_or(1.0),
+            acc,
             passed_objects,
             clock_rate,
+            hitresult_priority,
             n300,
             n100,
             n_misses,

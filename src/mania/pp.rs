@@ -420,10 +420,17 @@ impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
     fn from(osu: OsuPP<'map>) -> Self {
         let OsuPP {
             map,
+            attributes: _,
             mods,
+            acc,
+            combo: _,
+            n300,
+            n100,
+            n50,
+            n_misses,
             passed_objects,
             clock_rate,
-            ..
+            hitresult_priority,
         } = osu;
 
         Self {
@@ -433,13 +440,13 @@ impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
             passed_objects,
             clock_rate,
             n320: None,
-            n300: None,
+            n300,
             n200: None,
-            n100: None,
-            n50: None,
-            n_misses: None,
-            acc: None,
-            hitresult_priority: None,
+            n100,
+            n50,
+            n_misses,
+            acc,
+            hitresult_priority,
         }
     }
 }

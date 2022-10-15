@@ -21,8 +21,30 @@ pub struct TaikoScoreState {
 
 impl TaikoScoreState {
     /// Create a new empty score state.
+    #[inline]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Return the total amount of hits by adding everything up.
+    #[inline]
+    pub fn total_hits(&self) -> usize {
+        self.n300 + self.n100 + self.n_misses
+    }
+
+    /// Calculate the accuracy between `0.0` and `1.0` for this state.
+    #[inline]
+    pub fn accuracy(&self) -> f64 {
+        let total_hits = self.total_hits();
+
+        if total_hits == 0 {
+            return 0.0;
+        }
+
+        let numerator = 2 * self.n300 + self.n100;
+        let denominator = 2 * total_hits;
+
+        numerator as f64 / denominator as f64
     }
 }
 
