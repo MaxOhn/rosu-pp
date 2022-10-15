@@ -42,7 +42,7 @@ pub struct CatchPP<'map> {
     pub(crate) n_droplets: Option<usize>,
     pub(crate) n_tiny_droplets: Option<usize>,
     pub(crate) n_tiny_droplet_misses: Option<usize>,
-    pub(crate) n_misses: usize,
+    pub(crate) n_misses: Option<usize>,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
 }
@@ -61,7 +61,7 @@ impl<'map> CatchPP<'map> {
             n_droplets: None,
             n_tiny_droplets: None,
             n_tiny_droplet_misses: None,
-            n_misses: 0,
+            n_misses: None,
             passed_objects: None,
             clock_rate: None,
         }
@@ -132,7 +132,7 @@ impl<'map> CatchPP<'map> {
     /// Specify the amount of fruit / droplet misses of the play.
     #[inline]
     pub fn misses(mut self, n_misses: usize) -> Self {
-        self.n_misses = n_misses;
+        self.n_misses = Some(n_misses);
 
         self
     }
@@ -176,7 +176,7 @@ impl<'map> CatchPP<'map> {
         self.n_droplets = Some(n_droplets);
         self.n_tiny_droplets = Some(n_tiny_droplets);
         self.n_tiny_droplet_misses = Some(n_tiny_droplet_misses);
-        self.n_misses = n_misses;
+        self.n_misses = Some(n_misses);
 
         self
     }
@@ -201,15 +201,17 @@ impl<'map> CatchPP<'map> {
 
         let attributes = self.attributes.as_ref().unwrap();
 
-        let n_droplets = self
-            .n_droplets
-            .unwrap_or_else(|| attributes.n_droplets.saturating_sub(self.n_misses));
+        let n_droplets = self.n_droplets.unwrap_or_else(|| {
+            attributes
+                .n_droplets
+                .saturating_sub(self.n_misses.unwrap_or(0))
+        });
 
         let max_combo = attributes.max_combo();
 
         let n_fruits = self.n_fruits.unwrap_or_else(|| {
             max_combo
-                .saturating_sub(self.n_misses)
+                .saturating_sub(self.n_misses.unwrap_or(0))
                 .saturating_sub(n_droplets)
         });
 
@@ -237,16 +239,20 @@ impl<'map> CatchPP<'map> {
 
         let correct_combo_hits = self
             .n_fruits
-            .and_then(|f| self.n_droplets.map(|d| f + d + self.n_misses))
+            .and_then(|f| self.n_droplets.map(|d| f + d + self.n_misses.unwrap_or(0)))
             .filter(|h| *h == max_combo);
 
-        let correct_fruits = self
-            .n_fruits
-            .filter(|f| *f >= attributes.n_fruits.saturating_sub(self.n_misses));
+        let correct_fruits = self.n_fruits.filter(|f| {
+            *f >= attributes
+                .n_fruits
+                .saturating_sub(self.n_misses.unwrap_or(0))
+        });
 
-        let correct_droplets = self
-            .n_droplets
-            .filter(|d| *d >= attributes.n_droplets.saturating_sub(self.n_misses));
+        let correct_droplets = self.n_droplets.filter(|d| {
+            *d >= attributes
+                .n_droplets
+                .saturating_sub(self.n_misses.unwrap_or(0))
+        });
 
         let correct_tinies = self
             .n_tiny_droplets
@@ -267,7 +273,7 @@ impl<'map> CatchPP<'map> {
             let missing = max_combo
                 .saturating_sub(n_fruits)
                 .saturating_sub(n_droplets)
-                .saturating_sub(self.n_misses);
+                .saturating_sub(self.n_misses.unwrap_or(0));
 
             let missing_fruits =
                 missing.saturating_sub(attributes.n_droplets.saturating_sub(n_droplets));
@@ -287,7 +293,7 @@ impl<'map> CatchPP<'map> {
                 n_droplets,
                 n_tiny_droplets,
                 n_tiny_droplet_misses,
-                n_misses: self.n_misses,
+                n_misses: self.n_misses.unwrap_or(0),
             };
         }
 
@@ -299,7 +305,7 @@ impl<'map> CatchPP<'map> {
             n_droplets: self.n_droplets.unwrap_or(0),
             n_tiny_droplets: self.n_tiny_droplets.unwrap_or(0),
             n_tiny_droplet_misses: self.n_tiny_droplet_misses.unwrap_or(0),
-            n_misses: self.n_misses,
+            n_misses: self.n_misses.unwrap_or(0),
         }
     }
 
@@ -542,8 +548,9 @@ mod test {
         let numerator = calculator.n_fruits.unwrap_or(0)
             + calculator.n_droplets.unwrap_or(0)
             + calculator.n_tiny_droplets.unwrap_or(0);
-        let denominator =
-            numerator + calculator.n_tiny_droplet_misses.unwrap_or(0) + calculator.n_misses;
+        let denominator = numerator
+            + calculator.n_tiny_droplet_misses.unwrap_or(0)
+            + calculator.n_misses.unwrap_or(0);
         let acc = 100.0 * numerator as f64 / denominator as f64;
 
         assert!(
@@ -582,8 +589,9 @@ mod test {
         let numerator = calculator.n_fruits.unwrap_or(0)
             + calculator.n_droplets.unwrap_or(0)
             + calculator.n_tiny_droplets.unwrap_or(0);
-        let denominator =
-            numerator + calculator.n_tiny_droplet_misses.unwrap_or(0) + calculator.n_misses;
+        let denominator = numerator
+            + calculator.n_tiny_droplet_misses.unwrap_or(0)
+            + calculator.n_misses.unwrap_or(0);
         let acc = 100.0 * numerator as f64 / denominator as f64;
 
         assert!(

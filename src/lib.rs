@@ -200,7 +200,7 @@ mod gradual;
 pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes, ScoreState};
 
 mod pp;
-pub use pp::{AnyPP, AttributeProvider};
+pub use pp::{AnyPP, AttributeProvider, HitResultPriority};
 
 mod stars;
 pub use stars::AnyStars;

@@ -254,6 +254,22 @@ impl<'map> AnyPP<'map> {
     }
 }
 
+/// While generating remaining hitresults, decide how they should be distributed.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum HitResultPriority {
+    /// Prioritize good hitresults over bad ones
+    BestCase,
+    /// Prioritize bad hitresults over good ones
+    WorstCase,
+}
+
+impl Default for HitResultPriority {
+    #[inline]
+    fn default() -> Self {
+        Self::BestCase
+    }
+}
+
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait AttributeProvider {
     /// Provide the actual difficulty attributes.

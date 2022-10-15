@@ -1,7 +1,9 @@
 use std::borrow::Cow;
 
 use super::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaScoreState, ManiaStars};
-use crate::{Beatmap, DifficultyAttributes, GameMode, Mods, OsuPP, PerformanceAttributes};
+use crate::{
+    Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP, PerformanceAttributes,
+};
 
 // TODO: update
 /// Performance calculator on osu!mania maps.
@@ -48,7 +50,7 @@ pub struct ManiaPP<'map> {
     pub(crate) n_misses: Option<usize>,
 
     acc: Option<f64>,
-    hitresult_priority: Option<ManiaHitResultPriority>,
+    hitresult_priority: Option<HitResultPriority>,
 }
 
 impl<'map> ManiaPP<'map> {
@@ -120,7 +122,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
-    /// Specify the accuracy of a play.
+    /// Specify the accuracy of a play between `0` and `100`.
     /// This will be used to generate matching hitresults.
     #[inline]
     pub fn accuracy(mut self, acc: f64) -> Self {
@@ -131,9 +133,9 @@ impl<'map> ManiaPP<'map> {
 
     /// Specify how hitresults should be generated.
     ///
-    /// Defauls to [`ManiaHitResultPriority::BestCase`].
+    /// Defauls to [`HitResultPriority::BestCase`].
     #[inline]
-    pub fn hitresult_priority(mut self, priority: ManiaHitResultPriority) -> Self {
+    pub fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
         self.hitresult_priority = Some(priority);
 
         self
@@ -237,7 +239,7 @@ impl<'map> ManiaPP<'map> {
     }
 
     fn generate_hitresults(&self) -> ManiaScoreState {
-        let n_objects = self.map.hit_objects.len();
+        let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
         let priority = self.hitresult_priority.unwrap_or_default();
 
         let mut state = ManiaScoreState {
@@ -250,6 +252,7 @@ impl<'map> ManiaPP<'map> {
         };
 
         if let Some(acc) = self.acc {
+            // TODO: test
             let target_total = (acc * (n_objects * 6) as f64).round() as usize;
 
             let mut delta = target_total.saturating_sub(n_objects.saturating_sub(state.n_misses));
@@ -274,7 +277,7 @@ impl<'map> ManiaPP<'map> {
 
             state.n50 += n_objects.saturating_sub(state.total_hits() - state.n50);
 
-            if let ManiaHitResultPriority::BestCase = priority {
+            if let HitResultPriority::BestCase = priority {
                 // Shift n50 to n200
                 if self.n320.or(self.n300).or(self.n200).or(self.n50).is_none() {
                     let n = (state.n320 + state.n300).min(state.n50 / 2);
@@ -309,7 +312,7 @@ impl<'map> ManiaPP<'map> {
             let remaining = n_objects.saturating_sub(state.total_hits());
 
             match priority {
-                ManiaHitResultPriority::BestCase => {
+                HitResultPriority::BestCase => {
                     if self.n320.is_none() {
                         state.n320 = remaining;
                     } else if self.n300.is_none() {
@@ -324,7 +327,7 @@ impl<'map> ManiaPP<'map> {
                         state.n320 = remaining;
                     }
                 }
-                ManiaHitResultPriority::WorstCase => {
+                HitResultPriority::WorstCase => {
                     if self.n50.is_none() {
                         state.n50 = remaining;
                     } else if self.n100.is_none() {
@@ -405,26 +408,10 @@ impl ManiaPpInner {
             return 0.0;
         }
 
-        let numerator = *n320 * 320 + *n300 * 300 + *n200 * 200 + *n100 * 100 + *n50 * 50;
-        let denominator = total_hits as f64 * 320.0;
+        let numerator = *n320 * 32 + *n300 * 30 + *n200 * 20 + *n100 * 10 + *n50 * 5;
+        let denominator = total_hits * 32;
 
-        numerator as f64 / denominator
-    }
-}
-
-/// While generating hitresults that weren't specific, decide how they should be distributed.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum ManiaHitResultPriority {
-    /// Prioritize good hitresults over bad ones
-    BestCase,
-    /// Prioritize bad hitresults over good ones
-    WorstCase,
-}
-
-impl Default for ManiaHitResultPriority {
-    #[inline]
-    fn default() -> Self {
-        Self::BestCase
+        numerator as f64 / denominator as f64
     }
 }
 

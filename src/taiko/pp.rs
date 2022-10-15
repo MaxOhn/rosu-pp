@@ -48,7 +48,7 @@ pub struct TaikoPP<'map> {
 
     pub(crate) n300: Option<usize>,
     pub(crate) n100: Option<usize>,
-    pub(crate) n_misses: usize,
+    pub(crate) n_misses: Option<usize>,
 }
 
 impl<'map> TaikoPP<'map> {
@@ -61,7 +61,7 @@ impl<'map> TaikoPP<'map> {
             mods: 0,
             combo: None,
             acc: 1.0,
-            n_misses: 0,
+            n_misses: None,
             passed_objects: None,
             clock_rate: None,
             n300: None,
@@ -118,7 +118,7 @@ impl<'map> TaikoPP<'map> {
     /// Specify the amount of misses of the play.
     #[inline]
     pub fn n_misses(mut self, n_misses: usize) -> Self {
-        self.n_misses = n_misses.min(self.map.n_circles as usize);
+        self.n_misses = Some(n_misses.min(self.map.n_circles as usize));
 
         self
     }
@@ -168,7 +168,7 @@ impl<'map> TaikoPP<'map> {
         self.combo = Some(max_combo);
         self.n300 = Some(n300);
         self.n100 = Some(n100);
-        self.n_misses = n_misses;
+        self.n_misses = Some(n_misses);
 
         self
     }
@@ -196,7 +196,7 @@ impl<'map> TaikoPP<'map> {
 
     fn assert_hitresults(&'map self, attributes: TaikoDifficultyAttributes) -> TaikoPPInner<'map> {
         let total_result_count = attributes.max_combo();
-        let misses = self.n_misses;
+        let misses = self.n_misses.unwrap_or(0);
 
         let (n300, n100) = match (self.n300, self.n100) {
             (Some(n300), Some(n100)) => {
