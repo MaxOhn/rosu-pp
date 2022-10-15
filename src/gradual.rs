@@ -42,7 +42,7 @@ pub enum GradualDifficultyAttributes<'map> {
     /// Gradual osu!catch difficulty attributes.
     Catch(CatchGradualDifficultyAttributes<'map>),
     /// Gradual osu!mania difficulty attributes.
-    Mania(ManiaGradualDifficultyAttributes),
+    Mania(ManiaGradualDifficultyAttributes<'map>),
     /// Gradual osu!standard difficulty attributes.
     Osu(OsuGradualDifficultyAttributes),
     /// Gradual osu!taiko difficulty attributes.

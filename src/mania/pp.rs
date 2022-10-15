@@ -212,8 +212,9 @@ impl<'map> ManiaPP<'map> {
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(self) -> ManiaPerformanceAttributes {
         let attrs = self.attributes.unwrap_or_else(|| {
-            // TODO: handle converts
-            let mut calculator = ManiaStars::new(self.map.as_ref()).mods(self.mods);
+            let mut calculator = ManiaStars::new(self.map.as_ref())
+                .mods(self.mods)
+                .is_convert(matches!(self.map, Cow::Owned(_)));
 
             if let Some(passed_objects) = self.passed_objects {
                 calculator = calculator.passed_objects(passed_objects);
@@ -355,7 +356,7 @@ impl ManiaPpInner {
     fn calculate(self) -> ManiaPerformanceAttributes {
         // * Arbitrary initial value for scaling pp in order to standardize distributions across game modes.
         // * The specific number has no intrinsic meaning and can be adjusted as needed.
-        let mut multiplier = 0.8;
+        let mut multiplier = 8.0;
 
         if self.mods.nf() {
             multiplier *= 0.75;
@@ -379,7 +380,7 @@ impl ManiaPpInner {
         // Star rating to pp curve
         (self.attrs.stars - 0.15).max(0.05).powf(2.2)
              // From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
-             * (5.0 * self.custom_accuracy() - 4.0).max(0.0)
+             * (5.0 * self.calculate_custom_accuracy() - 4.0).max(0.0)
              // Length bonus, capped at 1500 notes
              * (1.0 + 0.1 * (self.total_hits() / 1500.0).min(1.0))
     }
@@ -388,7 +389,7 @@ impl ManiaPpInner {
         self.state.total_hits() as f64
     }
 
-    fn custom_accuracy(&self) -> f64 {
+    fn calculate_custom_accuracy(&self) -> f64 {
         let ManiaScoreState {
             n320,
             n300,
@@ -398,8 +399,14 @@ impl ManiaPpInner {
             n_misses: _,
         } = &self.state;
 
+        let total_hits = self.state.total_hits();
+
+        if total_hits == 0 {
+            return 0.0;
+        }
+
         let numerator = *n320 * 320 + *n300 * 300 + *n200 * 200 + *n100 * 100 + *n50 * 50;
-        let denominator = self.total_hits() * 320.0;
+        let denominator = total_hits as f64 * 320.0;
 
         numerator as f64 / denominator
     }

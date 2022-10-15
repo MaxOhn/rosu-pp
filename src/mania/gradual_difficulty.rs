@@ -1,4 +1,4 @@
-use crate::{beatmap::BeatmapHitWindows, Beatmap, Mods};
+use crate::{beatmap::BeatmapHitWindows, parse::HitObjectKind, Beatmap, Mods};
 
 use super::{
     difficulty_object::ManiaDifficultyObject,
@@ -37,16 +37,18 @@ use super::{
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct ManiaGradualDifficultyAttributes {
+pub struct ManiaGradualDifficultyAttributes<'map> {
     pub(crate) idx: usize,
+    map: &'map Beatmap,
     hit_window: f64,
     strain: Strain,
     diff_objects: Vec<ManiaDifficultyObject>,
+    curr_combo: usize,
 }
 
-impl ManiaGradualDifficultyAttributes {
+impl<'map> ManiaGradualDifficultyAttributes<'map> {
     /// Create a new difficulty attributes iterator for osu!mania maps.
-    pub fn new(map: &Beatmap, mods: u32) -> Self {
+    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         let total_columns = map.cs.round().max(1.0);
 
         let clock_rate = mods.clock_rate();
@@ -55,8 +57,8 @@ impl ManiaGradualDifficultyAttributes {
         let BeatmapHitWindows { od: hit_window, .. } = map
             .attributes()
             .mods(mods)
-            // TODO: allow converts
-            // .converted(is_convert)
+            // TODO: allow converts in gradual calc
+            .converted(false)
             .clock_rate(clock_rate)
             .hit_windows();
 
@@ -71,30 +73,53 @@ impl ManiaGradualDifficultyAttributes {
                 ManiaDifficultyObject::new(base, prev, clock_rate, total_columns, i)
             });
 
+        let curr_combo = if let Some(h) = map.hit_objects.first() {
+            match &h.kind {
+                HitObjectKind::Hold { end_time } => {
+                    1 + ((*end_time - h.start_time) / 100.0) as usize
+                }
+                _ => 1,
+            }
+        } else {
+            0
+        };
+
         let mut diff_objects = Vec::with_capacity(map.hit_objects.len().saturating_sub(1));
         diff_objects.extend(diff_objects_iter);
 
         Self {
             idx: 0,
+            map,
             hit_window,
             strain,
             diff_objects,
+            curr_combo,
         }
     }
 }
 
-impl Iterator for ManiaGradualDifficultyAttributes {
+impl Iterator for ManiaGradualDifficultyAttributes<'_> {
     type Item = ManiaDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
         let curr = self.diff_objects.get(self.idx)?;
         self.idx += 1;
 
+        if let Some(h) = self.map.hit_objects.get(self.idx) {
+            match &h.kind {
+                HitObjectKind::Hold { end_time } => {
+                    self.curr_combo += 1 + ((*end_time - h.start_time) / 100.0) as usize
+                }
+                _ => self.curr_combo += 1,
+            }
+        }
+
         self.strain.process(curr, &self.diff_objects);
 
         Some(ManiaDifficultyAttributes {
             stars: self.strain.clone().difficulty_value() * STAR_SCALING_FACTOR,
             hit_window: self.hit_window,
+            max_combo: self.curr_combo,
         })
     }
 
@@ -106,7 +131,7 @@ impl Iterator for ManiaGradualDifficultyAttributes {
     }
 }
 
-impl ExactSizeIterator for ManiaGradualDifficultyAttributes {
+impl ExactSizeIterator for ManiaGradualDifficultyAttributes<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.diff_objects.len() - self.idx

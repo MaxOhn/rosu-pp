@@ -25,9 +25,9 @@ impl Strain {
 
     pub(crate) fn new(total_columns: usize) -> Self {
         Self {
-            start_times: Vec::with_capacity(total_columns),
-            end_times: Vec::with_capacity(total_columns),
-            individual_strains: Vec::with_capacity(total_columns),
+            start_times: vec![0.0; total_columns],
+            end_times: vec![0.0; total_columns],
+            individual_strains: vec![0.0; total_columns],
             individual_strain: 0.0,
             overall_strain: 1.0,
             curr_strain: 0.0,
@@ -194,6 +194,6 @@ impl StrainDecaySkill for Strain {
             Self::OVERALL_DECAY_BASE,
         );
 
-        individual_decay * overall_decay
+        individual_decay + overall_decay
     }
 }

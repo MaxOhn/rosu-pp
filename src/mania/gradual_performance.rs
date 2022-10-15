@@ -101,7 +101,7 @@ impl ManiaScoreState {
 /// ```
 #[derive(Clone, Debug)]
 pub struct ManiaGradualPerformanceAttributes<'map> {
-    difficulty: ManiaGradualDifficultyAttributes,
+    difficulty: ManiaGradualDifficultyAttributes<'map>,
     performance: ManiaPP<'map>,
 }
 

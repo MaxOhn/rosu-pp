@@ -209,7 +209,7 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
         mods,
         passed_objects,
         clock_rate,
-        ..
+        is_convert: _,
     } = params;
 
     let take = passed_objects.unwrap_or(map.hit_objects.len());

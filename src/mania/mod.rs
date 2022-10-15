@@ -7,7 +7,7 @@ mod skills;
 
 use std::borrow::Cow;
 
-use crate::{beatmap::BeatmapHitWindows, Beatmap, GameMode, Mods, OsuStars};
+use crate::{beatmap::BeatmapHitWindows, parse::HitObjectKind, Beatmap, GameMode, Mods, OsuStars};
 
 pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
 
@@ -45,6 +45,7 @@ pub struct ManiaStars<'map> {
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
+    is_convert: bool,
 }
 
 impl<'map> ManiaStars<'map> {
@@ -56,6 +57,7 @@ impl<'map> ManiaStars<'map> {
             mods: 0,
             passed_objects: None,
             clock_rate: None,
+            is_convert: false,
         }
     }
 
@@ -91,10 +93,19 @@ impl<'map> ManiaStars<'map> {
         self
     }
 
+    /// Specify whether the map is a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(mut self, is_convert: bool) -> Self {
+        self.is_convert = is_convert;
+
+        self
+    }
+
     /// Calculate all difficulty related values, including stars.
     #[inline]
     pub fn calculate(self) -> ManiaDifficultyAttributes {
-        let is_convert = matches!(self.map, Cow::Owned(_));
+        let is_convert = self.is_convert || matches!(self.map, Cow::Owned(_));
+
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
 
         let BeatmapHitWindows { od: hit_window, .. } = self
@@ -105,11 +116,12 @@ impl<'map> ManiaStars<'map> {
             .clock_rate(clock_rate)
             .hit_windows();
 
-        let strain = calculate_strain(self);
+        let ManiaResult { strain, max_combo } = calculate_result(self);
 
         ManiaDifficultyAttributes {
             stars: strain.difficulty_value() * STAR_SCALING_FACTOR,
             hit_window,
+            max_combo,
         }
     }
 
@@ -119,7 +131,7 @@ impl<'map> ManiaStars<'map> {
     #[inline]
     pub fn strains(self) -> ManiaStrains {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
-        let strain = calculate_strain(self);
+        let ManiaResult { strain, .. } = calculate_result(self);
 
         ManiaStrains {
             section_len: SECTION_LEN * clock_rate, // TODO: clock_rate correct here?
@@ -147,12 +159,13 @@ impl ManiaStrains {
     }
 }
 
-fn calculate_strain(params: ManiaStars<'_>) -> Strain {
+fn calculate_result(params: ManiaStars<'_>) -> ManiaResult {
     let ManiaStars {
         map,
         mods,
         passed_objects,
         clock_rate,
+        is_convert: _,
     } = params;
 
     let take = passed_objects.unwrap_or(map.hit_objects.len());
@@ -160,11 +173,18 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
 
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
     let mut strain = Strain::new(total_columns as usize);
+    let mut max_combo = 0;
 
     let diff_objects_iter = map
         .hit_objects
         .iter()
         .take(take)
+        .inspect(|h| match &h.kind {
+            HitObjectKind::Hold { end_time } => {
+                max_combo += 1 + ((*end_time - h.start_time) / 100.0) as usize
+            }
+            _ => max_combo += 1,
+        })
         .skip(1)
         .map(ManiaObject::new)
         .enumerate()
@@ -180,7 +200,12 @@ fn calculate_strain(params: ManiaStars<'_>) -> Strain {
         strain.process(curr, &diff_objects);
     }
 
-    strain
+    ManiaResult { strain, max_combo }
+}
+
+struct ManiaResult {
+    strain: Strain,
+    max_combo: usize,
 }
 
 /// The result of a difficulty calculation on an osu!mania map.
@@ -190,6 +215,8 @@ pub struct ManiaDifficultyAttributes {
     pub stars: f64,
     /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc).
     pub hit_window: f64,
+    /// The maximum achievable combo.
+    pub max_combo: usize,
 }
 
 /// The result of a performance calculation on an osu!mania map.
@@ -239,6 +266,7 @@ impl<'map> From<OsuStars<'map>> for ManiaStars<'map> {
             mods,
             passed_objects,
             clock_rate,
+            is_convert: true,
         }
     }
 }
