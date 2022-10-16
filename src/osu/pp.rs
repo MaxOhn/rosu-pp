@@ -212,80 +212,140 @@ impl<'map> OsuPP<'map> {
         let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
         let priority = self.hitresult_priority.unwrap_or_default();
 
-        let mut state = OsuScoreState {
-            max_combo: self.combo.unwrap_or(max_combo),
-            n300: self.n300.unwrap_or(0),
-            n100: self.n100.unwrap_or(0),
-            n50: self.n50.unwrap_or(0),
-            n_misses: self.n_misses.unwrap_or(0),
-        };
+        let mut n300 = self.n300.unwrap_or(0);
+        let mut n100 = self.n100.unwrap_or(0);
+        let mut n50 = self.n50.unwrap_or(0);
+        let n_misses = self.n_misses.unwrap_or(0);
 
         if let Some(acc) = self.acc {
-            // TODO: test
             let target_total = (acc * (n_objects * 6) as f64).round() as usize;
 
-            let mut delta = target_total.saturating_sub(n_objects.saturating_sub(state.n_misses));
+            match (self.n300, self.n100, self.n50) {
+                (Some(_), Some(_), Some(_)) => {
+                    let remaining = n_objects.saturating_sub(n300 + n100 + n50 + n_misses);
 
-            if self.n50.is_some() {
-                delta /= 2;
-            }
+                    match priority {
+                        HitResultPriority::BestCase => n300 += remaining,
+                        HitResultPriority::WorstCase => n100 += remaining,
+                    }
+                }
+                (Some(_), Some(_), None) => n50 = n_objects.saturating_sub(n300 + n100 + n_misses),
+                (Some(_), None, Some(_)) => n100 = n_objects.saturating_sub(n300 + n50 + n_misses),
+                (None, Some(_), Some(_)) => n300 = n_objects.saturating_sub(n100 + n50 + n_misses),
+                (Some(_), None, None) => {
+                    let delta = (target_total - n_objects.saturating_sub(n_misses))
+                        .saturating_sub(n300 * 5);
 
-            if self.n100.is_some() {
-                delta /= 2;
-            }
+                    n100 = delta % 5;
+                    n50 = n_objects.saturating_sub(n300 + n100 + n_misses);
 
-            if let Some(n300) = self.n300 {
-                delta = delta.saturating_sub(n300 * 6);
-            } else {
-                state.n300 = delta / 5;
-            }
+                    let curr_total = 6 * n300 + 2 * n100 + n50;
 
-            if self.n100.is_none() {
-                state.n100 = delta % 5;
-            }
+                    if curr_total < target_total {
+                        let n = (target_total - curr_total).min(n50);
+                        n50 -= n;
+                        n100 += n;
+                    } else {
+                        let n = (curr_total - target_total).min(n100);
+                        n100 -= n;
+                        n50 += n;
+                    }
+                }
+                (None, Some(_), None) => {
+                    let delta =
+                        (target_total - n_objects.saturating_sub(n_misses)).saturating_sub(n100);
 
-            state.n50 += n_objects.saturating_sub(state.total_hits() - state.n50);
+                    n300 = delta / 5;
 
-            if let HitResultPriority::BestCase = priority {
-                // Shift n50 to n100
-                if self.n300.or(self.n100).or(self.n50).is_none() {
-                    let n = state.n300.min(state.n50 / 4);
+                    if n300 + n100 + n_misses > n_objects {
+                        n300 -= (n300 + n100 + n_misses) - n_objects;
+                    }
 
-                    state.n300 -= n;
-                    state.n100 += 5 * n;
-                    state.n50 -= 4 * n;
+                    n50 = n_objects - n300 - n100 - n_misses;
+                }
+                (None, None, Some(_)) => {
+                    let delta = target_total - n_objects.saturating_sub(n_misses);
+
+                    n300 = delta / 5;
+                    n100 = delta % 5;
+
+                    if n300 + n100 + n50 + n_misses > n_objects {
+                        let too_many = n300 + n100 + n50 + n_misses - n_objects;
+
+                        if too_many > n100 {
+                            n300 -= too_many - n100;
+                            n100 = 0;
+                        } else {
+                            n100 -= too_many;
+                        }
+                    }
+
+                    n100 += n_objects.saturating_sub(n300 + n100 + n50 + n_misses);
+
+                    let curr_total = 6 * n300 + 2 * n100 + n50;
+
+                    if curr_total < target_total {
+                        let n = n100.min((target_total - curr_total) / 4);
+                        n100 -= n;
+                        n300 += n;
+                    } else {
+                        let n = n300.min((curr_total - target_total) / 4);
+                        n300 -= n;
+                        n100 += n;
+                    }
+                }
+                (None, None, None) => {
+                    let delta = target_total - n_objects.saturating_sub(n_misses);
+
+                    n300 = delta / 5;
+                    n100 = delta % 5;
+                    n50 = n_objects.saturating_sub(n300 + n100 + n_misses);
+
+                    if let HitResultPriority::BestCase = priority {
+                        // Shift n50 to n100 by sacrificing n300
+                        let n = n300.min(n50 / 4);
+                        n300 -= n;
+                        n100 += 5 * n;
+                        n50 -= 4 * n;
+                    }
                 }
             }
         } else {
-            let remaining = n_objects.saturating_sub(state.total_hits());
+            let remaining = n_objects.saturating_sub(n300 + n100 + n50 + n_misses);
 
             match priority {
                 HitResultPriority::BestCase => {
                     if self.n300.is_none() {
-                        state.n300 = remaining;
+                        n300 = remaining;
                     } else if self.n100.is_none() {
-                        state.n100 = remaining;
+                        n100 = remaining;
                     } else if self.n50.is_none() {
-                        state.n50 = remaining;
+                        n50 = remaining;
                     } else {
-                        state.n300 = remaining;
+                        n300 += remaining;
                     }
                 }
                 HitResultPriority::WorstCase => {
                     if self.n50.is_none() {
-                        state.n50 = remaining;
+                        n50 = remaining;
                     } else if self.n100.is_none() {
-                        state.n100 = remaining;
+                        n100 = remaining;
                     } else if self.n300.is_none() {
-                        state.n300 = remaining;
+                        n300 = remaining;
                     } else {
-                        state.n50 = remaining;
+                        n50 += remaining;
                     }
                 }
             }
         }
 
-        state
+        OsuScoreState {
+            max_combo: self.combo.unwrap_or(max_combo),
+            n300,
+            n100,
+            n50,
+            n_misses,
+        }
     }
 
     /// Calculate all performance related values, including pp and stars.
@@ -684,87 +744,297 @@ mod test {
     use super::*;
     use crate::Beatmap;
 
-    #[test]
-    fn osu_only_accuracy() {
-        let map = Beatmap::default();
+    fn test_attrs() -> OsuDifficultyAttributes {
+        OsuDifficultyAttributes {
+            aim: 2.8693628443424104,
+            speed: 2.533869745015772,
+            flashlight: 2.288770487900865,
+            slider_factor: 0.9803052946037858,
+            speed_note_count: 210.36373973116545,
+            ar: 9.300000190734863,
+            od: 8.800000190734863,
+            hp: 5.0,
+            n_circles: 307,
+            n_sliders: 293,
+            n_spinners: 1,
+            stars: 5.669858729379631,
+            max_combo: 909,
+        }
+    }
 
-        let total_objects = 1234;
-        let target_acc = 97.5;
+    #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
+    fn test_map() -> (Beatmap, OsuDifficultyAttributes) {
+        let path = "./maps/2785319.osu";
+        let map = Beatmap::from_path(path).unwrap();
 
-        let calculator = OsuPP::new(&map)
-            .passed_objects(total_objects)
-            .accuracy(target_acc);
+        (map, test_attrs())
+    }
 
-        let numerator = 6 * calculator.n300.unwrap_or(0)
-            + 2 * calculator.n100.unwrap_or(0)
-            + calculator.n50.unwrap_or(0);
-        let denominator = 6 * total_objects;
-        let acc = 100.0 * numerator as f64 / denominator as f64;
+    #[cfg(any(feature = "async_tokio", feature = "async_str"))]
+    async fn test_map() -> Beatmap {
+        let path = "./maps/2785319.osu";
+        let map = Beatmap::from_path(path).await.unwrap();
 
-        assert!(
-            (target_acc - acc).abs() < 1.0,
-            "Expected: {} | Actual: {}",
-            target_acc,
-            acc
-        );
+        (map, test_attrs())
+    }
+
+    #[rustfmt::skip]
+    macro_rules! test_data {
+        () => {{
+            #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
+            { test_map() }
+            #[cfg(any(feature = "async_tokio", feature = "async_str"))]
+            { test_map().await }
+        }};
     }
 
     #[test]
-    fn osu_accuracy_and_n50() {
-        let map = Beatmap::default();
-
-        let total_objects = 1234;
-        let target_acc = 97.5;
-        let n50 = 30;
-
-        let calculator = OsuPP::new(&map)
-            .passed_objects(total_objects)
-            .n50(n50)
-            .accuracy(target_acc);
-
-        assert!(
-            (calculator.n50.unwrap() as i32 - n50 as i32).abs() <= 4,
-            "Expected: {} | Actual: {}",
-            n50,
-            calculator.n50.unwrap()
-        );
-
-        let numerator = 6 * calculator.n300.unwrap_or(0)
-            + 2 * calculator.n100.unwrap_or(0)
-            + calculator.n50.unwrap_or(0);
-        let denominator = 6 * total_objects;
-        let acc = 100.0 * numerator as f64 / denominator as f64;
-
-        assert!(
-            (target_acc - acc).abs() < 1.0,
-            "Expected: {} | Actual: {}",
-            target_acc,
-            acc
-        );
-    }
-
-    #[test]
-    fn osu_missing_objects() {
-        let map = Beatmap::default();
-
-        let total_objects = 1234;
-        let n300 = 1000;
-        let n100 = 200;
-        let n50 = 30;
+    fn osu_hitresults_n300_n100_n_misses_best() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
-            .passed_objects(total_objects)
-            .n300(n300)
-            .n100(n100)
-            .n50(n50)
-            .generate_hitresults(n300 + n100 + n50 + 50);
+            .attributes(attrs)
+            .combo(500)
+            .n300(300)
+            .n100(20)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
 
-        let n_objects = state.total_hits();
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 300,
+            n100: 20,
+            n50: 279,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn osu_hitresults_n300_n50_n_misses_best() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .n300(300)
+            .n50(10)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 300,
+            n100: 289,
+            n50: 10,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn osu_hitresults_n50_n_misses_worst() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .n50(10)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 0,
+            n100: 589,
+            n50: 10,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn osu_hitresults_n300_n100_n50_n_misses_worst() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .n300(300)
+            .n100(50)
+            .n50(10)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 300,
+            n100: 50,
+            n50: 249,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn osu_hitresults_acc_n_misses_best() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .accuracy(98.0)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 584,
+            n100: 15,
+            n50: 0,
+            n_misses: 2,
+        };
 
         assert_eq!(
-            total_objects, n_objects,
-            "Expected: {} | Actual: {}",
-            total_objects, n_objects
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+    }
+
+    #[test]
+    fn osu_hitresults_acc_n100_n_misses_best() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .accuracy(95.0)
+            .n100(15)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 562,
+            n100: 15,
+            n50: 22,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+    }
+
+    #[test]
+    fn osu_hitresults_acc_n50_n_misses_best() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .accuracy(95.0)
+            .n50(10)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 560,
+            n100: 29,
+            n50: 10,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+    }
+
+    #[test]
+    fn osu_hitresults_acc_best() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .accuracy(90.0)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 511,
+            n100: 89,
+            n50: 1,
+            n_misses: 0,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+    }
+
+    #[test]
+    fn osu_hitresults_acc_worst() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = OsuPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .accuracy(90.0)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_hitresults(max_combo);
+
+        let expected = OsuScoreState {
+            max_combo: 500,
+            n300: 528,
+            n100: 4,
+            n50: 69,
+            n_misses: 0,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
         );
     }
 }
