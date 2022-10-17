@@ -211,52 +211,59 @@ impl<'map> TaikoPP<'map> {
     }
 
     fn generate_hitresults(&self, max_combo: usize) -> TaikoScoreState {
-        // TODO: consider passed_objects
-        let total_result_count = max_combo;
-
-        let mut state = TaikoScoreState {
-            max_combo,
-            n300: self.n300.unwrap_or(0),
-            n100: self.n100.unwrap_or(0),
-            n_misses: self.n_misses.unwrap_or(0),
+        let total_result_count = if let Some(passed_objects) = self.passed_objects {
+            // Not really correct since not all objects count towards combo
+            max_combo.min(passed_objects)
+        } else {
+            max_combo
         };
+
+        let priority = self.hitresult_priority.unwrap_or_default();
+
+        let mut n300 = self.n300.unwrap_or(0);
+        let mut n100 = self.n100.unwrap_or(0);
+        let n_misses = self.n_misses.unwrap_or(0);
 
         if let Some(acc) = self.acc {
             // TODO: test
-            let target_total = (acc * (total_result_count * 2) as f64).round() as usize;
+            match (self.n300, self.n100) {
+                (Some(_), Some(_)) => {
+                    let remaining = total_result_count.saturating_sub(n300 + n100 + n_misses);
 
-            let mut delta =
-                target_total.saturating_sub(total_result_count.saturating_sub(state.n_misses));
-
-            if self.n100.is_some() {
-                delta /= 2;
+                    match priority {
+                        HitResultPriority::BestCase => n300 += remaining,
+                        HitResultPriority::WorstCase => n100 += remaining,
+                    }
+                }
+                (Some(_), None) => n100 += total_result_count.saturating_sub(n300 + n_misses),
+                (None, Some(_)) => n300 += total_result_count.saturating_sub(n100 + n_misses),
+                (None, None) => {
+                    let target_total = (acc * (total_result_count * 2) as f64).round() as usize;
+                    n300 = target_total - (total_result_count.saturating_sub(n_misses));
+                    n100 = total_result_count.saturating_sub(n300 + n_misses);
+                }
             }
-
-            if let Some(n300) = self.n300 {
-                delta = delta.saturating_sub(n300 * 2);
-            } else {
-                state.n300 = delta / 2;
-                delta %= 2;
-            }
-
-            state.n100 += delta;
         } else {
-            let priority = self.hitresult_priority.unwrap_or_default();
-            let remaining = total_result_count.saturating_sub(state.total_hits());
+            let remaining = total_result_count.saturating_sub(n300 + n100 + n_misses);
 
             match priority {
                 HitResultPriority::BestCase => match (self.n300, self.n100) {
-                    (Some(_), None) => state.n100 = remaining,
-                    _ => state.n300 = remaining,
+                    (Some(_), None) => n100 = remaining,
+                    _ => n300 = remaining,
                 },
                 HitResultPriority::WorstCase => match (self.n300, self.n100) {
-                    (None, Some(_)) => state.n300 = remaining,
-                    _ => state.n100 = remaining,
+                    (None, Some(_)) => n300 = remaining,
+                    _ => n100 = remaining,
                 },
             }
         }
 
-        state
+        TaikoScoreState {
+            max_combo,
+            n300,
+            n100,
+            n_misses,
+        }
     }
 }
 
@@ -328,7 +335,7 @@ impl TaikoPpInner {
             diff_value *= 1.05 * len_bonus;
         }
 
-        let acc = self.state.accuracy();
+        let acc = self.custom_accuracy();
 
         diff_value * acc * acc
     }
@@ -340,7 +347,7 @@ impl TaikoPpInner {
         }
 
         let mut acc_value = (60.0 / self.attrs.hit_window).powf(1.1)
-            * self.state.accuracy().powi(8)
+            * self.custom_accuracy().powi(8)
             * self.attrs.stars.powf(0.4)
             * 27.0;
 
@@ -361,6 +368,19 @@ impl TaikoPpInner {
 
     fn total_successful_hits(&self) -> usize {
         self.state.n300 + self.state.n100
+    }
+
+    fn custom_accuracy(&self) -> f64 {
+        let total_hits = self.state.total_hits();
+
+        if total_hits == 0 {
+            return 0.0;
+        }
+
+        let numerator = self.state.n300 * 300 + self.state.n100 * 150;
+        let denominator = total_hits * 300;
+
+        numerator as f64 / denominator as f64
     }
 }
 
@@ -439,5 +459,64 @@ impl TaikoAttributeProvider for PerformanceAttributes {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::Beatmap;
+
+    fn test_attrs() -> TaikoDifficultyAttributes {
+        todo!()
+    }
+
+    #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
+    fn test_map() -> (Beatmap, TaikoDifficultyAttributes) {
+        let path = "./maps/1028484.osu";
+        let map = Beatmap::from_path(path).unwrap();
+
+        (map, test_attrs())
+    }
+
+    #[cfg(any(feature = "async_tokio", feature = "async_str"))]
+    async fn test_map() -> (Beatmap, TaikoDifficultyAttributes) {
+        let path = "./maps/1028484.osu";
+        let map = Beatmap::from_path(path).await.unwrap();
+
+        (map, test_attrs())
+    }
+
+    #[rustfmt::skip]
+    macro_rules! test_data {
+        () => {{
+            #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
+            { test_map() }
+            #[cfg(any(feature = "async_tokio", feature = "async_str"))]
+            { test_map().await }
+        }};
+    }
+
+    #[test]
+    fn taiko_hitresults_n300_n_misses_best() {
+        let (map, attrs) = test_data!();
+        let max_combo = attrs.max_combo();
+
+        let state = TaikoPP::new(&map)
+            .attributes(attrs)
+            .combo(500)
+            .n300(300)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
+
+        let expected = TaikoScoreState {
+            max_combo: 500,
+            n300: 300,
+            n100: 20,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
     }
 }
