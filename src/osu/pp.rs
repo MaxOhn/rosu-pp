@@ -226,7 +226,7 @@ impl<'map> OsuPP<'map> {
 
                     match priority {
                         HitResultPriority::BestCase => n300 += remaining,
-                        HitResultPriority::WorstCase => n100 += remaining,
+                        HitResultPriority::WorstCase => n50 += remaining,
                     }
                 }
                 (Some(_), Some(_), None) => n50 = n_objects.saturating_sub(n300 + n100 + n_misses),
@@ -771,7 +771,7 @@ mod test {
     }
 
     #[cfg(any(feature = "async_tokio", feature = "async_str"))]
-    async fn test_map() -> Beatmap {
+    async fn test_map() -> (Beatmap, OsuDifficultyAttributes) {
         let path = "./maps/2785319.osu";
         let map = Beatmap::from_path(path).await.unwrap();
 

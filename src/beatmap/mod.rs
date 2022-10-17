@@ -5,7 +5,7 @@ use crate::parse::HitObject;
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, BeatmapHitWindows},
     breaks::Break,
-    control_points::{ControlPoint, ControlPointIter, DifficultyPoint, TimingPoint},
+    control_points::{DifficultyPoint, EffectPoint, TimingPoint},
     mode::GameMode,
     sorted_vec::SortedVec,
 };
@@ -57,6 +57,9 @@ pub struct Beatmap {
     /// Timing point for the current timing section.
     pub difficulty_points: SortedVec<DifficultyPoint>,
 
+    /// Control points for effect sections.
+    pub effect_points: SortedVec<EffectPoint>,
+
     /// The stack leniency that is used to calculate
     /// the stack offset for stacked positions.
     pub stack_leniency: f32,
@@ -79,12 +82,6 @@ impl Beatmap {
             Some(point) => point.beat_len.recip() * 1000.0 * 60.0,
             None => 0.0,
         }
-    }
-
-    /// Create an iterator over the map's timing- and difficulty points sorted by timestamp.
-    #[inline]
-    pub fn control_points(&self) -> ControlPointIter<'_> {
-        ControlPointIter::new(self)
     }
 
     /// Sum up the duration of all breaks (in milliseconds).
@@ -118,6 +115,17 @@ impl Beatmap {
             .binary_search_by(|probe| probe.time.partial_cmp(&time).unwrap_or(Ordering::Less))
             .map_or_else(|i| i.checked_sub(1), Some)
             .map(|i| self.difficulty_points[i])
+    }
+
+    /// Return the [`EffectPoint`] for the given timestamp.
+    ///
+    /// If `time` is before the first effect point, `None` is returned.
+    #[inline]
+    pub fn effect_point_at(&self, time: f64) -> Option<EffectPoint> {
+        self.effect_points
+            .binary_search_by(|probe| probe.time.partial_cmp(&time).unwrap_or(Ordering::Less))
+            .map_or_else(|i| i.checked_sub(1), Some)
+            .map(|i| self.effect_points[i])
     }
 
     /// Convert a [`Beatmap`] of some mode into a different mode.
@@ -157,6 +165,7 @@ impl Beatmap {
             sounds: Vec::with_capacity((with_sounds as usize) * self.sounds.len()),
             timing_points: self.timing_points.clone(),
             difficulty_points: self.difficulty_points.clone(),
+            effect_points: self.effect_points.clone(),
             stack_leniency: self.stack_leniency,
             breaks: self.breaks.clone(),
         }

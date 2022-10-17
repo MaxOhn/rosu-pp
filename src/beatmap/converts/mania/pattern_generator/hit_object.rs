@@ -1,6 +1,9 @@
 use crate::{
-    beatmap::converts::mania::{
-        legacy_random::Random, pattern::Pattern, pattern_type::PatternType, PrevValues,
+    beatmap::{
+        converts::mania::{
+            legacy_random::Random, pattern::Pattern, pattern_type::PatternType, PrevValues,
+        },
+        EffectPoint,
     },
     mania::ManiaObject,
     parse::{HitObject, HitSound},
@@ -61,18 +64,9 @@ impl<'h> HitObjectPatternGenerator<'h> {
         } else if density < timing_point.beat_len / 2.5 {
             // * High density
         } else {
-            let difficulty_point = orig.difficulty_point_at(hit_object.start_time);
-
-            let kiai = match difficulty_point {
-                Some(difficulty_point) => {
-                    if timing_point.time < difficulty_point.time {
-                        difficulty_point.kiai
-                    } else {
-                        timing_point.kiai
-                    }
-                }
-                None => timing_point.kiai,
-            };
+            let kiai = orig
+                .effect_point_at(hit_object.start_time)
+                .map_or(EffectPoint::DEFAULT_KIAI, |point| point.kiai);
 
             if kiai {
                 // * High density

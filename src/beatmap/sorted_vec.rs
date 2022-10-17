@@ -5,7 +5,7 @@ use std::{
     ops::Deref,
 };
 
-use super::{DifficultyPoint, TimingPoint};
+use super::{control_points::EffectPoint, DifficultyPoint, TimingPoint};
 
 /// A [`Vec`] whose elements are guaranteed to be in order based on the given comparator.
 #[derive(Clone)]
@@ -67,6 +67,16 @@ impl Default for SortedVec<TimingPoint> {
 }
 
 impl Default for SortedVec<DifficultyPoint> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            inner: Vec::new(),
+            cmp: |a, b| a.time.partial_cmp(&b.time).unwrap_or(Ordering::Equal),
+        }
+    }
+}
+
+impl Default for SortedVec<EffectPoint> {
     #[inline]
     fn default() -> Self {
         Self {

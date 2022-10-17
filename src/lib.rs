@@ -516,36 +516,26 @@ compile_error!("Only one of the features `async_tokio` and `async_std` should be
 
 #[cfg(test)]
 mod tests {
-    use crate::{Beatmap, OsuPP};
+    use crate::{Beatmap, GameMode, OsuPP, PerformanceAttributes};
 
     #[test]
     fn custom() {
-        let path = "F:\\osu!\\beatmaps\\1529760.osu";
+        let path = "F:/osu!/beatmaps/1000168.osu";
         let map = Beatmap::from_path(path).unwrap();
 
-        let attrs = OsuPP::new(&map).mods(16).calculate();
+        let attrs = match OsuPP::new(&map).mode(GameMode::Mania).mods(0).calculate() {
+            PerformanceAttributes::Mania(attrs) => attrs,
+            _ => unreachable!(),
+        };
 
         println!(
             "difficulty:\n\
-            aim={}\n\
-            speed={}\n\
-            flashlight={}\n\
             stars={}\n\
+            max_combo={}\n\
             performance:\n\
-            aim={}\n\
-            speed={}\n\
-            acc={}\n\
-            flashlight={}\n\
+            difficulty={}\n\
             pp={}\n",
-            attrs.difficulty.aim,
-            attrs.difficulty.speed,
-            attrs.difficulty.flashlight,
-            attrs.difficulty.stars,
-            attrs.pp_aim,
-            attrs.pp_speed,
-            attrs.pp_acc,
-            attrs.pp_flashlight,
-            attrs.pp,
+            attrs.difficulty.stars, attrs.difficulty.max_combo, attrs.pp_difficulty, attrs.pp,
         );
     }
 }

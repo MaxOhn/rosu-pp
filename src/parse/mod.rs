@@ -28,7 +28,7 @@ use std::path::Path;
 #[cfg(feature = "async_std")]
 use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
-use crate::beatmap::{Beatmap, Break, DifficultyPoint, GameMode, TimingPoint};
+use crate::beatmap::{Beatmap, Break, DifficultyPoint, EffectPoint, GameMode, TimingPoint};
 
 fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
     slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
@@ -374,19 +374,17 @@ macro_rules! parse_timingpoints_body {
             }
 
             if timing_change {
-                let point = TimingPoint {
-                    time,
-                    beat_len: beat_len.clamp(6.0, 60_000.0),
-                    kiai,
-                };
+                let point = TimingPoint::new(time, beat_len.clamp(6.0, 60_000.0));
 
                 $self.timing_points.push(point);
             }
 
             if !timing_change || pending_diff_point.is_none() {
-                pending_diff_point =
-                    Some(DifficultyPoint::new(time, beat_len, speed_multiplier, kiai));
+                pending_diff_point = Some(DifficultyPoint::new(time, beat_len, speed_multiplier));
             }
+
+            let effect_point = EffectPoint::new(time, kiai);
+            $self.effect_points.push(effect_point);
 
             pending_diff_points_time = time;
         }
@@ -397,6 +395,7 @@ macro_rules! parse_timingpoints_body {
 
         $self.timing_points.dedup_by_key(|point| point.time);
         $self.difficulty_points.dedup_by_key(|point| point.time);
+        $self.effect_points.dedup_by_key(|point| point.time);
 
         Ok(empty)
     }};

@@ -1,6 +1,7 @@
 use crate::{
-    beatmap::converts::mania::{
-        legacy_random::Random, pattern::Pattern, pattern_type::PatternType,
+    beatmap::{
+        converts::mania::{legacy_random::Random, pattern::Pattern, pattern_type::PatternType},
+        EffectPoint,
     },
     curve::Curve,
     mania::ManiaObject,
@@ -44,11 +45,9 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
             .difficulty_point_at(hit_object.start_time)
             .unwrap_or_default();
 
-        let kiai = if timing_point.time < difficulty_point.time {
-            difficulty_point.kiai
-        } else {
-            timing_point.kiai
-        };
+        let kiai = orig
+            .effect_point_at(hit_object.start_time)
+            .map_or(EffectPoint::DEFAULT_KIAI, |point| point.kiai);
 
         let convert_type = if kiai {
             PatternType::default()
@@ -56,8 +55,6 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
             PatternType::LOW_PROBABILITY
         };
 
-        // ! BUG: Since `LegacyDifficultyControlPoint` are not considered while parsing,
-        // ! this value can be slightly off due to float arithmetics.
         let beat_len = timing_point.beat_len * difficulty_point.bpm_mult;
 
         let span_count = (repeats + 1) as i32;

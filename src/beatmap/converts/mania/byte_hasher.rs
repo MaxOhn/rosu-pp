@@ -23,10 +23,8 @@ impl Hasher for ByteHasher {
     }
 
     #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        // Only use this hasher for single bytes
-        debug_assert_eq!(bytes.len(), 1);
-        self.byte = bytes[0];
+    fn write(&mut self, _: &[u8]) {
+        unreachable!()
     }
 
     #[inline]

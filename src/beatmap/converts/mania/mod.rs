@@ -51,13 +51,13 @@ impl Beatmap {
             .count();
 
         let percent_slider_or_spinner =
-            slider_or_spinner_count as f32 / self.hit_objects.len() as f32;
+            (slider_or_spinner_count as f32 / self.hit_objects.len() as f32) as f64;
 
         let target_columns = if percent_slider_or_spinner < 0.2 {
             7.0
         } else if percent_slider_or_spinner < 0.3 || rounded_cs >= 5.0 {
             (6 + (rounded_od > 5.0) as u8) as f32
-        } else if percent_slider_or_spinner > 0.6 {
+        } else if percent_slider_or_spinner as f64 > 0.6 {
             (4 + (rounded_od > 4.0) as u8) as f32
         } else {
             (rounded_od + 1.0).clamp(4.0, 7.0)
@@ -104,8 +104,8 @@ impl Beatmap {
                     last_values.time = obj.start_time;
                     last_values.pos = obj.pos;
 
-                    map.hit_objects
-                        .extend(new_pattern.hit_objects.iter().cloned());
+                    let new_hit_objects = new_pattern.hit_objects.iter().cloned();
+                    map.hit_objects.extend(new_hit_objects);
 
                     n_circles += new_pattern.hit_objects.len();
                     last_values.pattern = new_pattern;
