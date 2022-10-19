@@ -134,7 +134,7 @@ impl TaikoScoreState {
 /// ```
 #[derive(Clone, Debug)]
 pub struct TaikoGradualPerformanceAttributes<'map> {
-    difficulty: TaikoGradualDifficultyAttributes<'map>,
+    difficulty: TaikoGradualDifficultyAttributes,
     performance: TaikoPP<'map>,
 }
 

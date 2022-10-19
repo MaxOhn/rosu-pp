@@ -521,22 +521,39 @@ mod tests {
 
     #[test]
     fn custom() {
-        let path = "F:/osu!/beatmaps/34881.osu";
+        let path = "F:/osu!/beatmaps/1186086.osu";
         let map = Beatmap::from_path(path).unwrap();
 
-        let attrs = match OsuPP::new(&map).mode(GameMode::Mania).mods(0).calculate() {
-            PerformanceAttributes::Mania(attrs) => attrs,
+        let attrs = match OsuPP::new(&map).mode(GameMode::Taiko).mods(0).calculate() {
+            PerformanceAttributes::Taiko(attrs) => attrs,
             _ => unreachable!(),
         };
 
         println!(
             "difficulty:\n\
-            stars={}\n\
+            stamina={}\n\
+            rhythm={}\n\
+            colour={}\n\
+            peak={}\n\
+            hit_window={}\n\
             max_combo={}\n\
+            stars={}\n\
             performance:\n\
             difficulty={}\n\
+            acc={}\n\
+            effective={}\n\
             pp={}\n",
-            attrs.difficulty.stars, attrs.difficulty.max_combo, attrs.pp_difficulty, attrs.pp,
+            attrs.difficulty.stamina,
+            attrs.difficulty.rhythm,
+            attrs.difficulty.colour,
+            attrs.difficulty.peak,
+            attrs.difficulty.hit_window,
+            attrs.difficulty.max_combo,
+            attrs.difficulty.stars,
+            attrs.pp_difficulty,
+            attrs.pp_acc,
+            attrs.effective_miss_count,
+            attrs.pp,
         );
     }
 }

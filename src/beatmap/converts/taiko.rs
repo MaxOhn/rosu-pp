@@ -1,8 +1,7 @@
-use std::cmp::Ordering;
-
 use crate::{
     curve::{Curve, CurveBuffers},
     parse::{HitObject, HitObjectKind},
+    util::TandemSorter,
     Beatmap, GameMode,
 };
 
@@ -87,8 +86,10 @@ impl Beatmap {
         // We only convert STD to TKO so we don't need to remove objects
         // with the same timestamp that would appear only in MNA
 
-        map.hit_objects
-            .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
+        let mut sorter = TandemSorter::new(&map.hit_objects, true);
+        sorter.sort(&mut map.hit_objects);
+        sorter.toggle_marks();
+        sorter.sort(&mut map.sounds);
 
         map.mode = GameMode::Taiko;
 

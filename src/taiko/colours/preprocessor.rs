@@ -11,10 +11,10 @@ use super::{
     repeating_hit_patterns::RepeatingHitPatterns,
 };
 
-pub(crate) struct ColourDifficultyPreprocessor {}
+pub(crate) struct ColourDifficultyPreprocessor;
 
-impl<'o> ColourDifficultyPreprocessor {
-    pub(crate) fn process_and_assign(lists: &mut ObjectLists<'o>) {
+impl ColourDifficultyPreprocessor {
+    pub(crate) fn process_and_assign(lists: &mut ObjectLists) {
         // * Assign indexing and encoding data to all relevant objects. Only the first note of each encoding type is
         // * assigned with the relevant encodings.
         for repeating_hit_pattern in Self::encode(lists) {
@@ -78,14 +78,14 @@ impl<'o> ColourDifficultyPreprocessor {
         }
     }
 
-    fn encode(data: &mut ObjectLists<'o>) -> Vec<Rc<RefCell<RepeatingHitPatterns<'o>>>> {
+    fn encode(data: &mut ObjectLists) -> Vec<Rc<RefCell<RepeatingHitPatterns>>> {
         let mono_streaks = Self::encode_mono_streak(data);
         let alternating_mono_patterns = Self::encode_alternating_mono_pattern(mono_streaks);
 
         Self::encode_repeating_hit_pattern(alternating_mono_patterns)
     }
 
-    fn encode_mono_streak(data: &mut ObjectLists<'o>) -> Vec<Rc<RefCell<MonoStreak<'o>>>> {
+    fn encode_mono_streak(data: &mut ObjectLists) -> Vec<Rc<RefCell<MonoStreak>>> {
         let mut mono_streaks = vec![MonoStreak::new()];
         let mut curr_mono_streak = mono_streaks.last_mut();
         let mut data_iter = data.all.iter();
@@ -100,9 +100,9 @@ impl<'o> ColourDifficultyPreprocessor {
 
             // * If this is the first object in the list or the colour changed, create a new mono streak
             let condition = prev.filter(|prev| {
-                !(taiko_obj.borrow().base.is_hit()
-                    && prev.borrow().base.is_hit()
-                    && (taiko_obj.borrow().base.is_rim() != prev.borrow().base.is_rim()))
+                !(taiko_obj.borrow().base.is_hit
+                    && prev.borrow().base.is_hit
+                    && (taiko_obj.borrow().base.is_rim != prev.borrow().base.is_rim))
             });
 
             if condition.is_none() {
@@ -120,8 +120,8 @@ impl<'o> ColourDifficultyPreprocessor {
     }
 
     fn encode_alternating_mono_pattern(
-        data: Vec<Rc<RefCell<MonoStreak<'o>>>>,
-    ) -> VecDeque<Rc<RefCell<AlternatingMonoPattern<'o>>>> {
+        data: Vec<Rc<RefCell<MonoStreak>>>,
+    ) -> VecDeque<Rc<RefCell<AlternatingMonoPattern>>> {
         let mut mono_patterns = VecDeque::new();
         mono_patterns.push_back(AlternatingMonoPattern::new());
         let mut curr_mono_pattern = mono_patterns.back_mut();
@@ -151,8 +151,8 @@ impl<'o> ColourDifficultyPreprocessor {
     }
 
     fn encode_repeating_hit_pattern(
-        mut data: VecDeque<Rc<RefCell<AlternatingMonoPattern<'o>>>>,
-    ) -> Vec<Rc<RefCell<RepeatingHitPatterns<'o>>>> {
+        mut data: VecDeque<Rc<RefCell<AlternatingMonoPattern>>>,
+    ) -> Vec<Rc<RefCell<RepeatingHitPatterns>>> {
         let mut hit_patterns = Vec::new();
         let mut curr_hit_pattern: Option<Rc<std::cell::RefCell<_>>> = None;
 

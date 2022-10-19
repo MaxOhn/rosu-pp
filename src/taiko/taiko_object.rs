@@ -5,18 +5,17 @@ use crate::{parse::HitObject, Beatmap};
 use super::rim::Rim;
 
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct TaikoObject<'h> {
-    pub(crate) h: &'h HitObject,
-    pub(crate) sound: u8,
+pub(crate) struct TaikoObject {
+    pub(crate) is_hit: bool,
+    pub(crate) is_rim: bool,
 }
 
-impl TaikoObject<'_> {
-    pub(crate) fn is_rim(&self) -> bool {
-        self.sound.is_rim()
-    }
-
-    pub(crate) fn is_hit(&self) -> bool {
-        self.h.is_circle()
+impl TaikoObject {
+    pub(crate) fn new(h: &HitObject, sound: u8) -> Self {
+        Self {
+            is_hit: h.is_circle(),
+            is_rim: sound.is_rim(),
+        }
     }
 }
 
@@ -41,14 +40,14 @@ impl IntoTaikoObjectIter for Beatmap {
 }
 
 impl<'m> Iterator for TaikoObjectIter<'m> {
-    type Item = TaikoObject<'m>;
+    type Item = (TaikoObject, f64);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        Some(TaikoObject {
-            h: self.hit_objects.next()?,
-            sound: *self.sounds.next()?,
-        })
+        let h = self.hit_objects.next()?;
+        let sound = self.sounds.next()?;
+
+        Some((TaikoObject::new(h, *sound), h.start_time))
     }
 
     #[inline]

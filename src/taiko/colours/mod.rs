@@ -14,10 +14,10 @@ mod preprocessor;
 mod repeating_hit_patterns;
 
 #[derive(Clone, Debug, Default)]
-pub(crate) struct TaikoDifficultyColour<'o> {
-    pub(crate) mono_streak: Option<Weak<RefCell<MonoStreak<'o>>>>,
-    pub(crate) alternating_mono_pattern: Option<Weak<RefCell<AlternatingMonoPattern<'o>>>>,
-    pub(crate) repeating_hit_patterns: Option<Rc<RefCell<RepeatingHitPatterns<'o>>>>,
+pub(crate) struct TaikoDifficultyColour {
+    pub(crate) mono_streak: Option<Weak<RefCell<MonoStreak>>>,
+    pub(crate) alternating_mono_pattern: Option<Weak<RefCell<AlternatingMonoPattern>>>,
+    pub(crate) repeating_hit_patterns: Option<Rc<RefCell<RepeatingHitPatterns>>>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]

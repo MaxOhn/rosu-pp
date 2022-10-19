@@ -232,15 +232,22 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
         .taiko_objects()
         .take(take)
         .skip(2)
-        .zip(map.taiko_objects().skip(1))
-        .zip(map.taiko_objects())
+        .zip(map.hit_objects.iter().skip(1))
+        .zip(map.hit_objects.iter())
         .enumerate()
-        .inspect(|(_, ((base, _), _))| max_combo += base.h.is_circle() as usize)
+        .inspect(|(_, (((base, _), _), _))| max_combo += base.is_hit as usize)
         .fold(
             ObjectLists::default(),
-            |mut lists, (idx, ((base, last), last_last))| {
-                let diff_obj =
-                    TaikoDifficultyObject::new(base, last, last_last, clock_rate, &lists, idx);
+            |mut lists, (idx, (((base, base_start_time), last), last_last))| {
+                let diff_obj = TaikoDifficultyObject::new(
+                    base,
+                    base_start_time,
+                    last.start_time,
+                    last_last.start_time,
+                    clock_rate,
+                    &lists,
+                    idx,
+                );
 
                 match &diff_obj.mono_idx {
                     MonoIndex::Centre(_) => lists.centres.push(idx),
@@ -272,7 +279,7 @@ fn rescale(stars: f64) -> f64 {
     if stars < 0.0 {
         stars
     } else {
-        10.43 * (stars / 8.0).ln_1p()
+        10.43 * (stars / 8.0 + 1.0).ln()
     }
 }
 

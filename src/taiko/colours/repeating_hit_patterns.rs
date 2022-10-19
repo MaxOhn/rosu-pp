@@ -8,13 +8,13 @@ use crate::taiko::difficulty_object::TaikoDifficultyObject;
 
 use super::alternating_mono_pattern::AlternatingMonoPattern;
 
-pub(crate) struct RepeatingHitPatterns<'o> {
-    pub(crate) alternating_mono_patterns: Vec<Rc<RefCell<AlternatingMonoPattern<'o>>>>,
+pub(crate) struct RepeatingHitPatterns {
+    pub(crate) alternating_mono_patterns: Vec<Rc<RefCell<AlternatingMonoPattern>>>,
     pub(crate) prev: Option<Weak<RefCell<Self>>>,
     pub(crate) repetition_interval: usize,
 }
 
-impl Debug for RepeatingHitPatterns<'_> {
+impl Debug for RepeatingHitPatterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
@@ -26,7 +26,7 @@ impl Debug for RepeatingHitPatterns<'_> {
     }
 }
 
-impl<'o> RepeatingHitPatterns<'o> {
+impl RepeatingHitPatterns {
     const MAX_REPETITION_INTERVAL: usize = 16;
 
     pub(crate) fn new(prev: Option<Weak<RefCell<Self>>>) -> Rc<RefCell<Self>> {
@@ -39,7 +39,7 @@ impl<'o> RepeatingHitPatterns<'o> {
         Rc::new(RefCell::new(this))
     }
 
-    pub(crate) fn first_hit_object(&self) -> Option<Weak<RefCell<TaikoDifficultyObject<'o>>>> {
+    pub(crate) fn first_hit_object(&self) -> Option<Weak<RefCell<TaikoDifficultyObject>>> {
         self.alternating_mono_patterns
             .first()
             .and_then(|pattern| pattern.borrow().first_hit_object())

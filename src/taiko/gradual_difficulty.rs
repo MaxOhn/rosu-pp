@@ -41,17 +41,17 @@ use super::{
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct TaikoGradualDifficultyAttributes<'map> {
+pub struct TaikoGradualDifficultyAttributes {
     pub(crate) idx: usize,
     attrs: TaikoDifficultyAttributes,
-    hit_objects: IntoIter<Rc<RefCell<TaikoDifficultyObject<'map>>>>,
-    lists: ObjectLists<'map>,
+    hit_objects: IntoIter<Rc<RefCell<TaikoDifficultyObject>>>,
+    lists: ObjectLists,
     peaks: Peaks,
 }
 
-impl<'map> TaikoGradualDifficultyAttributes<'map> {
+impl TaikoGradualDifficultyAttributes {
     /// Create a new difficulty attributes iterator for osu!taiko maps.
-    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
+    pub fn new(map: &Beatmap, mods: u32) -> Self {
         let peaks = Peaks::new();
         let clock_rate = mods.clock_rate();
 
@@ -75,13 +75,20 @@ impl<'map> TaikoGradualDifficultyAttributes<'map> {
             .taiko_objects()
             .enumerate()
             .skip(2)
-            .zip(map.taiko_objects().skip(1))
-            .zip(map.taiko_objects())
+            .zip(map.hit_objects.iter().skip(1))
+            .zip(map.hit_objects.iter())
             .fold(
                 ObjectLists::default(),
-                |mut lists, (((idx, base), last), last_last)| {
-                    let diff_obj =
-                        TaikoDifficultyObject::new(base, last, last_last, clock_rate, &lists, idx);
+                |mut lists, (((idx, (base, base_start_time)), last), last_last)| {
+                    let diff_obj = TaikoDifficultyObject::new(
+                        base,
+                        base_start_time,
+                        last.start_time,
+                        last_last.start_time,
+                        clock_rate,
+                        &lists,
+                        idx,
+                    );
 
                     match &diff_obj.mono_idx {
                         MonoIndex::Centre(_) => lists.centres.push(idx),
@@ -111,7 +118,7 @@ impl<'map> TaikoGradualDifficultyAttributes<'map> {
     }
 }
 
-impl Iterator for TaikoGradualDifficultyAttributes<'_> {
+impl Iterator for TaikoGradualDifficultyAttributes {
     type Item = TaikoDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -120,7 +127,7 @@ impl Iterator for TaikoGradualDifficultyAttributes<'_> {
         {
             let curr = curr.borrow();
             self.peaks.process(&curr, &self.lists);
-            self.attrs.max_combo += curr.base.h.is_circle() as usize;
+            self.attrs.max_combo += curr.base.is_hit as usize;
         }
 
         let PeaksDifficultyValues {
@@ -169,7 +176,7 @@ impl Iterator for TaikoGradualDifficultyAttributes<'_> {
     }
 }
 
-impl ExactSizeIterator for TaikoGradualDifficultyAttributes<'_> {
+impl ExactSizeIterator for TaikoGradualDifficultyAttributes {
     #[inline]
     fn len(&self) -> usize {
         self.hit_objects.len()

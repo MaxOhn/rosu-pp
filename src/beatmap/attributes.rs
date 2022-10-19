@@ -157,7 +157,7 @@ impl BeatmapAttributesBuilder {
                     Self::TAIKO_MAX,
                 );
 
-                diff_range.floor() / clock_rate
+                diff_range / clock_rate
             }
             GameMode::Mania => {
                 let mut value = if !self.converted {

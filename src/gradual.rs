@@ -46,7 +46,7 @@ pub enum GradualDifficultyAttributes<'map> {
     /// Gradual osu!standard difficulty attributes.
     Osu(OsuGradualDifficultyAttributes),
     /// Gradual osu!taiko difficulty attributes.
-    Taiko(TaikoGradualDifficultyAttributes<'map>),
+    Taiko(TaikoGradualDifficultyAttributes),
 }
 
 impl<'map> GradualDifficultyAttributes<'map> {

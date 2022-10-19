@@ -30,7 +30,7 @@ impl Colour {
 }
 
 impl Skill for Colour {
-    fn process(&mut self, curr: &TaikoDifficultyObject<'_>, hit_objects: &ObjectLists<'_>) {
+    fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
         <Self as StrainSkill>::process(self, curr, hit_objects)
     }
 
@@ -52,15 +52,11 @@ impl StrainSkill for Colour {
         &mut self.curr_section_end
     }
 
-    fn strain_value_at(
-        &mut self,
-        curr: &TaikoDifficultyObject<'_>,
-        hit_objects: &ObjectLists<'_>,
-    ) -> f64 {
+    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
         <Self as StrainDecaySkill>::strain_value_at(self, curr, hit_objects)
     }
 
-    fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject<'_>) -> f64 {
+    fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
         <Self as StrainDecaySkill>::calculate_initial_strain(self, time, curr)
     }
 }
@@ -77,7 +73,7 @@ impl StrainDecaySkill for Colour {
         &mut self.curr_strain
     }
 
-    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject<'_>, _: &ObjectLists<'_>) -> f64 {
+    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, _: &ObjectLists) -> f64 {
         ColourEvaluator::evaluate_diff_of(curr)
     }
 }
@@ -91,7 +87,7 @@ impl ColourEvaluator {
         sigmoid * (height / 2.0) + middle
     }
 
-    fn evaluate_diff_of_mono_streak(mono_streak: Rc<RefCell<MonoStreak<'_>>>) -> f64 {
+    fn evaluate_diff_of_mono_streak(mono_streak: Rc<RefCell<MonoStreak>>) -> f64 {
         let mono_streak = mono_streak.borrow();
 
         let parent_eval = mono_streak
@@ -104,7 +100,7 @@ impl ColourEvaluator {
     }
 
     fn evaluate_diff_of_alternating_mono_pattern(
-        alternating_mono_pattern: Rc<RefCell<AlternatingMonoPattern<'_>>>,
+        alternating_mono_pattern: Rc<RefCell<AlternatingMonoPattern>>,
     ) -> f64 {
         let alternating_mono_pattern = alternating_mono_pattern.borrow();
 
@@ -118,14 +114,14 @@ impl ColourEvaluator {
     }
 
     fn evaluate_diff_of_repeating_hit_patterns(
-        repeating_hit_patterns: Rc<RefCell<RepeatingHitPatterns<'_>>>,
+        repeating_hit_patterns: Rc<RefCell<RepeatingHitPatterns>>,
     ) -> f64 {
         let repetition_interval = repeating_hit_patterns.borrow().repetition_interval as f64;
 
         2.0 * (1.0 - Self::sigmoid(repetition_interval, 2.0, 2.0, 0.5, 1.0))
     }
 
-    fn evaluate_diff_of(hit_object: &TaikoDifficultyObject<'_>) -> f64 {
+    fn evaluate_diff_of(hit_object: &TaikoDifficultyObject) -> f64 {
         let colour = &hit_object.colour;
         let mut difficulty = 0.0;
 

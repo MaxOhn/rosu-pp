@@ -600,19 +600,17 @@ macro_rules! parse_hitobjects_body {
                         None => None,
                     };
 
-                    // Note: Edge sets are currently not considered, seems to be fine though.
-                    let edge_sounds_opt = split.next().map(|sounds| {
-                        sounds
-                            .split('|')
-                            .take(repeats + 2)
-                            .map(parse_custom_sound)
-                            .collect()
-                    });
+                    let mut edge_sounds = vec![sound; repeats + 2];
 
-                    let edge_sounds = match edge_sounds_opt {
-                        None => Vec::new(),
-                        Some(sounds) => sounds,
-                    };
+                    split
+                        .next()
+                        .map(|sounds| sounds.split('|').map(parse_custom_sound))
+                        .into_iter()
+                        .flatten()
+                        .zip(edge_sounds.iter_mut())
+                        .for_each(|(parsed, sound)| *sound = parsed);
+
+                    // Note: Edge sets are currently not considered, seems to be fine though.
 
                     match has_custom_sound_file(split.nth(1)) {
                         Status::Ok(false) => {}
@@ -686,7 +684,7 @@ macro_rules! parse_hitobjects_body {
             GameMode::Osu | GameMode::Taiko | GameMode::Catch if !unsorted => {}
             GameMode::Osu | GameMode::Taiko => {
                 // Sort both hitobjects and hitsounds
-                let mut sorter = TandemSorter::new(&$self.hit_objects);
+                let mut sorter = TandemSorter::new(&$self.hit_objects, false);
                 sorter.sort(&mut $self.hit_objects);
                 sorter.toggle_marks();
                 sorter.sort(&mut $self.sounds);

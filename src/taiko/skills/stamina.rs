@@ -22,7 +22,7 @@ impl Stamina {
 }
 
 impl Skill for Stamina {
-    fn process(&mut self, curr: &TaikoDifficultyObject<'_>, hit_objects: &ObjectLists<'_>) {
+    fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
         <Self as StrainSkill>::process(self, curr, hit_objects)
     }
 
@@ -44,15 +44,11 @@ impl StrainSkill for Stamina {
         &mut self.curr_section_end
     }
 
-    fn strain_value_at(
-        &mut self,
-        curr: &TaikoDifficultyObject<'_>,
-        hit_objects: &ObjectLists<'_>,
-    ) -> f64 {
+    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
         <Self as StrainDecaySkill>::strain_value_at(self, curr, hit_objects)
     }
 
-    fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject<'_>) -> f64 {
+    fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
         <Self as StrainDecaySkill>::calculate_initial_strain(self, time, curr)
     }
 }
@@ -69,11 +65,7 @@ impl StrainDecaySkill for Stamina {
         &mut self.curr_strain
     }
 
-    fn strain_value_of(
-        &mut self,
-        curr: &TaikoDifficultyObject<'_>,
-        hit_objects: &ObjectLists<'_>,
-    ) -> f64 {
+    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
         StaminaEvaluator::evaluate_diff_of(curr, hit_objects)
     }
 }
@@ -90,11 +82,8 @@ impl StaminaEvaluator {
         30.0 / interval
     }
 
-    fn evaluate_diff_of(
-        hit_object: &TaikoDifficultyObject<'_>,
-        hit_objects: &ObjectLists<'_>,
-    ) -> f64 {
-        if !hit_object.base.is_hit() {
+    fn evaluate_diff_of(hit_object: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
+        if !hit_object.base.is_hit {
             return 0.0;
         }
 
@@ -104,7 +93,7 @@ impl StaminaEvaluator {
 
         if let Some(key_prev) = key_prev {
             // * Add a base strain to all objects
-            0.5 + Self::speed_bonus(curr.base.h.start_time - key_prev.borrow().base.h.start_time)
+            0.5 + Self::speed_bonus(curr.start_time - key_prev.borrow().start_time)
         } else {
             // * There is no previous hit object hit by the current key
             0.0

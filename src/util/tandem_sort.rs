@@ -9,14 +9,20 @@ pub(crate) struct TandemSorter {
 impl TandemSorter {
     /// Sort indices based on the given slice.
     /// Note that this does **not** sort the given slice.
-    pub(crate) fn new<T>(slice: &[T]) -> Self
+    pub(crate) fn new<T>(slice: &[T], stable: bool) -> Self
     where
         T: PartialOrd,
     {
         let mut indices: Vec<_> = (0..).take(slice.len()).collect();
 
-        indices
-            .sort_unstable_by(|&i, &j| slice[i].partial_cmp(&slice[j]).unwrap_or(Ordering::Equal));
+        let closure =
+            |&i: &usize, &j: &usize| slice[i].partial_cmp(&slice[j]).unwrap_or(Ordering::Equal);
+
+        if stable {
+            indices.sort_by(closure);
+        } else {
+            indices.sort_unstable_by(closure);
+        }
 
         Self { indices }
     }
@@ -75,7 +81,7 @@ mod tests {
     #[test]
     fn sort() {
         let mut base = vec![9, 7, 8, 1, 4, 3, 5, 2];
-        let mut sorter = TandemSorter::new(&base);
+        let mut sorter = TandemSorter::new(&base, false);
 
         sorter.sort(&mut base);
         assert_eq!(base, vec![1, 2, 3, 4, 5, 7, 8, 9]);

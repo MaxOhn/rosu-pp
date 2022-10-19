@@ -28,18 +28,17 @@ impl Peaks {
 
     pub(crate) fn difficulty_values(self) -> PeaksDifficultyValues {
         let colour_rating =
-            StrainSkill::difficulty_value(self.colour) * Self::COLOUR_SKILL_MULTIPLIER;
-        // let rhythm_rating =
-        //     StrainSkill::difficulty_value(self.rhythm.clone()) * Self::RHYTHM_SKILL_MULTIPLIER;
-        // let stamina_rating =
-        //     StrainSkill::difficulty_value(self.stamina.clone()) * Self::STAMINA_SKILL_MULTIPLIER;
+            StrainSkill::difficulty_value(self.colour.clone()) * Self::COLOUR_SKILL_MULTIPLIER;
+        let rhythm_rating =
+            StrainSkill::difficulty_value(self.rhythm.clone()) * Self::RHYTHM_SKILL_MULTIPLIER;
+        let stamina_rating =
+            StrainSkill::difficulty_value(self.stamina.clone()) * Self::STAMINA_SKILL_MULTIPLIER;
 
         PeaksDifficultyValues {
             colour_rating,
-            rhythm_rating: 0.0,
-            stamina_rating: 0.0,
-            // combined_rating: self.difficulty_value(),
-            combined_rating: 0.0,
+            rhythm_rating,
+            stamina_rating,
+            combined_rating: self.difficulty_value(),
         }
     }
 
@@ -60,10 +59,10 @@ impl Peaks {
 }
 
 impl Skill for Peaks {
-    fn process(&mut self, curr: &TaikoDifficultyObject<'_>, hit_objects: &ObjectLists<'_>) {
-        StrainSkill::process(&mut self.colour, curr, hit_objects);
-        StrainSkill::process(&mut self.rhythm, curr, hit_objects);
-        StrainSkill::process(&mut self.stamina, curr, hit_objects);
+    fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
+        <Colour as Skill>::process(&mut self.colour, curr, hit_objects);
+        <Rhythm as Skill>::process(&mut self.rhythm, curr, hit_objects);
+        <Stamina as Skill>::process(&mut self.stamina, curr, hit_objects);
     }
 
     fn difficulty_value(self) -> f64 {

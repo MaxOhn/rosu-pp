@@ -8,13 +8,13 @@ use crate::taiko::difficulty_object::{MonoIndex, TaikoDifficultyObject};
 
 use super::{alternating_mono_pattern::AlternatingMonoPattern, HitKind};
 
-pub(crate) struct MonoStreak<'o> {
-    pub(crate) hit_objects: Vec<Weak<RefCell<TaikoDifficultyObject<'o>>>>,
-    pub(crate) parent: Option<Weak<RefCell<AlternatingMonoPattern<'o>>>>,
+pub(crate) struct MonoStreak {
+    pub(crate) hit_objects: Vec<Weak<RefCell<TaikoDifficultyObject>>>,
+    pub(crate) parent: Option<Weak<RefCell<AlternatingMonoPattern>>>,
     pub(crate) idx: usize,
 }
 
-impl Debug for MonoStreak<'_> {
+impl Debug for MonoStreak {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
@@ -26,7 +26,7 @@ impl Debug for MonoStreak<'_> {
     }
 }
 
-impl<'o> MonoStreak<'o> {
+impl MonoStreak {
     pub(crate) fn new() -> Rc<RefCell<Self>> {
         let this = Self {
             hit_objects: Vec::new(),
@@ -37,7 +37,7 @@ impl<'o> MonoStreak<'o> {
         Rc::new(RefCell::new(this))
     }
 
-    pub(crate) fn first_hit_object(&self) -> Option<Weak<RefCell<TaikoDifficultyObject<'o>>>> {
+    pub(crate) fn first_hit_object(&self) -> Option<Weak<RefCell<TaikoDifficultyObject>>> {
         self.hit_objects.first().map(Weak::clone)
     }
 

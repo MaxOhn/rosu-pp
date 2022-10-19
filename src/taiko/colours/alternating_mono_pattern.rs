@@ -8,13 +8,13 @@ use crate::taiko::difficulty_object::TaikoDifficultyObject;
 
 use super::{mono_streak::MonoStreak, repeating_hit_patterns::RepeatingHitPatterns};
 
-pub(crate) struct AlternatingMonoPattern<'o> {
-    pub(crate) mono_streaks: Vec<Rc<RefCell<MonoStreak<'o>>>>,
-    pub(crate) parent: Option<Weak<RefCell<RepeatingHitPatterns<'o>>>>,
+pub(crate) struct AlternatingMonoPattern {
+    pub(crate) mono_streaks: Vec<Rc<RefCell<MonoStreak>>>,
+    pub(crate) parent: Option<Weak<RefCell<RepeatingHitPatterns>>>,
     pub(crate) idx: usize,
 }
 
-impl Debug for AlternatingMonoPattern<'_> {
+impl Debug for AlternatingMonoPattern {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
@@ -26,7 +26,7 @@ impl Debug for AlternatingMonoPattern<'_> {
     }
 }
 
-impl<'o> AlternatingMonoPattern<'o> {
+impl AlternatingMonoPattern {
     pub(crate) fn new() -> Rc<RefCell<Self>> {
         let this = Self {
             mono_streaks: Vec::new(),
@@ -37,7 +37,7 @@ impl<'o> AlternatingMonoPattern<'o> {
         Rc::new(RefCell::new(this))
     }
 
-    pub(crate) fn first_hit_object(&self) -> Option<Weak<RefCell<TaikoDifficultyObject<'o>>>> {
+    pub(crate) fn first_hit_object(&self) -> Option<Weak<RefCell<TaikoDifficultyObject>>> {
         self.mono_streaks
             .first()
             .and_then(|streak| streak.borrow().first_hit_object())

@@ -40,7 +40,7 @@ impl Rhythm {
         self.notes_since_rhythm_change = 0;
     }
 
-    fn repetition_penalties(&mut self, hit_object: &TaikoDifficultyObject<'_>) -> f64 {
+    fn repetition_penalties(&mut self, hit_object: &TaikoDifficultyObject) -> f64 {
         let mut penalty = 1.0;
 
         self.history.push(HistoryElement::new(hit_object));
@@ -100,7 +100,7 @@ impl Rhythm {
 }
 
 impl Skill for Rhythm {
-    fn process(&mut self, curr: &TaikoDifficultyObject<'_>, hit_objects: &ObjectLists<'_>) {
+    fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
         <Self as StrainSkill>::process(self, curr, hit_objects)
     }
 
@@ -122,15 +122,11 @@ impl StrainSkill for Rhythm {
         &mut self.curr_section_end
     }
 
-    fn strain_value_at(
-        &mut self,
-        curr: &TaikoDifficultyObject<'_>,
-        hit_objects: &ObjectLists<'_>,
-    ) -> f64 {
+    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
         <Self as StrainDecaySkill>::strain_value_at(self, curr, hit_objects)
     }
 
-    fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject<'_>) -> f64 {
+    fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
         <Self as StrainDecaySkill>::calculate_initial_strain(self, time, curr)
     }
 }
@@ -147,8 +143,8 @@ impl StrainDecaySkill for Rhythm {
         &mut self.curr_decay_strain
     }
 
-    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject<'_>, _: &ObjectLists<'_>) -> f64 {
-        let base_is_circle = curr.base.h.is_circle();
+    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, _: &ObjectLists) -> f64 {
+        let base_is_circle = curr.base.is_hit;
 
         // * drum rolls and swells are exempt.
         if !base_is_circle {
@@ -187,7 +183,7 @@ pub(crate) struct HistoryElement {
 }
 
 impl HistoryElement {
-    fn new(difficulty_object: &TaikoDifficultyObject<'_>) -> Self {
+    fn new(difficulty_object: &TaikoDifficultyObject) -> Self {
         Self {
             idx: difficulty_object.idx,
             rhythm: difficulty_object.rhythm,
