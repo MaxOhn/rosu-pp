@@ -14,7 +14,7 @@ pub use slider_parsing::*;
 use reader::FileReader;
 pub(crate) use sort::legacy_sort;
 
-use std::{cmp::Ordering, ops::Neg};
+use std::{cmp::Ordering, ops::Neg, str::FromStr};
 
 #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
 use std::{fs::File, io::Read};
@@ -28,11 +28,10 @@ use std::path::Path;
 #[cfg(feature = "async_std")]
 use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
-use crate::beatmap::{Beatmap, Break, DifficultyPoint, EffectPoint, GameMode, TimingPoint};
-
-fn sort_unstable<T: PartialOrd>(slice: &mut [T]) {
-    slice.sort_unstable_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
-}
+use crate::{
+    beatmap::{Beatmap, Break, DifficultyPoint, EffectPoint, GameMode, TimingPoint},
+    util::TandemSorter,
+};
 
 trait OptionExt<T> {
     fn next_field(self, field: &'static str) -> Result<T, ParseError>;
@@ -44,13 +43,27 @@ impl<T> OptionExt<T> for Option<T> {
     }
 }
 
-trait InRange: Sized + Copy + Neg<Output = Self> + PartialOrd {
+trait InRange: Sized + Copy + Neg<Output = Self> + PartialOrd + FromStr {
     const LIMIT: Self;
 
+    #[inline]
+    fn parse_in_range(s: &str) -> Option<Self> {
+        s.parse().ok().filter(<Self as InRange>::is_in_range)
+    }
+
+    #[inline]
+    fn parse_in_custom_range(s: &str, limit: Self) -> Option<Self> {
+        s.parse()
+            .ok()
+            .filter(|this| <Self as InRange>::is_in_custom_range(this, limit))
+    }
+
+    #[inline]
     fn is_in_range(&self) -> bool {
         (-Self::LIMIT..=Self::LIMIT).contains(self)
     }
 
+    #[inline]
     fn is_in_custom_range(&self, limit: Self) -> bool {
         (-limit..=limit).contains(self)
     }
@@ -125,7 +138,7 @@ macro_rules! parse_general_body {
             }
 
             if key == b"StackLeniency" {
-                if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                if let Some(val) = f32::parse_in_range(value) {
                     stack_leniency = Some(val);
                 }
             }
@@ -160,32 +173,32 @@ macro_rules! parse_difficulty_body {
 
             match key {
                 b"ApproachRate" => {
-                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                    if let Some(val) = f32::parse_in_range(value) {
                         ar = Some(val);
                     }
                 }
                 b"OverallDifficulty" => {
-                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                    if let Some(val) = f32::parse_in_range(value) {
                         od = Some(val);
                     }
                 }
                 b"CircleSize" => {
-                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                    if let Some(val) = f32::parse_in_range(value) {
                         cs = Some(val);
                     }
                 }
                 b"HPDrainRate" => {
-                    if let Some(val) = value.parse().ok().filter(f32::is_in_range) {
+                    if let Some(val) = f32::parse_in_range(value) {
                         hp = Some(val);
                     }
                 }
                 b"SliderTickRate" => {
-                    if let Some(val) = value.parse().ok().filter(f64::is_in_range) {
+                    if let Some(val) = f64::parse_in_range(value) {
                         tick_rate = Some(val);
                     }
                 }
                 b"SliderMultiplier" => {
-                    if let Some(val) = value.parse().ok().filter(f64::is_in_range) {
+                    if let Some(val) = f64::parse_in_range(value) {
                         sv = Some(val);
                     }
                 }
@@ -228,17 +241,13 @@ macro_rules! parse_events_body {
             if let Some(b'2') = split.next().and_then(|value| value.bytes().next()) {
                 let start_time = split
                     .next()
-                    .next_field("break start")?
-                    .parse()
-                    .ok()
-                    .filter(f64::is_in_range);
+                    .next_field("break start")
+                    .map(f64::parse_in_range)?;
 
                 let end_time = split
                     .next()
-                    .next_field("break end")?
-                    .parse()
-                    .ok()
-                    .filter(f64::is_in_range);
+                    .next_field("break end")
+                    .map(f64::parse_in_range)?;
 
                 if let (Some(start_time), Some(end_time)) = (start_time, end_time) {
                     $self.breaks.push(Break {
@@ -270,15 +279,16 @@ macro_rules! parse_timingpoints_body {
             let line = $reader.get_line()?;
             let mut split = line.split(',');
 
-            let time: f64 = split
+            let time_opt = split
                 .next()
-                .next_field("timing point time")?
-                .trim()
-                .parse()?;
+                .next_field("timing point time")
+                .map(str::trim)
+                .map(f64::parse_in_range)?;
 
-            if !time.is_in_range() {
-                continue;
-            }
+            let time = match time_opt {
+                Some(time) => time,
+                None => continue,
+            };
 
             // * beatLength is allowed to be NaN to handle an edge case in which
             // * some beatmaps use NaN slider velocity to disable slider tick
@@ -308,35 +318,30 @@ macro_rules! parse_timingpoints_body {
                 match split
                     .next()
                     .filter(|&sig| !sig.starts_with('0'))
-                    .map(str::parse::<i32>)
+                    .map(i32::parse_in_range)
                 {
-                    Some(Ok(time_sig)) if !time_sig.is_in_range() || time_sig < 1 => {
-                        return Status::Err
-                    }
-                    Some(Ok(_)) => {}
+                    Some(Some(time_sig)) if time_sig < 1 => return Status::Err,
+                    Some(Some(_)) => {}
                     None => return Status::Ok,
-                    Some(Err(_)) => return Status::Err,
+                    Some(None) => return Status::Err,
                 }
 
-                match split.next().map(str::parse::<i32>) {
-                    Some(Ok(sample_set)) if !sample_set.is_in_range() => return Status::Err,
-                    Some(Ok(_)) => {}
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(_)) => {}
+                    Some(None) => return Status::Err,
                     None => return Status::Ok,
-                    Some(Err(_)) => return Status::Err,
                 }
 
-                match split.next().map(str::parse::<i32>) {
-                    Some(Ok(custom_sample)) if !custom_sample.is_in_range() => return Status::Err,
-                    Some(Ok(_)) => {}
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(_)) => {}
+                    Some(None) => return Status::Err,
                     None => return Status::Ok,
-                    Some(Err(_)) => return Status::Err,
                 }
 
-                match split.next().map(str::parse::<i32>) {
-                    Some(Ok(sample_volume)) if !sample_volume.is_in_range() => return Status::Err,
-                    Some(Ok(_)) => {}
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(_)) => {}
+                    Some(None) => return Status::Err,
                     None => return Status::Ok,
-                    Some(Err(_)) => return Status::Err,
                 }
 
                 if let Some(byte) = split.next().and_then(|value| value.bytes().next()) {
@@ -345,11 +350,10 @@ macro_rules! parse_timingpoints_body {
                     return Status::Ok;
                 }
 
-                match split.next().map(str::parse::<i32>) {
-                    Some(Ok(effect_flags)) if !effect_flags.is_in_range() => return Status::Err,
-                    Some(Ok(effect_flags)) => *kiai = (effect_flags & KIAI_FLAG) > 0,
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(effect_flags)) => *kiai = (effect_flags & KIAI_FLAG) > 0,
+                    Some(None) => return Status::Err,
                     None => return Status::Ok,
-                    Some(Err(_)) => return Status::Err,
                 }
 
                 Status::Ok
@@ -393,10 +397,6 @@ macro_rules! parse_timingpoints_body {
             $self.difficulty_points.push_if_not_redundant(point);
         }
 
-        $self.timing_points.dedup_by_key(|point| point.time);
-        $self.difficulty_points.dedup_by_key(|point| point.time);
-        $self.effect_points.dedup_by_key(|point| point.time);
-
         Ok(empty)
     }};
 }
@@ -428,18 +428,14 @@ macro_rules! parse_hitobjects_body {
 
             let x = split
                 .next()
-                .next_field("x pos")?
-                .parse()
-                .ok()
-                .filter(|x| f32::is_in_custom_range(x, MAX_COORDINATE_VALUE as f32))
+                .next_field("x pos")
+                .map(|s| f32::parse_in_custom_range(s, MAX_COORDINATE_VALUE as f32))?
                 .map(|x| x as i32 as f32);
 
             let y = split
                 .next()
-                .next_field("y pos")?
-                .parse()
-                .ok()
-                .filter(|x| f32::is_in_custom_range(x, MAX_COORDINATE_VALUE as f32))
+                .next_field("y pos")
+                .map(|s| f32::parse_in_custom_range(s, MAX_COORDINATE_VALUE as f32))?
                 .map(|x| x as i32 as f32);
 
             let pos = if let (Some(x), Some(y)) = (x, y) {
@@ -450,11 +446,9 @@ macro_rules! parse_hitobjects_body {
 
             let time_opt = split
                 .next()
-                .next_field("hitobject time")?
-                .trim()
-                .parse()
-                .ok()
-                .filter(f64::is_in_range);
+                .next_field("hitobject time")
+                .map(str::trim)
+                .map(f64::parse_in_range)?;
 
             let time = match time_opt {
                 Some(time) => time,
@@ -470,12 +464,61 @@ macro_rules! parse_hitobjects_body {
                 Err(_) => continue,
             };
 
-            let sound: u8 = match split.next().next_field("sound")?.parse() {
+            let mut sound: u8 = match split.next().next_field("sound")?.parse() {
                 Ok(sound) => sound,
                 Err(_) => continue,
             };
 
+            #[derive(Debug)]
+            enum Status {
+                Ok(bool),
+                Skip,
+                Err(ParseError),
+            }
+
+            fn has_custom_sound_file(bank_info: Option<&str>) -> Status {
+                let mut split = match bank_info {
+                    Some(s) if !s.is_empty() => s.split(':'),
+                    _ => return Status::Ok(false),
+                };
+
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(_)) => {}
+                    Some(None) => return Status::Skip,
+                    None => return Status::Err(ParseError::MissingField("normal set")),
+                }
+
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(_)) => {}
+                    Some(None) => return Status::Skip,
+                    None => return Status::Err(ParseError::MissingField("additional set")),
+                }
+
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(_)) => {}
+                    None => return Status::Ok(false),
+                    Some(None) => return Status::Skip,
+                }
+
+                match split.next().map(i32::parse_in_range) {
+                    Some(Some(_)) => {}
+                    None => return Status::Ok(false),
+                    Some(None) => return Status::Skip,
+                }
+
+                let filename = split.next().filter(|filename| !filename.is_empty());
+
+                Status::Ok(filename.is_some())
+            }
+
             let kind = if kind & Self::CIRCLE_FLAG > 0 {
+                match has_custom_sound_file(split.next()) {
+                    Status::Ok(false) => {}
+                    Status::Ok(true) => sound = 0,
+                    Status::Skip => continue,
+                    Status::Err(err) => return Err(err),
+                }
+
                 $self.n_circles += 1;
 
                 HitObjectKind::Circle
@@ -548,14 +591,16 @@ macro_rules! parse_hitobjects_body {
                 if control_points.is_empty() {
                     HitObjectKind::Circle
                 } else {
-                    let pixel_len = match split.next().map(str::parse::<f64>) {
-                        Some(Ok(len)) if len.is_in_custom_range(MAX_COORDINATE_VALUE as f64) => {
-                            (len > 0.0).then_some(len)
-                        }
-                        Some(_) => continue,
+                    let pixel_len = match split
+                        .next()
+                        .map(|s| f64::parse_in_custom_range(s, MAX_COORDINATE_VALUE as f64))
+                    {
+                        Some(Some(len)) => (len > 0.0).then_some(len),
+                        Some(None) => continue,
                         None => None,
                     };
 
+                    // Note: Edge sets are currently not considered, seems to be fine though.
                     let edge_sounds_opt = split.next().map(|sounds| {
                         sounds
                             .split('|')
@@ -569,6 +614,13 @@ macro_rules! parse_hitobjects_body {
                         Some(sounds) => sounds,
                     };
 
+                    match has_custom_sound_file(split.nth(1)) {
+                        Status::Ok(false) => {}
+                        Status::Ok(true) => sound = 0,
+                        Status::Skip => continue,
+                        Status::Err(err) => return Err(err),
+                    }
+
                     HitObjectKind::Slider {
                         repeats,
                         pixel_len,
@@ -580,21 +632,37 @@ macro_rules! parse_hitobjects_body {
                 $self.n_spinners += 1;
 
                 let end_time = match split.next().next_field("spinner endtime")?.parse::<f64>() {
-                    Ok(end_time) => end_time.max(0.0),
+                    Ok(end_time) => end_time.max(time),
                     Err(_) => continue,
                 };
+
+                match has_custom_sound_file(split.next()) {
+                    Status::Ok(false) => {}
+                    Status::Ok(true) => sound = 0,
+                    Status::Skip => continue,
+                    Status::Err(err) => return Err(err),
+                }
 
                 HitObjectKind::Spinner { end_time }
             } else if kind & Self::HOLD_FLAG > 0 {
                 $self.n_sliders += 1;
 
-                let end_time = match split
-                    .next()
-                    .and_then(|next| next.split(':').next())
-                    .map(str::parse::<f64>)
-                {
-                    Some(Ok(time_)) if time_.is_in_range() => time_.max(time),
-                    Some(_) => continue,
+                let end_time = match split.next().and_then(|s| s.split_once(':')) {
+                    Some((head, tail)) => {
+                        let parsed = match f64::parse_in_range(head) {
+                            Some(time_) => time_.max(time),
+                            None => continue,
+                        };
+
+                        match has_custom_sound_file(Some(tail)) {
+                            Status::Ok(false) => {}
+                            Status::Ok(true) => sound = 0,
+                            Status::Skip => continue,
+                            Status::Err(err) => return Err(err),
+                        }
+
+                        parsed
+                    }
                     None => time,
                 };
 
@@ -614,18 +682,28 @@ macro_rules! parse_hitobjects_body {
             prev_time = time;
         }
 
-        // BUG: If [General] section comes after [HitObjects] then the mode
-        // won't be set yet so mania objects won't be sorted properly
-        if $self.mode == GameMode::Mania {
-            // First a _stable_ sort by time
-            $self
-                .hit_objects
-                .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
+        match $self.mode {
+            GameMode::Osu | GameMode::Taiko | GameMode::Catch if !unsorted => {}
+            GameMode::Osu | GameMode::Taiko => {
+                // Sort both hitobjects and hitsounds
+                let mut sorter = TandemSorter::new(&$self.hit_objects);
+                sorter.sort(&mut $self.hit_objects);
+                sorter.toggle_marks();
+                sorter.sort(&mut $self.sounds);
+            }
+            // No need to sort hitsounds for the rest
+            GameMode::Mania => {
+                // First a _stable_ sort by time
+                $self
+                    .hit_objects
+                    .sort_by(|p1, p2| p1.partial_cmp(p2).unwrap_or(Ordering::Equal));
 
-            // Then the legacy sort for correct position order
-            legacy_sort(&mut $self.hit_objects);
-        } else if unsorted {
-            sort_unstable(&mut $self.hit_objects);
+                // Then the legacy sort for correct position order
+                legacy_sort(&mut $self.hit_objects);
+            }
+            GameMode::Catch => $self
+                .hit_objects
+                .sort_unstable_by(|h1, h2| h1.partial_cmp(h2).unwrap_or(Ordering::Equal)),
         }
 
         Ok(empty)

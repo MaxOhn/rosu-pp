@@ -96,11 +96,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
-    // TODO: update
     /// Amount of passed objects for partial plays, e.g. a fail.
-    ///
-    /// Be sure you also set [`score`](ManiaPP::score) or the final values
-    /// won't be correct because it will incorrectly assume a score of 1,000,000.
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`ManiaPP`] multiple times with different `passed_objects`, you should use

@@ -1,6 +1,6 @@
 use crate::{
-    limited_queue::LimitedQueue,
     taiko::difficulty_object::{HitObjectRhythm, ObjectLists, TaikoDifficultyObject},
+    util::LimitedQueue,
 };
 
 use super::{Skill, StrainDecaySkill, StrainSkill};

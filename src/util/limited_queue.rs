@@ -132,7 +132,7 @@ mod test {
         }
 
         assert_eq!(queue.last(), Some(&5));
-        assert!(queue.iter().eq(vec![2, 3, 4, 5].iter()));
+        assert!(queue.iter().eq(&[2, 3, 4, 5]));
         assert_eq!(queue[0], 2);
         assert_eq!(queue[3], 5);
     }

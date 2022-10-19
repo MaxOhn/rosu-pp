@@ -32,7 +32,7 @@ impl fmt::Display for PatternType {
                 $(
                     if $self.contains(Self::$pat) {
                         if $written {
-                            $f.write_str(" | ")?;
+                            $f.write_str(", ")?;
                         } else {
                             $written = true;
                         }

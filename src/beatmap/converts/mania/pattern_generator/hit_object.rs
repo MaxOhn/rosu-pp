@@ -98,15 +98,14 @@ impl<'h> HitObjectPatternGenerator<'h> {
     pub(crate) fn generate(&mut self) -> Pattern {
         let pattern = self.generate_core();
 
-        for obj in pattern.hit_objects.iter().map(ManiaObject::new) {
-            if self.convert_type.contains(PatternType::STAIR)
-                && obj.column(self.total_columns as f32) as i32 == self.total_columns - 1
-            {
+        for obj in pattern.hit_objects.iter() {
+            let col = ManiaObject::column(obj.pos.x, self.total_columns as f32) as i32;
+
+            if self.convert_type.contains(PatternType::STAIR) && col == self.total_columns - 1 {
                 self.stair_type = PatternType::REVERSE_STAIR;
             }
 
-            if self.convert_type.contains(PatternType::REVERSE_STAIR)
-                && obj.column(self.total_columns as f32) as i32 == self.random_start()
+            if self.convert_type.contains(PatternType::REVERSE_STAIR) && col == self.random_start()
             {
                 self.stair_type = PatternType::STAIR;
             }
@@ -120,12 +119,9 @@ impl<'h> HitObjectPatternGenerator<'h> {
             return Pattern::new_note(self, 0);
         }
 
-        let last_column = self
-            .prev_pattern
-            .hit_objects
-            .last()
-            .map(ManiaObject::new)
-            .map_or(0, |h| h.column(self.total_columns as f32) as u8);
+        let last_column = self.prev_pattern.hit_objects.last().map_or(0, |h| {
+            ManiaObject::column(h.pos.x, self.total_columns as f32) as u8
+        });
 
         let random_start = self.random_start() as u8;
 

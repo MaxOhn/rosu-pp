@@ -109,7 +109,7 @@ pub struct EffectPoint {
 
 impl EffectPoint {
     /// The default slider velocity for a [`DifficultyPoint`]
-    pub const DEFAULT_KIAI: bool = true;
+    pub const DEFAULT_KIAI: bool = false;
 
     /// Create a new [`EffectPoint`].
     #[inline]

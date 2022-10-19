@@ -2,8 +2,8 @@ use std::cmp::Ordering;
 
 use crate::{
     curve::{Curve, CurveBuffers},
-    limited_queue::LimitedQueue,
     parse::{legacy_sort, HitObjectKind, Pos2},
+    util::{FloatExt, LimitedQueue},
     Beatmap, GameMode,
 };
 
@@ -17,7 +17,6 @@ use self::{
     pattern_type::PatternType,
 };
 
-mod byte_hasher;
 mod legacy_random;
 mod pattern;
 mod pattern_generator;
@@ -32,12 +31,14 @@ impl Beatmap {
         let mut n_circles = 0;
         let mut n_sliders = 0;
 
-        let seed =
-            (map.hp + map.cs).round() as i32 * 20 + (map.od * 41.2) as i32 + map.ar.round() as i32;
+        let seed = (map.hp + map.cs).round_even() as i32 * 20
+            + (map.od * 41.2) as i32
+            + map.ar.round_even() as i32;
+
         let mut random = Random::new(seed);
 
-        let rounded_cs = map.cs.round();
-        let rounded_od = map.od.round();
+        let rounded_cs = map.cs.round_even();
+        let rounded_od = map.od.round_even();
 
         let slider_or_spinner_count = self
             .hit_objects
@@ -78,9 +79,7 @@ impl Beatmap {
         };
 
         let total_columns = map.cs as i32;
-
         let mut last_values = PrevValues::default();
-
         let mut curve_bufs = CurveBuffers::default();
 
         for (obj, sound) in self.hit_objects.iter().zip(self.sounds.iter()) {
@@ -167,8 +166,8 @@ impl Beatmap {
                         &last_values.pattern,
                     );
 
-                    last_values.time = obj.start_time;
-                    last_values.pos = obj.pos;
+                    last_values.time = end_time;
+                    last_values.pos = Pos2 { x: 256.0, y: 192.0 };
 
                     compute_density(end_time, &mut density);
 

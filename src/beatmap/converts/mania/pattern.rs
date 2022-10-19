@@ -1,31 +1,31 @@
 use std::collections::HashSet;
 
-use crate::parse::{HitObject, HitObjectKind, Pos2};
+use crate::{
+    parse::{HitObject, HitObjectKind, Pos2},
+    util::ByteHasher,
+};
 
-use super::{
-    byte_hasher::BuildByteHasher,
-    pattern_generator::{
-        distance_object::DistanceObjectPatternGenerator,
-        end_time_object::EndTimeObjectPatternGenerator, hit_object::HitObjectPatternGenerator,
-    },
+use super::pattern_generator::{
+    distance_object::DistanceObjectPatternGenerator,
+    end_time_object::EndTimeObjectPatternGenerator, hit_object::HitObjectPatternGenerator,
 };
 
 #[derive(Default)]
 pub(crate) struct Pattern {
     pub(crate) hit_objects: Vec<HitObject>,
-    contained_columns: HashSet<u8, BuildByteHasher>,
+    contained_columns: HashSet<u8, ByteHasher>,
 }
 
 impl Pattern {
     pub(crate) fn with_capacity(capacity: usize) -> Self {
         Self {
             hit_objects: Vec::with_capacity(capacity),
-            contained_columns: HashSet::with_hasher(BuildByteHasher),
+            contained_columns: HashSet::with_hasher(ByteHasher),
         }
     }
 
     fn new_single(hit_object: HitObject, column: u8) -> Self {
-        let mut contained_columns = HashSet::with_capacity_and_hasher(1, BuildByteHasher);
+        let mut contained_columns = HashSet::with_capacity_and_hasher(1, ByteHasher);
         contained_columns.insert(column);
         let hit_objects = vec![hit_object];
 

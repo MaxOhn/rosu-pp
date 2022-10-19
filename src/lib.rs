@@ -206,8 +206,8 @@ mod stars;
 pub use stars::AnyStars;
 
 mod curve;
-mod limited_queue;
 mod mods;
+mod util;
 
 pub use catch::{CatchPP, CatchStars};
 pub use mania::{ManiaPP, ManiaStars};
@@ -216,6 +216,7 @@ pub use taiko::{TaikoPP, TaikoStars};
 
 pub use mods::Mods;
 pub use parse::{ParseError, ParseResult};
+pub use util::SortedVec;
 
 /// Provides some additional methods on [`Beatmap`](crate::Beatmap).
 pub trait BeatmapExt {
@@ -520,7 +521,7 @@ mod tests {
 
     #[test]
     fn custom() {
-        let path = "F:/osu!/beatmaps/1000168.osu";
+        let path = "F:/osu!/beatmaps/34881.osu";
         let map = Beatmap::from_path(path).unwrap();
 
         let attrs = match OsuPP::new(&map).mode(GameMode::Mania).mods(0).calculate() {

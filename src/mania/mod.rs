@@ -7,7 +7,7 @@ mod skills;
 
 use std::borrow::Cow;
 
-use crate::{beatmap::BeatmapHitWindows, parse::HitObjectKind, Beatmap, GameMode, Mods, OsuStars};
+use crate::{beatmap::BeatmapHitWindows, util::FloatExt, Beatmap, GameMode, Mods, OsuStars};
 
 pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
 
@@ -15,6 +15,7 @@ pub(crate) use self::mania_object::ManiaObject;
 
 use self::{
     difficulty_object::ManiaDifficultyObject,
+    mania_object::ObjectParameters,
     skills::{Skill, Strain},
 };
 
@@ -169,29 +170,30 @@ fn calculate_result(params: ManiaStars<'_>) -> ManiaResult {
     } = params;
 
     let take = passed_objects.unwrap_or(map.hit_objects.len());
-    let total_columns = map.cs.round().max(1.0);
+    let total_columns = map.cs.round_even().max(1.0);
 
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
     let mut strain = Strain::new(total_columns as usize);
-    let mut max_combo = 0;
+    let mut params = ObjectParameters::new(map.as_ref());
+    let mut hit_objects = map.hit_objects.iter();
 
-    let diff_objects_iter = map
-        .hit_objects
-        .iter()
-        .take(take)
-        .inspect(|h| match &h.kind {
-            HitObjectKind::Hold { end_time } => {
-                max_combo += 1 + ((*end_time - h.start_time) / 100.0) as usize
+    let first = match hit_objects.next() {
+        Some(h) => ManiaObject::new(h, total_columns, &mut params),
+        None => {
+            return ManiaResult {
+                strain,
+                max_combo: 0,
             }
-            _ => max_combo += 1,
-        })
-        .skip(1)
-        .map(ManiaObject::new)
-        .enumerate()
-        .zip(map.hit_objects.iter().map(ManiaObject::new))
-        .map(|((i, base), prev)| {
-            ManiaDifficultyObject::new(base, prev, clock_rate, total_columns, i)
-        });
+        }
+    };
+
+    let diff_objects_iter = hit_objects.enumerate().scan(first, |last, (i, h)| {
+        let base = ManiaObject::new(h, total_columns, &mut params);
+        let diff_object = ManiaDifficultyObject::new(&base, &*last, clock_rate, i);
+        *last = base;
+
+        Some(diff_object)
+    });
 
     let mut diff_objects = Vec::with_capacity(map.hit_objects.len().min(take).saturating_sub(1));
     diff_objects.extend(diff_objects_iter);
@@ -200,7 +202,10 @@ fn calculate_result(params: ManiaStars<'_>) -> ManiaResult {
         strain.process(curr, &diff_objects);
     }
 
-    ManiaResult { strain, max_combo }
+    ManiaResult {
+        strain,
+        max_combo: params.max_combo,
+    }
 }
 
 struct ManiaResult {

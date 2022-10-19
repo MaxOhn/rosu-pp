@@ -1,13 +1,12 @@
 use std::{borrow::Cow, cmp::Ordering};
 
-use crate::parse::HitObject;
+use crate::{parse::HitObject, util::SortedVec};
 
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, BeatmapHitWindows},
     breaks::Break,
     control_points::{DifficultyPoint, EffectPoint, TimingPoint},
     mode::GameMode,
-    sorted_vec::SortedVec,
 };
 
 mod attributes;
@@ -15,7 +14,6 @@ mod breaks;
 mod control_points;
 mod converts;
 mod mode;
-mod sorted_vec;
 
 /// The main beatmap struct containing all data relevant
 /// for difficulty and performance calculation

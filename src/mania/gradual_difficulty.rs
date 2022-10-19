@@ -1,7 +1,8 @@
-use crate::{beatmap::BeatmapHitWindows, parse::HitObjectKind, Beatmap, Mods};
+use crate::{beatmap::BeatmapHitWindows, parse::HitObjectKind, util::FloatExt, Beatmap, Mods};
 
 use super::{
     difficulty_object::ManiaDifficultyObject,
+    mania_object::ObjectParameters,
     skills::{Skill, Strain},
     ManiaDifficultyAttributes, ManiaObject, STAR_SCALING_FACTOR,
 };
@@ -44,12 +45,13 @@ pub struct ManiaGradualDifficultyAttributes<'map> {
     strain: Strain,
     diff_objects: Vec<ManiaDifficultyObject>,
     curr_combo: usize,
+    clock_rate: f64,
 }
 
 impl<'map> ManiaGradualDifficultyAttributes<'map> {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
-        let total_columns = map.cs.round().max(1.0);
+        let total_columns = map.cs.round_even().max(1.0);
 
         let clock_rate = mods.clock_rate();
         let strain = Strain::new(total_columns as usize);
@@ -62,16 +64,31 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
             .clock_rate(clock_rate)
             .hit_windows();
 
-        let diff_objects_iter = map
-            .hit_objects
-            .iter()
-            .skip(1)
-            .map(ManiaObject::new)
-            .enumerate()
-            .zip(map.hit_objects.iter().map(ManiaObject::new))
-            .map(|((i, base), prev)| {
-                ManiaDifficultyObject::new(base, prev, clock_rate, total_columns, i)
-            });
+        let mut params = ObjectParameters::new(map);
+        let mut hit_objects = map.hit_objects.iter();
+
+        let first = match hit_objects.next() {
+            Some(h) => ManiaObject::new(h, total_columns, &mut params),
+            None => {
+                return Self {
+                    idx: 0,
+                    map,
+                    hit_window,
+                    strain,
+                    diff_objects: Vec::new(),
+                    curr_combo: 0,
+                    clock_rate,
+                }
+            }
+        };
+
+        let diff_objects_iter = hit_objects.enumerate().scan(first, |last, (i, h)| {
+            let base = ManiaObject::new(h, total_columns, &mut params);
+            let diff_object = ManiaDifficultyObject::new(&base, &*last, clock_rate, i);
+            *last = base;
+
+            Some(diff_object)
+        });
 
         let curr_combo = if let Some(h) = map.hit_objects.first() {
             match &h.kind {
@@ -94,6 +111,7 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
             strain,
             diff_objects,
             curr_combo,
+            clock_rate,
         }
     }
 }
@@ -107,10 +125,14 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
 
         if let Some(h) = self.map.hit_objects.get(self.idx) {
             match &h.kind {
-                HitObjectKind::Hold { end_time } => {
-                    self.curr_combo += 1 + ((*end_time - h.start_time) / 100.0) as usize
+                HitObjectKind::Circle => self.curr_combo += 1,
+                _ => {
+                    let start_time = curr.start_time * self.clock_rate;
+                    let end_time = curr.end_time * self.clock_rate;
+                    let duration = end_time - start_time;
+
+                    self.curr_combo += 1 + (duration / 100.0) as usize;
                 }
-                _ => self.curr_combo += 1,
             }
         }
 

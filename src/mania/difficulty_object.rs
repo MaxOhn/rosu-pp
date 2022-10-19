@@ -10,24 +10,13 @@ pub(crate) struct ManiaDifficultyObject {
 }
 
 impl ManiaDifficultyObject {
-    pub(crate) fn new(
-        base: ManiaObject<'_>,
-        last: ManiaObject<'_>,
-        clock_rate: f64,
-        total_columns: f32,
-        idx: usize,
-    ) -> Self {
-        let delta_time = (base.start_time() - last.start_time()) / clock_rate;
-        let start_time = base.start_time() / clock_rate;
-        let end_time = base.end_time() / clock_rate;
-        let base_column = base.column(total_columns);
-
+    pub(crate) fn new(base: &ManiaObject, last: &ManiaObject, clock_rate: f64, idx: usize) -> Self {
         Self {
             idx,
-            base_column,
-            delta_time,
-            start_time,
-            end_time,
+            base_column: base.column,
+            delta_time: (base.start_time - last.start_time) / clock_rate,
+            start_time: base.start_time / clock_rate,
+            end_time: base.end_time / clock_rate,
         }
     }
 }

@@ -6,6 +6,7 @@ use crate::{
     curve::Curve,
     mania::ManiaObject,
     parse::{HitObject, HitSound},
+    util::FloatExt,
     Beatmap,
 };
 
@@ -58,7 +59,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let beat_len = timing_point.beat_len * difficulty_point.bpm_mult;
 
         let span_count = (repeats + 1) as i32;
-        let start_time = hit_object.start_time.round() as i32;
+        let start_time = hit_object.start_time.round_even() as i32;
 
         // * This matches stable's calculation.
         let end_time = (start_time as f64
@@ -97,12 +98,12 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let mut end_time_pattern = Pattern::default();
 
         for obj in orig_pattern.hit_objects {
-            let column = ManiaObject::new(&obj).column(self.total_columns as f32) as u8;
+            let col = ManiaObject::column(obj.pos.x, self.total_columns as f32) as u8;
 
-            if self.end_time != obj.end_time().round() as i32 {
-                intermediate_pattern.add_object(obj, column);
+            if self.end_time != obj.end_time().round_even() as i32 {
+                intermediate_pattern.add_object(obj, col);
             } else {
-                end_time_pattern.add_object(obj, column);
+                end_time_pattern.add_object(obj, col);
             }
         }
 
