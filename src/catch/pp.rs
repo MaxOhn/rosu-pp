@@ -16,8 +16,8 @@ use crate::{Beatmap, DifficultyAttributes, Mods, OsuPP, PerformanceAttributes};
 /// let pp_result = CatchPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
-///     .misses(1)
 ///     .accuracy(98.5)
+///     .misses(1)
 ///     .calculate();
 ///
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
@@ -181,7 +181,8 @@ impl<'map> CatchPP<'map> {
         self
     }
 
-    /// Generate the hit results with respect to the given accuracy between `0` and `100`.
+    // TODO: adjust this on the next rework
+    /// Generate the hit results with respect to the given accuracy between `0.0` and `100.0`.
     ///
     /// Be sure to set `misses` beforehand! Also, if available, set `attributes` beforehand.
     pub fn accuracy(mut self, mut acc: f64) -> Self {
@@ -438,6 +439,7 @@ impl CatchPPInner {
 }
 
 impl<'map> From<OsuPP<'map>> for CatchPP<'map> {
+    #[inline]
     fn from(osu: OsuPP<'map>) -> Self {
         let OsuPP {
             map,

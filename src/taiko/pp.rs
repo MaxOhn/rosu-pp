@@ -20,8 +20,8 @@ use crate::{
 /// let pp_result = TaikoPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
-///     .n_misses(1)
 ///     .accuracy(98.5)
+///     .n_misses(1)
 ///     .calculate();
 ///
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
@@ -134,7 +134,7 @@ impl<'map> TaikoPP<'map> {
         self
     }
 
-    /// Specify the accuracy of a play between `0` and `100`.
+    /// Specify the accuracy of a play between `0.0` and `100.0`.
     /// This will be used to generate matching hitresults.
     #[inline]
     pub fn accuracy(mut self, acc: f64) -> Self {

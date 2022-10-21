@@ -135,7 +135,7 @@ impl<'map> ManiaStars<'map> {
         let ManiaResult { strain, .. } = calculate_result(self);
 
         ManiaStrains {
-            section_len: SECTION_LEN * clock_rate, // TODO: clock_rate correct here?
+            section_len: SECTION_LEN * clock_rate,
             strains: strain.strain_peaks,
         }
     }
@@ -222,6 +222,14 @@ pub struct ManiaDifficultyAttributes {
     pub hit_window: f64,
     /// The maximum achievable combo.
     pub max_combo: usize,
+}
+
+impl ManiaDifficultyAttributes {
+    /// Return the maximum combo.
+    #[inline]
+    pub fn max_combo(&self) -> usize {
+        self.max_combo
+    }
 }
 
 /// The result of a performance calculation on an osu!mania map.

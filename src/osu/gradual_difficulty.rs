@@ -65,6 +65,7 @@ impl Debug for OsuGradualDifficultyAttributes {
             .field("attrs", &self.attrs)
             .field("diff_objects", &self.diff_objects)
             .field("skills", &"<cannot be displayed>")
+            .field("hit_window", &self.hit_window)
             .finish()
     }
 }
@@ -107,13 +108,11 @@ impl OsuGradualDifficultyAttributes {
             curve_bufs: CurveBuffers::default(),
         };
 
-        let hit_objects_iter = map
+        let mut hit_objects: Vec<_> = map
             .hit_objects
             .iter()
-            .filter_map(|h| OsuObject::new(h, &mut params));
-
-        let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
-        hit_objects.extend(hit_objects_iter);
+            .map(|h| OsuObject::new(h, &mut params))
+            .collect();
 
         attrs.n_circles = 0;
         attrs.n_sliders = 0;

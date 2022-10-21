@@ -59,6 +59,7 @@ impl Peaks {
 }
 
 impl Skill for Peaks {
+    #[inline]
     fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
         <Colour as Skill>::process(&mut self.colour, curr, hit_objects);
         <Rhythm as Skill>::process(&mut self.rhythm, curr, hit_objects);

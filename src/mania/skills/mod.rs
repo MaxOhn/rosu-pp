@@ -25,9 +25,8 @@ pub(crate) trait StrainSkill: Sized + Skill {
     fn strain_value_at(&mut self, curr: &ManiaDifficultyObject) -> f64;
 
     fn process(&mut self, curr: &ManiaDifficultyObject, diff_objects: &[ManiaDifficultyObject]) {
-        // The first object doesn't generate a strain, so we begin with an incremented section end
+        // * The first object doesn't generate a strain, so we begin with an incremented section end
         if curr.idx == 0 {
-            // currentSectionEnd = Math.Ceiling(current.StartTime / SectionLength) * SectionLength;
             *self.curr_section_end_mut() = (curr.start_time / SECTION_LEN).ceil() * SECTION_LEN;
         }
 
@@ -72,14 +71,14 @@ pub(crate) trait StrainSkill: Sized + Skill {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
-        // Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
-        // These sections will not contribute to the difficulty.
+        // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+        // * These sections will not contribute to the difficulty.
         let mut peaks = self.get_curr_strain_peaks();
         peaks.retain(|&peak| peak > 0.0);
         peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
-        // Difficulty is the weighted sum of the highest strains from every section.
-        // We're sorting from highest to lowest strain.
+        // * Difficulty is the weighted sum of the highest strains from every section.
+        // * We're sorting from highest to lowest strain.
         for strain in peaks {
             difficulty += strain * weight;
             weight *= Self::DECAY_WEIGHT;

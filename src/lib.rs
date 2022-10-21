@@ -217,7 +217,7 @@ pub use mods::Mods;
 pub use parse::{ParseError, ParseResult};
 pub use util::SortedVec;
 
-/// Provides some additional methods on [`Beatmap`](crate::Beatmap).
+/// Provides some additional methods on [`Beatmap`].
 pub trait BeatmapExt {
     /// Calculate the stars and other attributes of a beatmap which are required for pp calculation.
     fn stars(&self) -> AnyStars<'_>;
@@ -509,48 +509,3 @@ impl From<taiko::TaikoPerformanceAttributes> for PerformanceAttributes {
 
 #[cfg(all(feature = "async_tokio", feature = "async_std"))]
 compile_error!("Only one of the features `async_tokio` and `async_std` should be enabled");
-
-#[cfg(test)]
-mod tests {
-    use crate::{Beatmap, GameMode, OsuPP, PerformanceAttributes};
-
-    #[test]
-    fn custom() {
-        let path = "F:/osu!/beatmaps/1028484.osu";
-        let map = Beatmap::from_path(path).unwrap();
-
-        let attrs = match OsuPP::new(&map).mode(GameMode::Taiko).mods(0).calculate() {
-            PerformanceAttributes::Taiko(attrs) => attrs,
-            _ => unreachable!(),
-        };
-
-        println!("{attrs:#?}");
-
-        // println!(
-        //     "difficulty:\n\
-        //     stamina={}\n\
-        //     rhythm={}\n\
-        //     colour={}\n\
-        //     peak={}\n\
-        //     hit_window={}\n\
-        //     max_combo={}\n\
-        //     stars={}\n\
-        //     performance:\n\
-        //     difficulty={}\n\
-        //     acc={}\n\
-        //     effective={}\n\
-        //     pp={}\n",
-        //     attrs.difficulty.stamina,
-        //     attrs.difficulty.rhythm,
-        //     attrs.difficulty.colour,
-        //     attrs.difficulty.peak,
-        //     attrs.difficulty.hit_window,
-        //     attrs.difficulty.max_combo,
-        //     attrs.difficulty.stars,
-        //     attrs.pp_difficulty,
-        //     attrs.pp_acc,
-        //     attrs.effective_miss_count,
-        //     attrs.pp,
-        // );
-    }
-}

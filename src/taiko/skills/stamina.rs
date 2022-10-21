@@ -22,32 +22,39 @@ impl Stamina {
 }
 
 impl Skill for Stamina {
+    #[inline]
     fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
         <Self as StrainSkill>::process(self, curr, hit_objects)
     }
 
+    #[inline]
     fn difficulty_value(self) -> f64 {
         <Self as StrainSkill>::difficulty_value(self)
     }
 }
 
 impl StrainSkill for Stamina {
+    #[inline]
     fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
         &mut self.strain_peaks
     }
 
+    #[inline]
     fn curr_section_peak(&mut self) -> &mut f64 {
         &mut self.curr_section_peak
     }
 
+    #[inline]
     fn curr_section_end(&mut self) -> &mut f64 {
         &mut self.curr_section_end
     }
 
+    #[inline]
     fn strain_value_at(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
         <Self as StrainDecaySkill>::strain_value_at(self, curr, hit_objects)
     }
 
+    #[inline]
     fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
         <Self as StrainDecaySkill>::calculate_initial_strain(self, time, curr)
     }
@@ -57,14 +64,17 @@ impl StrainDecaySkill for Stamina {
     const SKILL_MULTIPLIER: f64 = 1.1;
     const STRAIN_DECAY_BASE: f64 = 0.4;
 
+    #[inline]
     fn curr_strain(&self) -> f64 {
         self.curr_strain
     }
 
+    #[inline]
     fn curr_strain_mut(&mut self) -> &mut f64 {
         &mut self.curr_strain
     }
 
+    #[inline]
     fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
         StaminaEvaluator::evaluate_diff_of(curr, hit_objects)
     }

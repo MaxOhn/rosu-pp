@@ -89,8 +89,6 @@ impl Beatmap {
     }
 
     /// Return the [`TimingPoint`] for the given timestamp.
-    ///
-    /// If `time` is before the first timing point, `None` is returned.
     #[inline]
     pub fn timing_point_at(&self, time: f64) -> TimingPoint {
         let idx_result = self

@@ -92,7 +92,7 @@ pub(crate) struct ObjectParameters<'a> {
 }
 
 impl OsuObject {
-    pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters<'_>) -> Option<Self> {
+    pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters<'_>) -> Self {
         let ObjectParameters {
             map,
             attrs,
@@ -103,7 +103,7 @@ impl OsuObject {
         attrs.max_combo += 1; // hitcircle, slider head, or spinner
         let pos = h.pos;
 
-        let obj = match &h.kind {
+        match &h.kind {
             HitObjectKind::Circle => {
                 attrs.n_circles += 1;
 
@@ -317,7 +317,7 @@ impl OsuObject {
                     kind: OsuObjectKind::Slider(slider),
                 }
             }
-            HitObjectKind::Spinner { end_time } => {
+            HitObjectKind::Spinner { end_time } | HitObjectKind::Hold { end_time } => {
                 attrs.n_spinners += 1;
 
                 Self {
@@ -330,10 +330,7 @@ impl OsuObject {
                     },
                 }
             }
-            HitObjectKind::Hold { .. } => return None,
-        };
-
-        Some(obj)
+        }
     }
 
     pub(crate) fn end_time(&self) -> f64 {

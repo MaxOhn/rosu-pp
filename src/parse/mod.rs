@@ -689,7 +689,6 @@ macro_rules! parse_hitobjects_body {
                 sorter.toggle_marks();
                 sorter.sort(&mut $self.sounds);
             }
-            // No need to sort hitsounds for the rest
             GameMode::Mania => {
                 // First a _stable_ sort by time
                 $self
@@ -975,6 +974,7 @@ impl Beatmap {
     ) -> ParseResult<bool> {
         parse_timingpoints_body!(self, reader, section)
     }
+
     /// Pass the path to a `.osu` file.
     ///
     /// Useful when you don't want to create the [`File`](std::fs::File) manually.
@@ -982,6 +982,11 @@ impl Beatmap {
     /// passing `&file` to [`parse`](Beatmap::parse) should be preferred.
     pub fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
         Self::parse(File::open(path)?)
+    }
+
+    /// Parse the content of a `.osu` file in form of a slice of bytes into a beatmap.
+    pub fn from_bytes(bytes: &[u8]) -> ParseResult<Self> {
+        Self::parse(bytes)
     }
 }
 
@@ -1043,6 +1048,11 @@ impl Beatmap {
     pub async fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {
         Self::parse(File::open(path).await?).await
     }
+
+    /// Parse the content of a `.osu` file in form of a slice of bytes into a beatmap.
+    pub async fn from_bytes(bytes: &[u8]) -> ParseResult<Self> {
+        Self::parse(bytes).await
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -1065,93 +1075,5 @@ impl Section {
             b"Events" => Self::Events,
             _ => Self::None,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[cfg(not(any(feature = "async_std", feature = "async_tokio")))]
-    #[test]
-    fn parsing_sync() {
-        for map_id in map_ids() {
-            println!("map_id: {}", map_id);
-
-            let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)) {
-                Ok(map) => map,
-                Err(why) => panic!("Error while parsing map: {}", why),
-            };
-
-            print_info(map);
-            println!("---");
-        }
-    }
-
-    #[cfg(feature = "async_tokio")]
-    #[test]
-    fn parsing_async_tokio() {
-        use tokio::runtime::Builder;
-
-        Builder::new_current_thread()
-            .build()
-            .expect("could not start runtime")
-            .block_on(async {
-                for map_id in map_ids() {
-                    println!("map_id: {}", map_id);
-
-                    let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
-                        Ok(map) => map,
-                        Err(why) => panic!("Error while parsing map: {}", why),
-                    };
-
-                    print_info(map);
-                    println!("---");
-                }
-            });
-    }
-
-    #[cfg(feature = "async_std")]
-    #[test]
-    fn parsing_async_std() {
-        async_std::task::block_on(async {
-            for map_id in map_ids() {
-                println!("map_id: {}", map_id);
-
-                let map = match Beatmap::from_path(format!("./maps/{}.osu", map_id)).await {
-                    Ok(map) => map,
-                    Err(why) => panic!("Error while parsing map: {}", why),
-                };
-
-                print_info(map);
-                println!("---");
-            }
-        });
-    }
-
-    fn map_ids() -> Vec<i32> {
-        vec![
-            2785319, // osu
-            1974394, // mania
-            2118524, // catch
-            1028484, // taiko
-        ]
-    }
-
-    fn print_info(map: Beatmap) {
-        println!("Mode: {}", map.mode as u8);
-        println!("n_circles: {}", map.n_circles);
-        println!("n_sliders: {}", map.n_sliders);
-        println!("n_spinners: {}", map.n_spinners);
-        println!("ar: {}", map.ar);
-        println!("od: {}", map.od);
-        println!("cs: {}", map.cs);
-        println!("hp: {}", map.hp);
-        println!("slider_mult: {}", map.slider_mult);
-        println!("tick_rate: {}", map.tick_rate);
-        println!("hit_objects: {}", map.hit_objects.len());
-        println!("stack_leniency: {}", map.stack_leniency);
-        println!("timing_points: {}", map.timing_points.len());
-        println!("difficulty_points: {}", map.difficulty_points.len());
     }
 }

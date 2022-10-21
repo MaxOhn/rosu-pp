@@ -43,10 +43,12 @@ impl Strain {
 }
 
 impl Skill for Strain {
+    #[inline]
     fn process(&mut self, curr: &ManiaDifficultyObject, diff_objects: &[ManiaDifficultyObject]) {
         <Self as StrainSkill>::process(self, curr, diff_objects)
     }
 
+    #[inline]
     fn difficulty_value(self) -> f64 {
         <Self as StrainSkill>::difficulty_value(self)
     }
@@ -55,30 +57,37 @@ impl Skill for Strain {
 impl StrainSkill for Strain {
     const DECAY_WEIGHT: f64 = 0.9;
 
+    #[inline]
     fn curr_section_end(&self) -> f64 {
         self.curr_section_end
     }
 
+    #[inline]
     fn curr_section_end_mut(&mut self) -> &mut f64 {
         &mut self.curr_section_end
     }
 
+    #[inline]
     fn curr_section_peak(&self) -> f64 {
         self.curr_section_peak
     }
 
+    #[inline]
     fn curr_section_peak_mut(&mut self) -> &mut f64 {
         &mut self.curr_section_peak
     }
 
+    #[inline]
     fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
         &mut self.strain_peaks
     }
 
+    #[inline]
     fn strain_value_at(&mut self, curr: &ManiaDifficultyObject) -> f64 {
         <Self as StrainDecaySkill>::strain_value_at(self, curr)
     }
 
+    #[inline]
     fn calculate_initial_strain(
         &self,
         time: f64,
@@ -93,10 +102,12 @@ impl StrainDecaySkill for Strain {
     const SKILL_MULTIPLIER: f64 = 1.0;
     const STRAIN_DECAY_BASE: f64 = 1.0;
 
+    #[inline]
     fn curr_strain(&self) -> f64 {
         self.curr_strain
     }
 
+    #[inline]
     fn curr_strain_mut(&mut self) -> &mut f64 {
         &mut self.curr_strain
     }
@@ -108,19 +119,19 @@ impl StrainDecaySkill for Strain {
         let col = mania_curr.base_column;
         let mut is_overlapping = false;
 
-        // Lowest value we can assume with the current information
+        // * Lowest value we can assume with the current information
         let mut closest_end_time = (end_time - start_time).abs();
-        // Factor to all additional strains in case something else is held
+        // * Factor to all additional strains in case something else is held
         let mut hold_factor = 1.0;
-        // Addition to the current note in case it's a hold and has to be released awkwardly
+        // * Addition to the current note in case it's a hold and has to be released awkwardly
         let mut hold_addition = 0.0;
 
         for i in 0..self.end_times.len() {
-            // The current note is overlapped if a previous note or end is overlapping the current note body
+            // * The current note is overlapped if a previous note or end is overlapping the current note body
             is_overlapping |=
                 self.end_times[i] > start_time + 1.0 && end_time > self.end_times[i] + 1.0;
 
-            // We give a slight bonus to everything if something is held meanwhile
+            // * We give a slight bonus to everything if something is held meanwhile
             if self.end_times[i] > end_time + 1.0 {
                 hold_factor = 1.25;
             }
@@ -128,22 +139,22 @@ impl StrainDecaySkill for Strain {
             closest_end_time = (end_time - self.end_times[i]).abs().min(closest_end_time);
         }
 
-        // The hold addition is given if there was an overlap, however it is only valid if there are no other note with a similar ending.
-        // Releasing multiple notes is just as easy as releasing 1. Nerfs the hold addition by half if the closest release is release_threshold away.
-        // holdAddition
-        //     ^
-        // 1.0 + - - - - - -+-----------
-        //     |           /
-        // 0.5 + - - - - -/   Sigmoid Curve
-        //     |         /|
-        // 0.0 +--------+-+---------------> Release Difference / ms
-        //         release_threshold
+        // * The hold addition is given if there was an overlap, however it is only valid if there are no other note with a similar ending.
+        // * Releasing multiple notes is just as easy as releasing 1. Nerfs the hold addition by half if the closest release is release_threshold away.
+        // * holdAddition
+        // *     ^
+        // * 1.0 + - - - - - -+-----------
+        // *     |           /
+        // * 0.5 + - - - - -/   Sigmoid Curve
+        // *     |         /|
+        // * 0.0 +--------+-+---------------> Release Difference / ms
+        // *         release_threshold
         if is_overlapping {
             hold_addition =
                 (1.0 + (0.5 * (Self::RELEASE_THRESHOLD - closest_end_time)).exp()).recip();
         }
 
-        // Decay and increase individualStrains in own column
+        // * Decay and increase individualStrains in own column
         self.individual_strains[col] = Self::apply_decay(
             self.individual_strains[col],
             start_time - self.start_times[col],
@@ -151,14 +162,14 @@ impl StrainDecaySkill for Strain {
         );
         self.individual_strains[col] += 2.0 * hold_factor;
 
-        // For notes at the same time (in a chord), the individualStrain should be the hardest individualStrain out of those columns
+        // * For notes at the same time (in a chord), the individualStrain should be the hardest individualStrain out of those columns
         self.individual_strain = if mania_curr.delta_time <= 1.0 {
             self.individual_strain.max(self.individual_strains[col])
         } else {
             self.individual_strains[col]
         };
 
-        // Decay and increase overallStrain
+        // * Decay and increase overallStrain
         self.overall_strain = Self::apply_decay(
             self.overall_strain,
             curr.delta_time,
@@ -166,11 +177,11 @@ impl StrainDecaySkill for Strain {
         );
         self.overall_strain += (1.0 + hold_addition) * hold_factor;
 
-        // Update startTimes and endTimes arrays
+        // * Update startTimes and endTimes arrays
         self.start_times[col] = start_time;
         self.end_times[col] = end_time;
 
-        // By subtracting CurrentStrain, this skill effectively only considers the maximum strain of any one hitobject within each strain section.
+        // * By subtracting CurrentStrain, this skill effectively only considers the maximum strain of any one hitobject within each strain section.
         self.individual_strain + self.overall_strain - self.curr_strain
     }
 

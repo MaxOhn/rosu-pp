@@ -12,18 +12,22 @@ pub trait HitSound {
 }
 
 impl HitSound for u8 {
+    #[inline]
     fn normal(self) -> bool {
         self == 0
     }
 
+    #[inline]
     fn whistle(self) -> bool {
         self & Self::HITSOUND_WHISTLE > 0
     }
 
+    #[inline]
     fn finish(self) -> bool {
         self & Self::HITSOUND_FINISH > 0
     }
 
+    #[inline]
     fn clap(self) -> bool {
         self & Self::HITSOUND_CLAP > 0
     }

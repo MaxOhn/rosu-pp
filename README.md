@@ -170,10 +170,12 @@ A large portion of this repository is a port of [osu!lazer](https://github.com/p
 - osu!:
   - osu!lazer: Commit `85adfc2df7d931164181e145377a6ced8db2bfb3` (Wed Sep 28 18:26:36 2022 +0300)
   - osu!tools: Commit `146d5916937161ef65906aa97f85d367035f3712` (Sat Oct 8 14:28:49 2022 +0900)
+  - [Article](https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp)
 
 - taiko:
   - osu!lazer: Commit `234c6ac7998fbc6742503e1a589536255554e56a` (Wed Oct 5 20:21:15 2022 +0900)
   - osu!tools: Commit `146d5916937161ef65906aa97f85d367035f3712` (Sat Oct 8 14:28:49 2022 +0900)
+  - [Article](https://osu.ppy.sh/home/news/2022-09-28-changes-to-osu-taiko-sr-and-pp)
 
 - catch: (will be updated on the next rework)
   - osu!lazer: -
@@ -182,6 +184,7 @@ A large portion of this repository is a port of [osu!lazer](https://github.com/p
 - mania:
   - osu!lazer: Commit `7342fb7f51b34533a42bffda89c3d6c569cc69ce` (Tue Oct 11 14:34:50 2022 +0900)
   - osu!tools: Commit `146d5916937161ef65906aa97f85d367035f3712` (Sat Oct 8 14:28:49 2022 +0900)
+  - [Article](https://osu.ppy.sh/home/news/2022-10-09-changes-to-osu-mania-sr-and-pp)
 
 ### Accuracy
 

@@ -70,11 +70,13 @@ pub(crate) trait StrainSkill: Skill + Sized {
             .max(*self.curr_section_peak());
     }
 
+    #[inline]
     fn save_curr_peak(&mut self) {
         let peak = *self.curr_section_peak();
         self.strain_peaks_mut().push(peak);
     }
 
+    #[inline]
     fn start_new_section_from(
         &mut self,
         time: f64,
@@ -89,6 +91,7 @@ pub(crate) trait StrainSkill: Skill + Sized {
 
     fn difficulty_value(&mut self) -> f64;
 
+    #[inline]
     fn get_curr_strain_peaks(&mut self) -> Vec<f64> {
         let curr_peak = *self.curr_section_peak();
         let mut strain_peaks = mem::take(self.strain_peaks_mut());

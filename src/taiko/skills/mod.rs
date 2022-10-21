@@ -51,11 +51,13 @@ pub(crate) trait StrainSkill: Skill {
             .max(*self.curr_section_peak());
     }
 
+    #[inline]
     fn save_curr_peak(&mut self) {
         let peak = *self.curr_section_peak();
         self.strain_peaks_mut().push(peak);
     }
 
+    #[inline]
     fn start_new_section_from(&mut self, time: f64, curr: &TaikoDifficultyObject) {
         // * The maximum strain of the new section is not zero by default
         // * This means we need to capture the strain level at the beginning of the new section,
@@ -84,6 +86,7 @@ pub(crate) trait StrainSkill: Skill {
         difficulty
     }
 
+    #[inline]
     fn get_curr_strain_peaks(mut self) -> Vec<f64> {
         let curr_peak = *self.curr_section_peak();
         let mut strain_peaks = mem::take(self.strain_peaks_mut());
@@ -102,10 +105,12 @@ pub(crate) trait StrainDecaySkill: StrainSkill {
 
     fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64;
 
+    #[inline]
     fn calculate_initial_strain(&self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
         self.curr_strain() * self.strain_decay(time - curr.prev_time)
     }
 
+    #[inline]
     fn strain_value_at(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) -> f64 {
         *self.curr_strain_mut() *= self.strain_decay(curr.delta);
         *self.curr_strain_mut() += self.strain_value_of(curr, hit_objects) * Self::SKILL_MULTIPLIER;
@@ -113,6 +118,7 @@ pub(crate) trait StrainDecaySkill: StrainSkill {
         self.curr_strain()
     }
 
+    #[inline]
     fn strain_decay(&self, ms: f64) -> f64 {
         Self::STRAIN_DECAY_BASE.powf(ms / 1000.0)
     }

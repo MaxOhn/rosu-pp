@@ -21,15 +21,15 @@ use crate::{
 /// let pp_result = AnyPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
+///     .accuracy(98.5)
 ///     .n_misses(1)
-///     .accuracy(98.5) // should be set last
 ///     .calculate();
 ///
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
 ///
 /// let next_result = AnyPP::new(&map)
-///     .attributes(pp_result)  // reusing previous results for performance
-///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .attributes(pp_result) // reusing previous results for performance
+///     .mods(8 + 64) // has to be the same to reuse attributes
 ///     .accuracy(99.5)
 ///     .calculate();
 ///
@@ -151,10 +151,7 @@ impl<'map> AnyPP<'map> {
         }
     }
 
-    /// Set the accuracy between 0.0 and 100.0.
-    ///
-    /// For some modes this method depends on previously set values.
-    /// Be sure to call this last before calling `calculate`.
+    /// Set the accuracy between `0.0` and `100.0`.
     #[inline]
     pub fn accuracy(self, acc: f64) -> Self {
         match self {

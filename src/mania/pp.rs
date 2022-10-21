@@ -5,7 +5,6 @@ use crate::{
     Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP, PerformanceAttributes,
 };
 
-// TODO: update
 /// Performance calculator on osu!mania maps.
 ///
 /// # Example
@@ -124,7 +123,7 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
-    /// Specify the accuracy of a play between `0` and `100`.
+    /// Specify the accuracy of a play between `0.0` and `100.0`.
     /// This will be used to generate matching hitresults.
     #[inline]
     pub fn accuracy(mut self, acc: f64) -> Self {
@@ -252,7 +251,6 @@ impl<'map> ManiaPP<'map> {
         let n_misses = self.n_misses.unwrap_or(0);
 
         if let Some(acc) = self.acc {
-            // TODO: test
             let target_total = (acc * (n_objects * 6) as f64).round() as usize;
 
             match (self.n320, self.n300, self.n200, self.n100, self.n50) {
@@ -530,11 +528,11 @@ impl ManiaPpInner {
     }
 
     fn compute_difficulty_value(&self) -> f64 {
-        // Star rating to pp curve
+        // * Star rating to pp curve
         (self.attrs.stars - 0.15).max(0.05).powf(2.2)
-             // From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
+             // * From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
              * (5.0 * self.calculate_custom_accuracy() - 4.0).max(0.0)
-             // Length bonus, capped at 1500 notes
+             // * Length bonus, capped at 1500 notes
              * (1.0 + 0.1 * (self.total_hits() / 1500.0).min(1.0))
     }
 

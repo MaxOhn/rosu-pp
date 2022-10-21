@@ -19,7 +19,7 @@ impl HitObject {
     #[inline]
     pub fn end_time(&self) -> f64 {
         match &self.kind {
-            HitObjectKind::Circle { .. } => self.start_time,
+            HitObjectKind::Circle => self.start_time,
             // incorrect, only called in mania which has no sliders though
             HitObjectKind::Slider { .. } => self.start_time,
             HitObjectKind::Spinner { end_time } => *end_time,
@@ -30,7 +30,7 @@ impl HitObject {
     /// If the object is a circle.
     #[inline]
     pub fn is_circle(&self) -> bool {
-        matches!(self.kind, HitObjectKind::Circle { .. })
+        matches!(self.kind, HitObjectKind::Circle)
     }
 
     /// If the object is a slider.

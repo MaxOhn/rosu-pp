@@ -42,6 +42,7 @@ impl Flashlight {
 }
 
 impl Skill for Flashlight {
+    #[inline]
     fn process(
         &mut self,
         curr: &OsuDifficultyObject<'_>,
@@ -51,18 +52,22 @@ impl Skill for Flashlight {
         <Self as StrainSkill>::process(self, curr, diff_objects, hit_window)
     }
 
+    #[inline]
     fn difficulty_value(&mut self) -> f64 {
         <Self as StrainSkill>::difficulty_value(self)
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 
+    #[inline]
     fn take_strain_peaks(&mut self) -> Vec<f64> {
         mem::take(&mut self.strain_peaks)
     }
@@ -71,18 +76,22 @@ impl Skill for Flashlight {
 impl StrainSkill for Flashlight {
     const DECAY_WEIGHT: f64 = 0.9;
 
+    #[inline]
     fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
         &mut self.strain_peaks
     }
 
+    #[inline]
     fn curr_section_peak(&mut self) -> &mut f64 {
         &mut self.curr_section_peak
     }
 
+    #[inline]
     fn curr_section_end(&mut self) -> &mut f64 {
         &mut self.curr_section_end
     }
 
+    #[inline]
     fn strain_value_at(
         &mut self,
         curr: &OsuDifficultyObject<'_>,
@@ -102,6 +111,7 @@ impl StrainSkill for Flashlight {
         self.curr_strain
     }
 
+    #[inline]
     fn calculate_initial_strain(
         &self,
         time: f64,
@@ -111,6 +121,7 @@ impl StrainSkill for Flashlight {
         self.curr_strain * Self::strain_decay(time - previous_start_time(diff_objects, curr.idx, 0))
     }
 
+    #[inline]
     fn difficulty_value(&mut self) -> f64 {
         self.get_curr_strain_peaks().into_iter().sum::<f64>() * Self::DIFFICULTY_MULTIPLER
     }
