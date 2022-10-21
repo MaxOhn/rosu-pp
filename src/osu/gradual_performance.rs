@@ -93,7 +93,7 @@ impl OsuScoreState {
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.misses += 1;
+/// state.n_misses += 1;
 /// # /*
 /// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -126,7 +126,7 @@ impl OsuScoreState {
 /// state.n300 = ...
 /// state.n100 = ...
 /// state.n50 = ...
-/// state.misses = ...
+/// state.n_misses = ...
 /// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
@@ -174,118 +174,17 @@ impl<'map> OsuGradualPerformanceAttributes<'map> {
         state: OsuScoreState,
         n: usize,
     ) -> Option<OsuPerformanceAttributes> {
-        let n = n.min(self.difficulty.len()).saturating_sub(1);
-        let difficulty = self.difficulty.nth(n)?;
+        let sub = (self.difficulty.idx == 0) as usize;
+        let difficulty = self.difficulty.nth(n.saturating_sub(sub))?;
 
         let performance = self
             .performance
             .clone()
             .attributes(difficulty)
             .state(state)
-            .passed_objects(self.difficulty.idx)
+            .passed_objects(self.difficulty.idx + 1)
             .calculate();
 
         Some(performance)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[allow(unused_imports)]
-    use super::*;
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn correct_empty() {
-        let map = Beatmap::from_path("./maps/2785319.osu").expect("failed to parse map");
-        let mods = 64;
-
-        let mut gradual = OsuGradualPerformanceAttributes::new(&map, mods);
-        let state = OsuScoreState::default();
-
-        assert!(gradual
-            .process_next_n_objects(state.clone(), usize::MAX)
-            .is_some());
-        assert!(gradual.process_next_object(state).is_none());
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn next_and_next_n() {
-        let map = Beatmap::from_path("./maps/2785319.osu").expect("failed to parse map");
-        let mods = 64;
-        let state = OsuScoreState::default();
-
-        let mut gradual1 = OsuGradualPerformanceAttributes::new(&map, mods);
-        let mut gradual2 = OsuGradualPerformanceAttributes::new(&map, mods);
-
-        for _ in 0..20 {
-            let _ = gradual1.process_next_object(state.clone());
-            let _ = gradual2.process_next_object(state.clone());
-        }
-
-        let n = 80;
-
-        for _ in 1..n {
-            let _ = gradual1.process_next_object(state.clone());
-        }
-
-        let state = OsuScoreState {
-            max_combo: 122,
-            n300: 88,
-            n100: 8,
-            n50: 2,
-            n_misses: 2,
-        };
-
-        let next = gradual1.process_next_object(state.clone());
-        let next_n = gradual2.process_next_n_objects(state, n);
-
-        assert_eq!(next_n, next);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/2785319.osu").expect("failed to parse map");
-        let mods = 64;
-        let regular = OsuPP::new(&map).mods(mods).calculate();
-
-        let mut gradual = OsuGradualPerformanceAttributes::new(&map, mods);
-
-        let state = OsuScoreState {
-            max_combo: 909,
-            n300: 601,
-            n100: 0,
-            n50: 0,
-            n_misses: 0,
-        };
-
-        let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
-
-        assert_eq!(regular, gradual_end);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_eq_regular_passed() {
-        let map = Beatmap::from_path("./maps/2785319.osu").expect("failed to parse map");
-        let mods = 64;
-        let n = 100;
-        let regular = OsuPP::new(&map).mods(mods).passed_objects(n).calculate();
-
-        let mut gradual = OsuGradualPerformanceAttributes::new(&map, mods);
-
-        let state = OsuScoreState {
-            max_combo: 122,
-            n300: 100,
-            n100: 0,
-            n50: 0,
-            n_misses: 0,
-        };
-
-        let gradual = gradual.process_next_n_objects(state, n).unwrap();
-
-        assert_eq!(regular, gradual);
     }
 }

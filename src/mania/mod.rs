@@ -175,7 +175,7 @@ fn calculate_result(params: ManiaStars<'_>) -> ManiaResult {
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
     let mut strain = Strain::new(total_columns as usize);
     let mut params = ObjectParameters::new(map.as_ref());
-    let mut hit_objects = map.hit_objects.iter();
+    let mut hit_objects = map.hit_objects.iter().take(take);
 
     let first = match hit_objects.next() {
         Some(h) => ManiaObject::new(h, total_columns, &mut params),
@@ -246,6 +246,12 @@ impl ManiaPerformanceAttributes {
     #[inline]
     pub fn pp(&self) -> f64 {
         self.pp
+    }
+
+    /// Return the maximum combo of the map.
+    #[inline]
+    pub fn max_combo(&self) -> usize {
+        self.difficulty.max_combo
     }
 }
 

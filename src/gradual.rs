@@ -214,7 +214,6 @@ impl From<ScoreState> for ManiaScoreState {
 /// for _ in 0..10 {
 ///     state.n300 += 1;
 ///     state.max_combo += 1;
-///     state.score += 123;
 ///
 ///     # /*
 ///     let performance = gradual_perf.process_next_object(state.clone()).unwrap();
@@ -226,7 +225,7 @@ impl From<ScoreState> for ManiaScoreState {
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.misses += 1;
+/// state.n_misses += 1;
 /// # /*
 /// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -238,7 +237,6 @@ impl From<ScoreState> for ManiaScoreState {
 /// state.n300 += 2;
 /// state.n100 += 7;
 /// state.n50 += 1;
-/// state.score += 987;
 /// // Don't forget state.n_katu
 /// # /*
 /// let performance = gradual_perf.process_next_n_objects(state.clone(), 10).unwrap();
@@ -249,7 +247,6 @@ impl From<ScoreState> for ManiaScoreState {
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
-/// state.score += 123;
 /// # /*
 /// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);

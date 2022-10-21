@@ -21,15 +21,15 @@ use crate::{
 /// let pp_result = OsuPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
-///     .misses(1)
+///     .n_misses(1)
 ///     .accuracy(98.5) // should be set last
 ///     .calculate();
 ///
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
 ///
 /// let next_result = OsuPP::new(&map)
-///     .attributes(pp_result)  // reusing previous results for performance
-///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .attributes(pp_result) // reusing previous results for performance
+///     .mods(8 + 64)  // has to be the same to reuse attributes
 ///     .accuracy(99.5)
 ///     .calculate();
 ///
@@ -739,13 +739,17 @@ impl OsuAttributeProvider for PerformanceAttributes {
     }
 }
 
+#[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::Beatmap;
 
-    fn test_attrs() -> OsuDifficultyAttributes {
-        OsuDifficultyAttributes {
+    fn test_data() -> (Beatmap, OsuDifficultyAttributes) {
+        let path = "./maps/2785319.osu";
+        let map = Beatmap::from_path(path).unwrap();
+
+        let attrs = OsuDifficultyAttributes {
             aim: 2.8693628443424104,
             speed: 2.533869745015772,
             flashlight: 2.288770487900865,
@@ -759,38 +763,14 @@ mod test {
             n_spinners: 1,
             stars: 5.669858729379631,
             max_combo: 909,
-        }
-    }
+        };
 
-    #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
-    fn test_map() -> (Beatmap, OsuDifficultyAttributes) {
-        let path = "./maps/2785319.osu";
-        let map = Beatmap::from_path(path).unwrap();
-
-        (map, test_attrs())
-    }
-
-    #[cfg(any(feature = "async_tokio", feature = "async_str"))]
-    async fn test_map() -> (Beatmap, OsuDifficultyAttributes) {
-        let path = "./maps/2785319.osu";
-        let map = Beatmap::from_path(path).await.unwrap();
-
-        (map, test_attrs())
-    }
-
-    #[rustfmt::skip]
-    macro_rules! test_data {
-        () => {{
-            #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
-            { test_map() }
-            #[cfg(any(feature = "async_tokio", feature = "async_str"))]
-            { test_map().await }
-        }};
+        (map, attrs)
     }
 
     #[test]
-    fn osu_hitresults_n300_n100_n_misses_best() {
-        let (map, attrs) = test_data!();
+    fn hitresults_n300_n100_n_misses_best() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -814,8 +794,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_n300_n50_n_misses_best() {
-        let (map, attrs) = test_data!();
+    fn hitresults_n300_n50_n_misses_best() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -839,8 +819,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_n50_n_misses_worst() {
-        let (map, attrs) = test_data!();
+    fn hitresults_n50_n_misses_worst() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -863,8 +843,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_n300_n100_n50_n_misses_worst() {
-        let (map, attrs) = test_data!();
+    fn hitresults_n300_n100_n50_n_misses_worst() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -889,8 +869,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_acc_n_misses_best() {
-        let (map, attrs) = test_data!();
+    fn hitresults_acc_n_misses_best() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -919,8 +899,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_acc_n100_n_misses_best() {
-        let (map, attrs) = test_data!();
+    fn hitresults_acc_n100_n_misses_best() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -950,8 +930,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_acc_n50_n_misses_best() {
-        let (map, attrs) = test_data!();
+    fn hitresults_acc_n50_n_misses_best() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -981,8 +961,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_acc_best() {
-        let (map, attrs) = test_data!();
+    fn hitresults_acc_best() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)
@@ -1010,8 +990,8 @@ mod test {
     }
 
     #[test]
-    fn osu_hitresults_acc_worst() {
-        let (map, attrs) = test_data!();
+    fn hitresults_acc_worst() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(&map)

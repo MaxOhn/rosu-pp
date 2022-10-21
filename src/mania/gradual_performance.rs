@@ -2,7 +2,10 @@ use crate::{Beatmap, ManiaPP};
 
 use super::{ManiaGradualDifficultyAttributes, ManiaPerformanceAttributes};
 
-/// TODO: docs
+/// Aggregation for a score's current state
+/// i.e. what are the current hitresults.
+///
+/// This struct is used for [`ManiaGradualPerformanceAttributes`].
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ManiaScoreState {
     /// Amount of current 320s.
@@ -65,7 +68,7 @@ impl ManiaScoreState {
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, mania::ManiaGradualPerformanceAttributes};
+/// use rosu_pp::{Beatmap, mania::{ManiaGradualPerformanceAttributes, ManiaScoreState}};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -74,45 +77,51 @@ impl ManiaScoreState {
 ///
 /// let mods = 64; // DT
 /// let mut gradual_perf = ManiaGradualPerformanceAttributes::new(&map, mods);
-/// let mut score = 0;
+/// let mut state = ManiaScoreState::new(); // empty state, everything is on 0.
 ///
-/// // The first 10 objects each increase the score by 123.
+/// // The first 10 hitresults are 320s
 /// for _ in 0..10 {
-///     score += 123;
+///     state.n320 += 1;
 ///
 ///     # /*
 ///     let performance = gradual_perf.process_next_object(score).unwrap();
 ///     println!("PP: {}", performance.pp);
 ///     # */
-///     # let _ = gradual_perf.process_next_object(score);
+///     # let _ = gradual_perf.process_next_object(state.clone());
 /// }
 ///
-/// // Then comes a miss so no additional score is added.
+/// // Then comes a miss.
+/// state.n_misses += 1;
 /// # /*
 /// let performance = gradual_perf.process_next_object(score).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_object(score);
+/// # let _ = gradual_perf.process_next_object(state.clone());
 ///
-/// // The next 10 objects give a total of 987 score and will be processed in one go.
-/// score += 987;
+/// // The next 10 objects will be a mixture of 320s and 100s.
+/// // Notice how all 10 objects will be processed in one go.
+/// state.n320 += 3;
+/// state.n100 += 7;
 /// # /*
 /// let performance = gradual_perf.process_next_n_objects(score, 10).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(score, 10);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), 10);
 ///
 /// // Skip to the end
 /// # /*
-/// score = ...
-/// let final_performance = gradual_perf.process_next_n_objects(score, usize::MAX).unwrap();
+/// state.max_combo = ...
+/// state.n300 = ...
+/// state.n100 = ...
+/// state.n_misses = ...
+/// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(score, usize::MAX);
+/// # let _ = gradual_perf.process_next_n_objects(state.clone(), usize::MAX);
 ///
 /// // Once the final performance was calculated,
 /// // attempting to process further objects will return `None`.
-/// assert!(gradual_perf.process_next_object(score).is_none());
+/// assert!(gradual_perf.process_next_object(state).is_none());
 /// ```
 #[derive(Clone, Debug)]
 pub struct ManiaGradualPerformanceAttributes<'map> {
@@ -152,140 +161,17 @@ impl<'map> ManiaGradualPerformanceAttributes<'map> {
         state: ManiaScoreState,
         n: usize,
     ) -> Option<ManiaPerformanceAttributes> {
-        let n = n.min(self.difficulty.len()).saturating_sub(1);
-        let difficulty = self.difficulty.nth(n)?;
-
-        self.performance.n320 = Some(state.n320);
-        self.performance.n300 = Some(state.n300);
-        self.performance.n200 = Some(state.n200);
-        self.performance.n100 = Some(state.n100);
-        self.performance.n50 = Some(state.n50);
-        self.performance.n_misses = Some(state.n_misses);
+        let sub = (self.difficulty.idx == 0) as usize;
+        let difficulty = self.difficulty.nth(n.saturating_sub(sub))?;
 
         let performance = self
             .performance
             .clone()
             .attributes(difficulty)
+            .state(state)
             .passed_objects(self.difficulty.idx)
             .calculate();
 
         Some(performance)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[allow(unused_imports)]
-    use super::*;
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn correct_empty() {
-        let map = Beatmap::from_path("./maps/1974394.osu").expect("failed to parse map");
-        let mods = 64;
-
-        let mut gradual = ManiaGradualPerformanceAttributes::new(&map, mods);
-
-        let state = ManiaScoreState {
-            n320: 0,
-            n300: 0,
-            n200: 0,
-            n100: 0,
-            n50: 0,
-            n_misses: 0,
-        };
-
-        assert!(gradual
-            .process_next_n_objects(state.clone(), usize::MAX)
-            .is_some());
-        assert!(gradual.process_next_object(state).is_none());
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn next_and_next_n() {
-        let map = Beatmap::from_path("./maps/1974394.osu").expect("failed to parse map");
-        let mods = 64;
-
-        let mut state = ManiaScoreState {
-            n320: 0,
-            n300: 0,
-            n200: 0,
-            n100: 0,
-            n50: 0,
-            n_misses: 0,
-        };
-
-        let mut gradual1 = ManiaGradualPerformanceAttributes::new(&map, mods);
-        let mut gradual2 = ManiaGradualPerformanceAttributes::new(&map, mods);
-
-        for _ in 0..20 {
-            let _ = gradual1.process_next_object(state.clone());
-            let _ = gradual2.process_next_object(state.clone());
-            state.n320 += 1;
-        }
-
-        let n = 80;
-
-        for _ in 1..n {
-            let _ = gradual1.process_next_object(state.clone());
-            state.n320 += 1;
-        }
-
-        let next = gradual1.process_next_object(state.clone());
-        let next_n = gradual2.process_next_n_objects(state, n);
-
-        assert_eq!(next_n, next);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/1974394.osu").expect("failed to parse map");
-        let mods = 64;
-        let regular = ManiaPP::new(&map).mods(mods).calculate();
-
-        let mut gradual = ManiaGradualPerformanceAttributes::new(&map, mods);
-
-        let state = ManiaScoreState {
-            n320: 3238,
-            n300: 0,
-            n200: 0,
-            n100: 0,
-            n50: 0,
-            n_misses: 0,
-        };
-
-        let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
-
-        assert_eq!(regular, gradual_end);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_eq_regular_passed() {
-        let map = Beatmap::from_path("./maps/1974394.osu").expect("failed to parse map");
-        let mods = 64;
-        let n = 100;
-
-        let state = ManiaScoreState {
-            n320: 100,
-            n300: 0,
-            n200: 0,
-            n100: 0,
-            n50: 0,
-            n_misses: 0,
-        };
-
-        let regular = ManiaPP::new(&map)
-            .mods(mods)
-            .passed_objects(n)
-            .state(state.clone())
-            .calculate();
-
-        let mut gradual = ManiaGradualPerformanceAttributes::new(&map, mods);
-        let gradual = gradual.process_next_n_objects(state, n).unwrap();
-
-        assert_eq!(regular, gradual);
     }
 }

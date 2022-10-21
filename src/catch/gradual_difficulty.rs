@@ -209,29 +209,3 @@ impl Iterator for CatchObjectIter<'_> {
         None
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn empty_map() {
-        let map = Beatmap::default();
-        let mut attributes = CatchGradualDifficultyAttributes::new(&map, 0);
-        assert!(attributes.next().is_none());
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn iter_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
-        let mods = 64;
-        let regular = crate::CatchStars::new(&map).mods(mods).calculate();
-
-        let iter_end = CatchGradualDifficultyAttributes::new(&map, mods)
-            .last()
-            .expect("empty iter");
-
-        assert_eq!(regular, iter_end);
-    }
-}

@@ -20,15 +20,15 @@ use crate::{
 /// let pp_result = TaikoPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
-///     .misses(1)
+///     .n_misses(1)
 ///     .accuracy(98.5)
 ///     .calculate();
 ///
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
 ///
 /// let next_result = TaikoPP::new(&map)
-///     .attributes(pp_result)  // reusing previous results for performance
-///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .attributes(pp_result) // reusing previous results for performance
+///     .mods(8 + 64) // has to be the same to reuse attributes
 ///     .accuracy(99.5)
 ///     .calculate();
 ///
@@ -225,7 +225,6 @@ impl<'map> TaikoPP<'map> {
         let n_misses = self.n_misses.unwrap_or(0);
 
         if let Some(acc) = self.acc {
-            // TODO: test
             match (self.n300, self.n100) {
                 (Some(_), Some(_)) => {
                     let remaining = total_result_count.saturating_sub(n300 + n100 + n_misses);
@@ -249,14 +248,18 @@ impl<'map> TaikoPP<'map> {
             match priority {
                 HitResultPriority::BestCase => match (self.n300, self.n100) {
                     (Some(_), None) => n100 = remaining,
-                    _ => n300 = remaining,
+                    (Some(_), Some(_)) => n300 += remaining,
+                    (None, _) => n300 = remaining,
                 },
                 HitResultPriority::WorstCase => match (self.n300, self.n100) {
                     (None, Some(_)) => n300 = remaining,
-                    _ => n100 = remaining,
+                    (Some(_), Some(_)) => n100 += remaining,
+                    (_, None) => n100 = remaining,
                 },
             }
         }
+
+        let max_combo = self.combo.map_or(max_combo, |combo| combo.min(max_combo));
 
         TaikoScoreState {
             max_combo,
@@ -462,61 +465,100 @@ impl TaikoAttributeProvider for PerformanceAttributes {
     }
 }
 
+#[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::Beatmap;
 
-    fn test_attrs() -> TaikoDifficultyAttributes {
-        todo!()
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
-    fn test_map() -> (Beatmap, TaikoDifficultyAttributes) {
+    fn test_data() -> (Beatmap, TaikoDifficultyAttributes) {
         let path = "./maps/1028484.osu";
         let map = Beatmap::from_path(path).unwrap();
 
-        (map, test_attrs())
-    }
+        let attrs = TaikoDifficultyAttributes {
+            stamina: 1.4528845068865617,
+            rhythm: 0.20130047251681948,
+            colour: 1.0487315549761433,
+            peak: 1.8881824429738323,
+            hit_window: 35.0,
+            stars: 2.9778030386845606,
+            max_combo: 289,
+        };
 
-    #[cfg(any(feature = "async_tokio", feature = "async_str"))]
-    async fn test_map() -> (Beatmap, TaikoDifficultyAttributes) {
-        let path = "./maps/1028484.osu";
-        let map = Beatmap::from_path(path).await.unwrap();
-
-        (map, test_attrs())
-    }
-
-    #[rustfmt::skip]
-    macro_rules! test_data {
-        () => {{
-            #[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
-            { test_map() }
-            #[cfg(any(feature = "async_tokio", feature = "async_str"))]
-            { test_map().await }
-        }};
+        (map, attrs)
     }
 
     #[test]
-    fn taiko_hitresults_n300_n_misses_best() {
-        let (map, attrs) = test_data!();
+    fn hitresults_n300_n_misses_best() {
+        let (map, attrs) = test_data();
         let max_combo = attrs.max_combo();
 
         let state = TaikoPP::new(&map)
             .attributes(attrs)
-            .combo(500)
-            .n300(300)
+            .combo(100)
+            .n300(150)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
             .generate_hitresults(max_combo);
 
         let expected = TaikoScoreState {
-            max_combo: 500,
-            n300: 300,
-            n100: 20,
+            max_combo: 100,
+            n300: 150,
+            n100: 137,
             n_misses: 2,
         };
 
         assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn hitresults_n_misses_best() {
+        let (map, attrs) = test_data();
+        let max_combo = attrs.max_combo();
+
+        let state = TaikoPP::new(&map)
+            .attributes(attrs)
+            .combo(100)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults(max_combo);
+
+        let expected = TaikoScoreState {
+            max_combo: 100,
+            n300: 287,
+            n100: 0,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn hitresults_acc_n_misses_worst() {
+        let (map, attrs) = test_data();
+        let max_combo = attrs.max_combo();
+
+        let state = TaikoPP::new(&map)
+            .attributes(attrs)
+            .combo(100)
+            .accuracy(97.2)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_hitresults(max_combo);
+
+        let expected = TaikoScoreState {
+            max_combo: 100,
+            n300: 275,
+            n100: 12,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
     }
 }

@@ -42,7 +42,6 @@ use super::{
 /// ```
 #[derive(Clone, Debug)]
 pub struct TaikoGradualDifficultyAttributes {
-    pub(crate) idx: usize,
     attrs: TaikoDifficultyAttributes,
     hit_objects: IntoIter<Rc<RefCell<TaikoDifficultyObject>>>,
     lists: ObjectLists,
@@ -61,7 +60,7 @@ impl TaikoGradualDifficultyAttributes {
             .clock_rate(clock_rate)
             .hit_windows();
 
-        let attrs = TaikoDifficultyAttributes {
+        let mut attrs = TaikoDifficultyAttributes {
             stamina: 0.0,
             rhythm: 0.0,
             colour: 0.0,
@@ -71,15 +70,27 @@ impl TaikoGradualDifficultyAttributes {
             max_combo: 0,
         };
 
+        if map.hit_objects.len() < 2 {
+            return Self {
+                hit_objects: Vec::new().into_iter(),
+                lists: ObjectLists::default(),
+                peaks,
+                attrs,
+            };
+        }
+
+        attrs.max_combo += map.hit_objects[0].is_circle() as usize;
+        attrs.max_combo += map.hit_objects[1].is_circle() as usize;
+
         let mut diff_objects = map
             .taiko_objects()
-            .enumerate()
             .skip(2)
             .zip(map.hit_objects.iter().skip(1))
             .zip(map.hit_objects.iter())
+            .enumerate()
             .fold(
                 ObjectLists::default(),
-                |mut lists, (((idx, (base, base_start_time)), last), last_last)| {
+                |mut lists, (idx, (((base, base_start_time), last), last_last))| {
                     let diff_obj = TaikoDifficultyObject::new(
                         base,
                         base_start_time,
@@ -109,12 +120,15 @@ impl TaikoGradualDifficultyAttributes {
         ColourDifficultyPreprocessor::process_and_assign(&mut diff_objects);
 
         Self {
-            idx: 0,
             hit_objects: diff_objects.all.clone().into_iter(),
             lists: diff_objects,
             peaks,
             attrs,
         }
+    }
+
+    pub(crate) fn passed_objects(&self) -> usize {
+        self.lists.all.len() - self.hit_objects.len()
     }
 }
 
@@ -122,12 +136,11 @@ impl Iterator for TaikoGradualDifficultyAttributes {
     type Item = TaikoDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.hit_objects.next()?;
-
         {
-            let curr = curr.borrow();
-            self.peaks.process(&curr, &self.lists);
-            self.attrs.max_combo += curr.base.is_hit as usize;
+            let curr = self.hit_objects.next()?;
+            let borrowed = curr.borrow();
+            self.peaks.process(&borrowed, &self.lists);
+            self.attrs.max_combo += borrowed.base.is_hit as usize;
         }
 
         let PeaksDifficultyValues {
@@ -174,37 +187,24 @@ impl Iterator for TaikoGradualDifficultyAttributes {
 
         (len, Some(len))
     }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let skip = n.min(self.len()).saturating_sub(1);
+
+        for _ in 0..skip {
+            let curr = self.hit_objects.next()?;
+            let borrowed = curr.borrow();
+            self.peaks.process(&borrowed, &self.lists);
+            self.attrs.max_combo += borrowed.base.is_hit as usize;
+        }
+
+        self.next()
+    }
 }
 
 impl ExactSizeIterator for TaikoGradualDifficultyAttributes {
     #[inline]
     fn len(&self) -> usize {
         self.hit_objects.len()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn empty_map() {
-        let map = Beatmap::default();
-        let mut attributes = TaikoGradualDifficultyAttributes::new(&map, 0);
-        assert!(attributes.next().is_none());
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn iter_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/1028484.osu").expect("failed to parse map");
-        let mods = 64;
-        let regular = crate::TaikoStars::new(&map).mods(mods).calculate();
-
-        let iter_end = TaikoGradualDifficultyAttributes::new(&map, mods)
-            .last()
-            .expect("empty iter");
-
-        assert_eq!(regular, iter_end);
     }
 }

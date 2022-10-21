@@ -21,7 +21,7 @@ use crate::{
 /// let pp_result = AnyPP::new(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
-///     .misses(1)
+///     .n_misses(1)
 ///     .accuracy(98.5) // should be set last
 ///     .calculate();
 ///
@@ -287,10 +287,10 @@ impl AttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> DifficultyAttributes {
         match self {
-            Self::Catch(f) => DifficultyAttributes::Catch(f.difficulty),
-            Self::Mania(m) => DifficultyAttributes::Mania(m.difficulty),
-            Self::Osu(o) => DifficultyAttributes::Osu(o.difficulty),
-            Self::Taiko(t) => DifficultyAttributes::Taiko(t.difficulty),
+            Self::Catch(attrs) => DifficultyAttributes::Catch(attrs.difficulty),
+            Self::Mania(attrs) => DifficultyAttributes::Mania(attrs.difficulty),
+            Self::Osu(attrs) => DifficultyAttributes::Osu(attrs.difficulty),
+            Self::Taiko(attrs) => DifficultyAttributes::Taiko(attrs.difficulty),
         }
     }
 }

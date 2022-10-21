@@ -23,8 +23,8 @@ use crate::{Beatmap, DifficultyAttributes, Mods, OsuPP, PerformanceAttributes};
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
 ///
 /// let next_result = CatchPP::new(&map)
-///     .attributes(pp_result)  // reusing previous results for performance
-///     .mods(8 + 64)           // has to be the same to reuse attributes
+///     .attributes(pp_result) // reusing previous results for performance
+///     .mods(8 + 64) // has to be the same to reuse attributes
 ///     .accuracy(99.5)
 ///     .calculate();
 ///

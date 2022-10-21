@@ -27,12 +27,12 @@ impl Peaks {
     }
 
     pub(crate) fn difficulty_values(self) -> PeaksDifficultyValues {
-        let colour_rating =
-            StrainSkill::difficulty_value(self.colour.clone()) * Self::COLOUR_SKILL_MULTIPLIER;
-        let rhythm_rating =
-            StrainSkill::difficulty_value(self.rhythm.clone()) * Self::RHYTHM_SKILL_MULTIPLIER;
-        let stamina_rating =
-            StrainSkill::difficulty_value(self.stamina.clone()) * Self::STAMINA_SKILL_MULTIPLIER;
+        let colour_rating = <Colour as StrainSkill>::difficulty_value(self.colour.clone())
+            * Self::COLOUR_SKILL_MULTIPLIER;
+        let rhythm_rating = <Rhythm as StrainSkill>::difficulty_value(self.rhythm.clone())
+            * Self::RHYTHM_SKILL_MULTIPLIER;
+        let stamina_rating = <Stamina as StrainSkill>::difficulty_value(self.stamina.clone())
+            * Self::STAMINA_SKILL_MULTIPLIER;
 
         PeaksDifficultyValues {
             colour_rating,

@@ -20,15 +20,21 @@ use crate::{
 ///
 /// let pp_result = ManiaPP::new(&map)
 ///     .mods(64) // DT
-///     .score(765_432)
+///     .n_misses(1)
+///     .accuracy(98.5)
 ///     .calculate();
 ///
 /// println!("PP: {} | Stars: {}", pp_result.pp(), pp_result.stars());
 ///
 /// let next_result = ManiaPP::new(&map)
-///     .attributes(pp_result)  // reusing previous results for performance
-///     .mods(8 + 64)           // has to be the same to reuse attributes
-///     .score(950_000)
+///     .attributes(pp_result) // reusing previous results for performance
+///     .mods(8 + 64) // has to be the same to reuse attributes
+///     .n320(2000)
+///     .n300(500)
+///     .n200(200)
+///     .n100(100)
+///     .n50(10)
+///     .n_misses(1)
 ///     .calculate();
 ///
 /// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
@@ -122,7 +128,7 @@ impl<'map> ManiaPP<'map> {
     /// This will be used to generate matching hitresults.
     #[inline]
     pub fn accuracy(mut self, acc: f64) -> Self {
-        self.acc = Some(acc);
+        self.acc = Some(acc / 100.0);
 
         self
     }
@@ -238,110 +244,258 @@ impl<'map> ManiaPP<'map> {
         let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
         let priority = self.hitresult_priority.unwrap_or_default();
 
-        let mut state = ManiaScoreState {
-            n320: self.n320.unwrap_or(0),
-            n300: self.n300.unwrap_or(0),
-            n200: self.n200.unwrap_or(0),
-            n100: self.n100.unwrap_or(0),
-            n50: self.n50.unwrap_or(0),
-            n_misses: self.n_misses.unwrap_or(0),
-        };
+        let mut n320 = self.n320.unwrap_or(0);
+        let mut n300 = self.n300.unwrap_or(0);
+        let mut n200 = self.n200.unwrap_or(0);
+        let mut n100 = self.n100.unwrap_or(0);
+        let mut n50 = self.n50.unwrap_or(0);
+        let n_misses = self.n_misses.unwrap_or(0);
 
         if let Some(acc) = self.acc {
             // TODO: test
             let target_total = (acc * (n_objects * 6) as f64).round() as usize;
 
-            let mut delta = target_total.saturating_sub(n_objects.saturating_sub(state.n_misses));
+            match (self.n320, self.n300, self.n200, self.n100, self.n50) {
+                (Some(_), Some(_), Some(_), Some(_), Some(_)) => {
+                    let remaining =
+                        n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
 
-            if self.n50.is_some() {
-                delta /= 2;
-            }
-
-            if self.n100.is_some() {
-                delta /= 2;
-            }
-
-            if let Some(n320) = self.n320 {
-                delta = delta.saturating_sub(n320 * 6);
-            } else {
-                state.n320 = delta / 5;
-            }
-
-            if self.n100.is_none() {
-                state.n100 = delta % 5;
-            }
-
-            state.n50 += n_objects.saturating_sub(state.total_hits() - state.n50);
-
-            if let HitResultPriority::BestCase = priority {
-                // Shift n50 to n200
-                if self.n320.or(self.n300).or(self.n200).or(self.n50).is_none() {
-                    let n = (state.n320 + state.n300).min(state.n50 / 2);
-
-                    if n <= state.n300 {
-                        state.n300 -= n;
-                    } else {
-                        state.n320 -= n - state.n300;
-                        state.n300 = 0;
-                    };
-
-                    state.n200 += 2 * n;
-                    state.n50 -= n;
+                    match priority {
+                        HitResultPriority::BestCase => n320 += remaining,
+                        HitResultPriority::WorstCase => n50 += remaining,
+                    }
                 }
+                (Some(_), None, Some(_), Some(_), Some(_)) => {
+                    n300 = n_objects.saturating_sub(n320 + n200 + n100 + n50 + n_misses)
+                }
+                (None, Some(_), Some(_), Some(_), Some(_)) => {
+                    n320 = n_objects.saturating_sub(n300 + n200 + n100 + n50 + n_misses)
+                }
+                (Some(_), _, Some(_), Some(_), None) | (_, Some(_), Some(_), Some(_), None) => {
+                    n50 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
+                }
+                (Some(_), _, _, None, None) | (_, Some(_), _, None, None) => {
+                    let n3x0 = n320 + n300;
+                    let delta = (target_total - n_objects.saturating_sub(n_misses))
+                        .saturating_sub(n3x0 * 5 + n200 * 3);
 
-                // Shift n50 to n100
-                if self.n320.or(self.n300).or(self.n100).or(self.n50).is_none() {
-                    let n = (state.n320 + state.n300).min(state.n50 / 4);
+                    n100 = delta % 5;
+                    n50 = n_objects.saturating_sub(n3x0 + n200 + n100 + n_misses);
 
-                    if n <= state.n300 {
-                        state.n300 -= n;
+                    let curr_total = 6 * n3x0 + 4 * n200 + 2 * n100 + n50;
+
+                    if curr_total < target_total {
+                        let n = (target_total - curr_total).min(n50);
+                        n50 -= n;
+                        n100 += n;
                     } else {
-                        state.n320 -= n - state.n300;
-                        state.n300 = 0;
-                    };
+                        let n = (curr_total - target_total).min(n100);
+                        n100 -= n;
+                        n50 += n;
+                    }
+                }
+                (Some(_), _, None, Some(_), None) | (_, Some(_), None, Some(_), None) => {
+                    let n3x0 = n320 + n300;
+                    let delta = (target_total - n_objects.saturating_sub(n_misses))
+                        .saturating_sub(n3x0 * 5 + n100);
 
-                    state.n100 += 5 * n;
-                    state.n50 -= 4 * n;
+                    n200 = delta / 3;
+                    n50 = n_objects.saturating_sub(n3x0 + n200 + n100 + n_misses);
+                }
+                (Some(_), _, None, None, Some(_)) | (_, Some(_), None, None, Some(_)) => {
+                    let remaining = n_objects.saturating_sub(n320 + n300 + n50 + n_misses);
+
+                    match priority {
+                        HitResultPriority::BestCase => n100 = remaining,
+                        HitResultPriority::WorstCase => n200 = remaining,
+                    }
+                }
+                (Some(_), _, None, Some(_), Some(_)) | (_, Some(_), None, Some(_), Some(_)) => {
+                    n200 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses);
+                }
+                (Some(_), _, Some(_), None, Some(_)) | (_, Some(_), Some(_), None, Some(_)) => {
+                    n100 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses);
+                }
+                (None, None, Some(_), Some(_), Some(_)) => {
+                    let remaining = n_objects.saturating_sub(n200 + n100 + n50 + n_misses);
+
+                    match priority {
+                        HitResultPriority::BestCase => n320 = remaining,
+                        HitResultPriority::WorstCase => n300 = remaining,
+                    }
+                }
+                (None, None, None, Some(_), Some(_)) => {
+                    let delta =
+                        (target_total - n_objects.saturating_sub(n_misses)).saturating_sub(n100);
+
+                    match priority {
+                        HitResultPriority::BestCase => n320 = delta / 5,
+                        HitResultPriority::WorstCase => n300 = delta / 5,
+                    }
+
+                    n200 = n_objects.saturating_sub(n320 + n100 + n50 + n_misses);
+
+                    let curr_total = 6 * (n320 + n300) + 4 * n200 + 2 * n100 + n50;
+
+                    if curr_total < target_total {
+                        let n = n200.min((target_total - curr_total) / 2);
+                        n200 -= n;
+
+                        match priority {
+                            HitResultPriority::BestCase => n320 += n,
+                            HitResultPriority::WorstCase => n300 += n,
+                        }
+                    } else {
+                        let n = (n320 + n300).min((curr_total - target_total) / 2);
+                        n200 += n;
+
+                        match priority {
+                            HitResultPriority::BestCase => n320 -= n,
+                            HitResultPriority::WorstCase => n300 -= n,
+                        }
+                    }
+                }
+                (None, None, Some(_), None, None) => {
+                    let delta = (target_total - n_objects.saturating_sub(n_misses))
+                        .saturating_sub(n200 * 3);
+
+                    match priority {
+                        HitResultPriority::BestCase => n320 = delta / 5,
+                        HitResultPriority::WorstCase => n300 = delta / 5,
+                    }
+
+                    n100 = delta % 5;
+                    n50 = n_objects.saturating_sub(n320 + n200 + n100 + n_misses);
+
+                    let curr_total = 6 * (n320 + n300) + 4 * n200 * 2 * n100 + n50;
+
+                    if curr_total < target_total {
+                        let n = (target_total - curr_total).min(n50);
+                        n50 -= n;
+                        n100 += n;
+                    } else {
+                        let n = (curr_total - target_total).min(n100);
+                        n100 -= n;
+                        n50 += n;
+                    }
+
+                    if let HitResultPriority::BestCase = priority {
+                        // Shift n50 to n100
+                        let n = n320.min(n50 / 4);
+
+                        n320 -= n;
+                        n100 += 5 * n;
+                        n50 -= 4 * n;
+                    }
+                }
+                (None, None, _, Some(_), None) => {
+                    let delta = (target_total - n_objects.saturating_sub(n_misses))
+                        .saturating_sub(n200 * 3 + n100);
+
+                    match priority {
+                        HitResultPriority::BestCase => n320 = delta / 5,
+                        HitResultPriority::WorstCase => n300 = delta / 5,
+                    }
+
+                    n50 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
+                }
+                (None, None, _, None, Some(_)) => {
+                    let delta =
+                        target_total - n_objects.saturating_sub(n_misses).saturating_sub(n200 * 3);
+
+                    match priority {
+                        HitResultPriority::BestCase => n320 = delta / 5,
+                        HitResultPriority::WorstCase => n300 = delta / 5,
+                    }
+
+                    n100 = delta % 5;
+                    n100 += n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
+
+                    let curr_total = 6 * (n320 + n300) + 4 * n200 + 2 * n100 + n50;
+
+                    if curr_total < target_total {
+                        let n = n100.min((target_total - curr_total) / 4);
+                        n100 -= n;
+
+                        match priority {
+                            HitResultPriority::BestCase => n320 += n,
+                            HitResultPriority::WorstCase => n300 += n,
+                        }
+                    } else {
+                        let n = (n320 + n300).min((curr_total - target_total) / 4);
+                        n100 += n;
+
+                        match priority {
+                            HitResultPriority::BestCase => n320 -= n,
+                            HitResultPriority::WorstCase => n300 -= n,
+                        }
+                    }
+                }
+                (None, None, None, None, None) => {
+                    let delta = target_total - n_objects.saturating_sub(n_misses);
+
+                    match priority {
+                        HitResultPriority::BestCase => n320 = delta / 5,
+                        HitResultPriority::WorstCase => n300 = delta / 5,
+                    }
+
+                    n100 = delta % 5;
+                    n50 = n_objects.saturating_sub(n320 + n300 + n100 + n_misses);
+
+                    if let HitResultPriority::BestCase = priority {
+                        // Shift n50 to n100
+                        let n = n320.min(n50 / 4);
+                        n320 -= n;
+                        n100 += 5 * n;
+                        n50 -= 4 * n;
+                    }
                 }
             }
         } else {
-            let remaining = n_objects.saturating_sub(state.total_hits());
+            let remaining = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
 
             match priority {
                 HitResultPriority::BestCase => {
                     if self.n320.is_none() {
-                        state.n320 = remaining;
+                        n320 = remaining;
                     } else if self.n300.is_none() {
-                        state.n300 = remaining;
+                        n300 = remaining;
                     } else if self.n200.is_none() {
-                        state.n200 = remaining;
+                        n200 = remaining;
                     } else if self.n100.is_none() {
-                        state.n100 = remaining;
+                        n100 = remaining;
                     } else if self.n50.is_none() {
-                        state.n50 = remaining;
+                        n50 = remaining;
                     } else {
-                        state.n320 = remaining;
+                        n320 += remaining;
                     }
                 }
                 HitResultPriority::WorstCase => {
                     if self.n50.is_none() {
-                        state.n50 = remaining;
+                        n50 = remaining;
                     } else if self.n100.is_none() {
-                        state.n100 = remaining;
+                        n100 = remaining;
                     } else if self.n200.is_none() {
-                        state.n200 = remaining;
+                        n200 = remaining;
                     } else if self.n300.is_none() {
-                        state.n300 = remaining;
+                        n300 = remaining;
                     } else if self.n320.is_none() {
-                        state.n320 = remaining;
+                        n320 = remaining;
                     } else {
-                        state.n50 = remaining;
+                        n50 += remaining;
                     }
                 }
             }
         }
 
-        state
+        ManiaScoreState {
+            n320,
+            n300,
+            n200,
+            n100,
+            n50,
+            n_misses,
+        }
     }
 }
 
@@ -486,5 +640,426 @@ impl ManiaAttributeProvider for PerformanceAttributes {
         } else {
             None
         }
+    }
+}
+
+#[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Beatmap;
+
+    fn test_data() -> (Beatmap, ManiaDifficultyAttributes) {
+        let path = "./maps/1974394.osu";
+        let map = Beatmap::from_path(path).unwrap();
+
+        let attrs = ManiaDifficultyAttributes {
+            stars: 4.824631127426499,
+            hit_window: 40.0,
+            max_combo: 5064,
+        };
+
+        (map, attrs)
+    }
+
+    #[test]
+    fn hitresults_acc_n320_n200_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n320(2600)
+            .n200(400)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2600,
+            n300: 0,
+            n200: 400,
+            n100: 49,
+            n50: 187,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n320_n300_n200_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n320(2250)
+            .n300(500)
+            .n200(100)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2250,
+            n300: 500,
+            n200: 100,
+            n100: 199,
+            n50: 187,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n320_n300_n100_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n320(2000)
+            .n300(500)
+            .n100(100)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2000,
+            n300: 500,
+            n200: 549,
+            n100: 100,
+            n50: 87,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n320_n100_n50_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n320(2700)
+            .n100(200)
+            .n50(10)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2700,
+            n300: 0,
+            n200: 326,
+            n100: 200,
+            n50: 10,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n320_n50_n_misses_worst() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n320(2000)
+            .n50(50)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2000,
+            n300: 0,
+            n200: 1186,
+            n100: 0,
+            n50: 50,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n100_n50_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n100(200)
+            .n50(50)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2546,
+            n300: 0,
+            n200: 440,
+            n100: 200,
+            n50: 50,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n200_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n200(500)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2503,
+            n300: 0,
+            n200: 500,
+            n100: 230,
+            n50: 3,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n200_n100_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n200(500)
+            .n100(200)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2509,
+            n300: 0,
+            n200: 500,
+            n100: 200,
+            n50: 27,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n50_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n50(200)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2804,
+            n300: 0,
+            n200: 0,
+            n100: 232,
+            n50: 200,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n200_n100_n50_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n200(500)
+            .n100(300)
+            .n50(100)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2336,
+            n300: 0,
+            n200: 500,
+            n100: 300,
+            n50: 100,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_acc_n_misses_worst() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .accuracy(90.0)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 0,
+            n300: 2849,
+            n200: 0,
+            n100: 4,
+            n50: 383,
+            n_misses: 2,
+        };
+
+        assert_eq!(
+            state,
+            expected,
+            "{}% vs {}%",
+            state.accuracy(),
+            expected.accuracy()
+        );
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_n320_n_misses_best() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .n320(2000)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 2000,
+            n300: 1236,
+            n200: 0,
+            n100: 0,
+            n50: 0,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+        assert_eq!(state.total_hits(), 3238);
+    }
+
+    #[test]
+    fn hitresults_n100_n50_n_misses_worst() {
+        let (map, attrs) = test_data();
+
+        let state = ManiaPP::new(&map)
+            .attributes(attrs)
+            .n100(500)
+            .n50(100)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_hitresults();
+
+        let expected = ManiaScoreState {
+            n320: 0,
+            n300: 0,
+            n200: 2636,
+            n100: 500,
+            n50: 100,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+        assert_eq!(state.total_hits(), 3238);
     }
 }

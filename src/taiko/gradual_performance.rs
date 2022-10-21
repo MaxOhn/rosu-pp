@@ -91,7 +91,7 @@ impl TaikoScoreState {
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.misses += 1;
+/// state.n_misses += 1;
 /// # /*
 /// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -122,7 +122,7 @@ impl TaikoScoreState {
 /// state.max_combo = ...
 /// state.n300 = ...
 /// state.n100 = ...
-/// state.misses = ...
+/// state.n_misses = ...
 /// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
@@ -170,115 +170,17 @@ impl<'map> TaikoGradualPerformanceAttributes<'map> {
         state: TaikoScoreState,
         n: usize,
     ) -> Option<TaikoPerformanceAttributes> {
-        let n = n.min(self.difficulty.len()).saturating_sub(1);
-        let difficulty = self.difficulty.nth(n)?;
+        let sub = 2 * (self.difficulty.passed_objects() == 0) as usize;
+        let difficulty = self.difficulty.nth(n.saturating_sub(sub))?;
 
         let performance = self
             .performance
             .clone()
             .attributes(difficulty)
             .state(state)
-            .passed_objects(self.difficulty.idx)
+            .passed_objects(self.difficulty.passed_objects() + 2)
             .calculate();
 
         Some(performance)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[allow(unused_imports)]
-    use super::*;
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn correct_empty() {
-        let map = Beatmap::from_path("./maps/1028484.osu").expect("failed to parse map");
-        let mods = 64;
-
-        let mut gradual = TaikoGradualPerformanceAttributes::new(&map, mods);
-        let state = TaikoScoreState::default();
-
-        assert!(gradual
-            .process_next_n_objects(state.clone(), usize::MAX)
-            .is_some());
-        assert!(gradual.process_next_object(state).is_none());
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn next_and_next_n() {
-        let map = Beatmap::from_path("./maps/1028484.osu").expect("failed to parse map");
-        let mods = 64;
-        let state = TaikoScoreState::default();
-
-        let mut gradual1 = TaikoGradualPerformanceAttributes::new(&map, mods);
-        let mut gradual2 = TaikoGradualPerformanceAttributes::new(&map, mods);
-
-        for _ in 0..50 {
-            let _ = gradual1.process_next_object(state.clone());
-            let _ = gradual2.process_next_object(state.clone());
-        }
-
-        let n = 200;
-
-        for _ in 1..n {
-            let _ = gradual1.process_next_object(state.clone());
-        }
-
-        let state = TaikoScoreState {
-            max_combo: 246,
-            n300: 200,
-            n100: 40,
-            n_misses: 6,
-        };
-
-        let next = gradual1.process_next_object(state.clone());
-        let next_n = gradual2.process_next_n_objects(state, n);
-
-        assert_eq!(next_n, next);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/1028484.osu").expect("failed to parse map");
-        let mods = 64;
-        let regular = TaikoPP::new(&map).mods(mods).calculate();
-
-        let mut gradual = TaikoGradualPerformanceAttributes::new(&map, mods);
-
-        let state = TaikoScoreState {
-            max_combo: 289,
-            n300: 289,
-            n100: 0,
-            n_misses: 0,
-        };
-
-        let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
-
-        assert_eq!(regular, gradual_end);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_eq_regular_passed() {
-        let map = Beatmap::from_path("./maps/1028484.osu").expect("failed to parse map");
-        let mods = 64;
-        let n = 250;
-        let regular = TaikoPP::new(&map).mods(mods).passed_objects(n).calculate();
-
-        let mut gradual = TaikoGradualPerformanceAttributes::new(&map, mods);
-
-        let state = TaikoScoreState {
-            max_combo: 246,
-            n300: 246,
-            n100: 0,
-            n_misses: 0,
-        };
-
-        let gradual = gradual.process_next_n_objects(state, n).unwrap();
-
-        assert_eq!(regular, gradual);
     }
 }

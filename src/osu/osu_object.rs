@@ -86,7 +86,7 @@ pub(crate) enum NestedObjectKind {
 
 pub(crate) struct ObjectParameters<'a> {
     pub(crate) map: &'a Beatmap,
-    pub(crate) attributes: &'a mut OsuDifficultyAttributes,
+    pub(crate) attrs: &'a mut OsuDifficultyAttributes,
     pub(crate) ticks: Vec<(Pos2, f64)>,
     pub(crate) curve_bufs: CurveBuffers,
 }
@@ -95,17 +95,17 @@ impl OsuObject {
     pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters<'_>) -> Option<Self> {
         let ObjectParameters {
             map,
-            attributes,
+            attrs,
             ticks,
             curve_bufs,
         } = params;
 
-        attributes.max_combo += 1; // hitcircle, slider head, or spinner
+        attrs.max_combo += 1; // hitcircle, slider head, or spinner
         let pos = h.pos;
 
         let obj = match &h.kind {
             HitObjectKind::Circle => {
-                attributes.n_circles += 1;
+                attrs.n_circles += 1;
 
                 Self {
                     start_time: h.start_time,
@@ -121,7 +121,7 @@ impl OsuObject {
                 control_points,
                 ..
             } => {
-                attributes.n_sliders += 1;
+                attrs.n_sliders += 1;
 
                 let timing_point = map.timing_point_at(h.start_time);
                 let difficulty_point = map.difficulty_point_at(h.start_time).unwrap_or_default();
@@ -283,7 +283,7 @@ impl OsuObject {
                     _ => nested_objects.push(legacy_last_tick),
                 };
 
-                attributes.max_combo += nested_objects.len();
+                attrs.max_combo += nested_objects.len();
 
                 let last_time = nested_objects
                     .last()
@@ -318,7 +318,7 @@ impl OsuObject {
                 }
             }
             HitObjectKind::Spinner { end_time } => {
-                attributes.n_spinners += 1;
+                attrs.n_spinners += 1;
 
                 Self {
                     start_time: h.start_time,

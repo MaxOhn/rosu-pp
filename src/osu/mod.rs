@@ -260,7 +260,7 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
         400.0 * (time_preempt / PREEMPT_MIN).min(1.0)
     };
 
-    let mut attributes = OsuDifficultyAttributes {
+    let mut attrs = OsuDifficultyAttributes {
         ar: map_attrs.ar,
         hp: map_attrs.hp,
         od: map_attrs.od,
@@ -269,7 +269,7 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
 
     let mut params = ObjectParameters {
         map,
-        attributes: &mut attributes,
+        attrs: &mut attrs,
         ticks: Vec::new(),
         curve_bufs: CurveBuffers::default(),
     };
@@ -301,7 +301,7 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
 
     let last = match hit_objects.next() {
         Some(prev) => prev,
-        None => return (skills, attributes),
+        None => return (skills, attrs),
     };
 
     let mut last_last = None;
@@ -340,7 +340,7 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
         }
     }
 
-    (skills, attributes)
+    (skills, attrs)
 }
 
 fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {

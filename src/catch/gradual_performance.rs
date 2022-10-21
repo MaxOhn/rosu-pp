@@ -78,7 +78,7 @@ impl CatchScoreState {
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.misses += 1;
+/// state.n_misses += 1;
 /// # /*
 /// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -114,7 +114,7 @@ impl CatchScoreState {
 /// state.n_droplets = ...
 /// state.n_tiny_droplets = ...
 /// state.n_tiny_droplet_misses = ...
-/// state.misses = ...
+/// state.n_misses = ...
 /// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
 /// # */
@@ -185,109 +185,5 @@ impl<'map> CatchGradualPerformanceAttributes<'map> {
             .calculate();
 
         Some(performance)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[allow(unused_imports)]
-    use super::*;
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn correct_empty() {
-        let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
-        let mods = 64;
-
-        let mut gradual = CatchGradualPerformanceAttributes::new(&map, mods);
-        let state = CatchScoreState::default();
-
-        assert!(gradual
-            .process_next_n_objects(state.clone(), usize::MAX)
-            .is_some());
-        assert!(gradual.process_next_object(state).is_none());
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn next_and_next_n() {
-        let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
-        let mods = 64;
-        let state = CatchScoreState::default();
-
-        let mut gradual1 = CatchGradualPerformanceAttributes::new(&map, mods);
-        let mut gradual2 = CatchGradualPerformanceAttributes::new(&map, mods);
-
-        for _ in 0..20 {
-            let _ = gradual1.process_next_object(state.clone());
-            let _ = gradual2.process_next_object(state.clone());
-        }
-
-        let n = 80;
-
-        for _ in 1..n {
-            let _ = gradual1.process_next_object(state.clone());
-        }
-
-        let state = CatchScoreState {
-            max_combo: 101,
-            n_fruits: 99,
-            n_droplets: 2,
-            n_tiny_droplets: 68,
-            n_tiny_droplet_misses: 0,
-            n_misses: 0,
-        };
-
-        let next = gradual1.process_next_object(state.clone());
-        let next_n = gradual2.process_next_n_objects(state, n);
-
-        assert_eq!(next_n, next);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
-        let mods = 64;
-        let regular = CatchPP::new(&map).mods(mods).calculate();
-
-        let mut gradual = CatchGradualPerformanceAttributes::new(&map, mods);
-
-        let state = CatchScoreState {
-            max_combo: 730,
-            n_fruits: 728,
-            n_droplets: 2,
-            n_tiny_droplets: 291,
-            n_tiny_droplet_misses: 0,
-            n_misses: 0,
-        };
-
-        let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
-
-        assert_eq!(regular, gradual_end);
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn gradual_eq_regular_passed() {
-        let map = Beatmap::from_path("./maps/2118524.osu").expect("failed to parse map");
-        let mods = 64;
-        let n = 100;
-        let regular = CatchPP::new(&map).mods(mods).passed_objects(n).calculate();
-
-        let mut gradual = CatchGradualPerformanceAttributes::new(&map, mods);
-
-        let state = CatchScoreState {
-            max_combo: 101,
-            n_fruits: 99,
-            n_droplets: 2,
-            n_tiny_droplets: 68,
-            n_tiny_droplet_misses: 0,
-            n_misses: 0,
-        };
-
-        let gradual = gradual.process_next_n_objects(state, n).unwrap();
-
-        assert_eq!(regular, gradual);
     }
 }

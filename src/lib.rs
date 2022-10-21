@@ -15,25 +15,24 @@
 //! };
 //! # */ let map = Beatmap::default();
 //!
-//! // If `BeatmapExt` is included, you can make use of
-//! // some methods on `Beatmap` to make your life simpler.
+//! // If `BeatmapExt` is included, you can make use of some methods
+//! // on `Beatmap` to make your life simpler like `BeatmapExt::pp`.
 //! let result = map.pp()
 //!     .mods(24) // HDHR
 //!     .combo(1234)
-//!     .misses(2)
-//!     .accuracy(99.2) // should be called last
+//!     .accuracy(99.2)
+//!     .n_misses(2)
 //!     .calculate();
 //!
 //! println!("PP: {}", result.pp());
 //!
-//! // If you intend to reuse the current map-mod combination,
-//! // make use of the previous result!
+//! // If you want to reuse the current map-mod combination, make use of the previous result!
 //! // If attributes are given, then stars & co don't have to be recalculated.
 //! let next_result = map.pp()
 //!     .mods(24) // HDHR
 //!     .attributes(result) // recycle
 //!     .combo(543)
-//!     .misses(5)
+//!     .n_misses(5)
 //!     .n50(3)
 //!     .accuracy(96.5)
 //!     .calculate();
@@ -68,7 +67,7 @@
 //! let result = map.pp()
 //!     .mods(24) // HDHR
 //!     .combo(1234)
-//!     .misses(2)
+//!     .n_misses(2)
 //!     .accuracy(99.2)
 //!     .calculate();
 //!
@@ -114,12 +113,12 @@
 //! // The default score state is kinda chunky because it considers all modes.
 //! let state = ScoreState {
 //!     max_combo: 1,
-//!     n_katu: 0, // only relevant for ctb
+//!     n_geki: 0, // only relevant for mania
+//!     n_katu: 0, // only relevant for mania and ctb
 //!     n300: 1,
 //!     n100: 0,
 //!     n50: 0,
-//!     misses: 0,
-//!     score: 300, // only relevant for mania
+//!     n_misses: 0,
 //! };
 //!
 //! // Process the score state after the first object
@@ -145,7 +144,7 @@
 //!     max_combo: 11,
 //!     n300: 9,
 //!     n100: 1,
-//!     misses: 1,
+//!     n_misses: 1,
 //! };
 //!
 //! // Process the next 10 objects in one go
@@ -362,23 +361,21 @@ impl DifficultyAttributes {
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
-            Self::Catch(attributes) => attributes.stars,
-            Self::Mania(attributes) => attributes.stars,
-            Self::Osu(attributes) => attributes.stars,
-            Self::Taiko(attributes) => attributes.stars,
+            Self::Catch(attrs) => attrs.stars,
+            Self::Mania(attrs) => attrs.stars,
+            Self::Osu(attrs) => attrs.stars,
+            Self::Taiko(attrs) => attrs.stars,
         }
     }
 
     /// The maximum combo of the map.
-    ///
-    /// This will only be `None` for attributes of osu!mania maps.
     #[inline]
-    pub fn max_combo(&self) -> Option<usize> {
+    pub fn max_combo(&self) -> usize {
         match self {
-            Self::Catch(attributes) => Some(attributes.max_combo()),
-            Self::Mania(_) => None,
-            Self::Osu(attributes) => Some(attributes.max_combo),
-            Self::Taiko(attributes) => Some(attributes.max_combo),
+            Self::Catch(attrs) => attrs.max_combo(),
+            Self::Mania(attrs) => attrs.max_combo,
+            Self::Osu(attrs) => attrs.max_combo,
+            Self::Taiko(attrs) => attrs.max_combo,
         }
     }
 }
@@ -429,10 +426,10 @@ impl PerformanceAttributes {
     #[inline]
     pub fn pp(&self) -> f64 {
         match self {
-            Self::Catch(attributes) => attributes.pp,
-            Self::Mania(attributes) => attributes.pp,
-            Self::Osu(attributes) => attributes.pp,
-            Self::Taiko(attributes) => attributes.pp,
+            Self::Catch(attrs) => attrs.pp,
+            Self::Mania(attrs) => attrs.pp,
+            Self::Osu(attrs) => attrs.pp,
+            Self::Taiko(attrs) => attrs.pp,
         }
     }
 
@@ -440,10 +437,10 @@ impl PerformanceAttributes {
     #[inline]
     pub fn stars(&self) -> f64 {
         match self {
-            Self::Catch(attributes) => attributes.stars(),
-            Self::Mania(attributes) => attributes.stars(),
-            Self::Osu(attributes) => attributes.stars(),
-            Self::Taiko(attributes) => attributes.stars(),
+            Self::Catch(attrs) => attrs.stars(),
+            Self::Mania(attrs) => attrs.stars(),
+            Self::Osu(attrs) => attrs.stars(),
+            Self::Taiko(attrs) => attrs.stars(),
         }
     }
 
@@ -451,23 +448,21 @@ impl PerformanceAttributes {
     #[inline]
     pub fn difficulty_attributes(&self) -> DifficultyAttributes {
         match self {
-            Self::Catch(attributes) => DifficultyAttributes::Catch(attributes.difficulty.clone()),
-            Self::Mania(attributes) => DifficultyAttributes::Mania(attributes.difficulty),
-            Self::Osu(attributes) => DifficultyAttributes::Osu(attributes.difficulty.clone()),
-            Self::Taiko(attributes) => DifficultyAttributes::Taiko(attributes.difficulty.clone()),
+            Self::Catch(attrs) => DifficultyAttributes::Catch(attrs.difficulty.clone()),
+            Self::Mania(attrs) => DifficultyAttributes::Mania(attrs.difficulty),
+            Self::Osu(attrs) => DifficultyAttributes::Osu(attrs.difficulty.clone()),
+            Self::Taiko(attrs) => DifficultyAttributes::Taiko(attrs.difficulty.clone()),
         }
     }
 
     #[inline]
     /// The maximum combo of the map.
-    ///
-    /// This will only be `None` for attributes of osu!mania maps.
-    pub fn max_combo(&self) -> Option<usize> {
+    pub fn max_combo(&self) -> usize {
         match self {
-            Self::Catch(f) => Some(f.difficulty.max_combo()),
-            Self::Mania(_) => None,
-            Self::Osu(o) => Some(o.difficulty.max_combo),
-            Self::Taiko(t) => Some(t.difficulty.max_combo),
+            Self::Catch(attrs) => attrs.difficulty.max_combo(),
+            Self::Mania(attrs) => attrs.difficulty.max_combo,
+            Self::Osu(attrs) => attrs.difficulty.max_combo,
+            Self::Taiko(attrs) => attrs.difficulty.max_combo,
         }
     }
 }
@@ -476,10 +471,10 @@ impl From<PerformanceAttributes> for DifficultyAttributes {
     #[inline]
     fn from(attributes: PerformanceAttributes) -> Self {
         match attributes {
-            PerformanceAttributes::Catch(attributes) => Self::Catch(attributes.difficulty),
-            PerformanceAttributes::Mania(attributes) => Self::Mania(attributes.difficulty),
-            PerformanceAttributes::Osu(attributes) => Self::Osu(attributes.difficulty),
-            PerformanceAttributes::Taiko(attributes) => Self::Taiko(attributes.difficulty),
+            PerformanceAttributes::Catch(attrs) => Self::Catch(attrs.difficulty),
+            PerformanceAttributes::Mania(attrs) => Self::Mania(attrs.difficulty),
+            PerformanceAttributes::Osu(attrs) => Self::Osu(attrs.difficulty),
+            PerformanceAttributes::Taiko(attrs) => Self::Taiko(attrs.difficulty),
         }
     }
 }
@@ -521,7 +516,7 @@ mod tests {
 
     #[test]
     fn custom() {
-        let path = "F:/osu!/beatmaps/1186086.osu";
+        let path = "F:/osu!/beatmaps/1028484.osu";
         let map = Beatmap::from_path(path).unwrap();
 
         let attrs = match OsuPP::new(&map).mode(GameMode::Taiko).mods(0).calculate() {
@@ -529,31 +524,33 @@ mod tests {
             _ => unreachable!(),
         };
 
-        println!(
-            "difficulty:\n\
-            stamina={}\n\
-            rhythm={}\n\
-            colour={}\n\
-            peak={}\n\
-            hit_window={}\n\
-            max_combo={}\n\
-            stars={}\n\
-            performance:\n\
-            difficulty={}\n\
-            acc={}\n\
-            effective={}\n\
-            pp={}\n",
-            attrs.difficulty.stamina,
-            attrs.difficulty.rhythm,
-            attrs.difficulty.colour,
-            attrs.difficulty.peak,
-            attrs.difficulty.hit_window,
-            attrs.difficulty.max_combo,
-            attrs.difficulty.stars,
-            attrs.pp_difficulty,
-            attrs.pp_acc,
-            attrs.effective_miss_count,
-            attrs.pp,
-        );
+        println!("{attrs:#?}");
+
+        // println!(
+        //     "difficulty:\n\
+        //     stamina={}\n\
+        //     rhythm={}\n\
+        //     colour={}\n\
+        //     peak={}\n\
+        //     hit_window={}\n\
+        //     max_combo={}\n\
+        //     stars={}\n\
+        //     performance:\n\
+        //     difficulty={}\n\
+        //     acc={}\n\
+        //     effective={}\n\
+        //     pp={}\n",
+        //     attrs.difficulty.stamina,
+        //     attrs.difficulty.rhythm,
+        //     attrs.difficulty.colour,
+        //     attrs.difficulty.peak,
+        //     attrs.difficulty.hit_window,
+        //     attrs.difficulty.max_combo,
+        //     attrs.difficulty.stars,
+        //     attrs.pp_difficulty,
+        //     attrs.pp_acc,
+        //     attrs.effective_miss_count,
+        //     attrs.pp,
+        // );
     }
 }

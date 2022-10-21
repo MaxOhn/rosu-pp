@@ -49,7 +49,9 @@ use super::{
 pub struct OsuGradualDifficultyAttributes {
     pub(crate) idx: usize,
     mods: u32,
-    attributes: OsuDifficultyAttributes,
+    attrs: OsuDifficultyAttributes,
+    // Unused but `diff_objects`' lifetimes secretly depend on it
+    #[allow(unused)]
     hit_objects: Vec<OsuObject>,
     diff_objects: Vec<OsuDifficultyObject<'static>>,
     skills: [Box<dyn Skill>; 4],
@@ -60,8 +62,8 @@ impl Debug for OsuGradualDifficultyAttributes {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("OsuGradualDifficultyAttributes")
             .field("idx", &self.idx)
-            .field("attributes", &self.attributes)
-            .field("hit_objects", &self.hit_objects)
+            .field("attrs", &self.attrs)
+            .field("diff_objects", &self.diff_objects)
             .field("skills", &"<cannot be displayed>")
             .finish()
     }
@@ -75,7 +77,7 @@ impl OsuGradualDifficultyAttributes {
         let scaling_factor = ScalingFactor::new(map_attrs.cs);
         let hr = mods.hr();
         let hit_window = 2.0 * map_attrs.hit_windows.od;
-        let time_preempt = map_attrs.hit_windows.ar;
+        let time_preempt = (map_attrs.hit_windows.ar * clock_rate) as f32 as f64;
 
         // * Preempt time can go below 450ms. Normally, this is achieved via the DT mod
         // * which uniformly speeds up all animations game wide regardless of AR.
@@ -100,7 +102,7 @@ impl OsuGradualDifficultyAttributes {
 
         let mut params = ObjectParameters {
             map,
-            attributes: &mut attrs,
+            attrs: &mut attrs,
             ticks: Vec::new(),
             curve_bufs: CurveBuffers::default(),
         };
@@ -140,7 +142,7 @@ impl OsuGradualDifficultyAttributes {
                 return Self {
                     idx: 0,
                     mods,
-                    attributes: attrs,
+                    attrs,
                     hit_objects: Vec::new(),
                     diff_objects: Vec::new(),
                     skills,
@@ -148,6 +150,8 @@ impl OsuGradualDifficultyAttributes {
                 }
             }
         };
+
+        Self::increment_combo(last, &mut attrs);
 
         let mut last_last = None;
 
@@ -182,11 +186,24 @@ impl OsuGradualDifficultyAttributes {
         Self {
             idx: 0,
             mods,
-            attributes: attrs,
+            attrs,
             diff_objects: extend_lifetime(diff_objects),
             hit_objects,
             skills,
             hit_window,
+        }
+    }
+
+    fn increment_combo(h: &OsuObject, attrs: &mut OsuDifficultyAttributes) {
+        attrs.max_combo += 1;
+
+        match &h.kind {
+            OsuObjectKind::Circle => attrs.n_circles += 1,
+            OsuObjectKind::Slider(slider) => {
+                attrs.n_sliders += 1;
+                attrs.max_combo += slider.nested_len();
+            }
+            OsuObjectKind::Spinner { .. } => attrs.n_spinners += 1,
         }
     }
 }
@@ -210,18 +227,7 @@ impl Iterator for OsuGradualDifficultyAttributes {
             skill.process(curr, &self.diff_objects, self.hit_window);
         }
 
-        let mut attrs = self.attributes.clone();
-
-        attrs.max_combo += 1;
-
-        match &curr.base.kind {
-            OsuObjectKind::Circle => attrs.n_circles += 1,
-            OsuObjectKind::Slider(slider) => {
-                attrs.n_sliders += 1;
-                attrs.max_combo += slider.nested_len();
-            }
-            OsuObjectKind::Spinner { .. } => attrs.n_spinners += 1,
-        }
+        Self::increment_combo(curr.base, &mut self.attrs);
 
         let [aim, aim_no_sliders, speed, flashlight] = &self.skills;
 
@@ -289,6 +295,7 @@ impl Iterator for OsuGradualDifficultyAttributes {
             0.0
         };
 
+        let mut attrs = self.attrs.clone();
         attrs.aim = aim_rating;
         attrs.speed = speed_rating;
         attrs.flashlight = flashlight_rating;
@@ -301,41 +308,32 @@ impl Iterator for OsuGradualDifficultyAttributes {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.hit_objects.len() - self.idx;
+        let len = self.len();
 
         (len, Some(len))
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let skip = n.min(self.len()).saturating_sub(1);
+
+        for _ in 0..skip {
+            let curr = self.diff_objects.get(self.idx)?;
+            self.idx += 1;
+
+            for skill in self.skills.iter_mut() {
+                skill.process(curr, &self.diff_objects, self.hit_window);
+            }
+
+            Self::increment_combo(curr.base, &mut self.attrs);
+        }
+
+        self.next()
     }
 }
 
 impl ExactSizeIterator for OsuGradualDifficultyAttributes {
     #[inline]
     fn len(&self) -> usize {
-        self.hit_objects.len()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn empty_map() {
-        let map = Beatmap::default();
-        let mut attributes = OsuGradualDifficultyAttributes::new(&map, 0);
-        assert!(attributes.next().is_none());
-    }
-
-    #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-    #[test]
-    fn iter_end_eq_regular() {
-        let map = Beatmap::from_path("./maps/2785319.osu").expect("failed to parse map");
-        let mods = 64;
-        let regular = crate::OsuStars::new(&map).mods(mods).calculate();
-
-        let iter_end = OsuGradualDifficultyAttributes::new(&map, mods)
-            .last()
-            .expect("empty iter");
-
-        assert_eq!(regular, iter_end);
+        self.diff_objects.len() - self.idx
     }
 }
