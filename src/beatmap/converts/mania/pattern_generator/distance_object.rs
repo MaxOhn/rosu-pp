@@ -37,7 +37,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         prev_pattern: &'h Pattern,
         orig: &'h Beatmap,
         repeats: usize,
-        curve: &Curve,
+        curve: &Curve<'_>,
         edge_sounds: &'h [u8],
     ) -> Self {
         let timing_point = orig.timing_point_at(hit_object.start_time);

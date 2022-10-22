@@ -136,7 +136,7 @@ impl Beatmap {
 }
 
 struct SliderParams<'c> {
-    curve: &'c Curve,
+    curve: &'c Curve<'c>,
     duration: u32,
     repeats: usize,
     start_time: f64,
@@ -144,7 +144,7 @@ struct SliderParams<'c> {
 }
 
 impl<'c> SliderParams<'c> {
-    fn new(start_time: f64, repeats: usize, curve: &'c Curve) -> Self {
+    fn new(start_time: f64, repeats: usize, curve: &'c Curve<'c>) -> Self {
         Self {
             curve,
             repeats,
