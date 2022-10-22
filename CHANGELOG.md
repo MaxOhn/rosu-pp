@@ -15,7 +15,7 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
   - `OsuDifficultyAttributes` now have a `speed_note_count` field
   - `OsuPerformanceAttributes` and `TaikoPerformanceAttributes` now have a `effective_miss_count` field
   - `TaikoDifficultyAttributes` now have a `peak` and `hit_window` field
-  - Some other thinks I likely forgot about :S
+  - Some other things I likely forgot about :S
 
 - __Additions:__
   - The performance calculators `OsuPP`, `TaikoPP`, `ManiaPP`, and `AnyPP` now have a `hitresult_priority` method to specify how hitresults should be generated
