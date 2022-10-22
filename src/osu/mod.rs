@@ -298,7 +298,13 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         h
     });
 
-    let mut skills = Skills::new(mods, scaling_factor.radius, time_preempt, time_fade_in);
+    let mut skills = Skills::new(
+        mods,
+        scaling_factor.radius,
+        time_preempt,
+        time_fade_in,
+        hit_window,
+    );
 
     let last = match hit_objects.next() {
         Some(prev) => prev,
@@ -336,7 +342,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     }
 
     for curr in diff_objects.iter() {
-        skills.process(curr, &diff_objects, hit_window);
+        skills.process(curr, &diff_objects);
     }
 
     (skills, attrs)

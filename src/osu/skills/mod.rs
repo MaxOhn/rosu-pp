@@ -21,11 +21,17 @@ pub(crate) struct Skills {
 }
 
 impl Skills {
-    pub(crate) fn new(mods: u32, radius: f32, time_preempt: f64, time_fade_in: f64) -> Self {
+    pub(crate) fn new(
+        mods: u32,
+        radius: f32,
+        time_preempt: f64,
+        time_fade_in: f64,
+        hit_window: f64,
+    ) -> Self {
         Self {
             aim: Aim::new(true),
             aim_no_sliders: Aim::new(false),
-            speed: Speed::new(),
+            speed: Speed::new(hit_window),
             flashlight: Flashlight::new(mods, radius, time_preempt, time_fade_in),
         }
     }
@@ -34,12 +40,11 @@ impl Skills {
         &mut self,
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
-        hit_window: f64,
     ) {
-        <Aim as Skill>::process(&mut self.aim, curr, diff_objects, hit_window);
-        <Aim as Skill>::process(&mut self.aim_no_sliders, curr, diff_objects, hit_window);
-        <Speed as Skill>::process(&mut self.speed, curr, diff_objects, hit_window);
-        <Flashlight as Skill>::process(&mut self.flashlight, curr, diff_objects, hit_window);
+        <Aim as Skill>::process(&mut self.aim, curr, diff_objects);
+        <Aim as Skill>::process(&mut self.aim_no_sliders, curr, diff_objects);
+        <Speed as Skill>::process(&mut self.speed, curr, diff_objects);
+        <Flashlight as Skill>::process(&mut self.flashlight, curr, diff_objects);
     }
 }
 

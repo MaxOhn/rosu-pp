@@ -38,9 +38,8 @@ impl Skill for Aim {
         &mut self,
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
-        hit_window: f64,
     ) {
-        <Self as StrainSkill>::process(self, curr, diff_objects, hit_window)
+        <Self as StrainSkill>::process(self, curr, diff_objects)
     }
 
     #[inline]
@@ -70,7 +69,6 @@ impl StrainSkill for Aim {
         &mut self,
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
-        _hit_window: f64,
     ) -> f64 {
         self.curr_strain *= Self::strain_decay(curr.delta_time);
         self.curr_strain += AimEvaluator::evaluate_diff_of(curr, diff_objects, self.with_sliders)

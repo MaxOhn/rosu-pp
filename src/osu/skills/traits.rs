@@ -3,12 +3,7 @@ use std::{cmp::Ordering, mem};
 use crate::osu::{difficulty_object::OsuDifficultyObject, SECTION_LEN};
 
 pub(crate) trait Skill {
-    fn process(
-        &mut self,
-        curr: &OsuDifficultyObject<'_>,
-        diff_objects: &[OsuDifficultyObject<'_>],
-        hit_window: f64,
-    );
+    fn process(&mut self, curr: &OsuDifficultyObject<'_>, diff_objects: &[OsuDifficultyObject<'_>]);
     fn difficulty_value(&mut self) -> f64;
 }
 
@@ -23,7 +18,6 @@ pub(crate) trait StrainSkill: Skill + Sized {
         &mut self,
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
-        hit_window: f64,
     ) -> f64;
 
     fn calculate_initial_strain(
@@ -37,7 +31,6 @@ pub(crate) trait StrainSkill: Skill + Sized {
         &mut self,
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
-        hit_window: f64,
     ) {
         // * The first object doesn't generate a strain, so we begin with an incremented section end
         if curr.idx == 0 {
@@ -57,7 +50,7 @@ pub(crate) trait StrainSkill: Skill + Sized {
         }
 
         *self.curr_section_peak() = self
-            .strain_value_at(curr, diff_objects, hit_window)
+            .strain_value_at(curr, diff_objects)
             .max(*self.curr_section_peak());
     }
 

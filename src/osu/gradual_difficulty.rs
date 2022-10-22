@@ -55,7 +55,6 @@ pub struct OsuGradualDifficultyAttributes {
     hit_objects: Vec<OsuObject>,
     diff_objects: Vec<OsuDifficultyObject<'static>>,
     skills: Skills,
-    hit_window: f64,
 }
 
 impl Debug for OsuGradualDifficultyAttributes {
@@ -65,7 +64,6 @@ impl Debug for OsuGradualDifficultyAttributes {
             .field("attrs", &self.attrs)
             .field("diff_objects", &self.diff_objects)
             .field("skills", &self.skills)
-            .field("hit_window", &self.hit_window)
             .finish()
     }
 }
@@ -133,7 +131,13 @@ impl OsuGradualDifficultyAttributes {
             h
         });
 
-        let skills = Skills::new(mods, scaling_factor.radius, time_preempt, time_fade_in);
+        let skills = Skills::new(
+            mods,
+            scaling_factor.radius,
+            time_preempt,
+            time_fade_in,
+            hit_window,
+        );
 
         let last = match hit_objects_iter.next() {
             Some(prev) => prev,
@@ -145,7 +149,6 @@ impl OsuGradualDifficultyAttributes {
                     hit_objects: Vec::new(),
                     diff_objects: Vec::new(),
                     skills,
-                    hit_window,
                 }
             }
         };
@@ -189,7 +192,6 @@ impl OsuGradualDifficultyAttributes {
             diff_objects: extend_lifetime(diff_objects),
             hit_objects,
             skills,
-            hit_window,
         }
     }
 
@@ -222,8 +224,7 @@ impl Iterator for OsuGradualDifficultyAttributes {
         let curr = self.diff_objects.get(self.idx)?;
         self.idx += 1;
 
-        self.skills
-            .process(curr, &self.diff_objects, self.hit_window);
+        self.skills.process(curr, &self.diff_objects);
 
         Self::increment_combo(curr.base, &mut self.attrs);
 
@@ -308,8 +309,7 @@ impl Iterator for OsuGradualDifficultyAttributes {
             let curr = self.diff_objects.get(self.idx)?;
             self.idx += 1;
 
-            self.skills
-                .process(curr, &self.diff_objects, self.hit_window);
+            self.skills.process(curr, &self.diff_objects);
 
             Self::increment_combo(curr.base, &mut self.attrs);
         }
