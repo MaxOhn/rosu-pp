@@ -1,5 +1,3 @@
-use std::{any::Any, mem};
-
 use crate::{
     osu::{difficulty_object::OsuDifficultyObject, osu_object::OsuObjectKind},
     Mods,
@@ -7,12 +5,12 @@ use crate::{
 
 use super::{previous, previous_start_time, OsuStrainSkill, Skill, StrainSkill};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Flashlight {
     curr_strain: f64,
     curr_section_peak: f64,
     curr_section_end: f64,
-    strain_peaks: Vec<f64>,
+    pub(crate) strain_peaks: Vec<f64>,
     has_hidden_mod: bool,
     scaling_factor: f64,
     time_preempt: f64,
@@ -55,21 +53,6 @@ impl Skill for Flashlight {
     #[inline]
     fn difficulty_value(&mut self) -> f64 {
         <Self as StrainSkill>::difficulty_value(self)
-    }
-
-    #[inline]
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    #[inline]
-    fn take_strain_peaks(&mut self) -> Vec<f64> {
-        mem::take(&mut self.strain_peaks)
     }
 }
 

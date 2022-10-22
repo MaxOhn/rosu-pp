@@ -12,7 +12,7 @@ use self::{
     difficulty_object::{Distances, OsuDifficultyObject},
     osu_object::{ObjectParameters, OsuObject},
     scaling_factor::ScalingFactor,
-    skills::{Aim, Flashlight, Skill, Speed},
+    skills::{Skill, Skills},
 };
 
 pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
@@ -116,21 +116,19 @@ impl<'map> OsuStars<'map> {
 
         let (skills, mut attrs) = calculate_skills(self);
 
-        let [mut aim, mut aim_no_sliders, mut speed, mut flashlight] = skills;
+        let Skills {
+            mut aim,
+            mut aim_no_sliders,
+            mut speed,
+            mut flashlight,
+        } = skills;
 
         let mut aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
         let aim_rating_no_sliders =
             aim_no_sliders.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
-        let (mut speed_rating, speed_notes) =
-            if let Some(speed) = speed.as_any_mut().downcast_mut::<Speed>() {
-                let notes = speed.relevant_note_count();
-                let rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-
-                (rating, notes)
-            } else {
-                unreachable!()
-            };
+        let speed_notes = speed.relevant_note_count();
+        let mut speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
         let mut flashlight_rating = flashlight.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
@@ -192,14 +190,19 @@ impl<'map> OsuStars<'map> {
         let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (skills, _) = calculate_skills(self);
 
-        let [mut aim, mut aim_no_sliders, mut speed, mut flashlight] = skills;
+        let Skills {
+            aim,
+            aim_no_sliders,
+            speed,
+            flashlight,
+        } = skills;
 
         OsuStrains {
             section_len: SECTION_LEN * clock_rate,
-            aim: aim.take_strain_peaks(),
-            aim_no_sliders: aim_no_sliders.take_strain_peaks(),
-            speed: speed.take_strain_peaks(),
-            flashlight: flashlight.take_strain_peaks(),
+            aim: aim.strain_peaks,
+            aim_no_sliders: aim_no_sliders.strain_peaks,
+            speed: speed.strain_peaks,
+            flashlight: flashlight.strain_peaks,
         }
     }
 }
@@ -229,7 +232,7 @@ impl OsuStrains {
     }
 }
 
-fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficultyAttributes) {
+fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     let OsuStars {
         map,
         mods,
@@ -295,7 +298,7 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
         h
     });
 
-    let mut skills = create_skills(mods, scaling_factor.radius, time_preempt, time_fade_in);
+    let mut skills = Skills::new(mods, scaling_factor.radius, time_preempt, time_fade_in);
 
     let last = match hit_objects.next() {
         Some(prev) => prev,
@@ -333,9 +336,7 @@ fn calculate_skills(params: OsuStars<'_>) -> ([Box<dyn Skill>; 4], OsuDifficulty
     }
 
     for curr in diff_objects.iter() {
-        for skill in skills.iter_mut() {
-            skill.process(curr, &diff_objects, hit_window);
-        }
+        skills.process(curr, &diff_objects, hit_window);
     }
 
     (skills, attrs)
@@ -489,20 +490,6 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
             }
         }
     }
-}
-
-fn create_skills(
-    mods: u32,
-    radius: f32,
-    time_preempt: f64,
-    time_fade_in: f64,
-) -> [Box<dyn Skill>; 4] {
-    [
-        Box::new(Aim::new(true)) as Box<dyn Skill>,
-        Box::new(Aim::new(false)) as Box<dyn Skill>,
-        Box::new(Speed::new()) as Box<dyn Skill>,
-        Box::new(Flashlight::new(mods, radius, time_preempt, time_fade_in)) as Box<dyn Skill>,
-    ]
 }
 
 /// The result of a difficulty calculation on an osu!standard map.

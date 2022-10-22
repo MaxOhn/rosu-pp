@@ -6,12 +6,11 @@ use std::{
 use crate::{curve::CurveBuffers, Beatmap, Mods};
 
 use super::{
-    create_skills,
     difficulty_object::{Distances, OsuDifficultyObject},
     old_stacking,
     osu_object::{ObjectParameters, OsuObject, OsuObjectKind},
     scaling_factor::ScalingFactor,
-    skills::{Aim, Flashlight, Skill, Speed},
+    skills::{Skill, Skills},
     stacking, OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, FADE_IN_DURATION_MULTIPLIER,
     PERFORMANCE_BASE_MULTIPLIER, PREEMPT_MIN,
 };
@@ -46,6 +45,7 @@ use super::{
 ///     // ...
 /// }
 /// ```
+#[derive(Clone)]
 pub struct OsuGradualDifficultyAttributes {
     pub(crate) idx: usize,
     mods: u32,
@@ -54,7 +54,7 @@ pub struct OsuGradualDifficultyAttributes {
     #[allow(unused)]
     hit_objects: Vec<OsuObject>,
     diff_objects: Vec<OsuDifficultyObject<'static>>,
-    skills: [Box<dyn Skill>; 4],
+    skills: Skills,
     hit_window: f64,
 }
 
@@ -64,7 +64,7 @@ impl Debug for OsuGradualDifficultyAttributes {
             .field("idx", &self.idx)
             .field("attrs", &self.attrs)
             .field("diff_objects", &self.diff_objects)
-            .field("skills", &"<cannot be displayed>")
+            .field("skills", &self.skills)
             .field("hit_window", &self.hit_window)
             .finish()
     }
@@ -133,7 +133,7 @@ impl OsuGradualDifficultyAttributes {
             h
         });
 
-        let skills = create_skills(mods, scaling_factor.radius, time_preempt, time_fade_in);
+        let skills = Skills::new(mods, scaling_factor.radius, time_preempt, time_fade_in);
 
         let last = match hit_objects_iter.next() {
             Some(prev) => prev,
@@ -222,35 +222,24 @@ impl Iterator for OsuGradualDifficultyAttributes {
         let curr = self.diff_objects.get(self.idx)?;
         self.idx += 1;
 
-        for skill in self.skills.iter_mut() {
-            skill.process(curr, &self.diff_objects, self.hit_window);
-        }
+        self.skills
+            .process(curr, &self.diff_objects, self.hit_window);
 
         Self::increment_combo(curr.base, &mut self.attrs);
 
-        let [aim, aim_no_sliders, speed, flashlight] = &self.skills;
-
-        let mut aim = aim.as_any().downcast_ref::<Aim>().unwrap().clone();
-
-        let mut aim_no_sliders = aim_no_sliders
-            .as_any()
-            .downcast_ref::<Aim>()
-            .unwrap()
-            .clone();
+        let Skills {
+            mut aim,
+            mut aim_no_sliders,
+            mut speed,
+            mut flashlight,
+        } = self.skills.clone();
 
         let mut aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
         let aim_rating_no_sliders =
             aim_no_sliders.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
-        let mut speed = speed.as_any().downcast_ref::<Speed>().unwrap().clone();
         let speed_notes = speed.relevant_note_count();
         let mut speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-
-        let mut flashlight = flashlight
-            .as_any()
-            .downcast_ref::<Flashlight>()
-            .unwrap()
-            .clone();
 
         let mut flashlight_rating = flashlight.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
@@ -319,9 +308,8 @@ impl Iterator for OsuGradualDifficultyAttributes {
             let curr = self.diff_objects.get(self.idx)?;
             self.idx += 1;
 
-            for skill in self.skills.iter_mut() {
-                skill.process(curr, &self.diff_objects, self.hit_window);
-            }
+            self.skills
+                .process(curr, &self.diff_objects, self.hit_window);
 
             Self::increment_combo(curr.base, &mut self.attrs);
         }

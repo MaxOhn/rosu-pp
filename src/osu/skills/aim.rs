@@ -1,19 +1,15 @@
-use std::{
-    any::Any,
-    f64::consts::{FRAC_PI_2, PI},
-    mem,
-};
+use std::f64::consts::{FRAC_PI_2, PI};
 
 use crate::osu::difficulty_object::OsuDifficultyObject;
 
 use super::{previous, previous_start_time, OsuStrainSkill, Skill, StrainSkill};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Aim {
     curr_strain: f64,
     curr_section_peak: f64,
     curr_section_end: f64,
-    strain_peaks: Vec<f64>,
+    pub(crate) strain_peaks: Vec<f64>,
     with_sliders: bool,
 }
 
@@ -50,21 +46,6 @@ impl Skill for Aim {
     #[inline]
     fn difficulty_value(&mut self) -> f64 {
         <Self as OsuStrainSkill>::difficulty_value(self)
-    }
-
-    #[inline]
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    #[inline]
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    #[inline]
-    fn take_strain_peaks(&mut self) -> Vec<f64> {
-        mem::take(&mut self.strain_peaks)
     }
 }
 
