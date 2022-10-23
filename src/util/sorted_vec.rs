@@ -87,7 +87,17 @@ macro_rules! impl_default_control_point {
                 #[inline]
                 fn default() -> Self {
                     Self {
-                        inner: Vec::default(),
+                        inner: Vec::new(),
+                        cmp: |a, b| a.time.partial_cmp(&b.time).unwrap_or(Ordering::Equal),
+                    }
+                }
+            }
+
+            impl SortedVec<$ty> {
+                #[allow(unused)]
+                pub(crate) fn with_capacity(capacity: usize) -> Self {
+                    Self {
+                        inner: Vec::with_capacity(capacity),
                         cmp: |a, b| a.time.partial_cmp(&b.time).unwrap_or(Ordering::Equal),
                     }
                 }

@@ -30,7 +30,7 @@ use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
 use crate::{
     beatmap::{Beatmap, Break, DifficultyPoint, EffectPoint, GameMode, TimingPoint},
-    util::TandemSorter,
+    util::{SortedVec, TandemSorter},
 };
 
 trait OptionExt<T> {
@@ -525,7 +525,8 @@ macro_rules! parse_hitobjects_body {
             } else if kind & Self::SLIDER_FLAG > 0 {
                 $self.n_sliders += 1;
 
-                let mut control_points = Vec::new();
+                // Control Points: [1, 94872] | Median=3 | Mean=2.9984
+                let mut control_points = Vec::with_capacity(3);
 
                 let control_point_iter = split.next().next_field("control points")?.split('|');
 
@@ -729,8 +730,20 @@ macro_rules! parse_body {
 
         let mut map = Beatmap {
             version: reader.version()?,
-            hit_objects: Vec::with_capacity(256), // TODO: test avg length, same for control points
-            sounds: Vec::with_capacity(256),
+            // Hit Objects & Sounds: [0, 40841] | Median=352 | Mean=546.0799
+            hit_objects: Vec::with_capacity(512),
+            sounds: Vec::with_capacity(512),
+            // Timing Points: [0, 22105] | Median=1 | Mean=6.0967
+            timing_points: SortedVec::<TimingPoint>::with_capacity(1),
+            // Difficulty Points: [0, 21910] | Median=4 | Mean=26.4693
+            // Don't allocate for the few maps without difficulty points.
+            // Once the first point is pushed, it allocates 4 immediately anyway.
+            difficulty_points: SortedVec::default(),
+            // Effect Points: [0, 30709] | Median=26 | Mean=69.2225
+            effect_points: SortedVec::<EffectPoint>::with_capacity(32),
+            // Breaks: [0, 55] | Median=0 | Mean=0.7901
+            // Don't allocate
+            breaks: Vec::new(),
             ..Default::default()
         };
 
