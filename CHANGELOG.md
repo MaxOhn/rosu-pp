@@ -1,5 +1,9 @@
 ## Upcoming
 
+Nothing as of now
+
+# v0.9.0 (2022-10-24)
+
 Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp), [taiko](https://osu.ppy.sh/home/news/2022-09-28-changes-to-osu-taiko-sr-and-pp), and [mania](https://osu.ppy.sh/home/news/2022-10-09-changes-to-osu-mania-sr-and-pp) updates, aswell as various breaking changes.
 
 - __Breaking changes:__
@@ -27,7 +31,7 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
   - Instead of throwing an error, invalid lines during parsing will just be ignored in some cases
   - Fixed an unsafe transmute between incompatible types while parsing sliders
 
-# v0.8.0 (2022-08-02)
+## v0.8.0 (2022-08-02)
 
 - __Fixes:__
   - Fixed stack overflow bug when allocating ticks for some sliders on converted catch maps ([#14])
