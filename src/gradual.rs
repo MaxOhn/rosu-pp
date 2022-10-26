@@ -39,14 +39,14 @@ use crate::{
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum GradualDifficultyAttributes<'map> {
-    /// Gradual osu!catch difficulty attributes.
-    Catch(CatchGradualDifficultyAttributes<'map>),
-    /// Gradual osu!mania difficulty attributes.
-    Mania(ManiaGradualDifficultyAttributes<'map>),
     /// Gradual osu!standard difficulty attributes.
     Osu(OsuGradualDifficultyAttributes),
     /// Gradual osu!taiko difficulty attributes.
     Taiko(TaikoGradualDifficultyAttributes),
+    /// Gradual osu!catch difficulty attributes.
+    Catch(CatchGradualDifficultyAttributes<'map>),
+    /// Gradual osu!mania difficulty attributes.
+    Mania(ManiaGradualDifficultyAttributes<'map>),
 }
 
 impl<'map> GradualDifficultyAttributes<'map> {
@@ -67,20 +67,20 @@ impl Iterator for GradualDifficultyAttributes<'_> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            GradualDifficultyAttributes::Catch(f) => f.next().map(DifficultyAttributes::Catch),
-            GradualDifficultyAttributes::Mania(m) => m.next().map(DifficultyAttributes::Mania),
             GradualDifficultyAttributes::Osu(o) => o.next().map(DifficultyAttributes::Osu),
             GradualDifficultyAttributes::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
+            GradualDifficultyAttributes::Catch(f) => f.next().map(DifficultyAttributes::Catch),
+            GradualDifficultyAttributes::Mania(m) => m.next().map(DifficultyAttributes::Mania),
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            GradualDifficultyAttributes::Catch(f) => f.size_hint(),
-            GradualDifficultyAttributes::Mania(m) => m.size_hint(),
             GradualDifficultyAttributes::Osu(o) => o.size_hint(),
             GradualDifficultyAttributes::Taiko(t) => t.size_hint(),
+            GradualDifficultyAttributes::Catch(f) => f.size_hint(),
+            GradualDifficultyAttributes::Mania(m) => m.size_hint(),
         }
     }
 }
@@ -120,20 +120,6 @@ impl ScoreState {
     }
 }
 
-impl From<ScoreState> for CatchScoreState {
-    #[inline]
-    fn from(state: ScoreState) -> Self {
-        Self {
-            max_combo: state.max_combo,
-            n_fruits: state.n300,
-            n_droplets: state.n100,
-            n_tiny_droplets: state.n50,
-            n_tiny_droplet_misses: state.n_katu,
-            n_misses: state.n_misses,
-        }
-    }
-}
-
 impl From<ScoreState> for OsuScoreState {
     #[inline]
     fn from(state: ScoreState) -> Self {
@@ -154,6 +140,20 @@ impl From<ScoreState> for TaikoScoreState {
             max_combo: state.max_combo,
             n300: state.n300,
             n100: state.n100,
+            n_misses: state.n_misses,
+        }
+    }
+}
+
+impl From<ScoreState> for CatchScoreState {
+    #[inline]
+    fn from(state: ScoreState) -> Self {
+        Self {
+            max_combo: state.max_combo,
+            n_fruits: state.n300,
+            n_droplets: state.n100,
+            n_tiny_droplets: state.n50,
+            n_tiny_droplet_misses: state.n_katu,
             n_misses: state.n_misses,
         }
     }
@@ -188,10 +188,10 @@ impl From<ScoreState> for ManiaScoreState {
 ///
 /// Alternatively, you can match on the map's mode yourself and use the gradual
 /// performance attribute struct for the corresponding mode, i.e.
-/// [`CatchGradualPerformanceAttributes`],
-/// [`ManiaGradualPerformanceAttributes`],
-/// [`OsuGradualPerformanceAttributes`], or
-/// [`TaikoGradualPerformanceAttributes`].
+/// [`OsuGradualPerformanceAttributes`],
+/// [`TaikoGradualPerformanceAttributes`],
+/// [`CatchGradualPerformanceAttributes`], or
+/// [`ManiaGradualPerformanceAttributes`].
 ///
 /// If you only want to calculate difficulty attributes use
 /// [`GradualDifficultyAttributes`](crate::GradualDifficultyAttributes) instead.
@@ -270,14 +270,14 @@ impl From<ScoreState> for ManiaScoreState {
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum GradualPerformanceAttributes<'map> {
-    /// Gradual osu!catch performance attributes.
-    Catch(CatchGradualPerformanceAttributes<'map>),
-    /// Gradual osu!mania performance attributes.
-    Mania(ManiaGradualPerformanceAttributes<'map>),
     /// Gradual osu!standard performance attributes.
     Osu(OsuGradualPerformanceAttributes<'map>),
     /// Gradual osu!taiko performance attributes.
     Taiko(TaikoGradualPerformanceAttributes<'map>),
+    /// Gradual osu!catch performance attributes.
+    Catch(CatchGradualPerformanceAttributes<'map>),
+    /// Gradual osu!mania performance attributes.
+    Mania(ManiaGradualPerformanceAttributes<'map>),
 }
 
 impl<'map> GradualPerformanceAttributes<'map> {
@@ -309,18 +309,18 @@ impl<'map> GradualPerformanceAttributes<'map> {
         n: usize,
     ) -> Option<PerformanceAttributes> {
         match self {
-            GradualPerformanceAttributes::Catch(f) => f
-                .process_next_n_objects(state.into(), n)
-                .map(PerformanceAttributes::Catch),
-            GradualPerformanceAttributes::Mania(m) => m
-                .process_next_n_objects(state.into(), n)
-                .map(PerformanceAttributes::Mania),
             GradualPerformanceAttributes::Osu(o) => o
                 .process_next_n_objects(state.into(), n)
                 .map(PerformanceAttributes::Osu),
             GradualPerformanceAttributes::Taiko(t) => t
                 .process_next_n_objects(state.into(), n)
                 .map(PerformanceAttributes::Taiko),
+            GradualPerformanceAttributes::Catch(f) => f
+                .process_next_n_objects(state.into(), n)
+                .map(PerformanceAttributes::Catch),
+            GradualPerformanceAttributes::Mania(m) => m
+                .process_next_n_objects(state.into(), n)
+                .map(PerformanceAttributes::Mania),
         }
     }
 }

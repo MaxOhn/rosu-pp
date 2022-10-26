@@ -38,14 +38,14 @@ use crate::{
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug)]
 pub enum AnyPP<'map> {
-    /// osu!catch performance calculator
-    Catch(CatchPP<'map>),
-    /// osu!mania performance calculator
-    Mania(ManiaPP<'map>),
     /// osu!standard performance calculator
     Osu(OsuPP<'map>),
     /// osu!taiko performance calculator
     Taiko(TaikoPP<'map>),
+    /// osu!catch performance calculator
+    Catch(CatchPP<'map>),
+    /// osu!mania performance calculator
+    Mania(ManiaPP<'map>),
 }
 
 impl<'map> AnyPP<'map> {
@@ -53,10 +53,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         match map.mode {
-            GameMode::Catch => Self::Catch(CatchPP::new(map)),
-            GameMode::Mania => Self::Mania(ManiaPP::new(map)),
             GameMode::Osu => Self::Osu(OsuPP::new(map)),
             GameMode::Taiko => Self::Taiko(TaikoPP::new(map)),
+            GameMode::Catch => Self::Catch(CatchPP::new(map)),
+            GameMode::Mania => Self::Mania(ManiaPP::new(map)),
         }
     }
 
@@ -65,10 +65,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn calculate(self) -> PerformanceAttributes {
         match self {
-            Self::Catch(f) => PerformanceAttributes::Catch(f.calculate()),
-            Self::Mania(m) => PerformanceAttributes::Mania(m.calculate()),
             Self::Osu(o) => PerformanceAttributes::Osu(o.calculate()),
             Self::Taiko(t) => PerformanceAttributes::Taiko(t.calculate()),
+            Self::Catch(f) => PerformanceAttributes::Catch(f.calculate()),
+            Self::Mania(m) => PerformanceAttributes::Mania(m.calculate()),
         }
     }
 
@@ -78,10 +78,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn attributes(self, attributes: impl AttributeProvider) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.attributes(attributes.attributes())),
-            Self::Mania(m) => Self::Mania(m.attributes(attributes.attributes())),
             Self::Osu(o) => Self::Osu(o.attributes(attributes.attributes())),
             Self::Taiko(t) => Self::Taiko(t.attributes(attributes.attributes())),
+            Self::Catch(f) => Self::Catch(f.attributes(attributes.attributes())),
+            Self::Mania(m) => Self::Mania(m.attributes(attributes.attributes())),
         }
     }
 
@@ -105,10 +105,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn mods(self, mods: u32) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.mods(mods)),
-            Self::Mania(m) => Self::Mania(m.mods(mods)),
             Self::Osu(o) => Self::Osu(o.mods(mods)),
             Self::Taiko(t) => Self::Taiko(t.mods(mods)),
+            Self::Catch(f) => Self::Catch(f.mods(mods)),
+            Self::Mania(m) => Self::Mania(m.mods(mods)),
         }
     }
 
@@ -120,10 +120,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.passed_objects(passed_objects)),
-            Self::Mania(m) => Self::Mania(m.passed_objects(passed_objects)),
             Self::Osu(o) => Self::Osu(o.passed_objects(passed_objects)),
             Self::Taiko(t) => Self::Taiko(t.passed_objects(passed_objects)),
+            Self::Catch(f) => Self::Catch(f.passed_objects(passed_objects)),
+            Self::Mania(m) => Self::Mania(m.passed_objects(passed_objects)),
         }
     }
 
@@ -133,10 +133,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn clock_rate(self, clock_rate: f64) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.clock_rate(clock_rate)),
-            Self::Mania(m) => Self::Mania(m.clock_rate(clock_rate)),
             Self::Osu(o) => Self::Osu(o.clock_rate(clock_rate)),
             Self::Taiko(t) => Self::Taiko(t.clock_rate(clock_rate)),
+            Self::Catch(f) => Self::Catch(f.clock_rate(clock_rate)),
+            Self::Mania(m) => Self::Mania(m.clock_rate(clock_rate)),
         }
     }
 
@@ -144,10 +144,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn state(self, state: ScoreState) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.state(state.into())),
-            Self::Mania(m) => Self::Mania(m.state(state.into())),
             Self::Osu(o) => Self::Osu(o.state(state.into())),
             Self::Taiko(t) => Self::Taiko(t.state(state.into())),
+            Self::Catch(f) => Self::Catch(f.state(state.into())),
+            Self::Mania(m) => Self::Mania(m.state(state.into())),
         }
     }
 
@@ -155,10 +155,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn accuracy(self, acc: f64) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.accuracy(acc)),
-            Self::Mania(m) => Self::Mania(m.accuracy(acc)),
             Self::Osu(o) => Self::Osu(o.accuracy(acc)),
             Self::Taiko(t) => Self::Taiko(t.accuracy(acc)),
+            Self::Catch(f) => Self::Catch(f.accuracy(acc)),
+            Self::Mania(m) => Self::Mania(m.accuracy(acc)),
         }
     }
 
@@ -166,10 +166,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n_misses(self, n_misses: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.misses(n_misses)),
-            Self::Mania(m) => Self::Mania(m.n_misses(n_misses)),
             Self::Osu(o) => Self::Osu(o.n_misses(n_misses)),
             Self::Taiko(t) => Self::Taiko(t.n_misses(n_misses)),
+            Self::Catch(f) => Self::Catch(f.misses(n_misses)),
+            Self::Mania(m) => Self::Mania(m.n_misses(n_misses)),
         }
     }
 
@@ -179,10 +179,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn combo(self, combo: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.combo(combo)),
-            Self::Mania(_) => self,
             Self::Osu(o) => Self::Osu(o.combo(combo)),
             Self::Taiko(t) => Self::Taiko(t.combo(combo)),
+            Self::Catch(f) => Self::Catch(f.combo(combo)),
+            Self::Mania(_) => self,
         }
     }
 
@@ -190,10 +190,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n300(self, n300: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.fruits(n300)),
-            Self::Mania(m) => Self::Mania(m.n300(n300)),
             Self::Osu(o) => Self::Osu(o.n300(n300)),
             Self::Taiko(t) => Self::Taiko(t.n300(n300)),
+            Self::Catch(f) => Self::Catch(f.fruits(n300)),
+            Self::Mania(m) => Self::Mania(m.n300(n300)),
         }
     }
 
@@ -201,10 +201,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n100(self, n100: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.droplets(n100)),
-            Self::Mania(m) => Self::Mania(m.n100(n100)),
             Self::Osu(o) => Self::Osu(o.n100(n100)),
             Self::Taiko(t) => Self::Taiko(t.n100(n100)),
+            Self::Catch(f) => Self::Catch(f.droplets(n100)),
+            Self::Mania(m) => Self::Mania(m.n100(n100)),
         }
     }
 
@@ -214,10 +214,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n50(self, n50: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.tiny_droplets(n50)),
-            Self::Mania(m) => Self::Mania(m.n50(n50)),
             Self::Osu(o) => Self::Osu(o.n50(n50)),
             Self::Taiko(_) => self,
+            Self::Catch(f) => Self::Catch(f.tiny_droplets(n50)),
+            Self::Mania(m) => Self::Mania(m.n50(n50)),
         }
     }
 
@@ -229,10 +229,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n_katu(self, n_katu: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.tiny_droplet_misses(n_katu)),
-            Self::Mania(m) => Self::Mania(m.n200(n_katu)),
             Self::Osu(_) => self,
             Self::Taiko(_) => self,
+            Self::Catch(f) => Self::Catch(f.tiny_droplet_misses(n_katu)),
+            Self::Mania(m) => Self::Mania(m.n200(n_katu)),
         }
     }
 
@@ -243,10 +243,10 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n_geki(self, n_geki: usize) -> Self {
         match self {
-            Self::Mania(m) => Self::Mania(m.n320(n_geki)),
             Self::Osu(_) => self,
             Self::Taiko(_) => self,
             Self::Catch(_) => self,
+            Self::Mania(m) => Self::Mania(m.n320(n_geki)),
         }
     }
 }
@@ -284,10 +284,10 @@ impl AttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> DifficultyAttributes {
         match self {
-            Self::Catch(attrs) => DifficultyAttributes::Catch(attrs.difficulty),
-            Self::Mania(attrs) => DifficultyAttributes::Mania(attrs.difficulty),
             Self::Osu(attrs) => DifficultyAttributes::Osu(attrs.difficulty),
             Self::Taiko(attrs) => DifficultyAttributes::Taiko(attrs.difficulty),
+            Self::Catch(attrs) => DifficultyAttributes::Catch(attrs.difficulty),
+            Self::Mania(attrs) => DifficultyAttributes::Mania(attrs.difficulty),
         }
     }
 }

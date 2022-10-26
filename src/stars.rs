@@ -22,14 +22,14 @@ use crate::{
 /// ```
 #[derive(Clone, Debug)]
 pub enum AnyStars<'map> {
-    /// osu!catch difficulty calculator
-    Catch(CatchStars<'map>),
-    /// osu!mania difficulty calculator
-    Mania(ManiaStars<'map>),
     /// osu!standard difficulty calculator
     Osu(OsuStars<'map>),
     /// osu!taiko difficulty calculator
     Taiko(TaikoStars<'map>),
+    /// osu!catch difficulty calculator
+    Catch(CatchStars<'map>),
+    /// osu!mania difficulty calculator
+    Mania(ManiaStars<'map>),
 }
 
 impl<'map> AnyStars<'map> {
@@ -37,10 +37,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         match map.mode {
-            GameMode::Catch => Self::Catch(CatchStars::new(map)),
-            GameMode::Mania => Self::Mania(ManiaStars::new(map)),
             GameMode::Osu => Self::Osu(OsuStars::new(map)),
             GameMode::Taiko => Self::Taiko(TaikoStars::new(map)),
+            GameMode::Catch => Self::Catch(CatchStars::new(map)),
+            GameMode::Mania => Self::Mania(ManiaStars::new(map)),
         }
     }
 
@@ -64,10 +64,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn mods(self, mods: u32) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.mods(mods)),
-            Self::Mania(m) => Self::Mania(m.mods(mods)),
             Self::Osu(o) => Self::Osu(o.mods(mods)),
             Self::Taiko(t) => Self::Taiko(t.mods(mods)),
+            Self::Catch(f) => Self::Catch(f.mods(mods)),
+            Self::Mania(m) => Self::Mania(m.mods(mods)),
         }
     }
 
@@ -79,10 +79,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.passed_objects(passed_objects)),
-            Self::Mania(m) => Self::Mania(m.passed_objects(passed_objects)),
             Self::Osu(o) => Self::Osu(o.passed_objects(passed_objects)),
             Self::Taiko(t) => Self::Taiko(t.passed_objects(passed_objects)),
+            Self::Catch(f) => Self::Catch(f.passed_objects(passed_objects)),
+            Self::Mania(m) => Self::Mania(m.passed_objects(passed_objects)),
         }
     }
 
@@ -92,10 +92,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn clock_rate(self, clock_rate: f64) -> Self {
         match self {
-            Self::Catch(f) => Self::Catch(f.clock_rate(clock_rate)),
-            Self::Mania(m) => Self::Mania(m.clock_rate(clock_rate)),
             Self::Osu(o) => Self::Osu(o.clock_rate(clock_rate)),
             Self::Taiko(t) => Self::Taiko(t.clock_rate(clock_rate)),
+            Self::Catch(f) => Self::Catch(f.clock_rate(clock_rate)),
+            Self::Mania(m) => Self::Mania(m.clock_rate(clock_rate)),
         }
     }
 
@@ -104,10 +104,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn calculate(self) -> DifficultyAttributes {
         match self {
-            Self::Catch(f) => DifficultyAttributes::Catch(f.calculate()),
-            Self::Mania(m) => DifficultyAttributes::Mania(m.calculate()),
             Self::Osu(o) => DifficultyAttributes::Osu(o.calculate()),
             Self::Taiko(t) => DifficultyAttributes::Taiko(t.calculate()),
+            Self::Catch(f) => DifficultyAttributes::Catch(f.calculate()),
+            Self::Mania(m) => DifficultyAttributes::Mania(m.calculate()),
         }
     }
 
@@ -118,10 +118,10 @@ impl<'map> AnyStars<'map> {
     #[inline]
     pub fn strains(self) -> Strains {
         match self {
-            Self::Catch(f) => Strains::Catch(f.strains()),
-            Self::Mania(m) => Strains::Mania(m.strains()),
             Self::Osu(o) => Strains::Osu(o.strains()),
             Self::Taiko(t) => Strains::Taiko(t.strains()),
+            Self::Catch(f) => Strains::Catch(f.strains()),
+            Self::Mania(m) => Strains::Mania(m.strains()),
         }
     }
 }
