@@ -63,7 +63,7 @@ impl<'map> ManiaPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map: Cow::Borrowed(map),
+            map: map.convert_mode(GameMode::Mania),
             attributes: None,
             mods: 0,
             passed_objects: None,

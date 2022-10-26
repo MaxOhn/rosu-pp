@@ -130,7 +130,7 @@ impl Beatmap {
     /// - Since hitsounds are irrelevant for difficulty and performance calculations
     /// in osu!mania, the resulting map of a conversion to mania will not contain hitsounds.
     /// - To avoid having to clone the map for osu!catch conversions, the field `Beatmap::mode`
-    /// will not be adjusted in a ctb-converted map.
+    /// will not be adjusted in a osu!catch-converted map.
     #[inline]
     pub fn convert_mode(&self, mode: GameMode) -> Cow<'_, Self> {
         if mode == self.mode {

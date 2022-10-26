@@ -55,12 +55,15 @@ impl<'map> TaikoStars<'map> {
     /// Create a new difficulty calculator for osu!taiko maps.
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
+        let map = map.convert_mode(GameMode::Taiko);
+        let is_convert = matches!(map, Cow::Owned(_));
+
         Self {
-            map: Cow::Borrowed(map),
+            map,
             mods: 0,
             passed_objects: None,
             clock_rate: None,
-            is_convert: false,
+            is_convert,
         }
     }
 

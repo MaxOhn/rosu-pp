@@ -1,6 +1,7 @@
 ## Upcoming
 
-Nothing as of now
+- __Adjustments:__
+  - When passing an osu!std map to `TaikoPP` or `ManiaPP`, it now automatically converts the map internally. For osu!catch it was already happening trivially.
 
 # v0.9.0 (2022-10-24)
 

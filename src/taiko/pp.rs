@@ -56,7 +56,7 @@ impl<'map> TaikoPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map: Cow::Borrowed(map),
+            map: map.convert_mode(GameMode::Taiko),
             attributes: None,
             mods: 0,
             combo: None,
