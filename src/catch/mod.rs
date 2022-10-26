@@ -107,11 +107,10 @@ impl<'map> CatchStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> CatchStrains {
-        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (movement, _) = calculate_movement(self);
 
         CatchStrains {
-            section_len: SECTION_LENGTH * clock_rate,
+            section_len: SECTION_LENGTH,
             movement: movement.strain_peaks,
         }
     }

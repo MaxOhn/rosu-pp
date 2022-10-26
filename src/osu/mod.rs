@@ -187,7 +187,6 @@ impl<'map> OsuStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> OsuStrains {
-        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (skills, _) = calculate_skills(self);
 
         let Skills {
@@ -198,7 +197,7 @@ impl<'map> OsuStars<'map> {
         } = skills;
 
         OsuStrains {
-            section_len: SECTION_LEN * clock_rate,
+            section_len: SECTION_LEN,
             aim: aim.strain_peaks,
             aim_no_sliders: aim_no_sliders.strain_peaks,
             speed: speed.strain_peaks,
@@ -212,7 +211,7 @@ impl<'map> OsuStars<'map> {
 #[derive(Clone, Debug)]
 pub struct OsuStrains {
     /// Time in ms inbetween two strains.
-    pub section_len: f64,
+    pub section_len: f64, // TODO: remove field, make it a method
     /// Strain peaks of the aim skill.
     pub aim: Vec<f64>,
     /// Strain peaks of the aim skill without sliders.

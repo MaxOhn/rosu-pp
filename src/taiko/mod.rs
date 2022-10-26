@@ -165,7 +165,6 @@ impl<'map> TaikoStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> TaikoStrains {
-        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let (peaks, _) = calculate_skills(self);
 
         let PeaksRaw {
@@ -175,7 +174,7 @@ impl<'map> TaikoStars<'map> {
         } = peaks.into_raw();
 
         TaikoStrains {
-            section_len: SECTION_LEN as f64 * clock_rate,
+            section_len: SECTION_LEN as f64,
             color: colour,
             rhythm,
             stamina,

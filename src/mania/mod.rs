@@ -134,11 +134,10 @@ impl<'map> ManiaStars<'map> {
     /// Suitable to plot the difficulty of a map over time.
     #[inline]
     pub fn strains(self) -> ManiaStrains {
-        let clock_rate = self.clock_rate.unwrap_or_else(|| self.mods.clock_rate());
         let ManiaResult { strain, .. } = calculate_result(self);
 
         ManiaStrains {
-            section_len: SECTION_LEN * clock_rate,
+            section_len: SECTION_LEN,
             strains: strain.strain_peaks,
         }
     }

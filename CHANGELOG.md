@@ -3,6 +3,9 @@
 - __Adjustments:__
   - When passing an osu!std map to `TaikoPP` or `ManiaPP`, it now automatically converts the map internally. For osu!catch it was already happening trivially.
 
+- __Fixes:__
+  - The fields `section_len` for all strain structs no longer depends on the clock rate.
+
 # v0.9.0 (2022-10-24)
 
 Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp), [taiko](https://osu.ppy.sh/home/news/2022-09-28-changes-to-osu-taiko-sr-and-pp), and [mania](https://osu.ppy.sh/home/news/2022-10-09-changes-to-osu-mania-sr-and-pp) updates, aswell as various breaking changes.
