@@ -87,10 +87,13 @@
 //!     taiko::TaikoScoreState,
 //! };
 //!
+//! # /*
 //! let map = match Beatmap::from_path("/path/to/file.osu") {
 //!     Ok(map) => map,
 //!     Err(why) => panic!("Error while parsing map: {}", why),
 //! };
+//! # */
+//! # let map = Beatmap::default();
 //!
 //! let mods = 8 + 64; // HDDT
 //!

@@ -641,7 +641,7 @@ impl ManiaAttributeProvider for PerformanceAttributes {
     }
 }
 
-#[cfg(not(any(feature = "async_tokio", feature = "async_str")))]
+#[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
 #[cfg(test)]
 mod tests {
     use super::*;

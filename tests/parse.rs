@@ -1,15 +1,99 @@
-#![cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-
-use rosu_pp::GameMode;
+use rosu_pp::{Beatmap, GameMode};
 
 use crate::common::{Catch, Mania, Osu, Taiko};
 
 mod common;
 
-#[test]
-fn parse_osu() {
-    let map = test_map!(Osu);
+#[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
+mod sync {
+    use super::*;
 
+    #[test]
+    fn parse_osu() {
+        assert_osu(test_map!(Osu));
+    }
+
+    #[test]
+    fn parse_taiko() {
+        assert_taiko(test_map!(Taiko));
+    }
+
+    #[test]
+    fn parse_catch() {
+        assert_catch(test_map!(Catch));
+    }
+
+    #[test]
+    fn parse_mania() {
+        assert_mania(test_map!(Mania));
+    }
+}
+
+#[cfg(feature = "async_tokio")]
+mod async_tokio {
+    use tokio::runtime::Builder as RuntimeBuilder;
+
+    use super::*;
+
+    #[test]
+    fn parse_osu() {
+        RuntimeBuilder::new_current_thread()
+            .build()
+            .unwrap()
+            .block_on(async { assert_osu(test_map!(Osu)) });
+    }
+
+    #[test]
+    fn parse_taiko() {
+        RuntimeBuilder::new_current_thread()
+            .build()
+            .unwrap()
+            .block_on(async { assert_taiko(test_map!(Taiko)) });
+    }
+
+    #[test]
+    fn parse_catch() {
+        RuntimeBuilder::new_current_thread()
+            .build()
+            .unwrap()
+            .block_on(async { assert_catch(test_map!(Catch)) });
+    }
+
+    #[test]
+    fn parse_mania() {
+        RuntimeBuilder::new_current_thread()
+            .build()
+            .unwrap()
+            .block_on(async { assert_mania(test_map!(Mania)) });
+    }
+}
+
+#[cfg(feature = "async_std")]
+mod async_tokio {
+    use super::*;
+
+    #[test]
+    fn parse_osu() {
+        async_std::task::block_on(async { assert_osu(test_map!(Osu)) });
+    }
+
+    #[test]
+    fn parse_taiko() {
+        async_std::task::block_on(async { assert_taiko(test_map!(Taiko)) });
+    }
+
+    #[test]
+    fn parse_catch() {
+        async_std::task::block_on(async { assert_catch(test_map!(Catch)) });
+    }
+
+    #[test]
+    fn parse_mania() {
+        async_std::task::block_on(async { assert_mania(test_map!(Mania)) });
+    }
+}
+
+fn assert_osu(map: Beatmap) {
     assert_eq!(map.mode, GameMode::Osu);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 307);
@@ -30,10 +114,7 @@ fn parse_osu() {
     assert_eq!(map.breaks.len(), 1)
 }
 
-#[test]
-fn parse_taiko() {
-    let map = test_map!(Taiko);
-
+fn assert_taiko(map: Beatmap) {
     assert_eq!(map.mode, GameMode::Taiko);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 289);
@@ -54,10 +135,7 @@ fn parse_taiko() {
     assert_eq!(map.breaks.len(), 0)
 }
 
-#[test]
-fn parse_catch() {
-    let map = test_map!(Catch);
-
+fn assert_catch(map: Beatmap) {
     assert_eq!(map.mode, GameMode::Catch);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 249);
@@ -78,10 +156,7 @@ fn parse_catch() {
     assert_eq!(map.breaks.len(), 0)
 }
 
-#[test]
-fn parse_mania() {
-    let map = test_map!(Mania);
-
+fn assert_mania(map: Beatmap) {
     assert_eq!(map.mode, GameMode::Mania);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 2815);
