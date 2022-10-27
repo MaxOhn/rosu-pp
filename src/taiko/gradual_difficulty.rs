@@ -46,6 +46,8 @@ pub struct TaikoGradualDifficultyAttributes {
     hit_objects: IntoIter<Rc<RefCell<TaikoDifficultyObject>>>,
     lists: ObjectLists,
     peaks: Peaks,
+    total_hits: usize,
+    pub(crate) started: bool,
 }
 
 impl TaikoGradualDifficultyAttributes {
@@ -76,11 +78,14 @@ impl TaikoGradualDifficultyAttributes {
                 lists: ObjectLists::default(),
                 peaks,
                 attrs,
+                total_hits: 0,
+                started: false,
             };
         }
 
         attrs.max_combo += map.hit_objects[0].is_circle() as usize;
         attrs.max_combo += map.hit_objects[1].is_circle() as usize;
+        let mut total_hits = attrs.max_combo;
 
         let mut diff_objects = map
             .taiko_objects()
@@ -91,6 +96,8 @@ impl TaikoGradualDifficultyAttributes {
             .fold(
                 ObjectLists::default(),
                 |mut lists, (idx, (((base, base_start_time), last), last_last))| {
+                    total_hits += base.is_hit as usize;
+
                     let diff_obj = TaikoDifficultyObject::new(
                         base,
                         base_start_time,
@@ -124,11 +131,9 @@ impl TaikoGradualDifficultyAttributes {
             lists: diff_objects,
             peaks,
             attrs,
+            total_hits,
+            started: false,
         }
-    }
-
-    pub(crate) fn passed_objects(&self) -> usize {
-        self.lists.all.len() - self.hit_objects.len()
     }
 }
 
@@ -136,11 +141,18 @@ impl Iterator for TaikoGradualDifficultyAttributes {
     type Item = TaikoDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        {
+        self.started = true;
+
+        loop {
             let curr = self.hit_objects.next()?;
             let borrowed = curr.borrow();
             self.peaks.process(&borrowed, &self.lists);
-            self.attrs.max_combo += borrowed.base.is_hit as usize;
+
+            if borrowed.base.is_hit {
+                self.attrs.max_combo += 1;
+
+                break;
+            }
         }
 
         let PeaksDifficultyValues {
@@ -189,13 +201,22 @@ impl Iterator for TaikoGradualDifficultyAttributes {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let skip = n.min(self.len()).saturating_sub(1);
+        let skip = n
+            .min(self.total_hits - self.attrs.max_combo)
+            .saturating_sub(1);
 
         for _ in 0..skip {
-            let curr = self.hit_objects.next()?;
-            let borrowed = curr.borrow();
-            self.peaks.process(&borrowed, &self.lists);
-            self.attrs.max_combo += borrowed.base.is_hit as usize;
+            loop {
+                let curr = self.hit_objects.next()?;
+                let borrowed = curr.borrow();
+                self.peaks.process(&borrowed, &self.lists);
+
+                if borrowed.base.is_hit {
+                    self.attrs.max_combo += 1;
+
+                    break;
+                }
+            }
         }
 
         self.next()

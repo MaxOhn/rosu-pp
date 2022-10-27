@@ -1,6 +1,7 @@
 ## Upcoming
 
-Nothing as of now
+- __Fixes:__
+  - Fixed passed object count for taiko by ignoring non-circles.
 
 # v0.9.1 (2022-10-26)
 

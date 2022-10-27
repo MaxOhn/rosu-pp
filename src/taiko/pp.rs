@@ -212,7 +212,6 @@ impl<'map> TaikoPP<'map> {
 
     fn generate_hitresults(&self, max_combo: usize) -> TaikoScoreState {
         let total_result_count = if let Some(passed_objects) = self.passed_objects {
-            // Not really correct since not all objects count towards combo
             max_combo.min(passed_objects)
         } else {
             max_combo

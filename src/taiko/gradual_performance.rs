@@ -170,15 +170,16 @@ impl<'map> TaikoGradualPerformanceAttributes<'map> {
         state: TaikoScoreState,
         n: usize,
     ) -> Option<TaikoPerformanceAttributes> {
-        let sub = 2 * (self.difficulty.passed_objects() == 0) as usize;
+        let sub = 2 * !self.difficulty.started as usize;
         let difficulty = self.difficulty.nth(n.saturating_sub(sub))?;
+        let passed_objects = difficulty.max_combo;
 
         let performance = self
             .performance
             .clone()
             .attributes(difficulty)
             .state(state)
-            .passed_objects(self.difficulty.passed_objects() + 2)
+            .passed_objects(passed_objects)
             .calculate();
 
         Some(performance)

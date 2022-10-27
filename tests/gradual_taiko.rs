@@ -100,14 +100,13 @@ fn gradual_eq_regular_passed() {
     let mut gradual = TaikoGradualPerformanceAttributes::new(&map, 0);
 
     let state = TaikoScoreState {
-        max_combo: 246,
-        n300: 246,
+        max_combo: 250,
+        n300: 250,
         n100: 0,
         n_misses: 0,
     };
 
     let gradual = gradual.process_next_n_objects(state, n).unwrap();
 
-    // Cyclic types in difficulty calculation prohibit values to coincide completely
-    assert_eq!(regular.difficulty.max_combo, gradual.difficulty.max_combo);
+    assert_eq!(regular, gradual);
 }

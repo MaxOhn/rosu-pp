@@ -214,30 +214,30 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
         is_convert: _,
     } = params;
 
-    let take = passed_objects.unwrap_or(map.hit_objects.len());
+    let mut take = passed_objects.unwrap_or(map.hit_objects.len());
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
     let mut peaks = Peaks::new();
     let mut max_combo = 0;
 
-    match map.hit_objects.get(0) {
-        Some(h) => max_combo += h.is_circle() as usize,
-        None => return (peaks, max_combo),
-    }
-
-    match map.hit_objects.get(1) {
-        Some(h) => max_combo += h.is_circle() as usize,
-        None => return (peaks, max_combo),
-    }
-
     let mut diff_objects = map
         .taiko_objects()
-        .take(take)
+        .take_while(|(h, _)| {
+            if h.is_hit {
+                if take == 0 {
+                    return false;
+                }
+
+                max_combo += 1;
+                take -= 1;
+            }
+
+            true
+        })
         .skip(2)
         .zip(map.hit_objects.iter().skip(1))
         .zip(map.hit_objects.iter())
         .enumerate()
-        .inspect(|(_, (((base, _), _), _))| max_combo += base.is_hit as usize)
         .fold(
             ObjectLists::default(),
             |mut lists, (idx, (((base, base_start_time), last), last_last))| {
