@@ -515,7 +515,7 @@ pub struct OsuDifficultyAttributes {
     /// The overall difficulty
     pub od: f64,
     /// The health drain rate.
-    pub hp: f64, // TODO: remove as it is not used for performance calculation
+    pub hp: f64,
     /// The amount of circles.
     pub n_circles: usize,
     /// The amount of sliders.

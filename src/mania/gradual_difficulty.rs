@@ -1,8 +1,10 @@
+use std::borrow::Cow;
+
 use crate::{
     beatmap::BeatmapHitWindows,
     parse::{HitObject, HitObjectKind},
     util::FloatExt,
-    Beatmap, Mods,
+    Beatmap, GameMode, Mods,
 };
 
 use super::{
@@ -45,7 +47,7 @@ use super::{
 #[derive(Clone, Debug)]
 pub struct ManiaGradualDifficultyAttributes<'map> {
     pub(crate) idx: usize,
-    map: &'map Beatmap,
+    map: Cow<'map, Beatmap>,
     hit_window: f64,
     strain: Strain,
     diff_objects: Vec<ManiaDifficultyObject>,
@@ -56,6 +58,7 @@ pub struct ManiaGradualDifficultyAttributes<'map> {
 impl<'map> ManiaGradualDifficultyAttributes<'map> {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
+        let map = map.convert_mode(GameMode::Mania);
         let total_columns = map.cs.round_even().max(1.0);
         let clock_rate = mods.clock_rate();
         let strain = Strain::new(total_columns as usize);
@@ -63,12 +66,11 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
         let BeatmapHitWindows { od: hit_window, .. } = map
             .attributes()
             .mods(mods)
-            // TODO: allow converts in gradual calc
-            .converted(false)
+            .converted(matches!(map, Cow::Owned(_)))
             .clock_rate(clock_rate)
             .hit_windows();
 
-        let mut params = ObjectParameters::new(map);
+        let mut params = ObjectParameters::new(map.as_ref());
         let mut hit_objects = map.hit_objects.iter();
 
         let first = match hit_objects.next() {

@@ -1,6 +1,6 @@
-use std::{cell::RefCell, rc::Rc, vec::IntoIter};
+use std::{borrow::Cow, cell::RefCell, rc::Rc, vec::IntoIter};
 
-use crate::{beatmap::BeatmapHitWindows, taiko::rescale, Beatmap, Mods};
+use crate::{beatmap::BeatmapHitWindows, taiko::rescale, Beatmap, GameMode, Mods};
 
 use super::{
     colours::ColourDifficultyPreprocessor,
@@ -47,12 +47,15 @@ pub struct TaikoGradualDifficultyAttributes {
     lists: ObjectLists,
     peaks: Peaks,
     total_hits: usize,
+    is_convert: bool,
     pub(crate) started: bool,
 }
 
 impl TaikoGradualDifficultyAttributes {
     /// Create a new difficulty attributes iterator for osu!taiko maps.
     pub fn new(map: &Beatmap, mods: u32) -> Self {
+        let map = map.convert_mode(GameMode::Taiko);
+        let is_convert = matches!(map, Cow::Owned(_));
         let peaks = Peaks::new();
         let clock_rate = mods.clock_rate();
 
@@ -79,6 +82,7 @@ impl TaikoGradualDifficultyAttributes {
                 peaks,
                 attrs,
                 total_hits: 0,
+                is_convert,
                 started: false,
             };
         }
@@ -132,6 +136,7 @@ impl TaikoGradualDifficultyAttributes {
             peaks,
             attrs,
             total_hits,
+            is_convert,
             started: false,
         }
     }
@@ -169,12 +174,9 @@ impl Iterator for TaikoGradualDifficultyAttributes {
 
         let mut star_rating = rescale(combined_rating * 1.4);
 
-        // TODO: adjust once converts are available for gradual processing
-        let is_convert = false;
-
         // * TODO: This is temporary measure as we don't detect abuse of multiple-input
         // * playstyles of converts within the current system.
-        if is_convert {
+        if self.is_convert {
             star_rating *= 0.925;
 
             // * For maps with low colour variance and high stamina requirement,
