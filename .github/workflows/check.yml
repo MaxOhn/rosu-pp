@@ -12,6 +12,10 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        feature: [default, async_tokio, async_std]
+
     steps:
       - name: Checkout project
         uses: actions/checkout@v3
@@ -28,10 +32,15 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
+          arg: --no-default-features --features ${{ matrix.feature }}
 
   tests:
     name: Tests
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        feature: [default, async_tokio, async_std]
 
     steps:
       - name: Checkout project
@@ -49,3 +58,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+          arg: --no-default-features --features ${{ matrix.feature }}
