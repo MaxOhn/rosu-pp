@@ -5,6 +5,7 @@
 
 - __Fixes:__
   - Fixed passed object count for taiko by ignoring non-circles.
+  - Fixed a niche panic on UTF-16 encoded maps ([#18])
 
 # v0.9.1 (2022-10-26)
 
@@ -213,3 +214,4 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
 [#9]: https://github.com/MaxOhn/rosu-pp/pull/9
 [#14]: https://github.com/MaxOhn/rosu-pp/pull/14
 [#15]: https://github.com/MaxOhn/rosu-pp/pull/15
+[#18]: https://github.com/MaxOhn/rosu-pp/pull/18
