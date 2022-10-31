@@ -245,7 +245,7 @@ impl<R> FileReader<R> {
     /// the first element and all the 0's, turning it into `[a, b, c, ...]`.
     fn decode_utf16(&mut self) {
         // remove the 0's
-        let limit = self.buf.len() / 2 + 1 + (self.buf.len() % 2);
+        let limit = self.buf.len() / 2 + 1;
 
         for i in 2..limit {
             self.buf.swap(i, i * 2 - 1);
