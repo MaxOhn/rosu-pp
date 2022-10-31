@@ -596,19 +596,18 @@ impl OsuPpInner {
         // * of the calculation we focus on hitting the timing hit window.
         let amount_hit_objects_with_acc = self.attrs.n_circles;
 
-        let mut better_acc_percentage = if amount_hit_objects_with_acc > 0 {
-            ((self.state.n300 - (self.state.total_hits() - amount_hit_objects_with_acc)) * 6
-                + self.state.n100 * 2
-                + self.state.n50) as f64
-                / (amount_hit_objects_with_acc * 6) as f64
+        let better_acc_percentage = if amount_hit_objects_with_acc > 0 {
+            let sub = self.state.total_hits() - amount_hit_objects_with_acc;
+
+            if self.state.n300 < sub {
+                0.0
+            } else {
+                ((self.state.n300 - sub) * 6 + self.state.n100 * 2 + self.state.n50) as f64
+                    / (amount_hit_objects_with_acc * 6) as f64
+            }
         } else {
             0.0
         };
-
-        // * It is possible to reach a negative accuracy with this formula. Cap it at zero - zero points.
-        if better_acc_percentage < 0.0 {
-            better_acc_percentage = 0.0;
-        }
 
         // * Lots of arbitrary values from testing.
         // * Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution.

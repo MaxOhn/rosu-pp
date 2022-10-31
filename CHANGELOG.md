@@ -4,8 +4,9 @@
   - When passing an osu!std map to `TaikoGradualDifficultyAttributes` or `ManiaGradualDifficultyAttributes`, it now automatically converts the map internally. For osu!catch is was already happening trivially.
 
 - __Fixes:__
-  - Fixed passed object count for taiko by ignoring non-circles.
-  - Fixed a niche panic on UTF-16 encoded maps ([#18])
+  - Fixed passed object count for taiko by ignoring non-circles
+  - Fixed a niche panic on UTF-16 encoded maps. ([#18])
+  - Fixed an occasional underflow when calculating accuracy pp
 
 # v0.9.1 (2022-10-26)
 
