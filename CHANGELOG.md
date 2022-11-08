@@ -1,5 +1,9 @@
 ## Upcoming
 
+Nothing as of now
+
+# v0.9.2 (2022-11-08)
+
 - __Adjustments:__
   - When passing an osu!std map to `TaikoGradualDifficultyAttributes` or `ManiaGradualDifficultyAttributes`, it now automatically converts the map internally. For osu!catch is was already happening trivially.
 
@@ -9,7 +13,7 @@
   - Fixed an occasional underflow when calculating accuracy pp
   - Fixed an infinite loop on special ctb maps
 
-# v0.9.1 (2022-10-26)
+## v0.9.1 (2022-10-26)
 
 - __Adjustments:__
   - When passing an osu!std map to `TaikoPP` or `ManiaPP`, it now automatically converts the map internally. For osu!catch it was already happening trivially.
