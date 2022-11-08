@@ -599,6 +599,7 @@ impl OsuPpInner {
         let better_acc_percentage = if amount_hit_objects_with_acc > 0 {
             let sub = self.state.total_hits() - amount_hit_objects_with_acc;
 
+            // * It is possible to reach a negative accuracy with this formula. Cap it at zero - zero points.
             if self.state.n300 < sub {
                 0.0
             } else {

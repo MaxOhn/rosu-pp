@@ -5,8 +5,9 @@
 
 - __Fixes:__
   - Fixed passed object count for taiko by ignoring non-circles
-  - Fixed a niche panic on UTF-16 encoded maps. ([#18])
+  - Fixed a niche panic on UTF-16 encoded maps ([#18])
   - Fixed an occasional underflow when calculating accuracy pp
+  - Fixed an infinite loop on special ctb maps
 
 # v0.9.1 (2022-10-26)
 

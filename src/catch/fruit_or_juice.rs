@@ -89,7 +89,6 @@ impl FruitOrJuice {
 
                 let mut curr_dist = tick_dist;
                 let pixel_len = pixel_len.unwrap_or(0.0);
-                let time_add = total_duration * tick_dist / (pixel_len * span_count);
 
                 let target = pixel_len - tick_dist / 8.0;
 
@@ -107,13 +106,17 @@ impl FruitOrJuice {
                         curr_dist += tick_dist;
                     }
 
-                    params.attributes.n_tiny_droplets += tiny_droplet_count(
-                        h.start_time,
-                        time_add,
-                        total_duration,
-                        span_count as usize,
-                        &params.ticks,
-                    );
+                    if pixel_len > 0.0 {
+                        let time_add = total_duration * tick_dist / (pixel_len * span_count);
+
+                        params.attributes.n_tiny_droplets += tiny_droplet_count(
+                            h.start_time,
+                            time_add,
+                            total_duration,
+                            span_count as usize,
+                            &params.ticks,
+                        );
+                    }
 
                     slider_objects.reserve(span_count as usize * (params.ticks.len()));
 
