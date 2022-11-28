@@ -1,6 +1,7 @@
 ## Upcoming
 
-Nothing as of now
+- __Additions:__
+  - Added the method `ScoreState::total_hits`
 
 # v0.9.2 (2022-11-08)
 

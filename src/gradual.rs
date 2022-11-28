@@ -51,6 +51,7 @@ pub enum GradualDifficultyAttributes<'map> {
 
 impl<'map> GradualDifficultyAttributes<'map> {
     /// Create a new gradual difficulty calculator for maps of any mode.
+    #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
             GameMode::Osu => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
@@ -115,8 +116,26 @@ pub struct ScoreState {
 
 impl ScoreState {
     /// Create a new empty score state.
+    #[inline]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Return the total amount of hits by adding everything up based on the mode.
+    #[inline]
+    pub fn total_hits(&self, mode: GameMode) -> usize {
+        let mut amount = self.n300 + self.n100 + self.n_misses;
+
+        if mode != GameMode::Taiko {
+            amount += self.n50;
+
+            if mode != GameMode::Osu {
+                amount += self.n_katu;
+                amount += (mode != GameMode::Catch) as usize * self.n_geki;
+            }
+        }
+
+        amount
     }
 }
 
@@ -282,6 +301,7 @@ pub enum GradualPerformanceAttributes<'map> {
 
 impl<'map> GradualPerformanceAttributes<'map> {
     /// Create a new gradual performance calculator for maps of any mode.
+    #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
             GameMode::Osu => Self::Osu(OsuGradualPerformanceAttributes::new(map, mods)),
@@ -293,6 +313,7 @@ impl<'map> GradualPerformanceAttributes<'map> {
 
     /// Process the next hit object and calculate the
     /// performance attributes for the resulting score.
+    #[inline]
     pub fn process_next_object(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
         self.process_next_n_objects(state, 1)
     }
@@ -303,6 +324,7 @@ impl<'map> GradualPerformanceAttributes<'map> {
     /// If `n` is 0 it will be considered as 1.
     /// If there are still objects to be processed but `n` is larger than the amount
     /// of remaining objects, `n` will be considered as the amount of remaining objects.
+    #[inline]
     pub fn process_next_n_objects(
         &mut self,
         state: ScoreState,
