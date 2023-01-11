@@ -59,7 +59,7 @@ impl DifficultyPoint {
     pub fn new(time: f64, beat_len: f64, speed_multiplier: f64) -> Self {
         // * Note: In stable, the division occurs on floats, but with compiler optimisations
         // * turned on actually seems to occur on doubles via some .NET black magic (possibly inlining?).
-        let bpm_multiplier = if beat_len < 0.0 {
+        let bpm_mult = if beat_len < 0.0 {
             ((-beat_len) as f32).clamp(10.0, 10_000.0) as f64 / 100.0
         } else {
             1.0
@@ -68,7 +68,7 @@ impl DifficultyPoint {
         Self {
             time,
             slider_vel: speed_multiplier.clamp(0.1, 10.0),
-            bpm_mult: bpm_multiplier as f64,
+            bpm_mult,
             generate_ticks: !beat_len.is_nan(),
         }
     }

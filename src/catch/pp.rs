@@ -431,9 +431,7 @@ impl CatchPPInner {
         if total_hits == 0 {
             1.0
         } else {
-            (self.successful_hits() as f64 / total_hits as f64)
-                .max(0.0)
-                .min(1.0)
+            (self.successful_hits() as f64 / total_hits as f64).clamp(0.0, 1.0)
         }
     }
 }

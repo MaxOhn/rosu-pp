@@ -713,7 +713,7 @@ fn parse_custom_sound(sound: &str) -> u8 {
     sound
         .bytes()
         .try_fold(0_u8, |sound, byte| match byte {
-            b'0'..=b'9' => Some(sound.wrapping_mul(10).wrapping_add((byte & 0xF) as u8)),
+            b'0'..=b'9' => Some(sound.wrapping_mul(10).wrapping_add(byte & 0xF)),
             _ => None,
         })
         .unwrap_or(0)

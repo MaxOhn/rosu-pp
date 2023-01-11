@@ -34,7 +34,7 @@ pub(crate) trait StrainSkill: Skill + Sized {
     ) {
         // * The first object doesn't generate a strain, so we begin with an incremented section end
         if curr.idx == 0 {
-            let section_len = SECTION_LEN as f64;
+            let section_len = SECTION_LEN;
             *self.curr_section_end() = (curr.start_time / section_len).ceil() * section_len;
         }
 
@@ -46,7 +46,7 @@ pub(crate) trait StrainSkill: Skill + Sized {
                 self.start_new_section_from(section_end, curr, diff_objects);
             }
 
-            *self.curr_section_end() += SECTION_LEN as f64;
+            *self.curr_section_end() += SECTION_LEN;
         }
 
         *self.curr_section_peak() = self

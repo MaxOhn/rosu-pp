@@ -171,10 +171,14 @@ impl Distances {
 
             let tail_jump_dist = (stacked_tail_pos - base.stacked_pos()).length() * scaling_factor;
 
-            this.min_jump_dist = (this.lazy_jump_dist
-                - (Self::MAXIMUM_SLIDER_RADIUS - Self::ASSUMED_SLIDER_RADIUS) as f64)
-                .min((tail_jump_dist - Self::MAXIMUM_SLIDER_RADIUS) as f64)
-                .max(0.0);
+            let diff = (Self::MAXIMUM_SLIDER_RADIUS - Self::ASSUMED_SLIDER_RADIUS) as f64;
+            let min = (tail_jump_dist - Self::MAXIMUM_SLIDER_RADIUS) as f64;
+
+            // "attributes on expressions are experimental see issue #15701 https://github.com/rust-lang/rust/issues/15701"
+            // rust pls...
+            #[allow(clippy::manual_clamp)]
+            let tmp = (this.lazy_jump_dist - diff).min(min).max(0.0);
+            this.min_jump_dist = tmp;
         }
 
         if let Some(last_last) = last_last.filter(|obj| !obj.is_spinner()) {

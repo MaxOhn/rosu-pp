@@ -214,8 +214,7 @@ impl FlashlightEvaluator {
             let pixel_travel_dist = osu_curr.dists.lazy_travel_dist as f64 / scaling_factor;
 
             // * Reward sliders based on velocity.
-            slider_bonus = ((pixel_travel_dist / osu_curr.dists.travel_time as f64
-                - Self::MIN_VELOCITY)
+            slider_bonus = ((pixel_travel_dist / osu_curr.dists.travel_time - Self::MIN_VELOCITY)
                 .max(0.0))
             .sqrt();
 

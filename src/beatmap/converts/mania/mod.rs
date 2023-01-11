@@ -58,7 +58,7 @@ impl Beatmap {
             7.0
         } else if percent_slider_or_spinner < 0.3 || rounded_cs >= 5.0 {
             (6 + (rounded_od > 5.0) as u8) as f32
-        } else if percent_slider_or_spinner as f64 > 0.6 {
+        } else if percent_slider_or_spinner > 0.6 {
             (4 + (rounded_od > 4.0) as u8) as f32
         } else {
             (rounded_od + 1.0).clamp(4.0, 7.0)

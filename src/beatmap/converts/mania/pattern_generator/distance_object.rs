@@ -299,7 +299,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let legacy = (4..=8).contains(&self.total_columns);
         let interval = self
             .random
-            .gen_int_range(1, self.total_columns as i32 - (legacy as i32));
+            .gen_int_range(1, self.total_columns - (legacy as i32));
 
         let mut next_column = self.get_column(Some(true)) as i32;
         let random_start = self.random_start();
