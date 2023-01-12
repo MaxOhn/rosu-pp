@@ -211,21 +211,6 @@ impl OsuObject {
 
                         // Ticks
                         if span_idx & 1 == 1 {
-                            // S-------->R | Span 0
-                            //  2  4  6  8 | => span_duration = 8
-                            // R<--------- | Span 1
-                            // 16 14 12 10 | => offset = 1 * span_duration
-                            // --------->R | Span 2
-                            // 18 20 22 24 | => not reverse; simple case
-                            // T<--------- | Span 3
-                            // 32 30 28 26 | => offset = 3 * span_duration
-                            //
-                            //  n = offset + tick
-                            // 26 =   24   +   2
-                            // 28 =   24   +   4
-                            // 30 =   24   +   6
-                            // 32 =   24   +   8
-
                             let base = h.start_time + h.start_time + span_duration;
 
                             let tick_iter = ticks.iter().rev().map(|(pos, time)| NestedObject {
