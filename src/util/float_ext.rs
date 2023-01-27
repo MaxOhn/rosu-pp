@@ -55,10 +55,7 @@ mod tests {
 
             assert!(
                 (rounded - expected).abs() <= f32::EPSILON,
-                "expected {} for {}; got {}",
-                expected,
-                value,
-                rounded,
+                "expected {expected} for {value}; got {rounded}"
             );
         }
     }

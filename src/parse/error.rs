@@ -36,7 +36,7 @@ impl fmt::Display for ParseError {
             Self::InvalidCurvePoints => f.write_str("invalid curve point"),
             Self::InvalidDecimalNumber => f.write_str("invalid float number"),
             Self::InvalidMode => f.write_str("invalid mode"),
-            Self::MissingField(field) => write!(f, "missing field `{}`", field),
+            Self::MissingField(field) => write!(f, "missing field `{field}`"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
         }
     }

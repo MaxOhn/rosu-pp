@@ -143,11 +143,13 @@ impl StrainDecaySkill for Rhythm {
     const STRAIN_DECAY_BASE: f64 = 0.0;
 
     #[inline]
+    #[allow(clippy::misnamed_getters)]
     fn curr_strain(&self) -> f64 {
         self.curr_decay_strain
     }
 
     #[inline]
+    #[allow(clippy::misnamed_getters)]
     fn curr_strain_mut(&mut self) -> &mut f64 {
         &mut self.curr_decay_strain
     }

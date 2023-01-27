@@ -555,9 +555,7 @@ mod test {
 
         assert!(
             (target_acc - acc).abs() < 1.0,
-            "Expected: {} | Actual: {}",
-            target_acc,
-            acc
+            "Expected: {target_acc} | Actual: {acc}",
         );
     }
 
@@ -596,9 +594,7 @@ mod test {
 
         assert!(
             (target_acc - acc).abs() < 1.0,
-            "Expected: {} | Actual: {}",
-            target_acc,
-            acc
+            "Expected: {target_acc} | Actual: {acc}",
         );
     }
 
