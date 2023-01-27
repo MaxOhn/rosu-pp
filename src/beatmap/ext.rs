@@ -1,5 +1,7 @@
 use crate::{
+    mania::{ManiaObject, ObjectParameters},
     osu::{OsuDifficultyAttributes, OsuObject, ScalingFactor},
+    util::FloatExt,
     AnyPP, AnyStars, Beatmap, CatchPP, CatchStars, GameMode, GradualDifficultyAttributes,
     GradualPerformanceAttributes, ManiaPP, ManiaStars, Mods, OsuPP, OsuStars,
     PerformanceAttributes, Strains, TaikoPP, TaikoStars,
@@ -40,6 +42,9 @@ pub trait BeatmapExt {
 
     /// TODO: docs
     fn osu_hitobjects(&self, mods: u32) -> Vec<OsuObject>;
+
+    /// TODO: docs
+    fn mania_hitobjects(&self) -> Vec<ManiaObject>;
 }
 
 impl BeatmapExt for Beatmap {
@@ -109,5 +114,16 @@ impl BeatmapExt for Beatmap {
             hr,
             time_preempt,
         )
+    }
+
+    fn mania_hitobjects(&self) -> Vec<ManiaObject> {
+        let map = self.convert_mode(GameMode::Mania);
+        let total_columns = map.cs.round_even().max(1.0);
+        let mut params = ObjectParameters::new(map.as_ref());
+
+        self.hit_objects
+            .iter()
+            .map(|h| ManiaObject::new(h, total_columns, &mut params))
+            .collect()
     }
 }

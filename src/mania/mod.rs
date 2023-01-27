@@ -11,11 +11,10 @@ use crate::{beatmap::BeatmapHitWindows, util::FloatExt, Beatmap, GameMode, Mods,
 
 pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
 
-pub(crate) use self::mania_object::ManiaObject;
+pub(crate) use self::mania_object::{ManiaObject, ObjectParameters};
 
 use self::{
     difficulty_object::ManiaDifficultyObject,
-    mania_object::ObjectParameters,
     skills::{Skill, Strain},
 };
 
