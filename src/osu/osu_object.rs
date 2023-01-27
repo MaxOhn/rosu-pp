@@ -1,5 +1,3 @@
-use std::slice::Iter;
-
 use super::{scaling_factor::ScalingFactor, OsuDifficultyAttributes, PLAYFIELD_BASE_SIZE};
 
 use crate::{
@@ -11,56 +9,75 @@ use crate::{
 const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
 const BASE_SCORING_DISTANCE: f64 = 100.0;
 
+/// A [`HitObject`] that was processed for the osu! gamemode.
 #[derive(Clone, Debug)]
-pub(crate) struct OsuObject {
-    pos: Pos2,
-    pub(crate) start_time: f64,
-    pub(crate) stack_offset: Pos2,
-    pub(crate) stack_height: f32,
-    pub(crate) kind: OsuObjectKind,
+pub struct OsuObject {
+    /// Position of the object.
+    pub pos: Pos2,
+    /// Start time of the object.
+    pub start_time: f64,
+    /// The positional offset due to stacking.
+    pub stack_offset: Pos2,
+    /// The height of the stacking offset.
+    pub stack_height: f32,
+    /// Type of the object.
+    pub kind: OsuObjectKind,
 }
 
+/// The type of an [`OsuObject`].
 #[derive(Clone, Debug)]
-pub(crate) enum OsuObjectKind {
+pub enum OsuObjectKind {
+    /// A hitcircle object.
     Circle,
+    /// A slider object.
     Slider(OsuSlider),
-    Spinner { end_time: f64 },
+    /// A spinner object.
+    Spinner {
+        /// The endtime of the spinner.
+        end_time: f64,
+    },
 }
 
+/// A [`HitObject`] that was processed a slider for the osu! gamemode.
 #[derive(Clone, Debug)]
-pub(crate) struct OsuSlider {
-    pub(crate) end_time: f64,
-    pub(crate) lazy_end_pos: Pos2,
-    nested_objects: Vec<NestedObject>,
+pub struct OsuSlider {
+    /// The endtime of the slider.
+    pub end_time: f64,
+    /// The lazy end position of the cursor.
+    pub lazy_end_pos: Pos2,
+    /// All nested objects of the slider except for the slider head.
+    pub nested_objects: Vec<NestedObject>,
 }
 
 impl OsuSlider {
-    pub(crate) fn nested_len(&self) -> usize {
-        self.nested_objects.len()
-    }
-
-    pub(crate) fn nested_iter(&self) -> Iter<'_, NestedObject> {
-        self.nested_objects.iter()
-    }
-
-    pub(crate) fn repeat_count(&self) -> usize {
+    /// The amount of repeat points.
+    pub fn repeat_count(&self) -> usize {
         self.nested_objects.iter().fold(0, |count, nested| {
             count + matches!(nested.kind, NestedObjectKind::Repeat) as usize
         })
     }
 
-    pub(crate) fn end_pos(&self) -> Option<Pos2> {
+    /// The position of the slider tail.
+    ///
+    /// This is usually but not necessarily the position of the last nested object.
+    pub fn end_pos(&self) -> Option<Pos2> {
         self.tail().map(|tail| tail.pos)
     }
 
-    pub(crate) fn tail(&self) -> Option<&NestedObject> {
+    /// A shared reference to the slider tail.
+    ///
+    /// This is usually but not necessarily the last nested object.
+    pub fn tail(&self) -> Option<&NestedObject> {
         self.nested_objects
             .iter()
             .rev()
             .find(|nested| matches!(nested.kind, NestedObjectKind::Tail))
     }
 
-    pub(crate) fn tail_mut(&mut self) -> Option<(usize, &mut NestedObject)> {
+    /// An exclusive reference to the slider tail and its index in the nested object list.
+    ///
+    /// This is usually but not necessarily the last nested object.
+    pub fn tail_mut(&mut self) -> Option<(usize, &mut NestedObject)> {
         self.nested_objects
             .iter_mut()
             .enumerate()
@@ -69,18 +86,27 @@ impl OsuSlider {
     }
 }
 
+/// A nested object within a slider.
 #[derive(Clone, Debug)]
-pub(crate) struct NestedObject {
-    /// Note: `pos` does not include stacking!
-    pub(crate) pos: Pos2,
-    pub(crate) start_time: f64,
-    pub(crate) kind: NestedObjectKind,
+pub struct NestedObject {
+    /// Position of the object.
+    ///
+    /// Note: `pos` does not include stacking.
+    pub pos: Pos2,
+    /// Start time of the object.
+    pub start_time: f64,
+    /// Type of the object.
+    pub kind: NestedObjectKind,
 }
 
+/// Type of a [`NestedObject`].
 #[derive(Copy, Clone, Debug)]
-pub(crate) enum NestedObjectKind {
+pub enum NestedObjectKind {
+    /// A repeat point.
     Repeat,
+    /// The logical slider tail i.e. the legacy last tick.
     Tail,
+    /// A regular slider tick.
     Tick,
 }
 
@@ -318,7 +344,8 @@ impl OsuObject {
         }
     }
 
-    pub(crate) fn end_time(&self) -> f64 {
+    /// Endtime of the object.
+    pub fn end_time(&self) -> f64 {
         match &self.kind {
             OsuObjectKind::Circle => self.start_time,
             OsuObjectKind::Slider(slider) => slider.end_time,
@@ -326,7 +353,8 @@ impl OsuObject {
         }
     }
 
-    pub(crate) fn end_pos(&self) -> Pos2 {
+    /// End position of the object.
+    pub fn end_pos(&self) -> Pos2 {
         match &self.kind {
             OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => self.pos,
             OsuObjectKind::Slider(slider) => slider.end_pos().unwrap_or(self.pos),
@@ -356,7 +384,8 @@ impl OsuObject {
                         .map_or(self.pos, |end_pos| self.pos + end_pos)
                 } else {
                     slider
-                        .nested_iter()
+                        .nested_objects
+                        .iter()
                         .find(|nested| matches!(nested.kind, NestedObjectKind::Repeat))
                         .map_or(self.pos, |repeat| repeat.pos)
                 }
@@ -364,26 +393,31 @@ impl OsuObject {
         }
     }
 
-    pub(crate) const fn pos(&self) -> Pos2 {
+    /// Position of the object without stacking.
+    pub const fn pos(&self) -> Pos2 {
         self.pos
     }
 
-    pub(crate) fn stacked_pos(&self) -> Pos2 {
+    /// Stacked position of the object.
+    pub fn stacked_pos(&self) -> Pos2 {
         self.pos + self.stack_offset
     }
 
-    pub(crate) fn stacked_end_pos(&self) -> Pos2 {
+    /// Stacked end position of the object.
+    pub fn stacked_end_pos(&self) -> Pos2 {
         self.end_pos() + self.stack_offset
     }
 
-    pub(crate) fn lazy_end_pos(&self) -> Pos2 {
+    /// Lazy end position of the object. Stacking is included.
+    pub fn lazy_end_pos(&self) -> Pos2 {
         match &self.kind {
             OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => self.stacked_pos(),
             OsuObjectKind::Slider(slider) => slider.lazy_end_pos,
         }
     }
 
-    pub(crate) fn lazy_travel_time(&self) -> f64 {
+    /// Lazy travel time of the object.
+    pub fn lazy_travel_time(&self) -> f64 {
         match &self.kind {
             OsuObjectKind::Circle | OsuObjectKind::Spinner { .. } => 0.0,
             OsuObjectKind::Slider(slider) => slider
@@ -393,18 +427,18 @@ impl OsuObject {
         }
     }
 
-    #[inline]
-    pub(crate) fn is_circle(&self) -> bool {
+    /// Whether the object is a hitcircle.
+    pub const fn is_circle(&self) -> bool {
         matches!(self.kind, OsuObjectKind::Circle)
     }
 
-    #[inline]
-    pub(crate) fn is_slider(&self) -> bool {
+    /// Whether the object is a slider.
+    pub const fn is_slider(&self) -> bool {
         matches!(self.kind, OsuObjectKind::Slider { .. })
     }
 
-    #[inline]
-    pub(crate) fn is_spinner(&self) -> bool {
+    /// Whether the object is a spinner.
+    pub const fn is_spinner(&self) -> bool {
         matches!(self.kind, OsuObjectKind::Spinner { .. })
     }
 

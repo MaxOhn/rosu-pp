@@ -26,7 +26,7 @@ pub trait BeatmapExt {
     /// Suitable to plot the difficulty of a map over time.
     fn strains(&self, mods: u32) -> Strains;
 
-    /// Return an iterator that gives you the [`DifficultyAttributes`] after each hit object.
+    /// Return an iterator that gives you the [`DifficultyAttributes`](crate::DifficultyAttributes) after each hit object.
     ///
     /// Suitable to efficiently get the map's star rating after multiple different locations.
     fn gradual_difficulty(&self, mods: u32) -> GradualDifficultyAttributes<'_>;

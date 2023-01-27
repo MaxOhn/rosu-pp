@@ -10,12 +10,11 @@ use crate::{curve::CurveBuffers, parse::Pos2, AnyStars, Beatmap, GameMode, Mods}
 
 use self::{
     difficulty_object::{Distances, OsuDifficultyObject},
-    osu_object::{ObjectParameters, OsuObject},
     scaling_factor::ScalingFactor,
     skills::{Skill, Skills},
 };
 
-pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
+pub use self::{gradual_difficulty::*, gradual_performance::*, osu_object::*, pp::*};
 
 const SECTION_LEN: f64 = 400.0;
 const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
