@@ -6,6 +6,7 @@ pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, BeatmapHitWindows},
     breaks::Break,
     control_points::{DifficultyPoint, EffectPoint, TimingPoint},
+    ext::*,
     mode::GameMode,
 };
 
@@ -13,6 +14,7 @@ mod attributes;
 mod breaks;
 mod control_points;
 mod converts;
+mod ext;
 mod mode;
 
 /// The main beatmap struct containing all data relevant
