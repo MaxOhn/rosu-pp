@@ -1,4 +1,9 @@
 use crate::{
+    catch::{
+        calculate_catch_width, CatchDifficultyAttributes, CatchObject, FruitOrJuice, FruitParams,
+        ALLOWED_CATCH_RANGE,
+    },
+    curve::CurveBuffers,
     mania::{ManiaObject, ObjectParameters},
     osu::{OsuDifficultyAttributes, OsuObject, ScalingFactor},
     taiko::{IntoTaikoObjectIter, TaikoObject},
@@ -130,6 +135,50 @@ impl BeatmapExt for Beatmap {
                 is_rim: h.is_rim,
             })
             .collect()
+    }
+
+    fn catch_hitobjects(&self, mods: u32) -> Vec<CatchObject> {
+        let attrs = self.attributes().mods(mods).build();
+
+        let mut params = FruitParams {
+            attributes: CatchDifficultyAttributes::default(),
+            curve_bufs: CurveBuffers::default(),
+            last_pos: None,
+            last_time: 0.0,
+            map: self,
+            ticks: Vec::new(),
+            with_hr: mods.hr(),
+        };
+
+        let mut hit_objects: Vec<_> = self
+            .hit_objects
+            .iter()
+            .filter_map(|h| FruitOrJuice::new(h, &mut params))
+            .flatten()
+            .collect();
+
+        let half_catcher_width =
+            (calculate_catch_width(attrs.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
+        let mut last_direction = 0;
+        let mut last_excess = half_catcher_width;
+
+        for i in 1..hit_objects.len() {
+            // SAFETY: The indices are guaranteed the be included based on the loop condition
+            let window = unsafe { hit_objects.get_unchecked_mut(i - 1..=i) };
+
+            let [curr, next] = window else {
+                unreachable!();
+            };
+
+            curr.init_hyper_dash(
+                half_catcher_width,
+                &*next,
+                &mut last_direction,
+                &mut last_excess,
+            );
+        }
+
+        hit_objects
     }
 
     fn mania_hitobjects(&self) -> Vec<ManiaObject> {
