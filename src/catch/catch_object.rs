@@ -5,7 +5,7 @@ use super::fruit_or_juice::FruitParams;
 const PLAYFIELD_WIDTH: f32 = 512.0;
 const BASE_SPEED: f64 = 1.0;
 
-/// A [`HitObject`] that was processed for the osu!ctb gamemode.
+/// A [`HitObject`](crate::parse::HitObject) that was processed for the osu!ctb gamemode.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CatchObject {
     /// The X position of the object.

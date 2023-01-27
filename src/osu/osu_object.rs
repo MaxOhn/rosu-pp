@@ -38,7 +38,7 @@ pub enum OsuObjectKind {
     },
 }
 
-/// A [`HitObject`] that was processed a slider for the osu! gamemode.
+/// A [`HitObject`] that was processed as a slider for the osu! gamemode.
 #[derive(Clone, Debug, PartialEq)]
 pub struct OsuSlider {
     /// The endtime of the slider.

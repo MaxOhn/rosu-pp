@@ -53,7 +53,7 @@ pub trait BeatmapExt {
     /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!taiko-specific [`TaikoObject`],
     /// just like the difficulty calculation does.
     ///
-    /// Only hitcircles produce a [`TaikoObject`] and clockrate is *not* considered.
+    /// Clockrate is *not* considered.
     fn taiko_hitobjects(&self) -> Vec<TaikoObject>;
 
     /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!ctb-specific [`CatchObject`],
