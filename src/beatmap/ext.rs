@@ -46,13 +46,27 @@ pub trait BeatmapExt {
     /// i.e. live update a score's pp.
     fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_>;
 
-    /// TODO: docs
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!-specific [`OsuObject`],
+    /// just like the difficulty calculation does.
     fn osu_hitobjects(&self, mods: u32) -> Vec<OsuObject>;
 
-    /// TODO: docs
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!taiko-specific [`TaikoObject`],
+    /// just like the difficulty calculation does.
+    ///
+    /// Only hitcircles produce a [`TaikoObject`] and clockrate is *not* considered.
     fn taiko_hitobjects(&self) -> Vec<TaikoObject>;
 
-    /// TODO: docs
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!ctb-specific [`CatchObject`],
+    /// just like the difficulty calculation does.
+    ///
+    /// A [`CatchObject`] is either a fruit or a droplet which means
+    /// tiny droplets and bananas are not included.
+    fn catch_hitobjects(&self, mods: u32) -> Vec<CatchObject>;
+
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!mania-specific [`ManiaObject`],
+    /// just like the difficulty calculation does.
+    ///
+    /// Clockrate is *not* considered.
     fn mania_hitobjects(&self) -> Vec<ManiaObject>;
 }
 
@@ -165,10 +179,7 @@ impl BeatmapExt for Beatmap {
         for i in 1..hit_objects.len() {
             // SAFETY: The indices are guaranteed the be included based on the loop condition
             let window = unsafe { hit_objects.get_unchecked_mut(i - 1..=i) };
-
-            let [curr, next] = window else {
-                unreachable!();
-            };
+            let [curr, next] = window else { unreachable!() };
 
             curr.init_hyper_dash(
                 half_catcher_width,
