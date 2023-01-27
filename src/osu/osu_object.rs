@@ -10,7 +10,7 @@ const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
 const BASE_SCORING_DISTANCE: f64 = 100.0;
 
 /// A [`HitObject`] that was processed for the osu! gamemode.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OsuObject {
     /// Position of the object.
     pub pos: Pos2,
@@ -25,7 +25,7 @@ pub struct OsuObject {
 }
 
 /// The type of an [`OsuObject`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum OsuObjectKind {
     /// A hitcircle object.
     Circle,
@@ -39,7 +39,7 @@ pub enum OsuObjectKind {
 }
 
 /// A [`HitObject`] that was processed a slider for the osu! gamemode.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OsuSlider {
     /// The endtime of the slider.
     pub end_time: f64,
@@ -87,7 +87,7 @@ impl OsuSlider {
 }
 
 /// A nested object within a slider.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NestedObject {
     /// Position of the object.
     ///
@@ -100,7 +100,7 @@ pub struct NestedObject {
 }
 
 /// Type of a [`NestedObject`].
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum NestedObjectKind {
     /// A repeat point.
     Repeat,
