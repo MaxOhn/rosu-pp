@@ -62,3 +62,14 @@ impl ExactSizeIterator for TaikoObjectIter<'_> {
         self.hit_objects.len()
     }
 }
+
+/// A [`HitObject`] that was processed for the osu!taiko gamemode.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct TaikoObjectPub {
+    /// Start time of the object.
+    pub start_time: f64,
+    /// Whether the object is a circle i.e. this is false if the object is a drum roll or a swell.
+    pub is_hit: bool,
+    /// Whether it's a rim or center hit.
+    pub is_rim: bool,
+}
