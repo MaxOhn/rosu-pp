@@ -1,7 +1,8 @@
 use crate::{
+    osu::{OsuDifficultyAttributes, OsuObject, ScalingFactor},
     AnyPP, AnyStars, Beatmap, CatchPP, CatchStars, GameMode, GradualDifficultyAttributes,
-    GradualPerformanceAttributes, ManiaPP, ManiaStars, OsuPP, OsuStars, PerformanceAttributes,
-    Strains, TaikoPP, TaikoStars,
+    GradualPerformanceAttributes, ManiaPP, ManiaStars, Mods, OsuPP, OsuStars,
+    PerformanceAttributes, Strains, TaikoPP, TaikoStars,
 };
 
 /// Provides some additional methods on [`Beatmap`].
@@ -36,6 +37,9 @@ pub trait BeatmapExt {
     /// Suitable to efficiently get a score's performance after multiple different locations,
     /// i.e. live update a score's pp.
     fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_>;
+
+    /// TODO: docs
+    fn osu_hitobjects(&self, mods: u32) -> Vec<OsuObject>;
 }
 
 impl BeatmapExt for Beatmap {
@@ -88,5 +92,22 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_> {
         GradualPerformanceAttributes::new(self, mods)
+    }
+
+    fn osu_hitobjects(&self, mods: u32) -> Vec<OsuObject> {
+        let attrs = self.attributes().mods(mods).build();
+        let scaling_factor = ScalingFactor::new(attrs.cs);
+        let hr = mods.hr();
+        let time_preempt = (attrs.hit_windows.ar * attrs.clock_rate) as f32 as f64;
+        let mut attrs = OsuDifficultyAttributes::default();
+
+        crate::osu::create_osu_objects(
+            self,
+            &mut attrs,
+            &scaling_factor,
+            usize::MAX,
+            hr,
+            time_preempt,
+        )
     }
 }

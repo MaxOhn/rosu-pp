@@ -10,11 +10,12 @@ use crate::{curve::CurveBuffers, parse::Pos2, AnyStars, Beatmap, GameMode, Mods}
 
 use self::{
     difficulty_object::{Distances, OsuDifficultyObject},
-    scaling_factor::ScalingFactor,
     skills::{Skill, Skills},
 };
 
 pub use self::{gradual_difficulty::*, gradual_performance::*, osu_object::*, pp::*};
+
+pub(crate) use self::scaling_factor::ScalingFactor;
 
 const SECTION_LEN: f64 = 400.0;
 const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
@@ -268,33 +269,9 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         ..Default::default()
     };
 
-    let mut params = ObjectParameters {
-        map,
-        attrs: &mut attrs,
-        ticks: Vec::new(),
-        curve_bufs: CurveBuffers::default(),
-    };
-
-    let mut hit_objects: Vec<_> = map
-        .hit_objects
-        .iter()
-        .take(take)
-        .map(|h| OsuObject::new(h, &mut params))
-        .collect();
-
-    let stack_threshold = time_preempt * map.stack_leniency as f64;
-
-    if map.version >= 6 {
-        stacking(&mut hit_objects, stack_threshold);
-    } else {
-        old_stacking(&mut hit_objects, stack_threshold);
-    }
-
-    let mut hit_objects = hit_objects.iter_mut().map(|h| {
-        h.post_process(hr, &scaling_factor);
-
-        h
-    });
+    let mut hit_objects =
+        create_osu_objects(map, &mut attrs, &scaling_factor, take, hr, time_preempt);
+    let mut hit_objects_iter = hit_objects.iter_mut();
 
     let mut skills = Skills::new(
         mods,
@@ -304,7 +281,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         hit_window,
     );
 
-    let last = match hit_objects.next() {
+    let last = match hit_objects_iter.next() {
         Some(prev) => prev,
         None => return (skills, attrs),
     };
@@ -315,9 +292,9 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     Distances::compute_slider_cursor_pos(last, &scaling_factor);
 
     let mut last = &*last;
-    let mut diff_objects = Vec::with_capacity(hit_objects.len());
+    let mut diff_objects = Vec::with_capacity(hit_objects_iter.len());
 
-    for (i, curr) in hit_objects.enumerate() {
+    for (i, curr) in hit_objects_iter.enumerate() {
         let delta_time = (curr.start_time - last.start_time) / clock_rate;
 
         // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
@@ -344,6 +321,43 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     }
 
     (skills, attrs)
+}
+
+pub(crate) fn create_osu_objects(
+    map: &Beatmap,
+    attrs: &mut OsuDifficultyAttributes,
+    scaling_factor: &ScalingFactor,
+    take: usize,
+    hr: bool,
+    time_preempt: f64,
+) -> Vec<OsuObject> {
+    let mut params = ObjectParameters {
+        map,
+        attrs,
+        ticks: Vec::new(),
+        curve_bufs: CurveBuffers::default(),
+    };
+
+    let mut hit_objects: Vec<_> = map
+        .hit_objects
+        .iter()
+        .take(take)
+        .map(|h| OsuObject::new(h, &mut params))
+        .collect();
+
+    let stack_threshold = time_preempt * map.stack_leniency as f64;
+
+    if map.version >= 6 {
+        stacking(&mut hit_objects, stack_threshold);
+    } else {
+        old_stacking(&mut hit_objects, stack_threshold);
+    }
+
+    hit_objects
+        .iter_mut()
+        .for_each(|h| h.post_process(hr, scaling_factor));
+
+    hit_objects
 }
 
 fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
