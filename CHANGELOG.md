@@ -5,6 +5,7 @@
 
 - __Fixes:__
   - Lines with invalid curve points are now ignored instead of making parsing fail
+  - Fixed a niche capacity overflow in curve generation
 
 # v0.9.2 (2022-11-08)
 

@@ -294,9 +294,8 @@ impl<'bufs> Curve<'bufs> {
     }
 
     fn approximate_circular_arc(path: &mut Vec<Pos2>, a: Pos2, b: Pos2, c: Pos2) -> bool {
-        let pr = match Self::circular_arc_properties(a, b, c) {
-            Some(pr) => pr,
-            None => return false,
+        let Some(pr) = Self::circular_arc_properties(a, b, c) else {
+            return false;
         };
 
         // * We select the amount of points for the approximation by requiring the discrete curvature
@@ -309,7 +308,13 @@ impl<'bufs> Curve<'bufs> {
         } else {
             let divisor = 2.0 * (1.0 - CIRCULAR_ARC_TOLERANCE / pr.radius).acos();
 
-            ((pr.theta_range / divisor as f64).ceil() as usize).max(2)
+            // In C# it holds `(int)Infinity == -2147483648` whereas in Rust it's 2147483647
+            // so we need to workaround this edge case, see map id 2568364
+            if divisor.abs() <= f32::EPSILON {
+                2
+            } else {
+                ((pr.theta_range / divisor as f64).ceil() as usize).max(2)
+            }
         };
 
         path.reserve_exact(amount_points);
