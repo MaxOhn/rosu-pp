@@ -416,7 +416,7 @@ macro_rules! parse_hitobjects_body {
         // Buffer to re-use for all sliders
         let mut vertices = Vec::new();
 
-        while next_line!($reader)? != 0 {
+        'next_line: while next_line!($reader)? != 0 {
             if let Some(bytes) = $reader.get_section() {
                 *$section = Section::from_bytes(bytes);
                 empty = false;
@@ -441,7 +441,7 @@ macro_rules! parse_hitobjects_body {
             let pos = if let (Some(x), Some(y)) = (x, y) {
                 Pos2 { x, y }
             } else {
-                continue;
+                continue 'next_line;
             };
 
             let time_opt = split
@@ -452,7 +452,7 @@ macro_rules! parse_hitobjects_body {
 
             let time = match time_opt {
                 Some(time) => time,
-                None => continue,
+                None => continue 'next_line,
             };
 
             if !$self.hit_objects.is_empty() && time < prev_time {
@@ -461,12 +461,12 @@ macro_rules! parse_hitobjects_body {
 
             let kind: u8 = match split.next().next_field("hitobject kind")?.parse() {
                 Ok(kind) => kind,
-                Err(_) => continue,
+                Err(_) => continue 'next_line,
             };
 
             let mut sound: u8 = match split.next().next_field("sound")?.parse() {
                 Ok(sound) => sound,
-                Err(_) => continue,
+                Err(_) => continue 'next_line,
             };
 
             #[derive(Debug)]
@@ -515,7 +515,7 @@ macro_rules! parse_hitobjects_body {
                 match has_custom_sound_file(split.next()) {
                     Status::Ok(false) => {}
                     Status::Ok(true) => sound = 0,
-                    Status::Skip => continue,
+                    Status::Skip => continue 'next_line,
                     Status::Err(err) => return Err(err),
                 }
 
@@ -534,7 +534,7 @@ macro_rules! parse_hitobjects_body {
                     // * osu-stable treated the first span of the slider
                     // * as a repeat, but no repeats are happening
                     Ok(repeats @ 0..=9000) => repeats.saturating_sub(1),
-                    Ok(_) | Err(_) => continue,
+                    Ok(_) | Err(_) => continue 'next_line,
                 };
 
                 let mut start_idx = 0;
@@ -565,28 +565,36 @@ macro_rules! parse_hitobjects_body {
                     // * The start of the next segment is the index after the type descriptor.
                     let end_point = point_split.get(end_idx + 1).copied();
 
-                    convert_points(
+                    let convert_res = convert_points(
                         &point_split[start_idx..end_idx],
                         end_point,
                         first,
                         pos,
                         &mut control_points,
                         &mut vertices,
-                    )?;
+                    );
+
+                    if convert_res.is_err() {
+                        continue 'next_line;
+                    }
 
                     start_idx = end_idx;
                     first = false;
                 }
 
                 if end_idx > start_idx {
-                    convert_points(
+                    let convert_res = convert_points(
                         &point_split[start_idx..end_idx],
                         None,
                         first,
                         pos,
                         &mut control_points,
                         &mut vertices,
-                    )?;
+                    );
+
+                    if convert_res.is_err() {
+                        continue 'next_line;
+                    }
                 }
 
                 if control_points.is_empty() {
@@ -597,7 +605,7 @@ macro_rules! parse_hitobjects_body {
                         .map(|s| f64::parse_in_custom_range(s, MAX_COORDINATE_VALUE as f64))
                     {
                         Some(Some(len)) => (len > 0.0).then_some(len),
-                        Some(None) => continue,
+                        Some(None) => continue 'next_line,
                         None => None,
                     };
 
@@ -616,7 +624,7 @@ macro_rules! parse_hitobjects_body {
                     match has_custom_sound_file(split.nth(1)) {
                         Status::Ok(false) => {}
                         Status::Ok(true) => sound = 0,
-                        Status::Skip => continue,
+                        Status::Skip => continue 'next_line,
                         Status::Err(err) => return Err(err),
                     }
 
@@ -632,13 +640,13 @@ macro_rules! parse_hitobjects_body {
 
                 let end_time = match split.next().next_field("spinner endtime")?.parse::<f64>() {
                     Ok(end_time) => end_time.max(time),
-                    Err(_) => continue,
+                    Err(_) => continue 'next_line,
                 };
 
                 match has_custom_sound_file(split.next()) {
                     Status::Ok(false) => {}
                     Status::Ok(true) => sound = 0,
-                    Status::Skip => continue,
+                    Status::Skip => continue 'next_line,
                     Status::Err(err) => return Err(err),
                 }
 
@@ -650,13 +658,13 @@ macro_rules! parse_hitobjects_body {
                     Some((head, tail)) => {
                         let parsed = match f64::parse_in_range(head) {
                             Some(time_) => time_.max(time),
-                            None => continue,
+                            None => continue 'next_line,
                         };
 
                         match has_custom_sound_file(Some(tail)) {
                             Status::Ok(false) => {}
                             Status::Ok(true) => sound = 0,
-                            Status::Skip => continue,
+                            Status::Skip => continue 'next_line,
                             Status::Err(err) => return Err(err),
                         }
 

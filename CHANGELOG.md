@@ -3,6 +3,9 @@
 - __Additions:__
   - Added the method `ScoreState::total_hits`
 
+- __Fixes:__
+  - Lines with invalid curve points are now ignored instead of making parsing fail
+
 # v0.9.2 (2022-11-08)
 
 - __Adjustments:__
