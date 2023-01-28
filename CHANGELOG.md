@@ -1,5 +1,9 @@
 ## Upcoming
 
+Nothing as of now
+
+# v0.9.3 (2023-01-28)
+
 - __Additions:__
   - Added the method `ScoreState::total_hits`
   - Added the trait methods `BeatmapExt::{mode}_hitobjects` which return a list of mode-specific processed `HitObject`s
@@ -8,7 +12,7 @@
   - Lines with invalid curve points are now ignored instead of throwing an error while parsing
   - Fixed a niche capacity overflow in curve generation
 
-# v0.9.2 (2022-11-08)
+## v0.9.2 (2022-11-08)
 
 - __Adjustments:__
   - When passing an osu!std map to `TaikoGradualDifficultyAttributes` or `ManiaGradualDifficultyAttributes`, it now automatically converts the map internally. For osu!catch it was already happening trivially.
