@@ -2,9 +2,10 @@
 
 - __Additions:__
   - Added the method `ScoreState::total_hits`
+  - Added the trait methods `BeatmapExt::{mode}_hitobjects` which return a list of mode-specific processed `HitObject`s
 
 - __Fixes:__
-  - Lines with invalid curve points are now ignored instead of making parsing fail
+  - Lines with invalid curve points are now ignored instead of throwing an error while parsing
   - Fixed a niche capacity overflow in curve generation
 
 # v0.9.2 (2022-11-08)
