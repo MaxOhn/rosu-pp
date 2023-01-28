@@ -18,8 +18,6 @@ async_tokio = ["tokio"]
 [dependencies.async-std]
 version = "1.9"
 optional = true
-default-features = false
-features = ["async-io", "std"]
 
 [dependencies.tokio]
 version = "1.2"
