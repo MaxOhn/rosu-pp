@@ -15,21 +15,9 @@ default = []
 async_std = ["async-std"]
 async_tokio = ["tokio"]
 
-[dependencies.async-std]
-version = "1.9"
-optional = true
+[dependencies]
+async-std = { version = "1.9", optional = true }
+tokio = { version = "1.2", optional = true, default-features = false, features = ["fs", "io-util"] }
 
-[dependencies.tokio]
-version = "1.2"
-optional = true
-default-features = false
-features = ["fs", "io-util"]
-
-[dev-dependencies.tokio]
-version = "1.2"
-default-features = false
-features = ["fs", "rt"]
-
-[dev-dependencies.async-std]
-version = "1.9"
-default-features = true
+[dev-dependencies]
+tokio = { version = "1.2", default-features = false, features = ["fs", "rt"] }
