@@ -792,7 +792,7 @@ impl Beatmap {
 mod slider_parsing {
     use crate::ParseError;
 
-    use super::Pos2;
+    use super::{InRange, Pos2, MAX_COORDINATE_VALUE};
 
     pub(super) fn convert_points(
         points: &[&str],
@@ -893,10 +893,13 @@ mod slider_parsing {
     }
 
     pub(super) fn read_point(value: &str, start_pos: Pos2) -> Result<PathControlPoint, ParseError> {
-        let mut v = value.split(':').map(str::parse);
+        let mut v = value
+            .split(':')
+            .flat_map(|s| f64::parse_in_custom_range(s, MAX_COORDINATE_VALUE as f64))
+            .map(|n| n as i32 as f32);
 
         match (v.next(), v.next()) {
-            (Some(Ok(x)), Some(Ok(y))) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
+            (Some(x), Some(y)) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
             _ => Err(ParseError::InvalidCurvePoints),
         }
     }
