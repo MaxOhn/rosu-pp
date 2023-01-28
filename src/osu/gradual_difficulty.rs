@@ -202,7 +202,7 @@ impl OsuGradualDifficultyAttributes {
             OsuObjectKind::Circle => attrs.n_circles += 1,
             OsuObjectKind::Slider(slider) => {
                 attrs.n_sliders += 1;
-                attrs.max_combo += slider.nested_len();
+                attrs.max_combo += slider.nested_objects.len();
             }
             OsuObjectKind::Spinner { .. } => attrs.n_spinners += 1,
         }

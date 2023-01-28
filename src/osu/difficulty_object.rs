@@ -213,7 +213,7 @@ impl Distances {
 
         let mut lazy_travel_dist: f32 = 0.0;
 
-        for (curr_movement_obj, i) in slider.nested_iter().zip(1..) {
+        for (curr_movement_obj, i) in slider.nested_objects.iter().zip(1..) {
             let mut curr_movement =
                 (curr_movement_obj.pos + hit_object.stack_offset) - curr_cursor_pos;
             let mut curr_movement_len = scaling_factor * curr_movement.length() as f64;
@@ -221,7 +221,7 @@ impl Distances {
             // * Amount of movement required so that the cursor position needs to be updated.
             let mut required_movement = Self::ASSUMED_SLIDER_RADIUS as f64;
 
-            if i == slider.nested_len() {
+            if i == slider.nested_objects.len() {
                 // * The end of a slider has special aim rules due
                 // * to the relaxed time constraint on position.
                 // * There is both a lazy end position as well as the actual end slider position.

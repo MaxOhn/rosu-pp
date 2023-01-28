@@ -5,13 +5,17 @@ use super::fruit_or_juice::FruitParams;
 const PLAYFIELD_WIDTH: f32 = 512.0;
 const BASE_SPEED: f64 = 1.0;
 
-#[derive(Clone, Debug)]
+/// A [`HitObject`](crate::parse::HitObject) that was processed for the osu!ctb gamemode.
+#[derive(Clone, Debug, PartialEq)]
 pub struct CatchObject {
-    pub(crate) pos: f32,
-    pub(crate) time: f64,
-
-    pub(crate) hyper_dash: bool,
-    pub(crate) hyper_dist: f32,
+    /// The X position of the object.
+    pub pos: f32,
+    /// The time of the object.
+    pub time: f64,
+    /// Whether the object is a hyper dash.
+    pub hyper_dash: bool,
+    /// The hyper distance to the next object
+    pub hyper_dist: f32,
 }
 
 impl CatchObject {

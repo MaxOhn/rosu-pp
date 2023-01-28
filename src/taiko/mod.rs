@@ -9,7 +9,12 @@ mod taiko_object;
 
 use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
-pub use self::{gradual_difficulty::*, gradual_performance::*, pp::*};
+pub use self::{
+    gradual_difficulty::*, gradual_performance::*, pp::*,
+    taiko_object::TaikoObjectPub as TaikoObject,
+};
+
+pub(crate) use self::taiko_object::IntoTaikoObjectIter;
 
 use crate::{beatmap::BeatmapHitWindows, Beatmap, GameMode, Mods, OsuStars};
 
@@ -17,7 +22,6 @@ use self::{
     colours::ColourDifficultyPreprocessor,
     difficulty_object::{MonoIndex, ObjectLists, TaikoDifficultyObject},
     skills::{Peaks, PeaksDifficultyValues, PeaksRaw, Skill},
-    taiko_object::IntoTaikoObjectIter,
 };
 
 const SECTION_LEN: usize = 400;

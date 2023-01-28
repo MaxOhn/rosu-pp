@@ -22,10 +22,15 @@ impl<'a> ObjectParameters<'a> {
     }
 }
 
-pub(crate) struct ManiaObject {
-    pub(crate) start_time: f64,
-    pub(crate) end_time: f64,
-    pub(crate) column: usize,
+/// A [`HitObject`] that was processed for the osu!mania gamemode.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ManiaObject {
+    /// Start time of the object.
+    pub start_time: f64,
+    /// Endtime of the object.
+    pub end_time: f64,
+    /// Column of the object.
+    pub column: usize,
 }
 
 impl ManiaObject {

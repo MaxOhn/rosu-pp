@@ -1,7 +1,16 @@
 use crate::{
+    catch::{
+        calculate_catch_width, CatchDifficultyAttributes, CatchObject, FruitOrJuice, FruitParams,
+        ALLOWED_CATCH_RANGE,
+    },
+    curve::CurveBuffers,
+    mania::{ManiaObject, ObjectParameters},
+    osu::{OsuDifficultyAttributes, OsuObject, ScalingFactor},
+    taiko::{IntoTaikoObjectIter, TaikoObject},
+    util::FloatExt,
     AnyPP, AnyStars, Beatmap, CatchPP, CatchStars, GameMode, GradualDifficultyAttributes,
-    GradualPerformanceAttributes, ManiaPP, ManiaStars, OsuPP, OsuStars, PerformanceAttributes,
-    Strains, TaikoPP, TaikoStars,
+    GradualPerformanceAttributes, ManiaPP, ManiaStars, Mods, OsuPP, OsuStars,
+    PerformanceAttributes, Strains, TaikoPP, TaikoStars,
 };
 
 /// Provides some additional methods on [`Beatmap`].
@@ -26,7 +35,7 @@ pub trait BeatmapExt {
     /// Suitable to plot the difficulty of a map over time.
     fn strains(&self, mods: u32) -> Strains;
 
-    /// Return an iterator that gives you the [`DifficultyAttributes`] after each hit object.
+    /// Return an iterator that gives you the [`DifficultyAttributes`](crate::DifficultyAttributes) after each hit object.
     ///
     /// Suitable to efficiently get the map's star rating after multiple different locations.
     fn gradual_difficulty(&self, mods: u32) -> GradualDifficultyAttributes<'_>;
@@ -36,6 +45,29 @@ pub trait BeatmapExt {
     /// Suitable to efficiently get a score's performance after multiple different locations,
     /// i.e. live update a score's pp.
     fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_>;
+
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!-specific [`OsuObject`],
+    /// just like the difficulty calculation does.
+    fn osu_hitobjects(&self, mods: u32) -> Vec<OsuObject>;
+
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!taiko-specific [`TaikoObject`],
+    /// just like the difficulty calculation does.
+    ///
+    /// Clockrate is *not* considered.
+    fn taiko_hitobjects(&self) -> Vec<TaikoObject>;
+
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!ctb-specific [`CatchObject`],
+    /// just like the difficulty calculation does.
+    ///
+    /// A [`CatchObject`] is either a fruit or a droplet which means
+    /// tiny droplets and bananas are not included.
+    fn catch_hitobjects(&self, mods: u32) -> Vec<CatchObject>;
+
+    /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!mania-specific [`ManiaObject`],
+    /// just like the difficulty calculation does.
+    ///
+    /// Clockrate is *not* considered.
+    fn mania_hitobjects(&self) -> Vec<ManiaObject>;
 }
 
 impl BeatmapExt for Beatmap {
@@ -88,5 +120,86 @@ impl BeatmapExt for Beatmap {
     #[inline]
     fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_> {
         GradualPerformanceAttributes::new(self, mods)
+    }
+
+    fn osu_hitobjects(&self, mods: u32) -> Vec<OsuObject> {
+        let attrs = self.attributes().mods(mods).build();
+        let scaling_factor = ScalingFactor::new(attrs.cs);
+        let hr = mods.hr();
+        let time_preempt = (attrs.hit_windows.ar * attrs.clock_rate) as f32 as f64;
+        let mut attrs = OsuDifficultyAttributes::default();
+
+        crate::osu::create_osu_objects(
+            self,
+            &mut attrs,
+            &scaling_factor,
+            usize::MAX,
+            hr,
+            time_preempt,
+        )
+    }
+
+    fn taiko_hitobjects(&self) -> Vec<TaikoObject> {
+        let map = self.convert_mode(GameMode::Taiko);
+
+        map.taiko_objects()
+            .map(|(h, start_time)| TaikoObject {
+                start_time,
+                is_hit: h.is_hit,
+                is_rim: h.is_rim,
+            })
+            .collect()
+    }
+
+    fn catch_hitobjects(&self, mods: u32) -> Vec<CatchObject> {
+        let attrs = self.attributes().mods(mods).build();
+
+        let mut params = FruitParams {
+            attributes: CatchDifficultyAttributes::default(),
+            curve_bufs: CurveBuffers::default(),
+            last_pos: None,
+            last_time: 0.0,
+            map: self,
+            ticks: Vec::new(),
+            with_hr: mods.hr(),
+        };
+
+        let mut hit_objects: Vec<_> = self
+            .hit_objects
+            .iter()
+            .filter_map(|h| FruitOrJuice::new(h, &mut params))
+            .flatten()
+            .collect();
+
+        let half_catcher_width =
+            (calculate_catch_width(attrs.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
+        let mut last_direction = 0;
+        let mut last_excess = half_catcher_width;
+
+        for i in 1..hit_objects.len() {
+            // SAFETY: The indices are guaranteed the be included based on the loop condition
+            let window = unsafe { hit_objects.get_unchecked_mut(i - 1..=i) };
+            let [curr, next] = window else { unreachable!() };
+
+            curr.init_hyper_dash(
+                half_catcher_width,
+                &*next,
+                &mut last_direction,
+                &mut last_excess,
+            );
+        }
+
+        hit_objects
+    }
+
+    fn mania_hitobjects(&self) -> Vec<ManiaObject> {
+        let map = self.convert_mode(GameMode::Mania);
+        let total_columns = map.cs.round_even().max(1.0);
+        let mut params = ObjectParameters::new(map.as_ref());
+
+        self.hit_objects
+            .iter()
+            .map(|h| ManiaObject::new(h, total_columns, &mut params))
+            .collect()
     }
 }
