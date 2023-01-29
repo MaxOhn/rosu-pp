@@ -13,6 +13,8 @@ const BASE_SCORING_DISTANCE: f64 = 100.0;
 #[derive(Clone, Debug, PartialEq)]
 pub struct OsuObject {
     /// Position of the object.
+    ///
+    /// Note that stacking is **not** applied, use the [`stacked_pos`](OsuObject::stacked_pos) method instead.
     pub pos: Pos2,
     /// Start time of the object.
     pub start_time: f64,
