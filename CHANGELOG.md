@@ -1,6 +1,7 @@
 ## Upcoming
 
-Nothing as of now
+- __Fixes:__
+  - The `Beatmap::bpm` method now works properly by considering the most common beat length instead of just the first one
 
 # v0.9.3 (2023-01-28)
 
