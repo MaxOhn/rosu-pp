@@ -104,6 +104,8 @@ impl<'map> TaikoStars<'map> {
     }
 
     /// Specify whether the map is a convert i.e. an osu!standard map.
+    ///
+    /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
     pub fn is_convert(mut self, is_convert: bool) -> Self {
         self.is_convert = is_convert;

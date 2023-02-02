@@ -38,6 +38,7 @@ use crate::{
 #[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'map> {
     pub(crate) map: Cow<'map, Beatmap>,
+    is_convert: bool,
     attributes: Option<TaikoDifficultyAttributes>,
     mods: u32,
     combo: Option<usize>,
@@ -55,8 +56,11 @@ impl<'map> TaikoPP<'map> {
     /// Create a new performance calculator for osu!taiko maps.
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
+        let map = map.convert_mode(GameMode::Taiko);
+
         Self {
-            map: map.convert_mode(GameMode::Taiko),
+            is_convert: matches!(map, Cow::Owned(_)),
+            map,
             attributes: None,
             mods: 0,
             combo: None,
@@ -165,6 +169,16 @@ impl<'map> TaikoPP<'map> {
         self
     }
 
+    /// Specify whether the map is a convert i.e. an osu!standard map.
+    ///
+    /// This only needs to be specified if the map was converted manually beforehand.
+    #[inline]
+    pub fn is_convert(mut self, is_convert: bool) -> Self {
+        self.is_convert = is_convert;
+
+        self
+    }
+
     /// Provide parameters through a [`TaikoScoreState`].
     #[inline]
     pub fn state(mut self, state: TaikoScoreState) -> Self {
@@ -188,7 +202,7 @@ impl<'map> TaikoPP<'map> {
         let attrs = self.attributes.take().unwrap_or_else(|| {
             let mut calculator = TaikoStars::new(self.map.as_ref())
                 .mods(self.mods)
-                .is_convert(matches!(self.map, Cow::Owned(_)));
+                .is_convert(self.is_convert);
 
             if let Some(passed_objects) = self.passed_objects {
                 calculator = calculator.passed_objects(passed_objects);
@@ -404,8 +418,11 @@ impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
             hitresult_priority,
         } = osu;
 
+        let map = map.convert_mode(GameMode::Taiko);
+
         Self {
-            map: map.convert_mode(GameMode::Taiko),
+            is_convert: matches!(map, Cow::Owned(_)),
+            map,
             attributes: None,
             mods,
             combo,

@@ -42,6 +42,7 @@ use crate::{
 #[allow(clippy::upper_case_acronyms)]
 pub struct ManiaPP<'map> {
     map: Cow<'map, Beatmap>,
+    is_convert: bool,
     attributes: Option<ManiaDifficultyAttributes>,
     mods: u32,
     passed_objects: Option<usize>,
@@ -62,8 +63,11 @@ impl<'map> ManiaPP<'map> {
     /// Create a new performance calculator for osu!mania maps.
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
+        let map = map.convert_mode(GameMode::Mania);
+
         Self {
-            map: map.convert_mode(GameMode::Mania),
+            is_convert: matches!(map, Cow::Owned(_)),
+            map,
             attributes: None,
             mods: 0,
             passed_objects: None,
@@ -186,6 +190,16 @@ impl<'map> ManiaPP<'map> {
     #[inline]
     pub fn n_misses(mut self, n_misses: usize) -> Self {
         self.n_misses = Some(n_misses);
+
+        self
+    }
+
+    /// Specify whether the map is a convert i.e. an osu!standard map.
+    ///
+    /// This only needs to be specified if the map was converted manually beforehand.
+    #[inline]
+    pub fn is_convert(mut self, is_convert: bool) -> Self {
+        self.is_convert = is_convert;
 
         self
     }
@@ -581,8 +595,11 @@ impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
             hitresult_priority,
         } = osu;
 
+        let map = map.convert_mode(GameMode::Mania);
+
         Self {
-            map: map.convert_mode(GameMode::Mania),
+            is_convert: matches!(map, Cow::Owned(_)),
+            map,
             attributes: None,
             mods,
             passed_objects,

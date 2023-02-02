@@ -1,5 +1,8 @@
 ## Upcoming
 
+- __Additions:__
+  - Added the method `{TaikoPP/ManiaPP}::is_convert` which **needs** to be used if the map was manually converted beforehand
+
 - __Fixes:__
   - The `Beatmap::bpm` method now works properly by considering the most common beat length instead of just the first one
 
