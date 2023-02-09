@@ -11,8 +11,6 @@ pub enum ParseError {
     IoError(IoError),
     /// The initial data of an `.osu` file was incorrect.
     IncorrectFileHeader,
-    /// Line in `.osu` that contains a slider was not in the proper format.
-    InvalidCurvePoints,
 }
 
 impl fmt::Display for ParseError {
@@ -22,7 +20,6 @@ impl fmt::Display for ParseError {
             Self::IncorrectFileHeader => {
                 write!(f, "expected `osu file format v` at file begin")
             }
-            Self::InvalidCurvePoints => f.write_str("invalid curve point"),
         }
     }
 }
@@ -32,7 +29,6 @@ impl StdError for ParseError {
         match self {
             Self::IoError(inner) => Some(inner),
             Self::IncorrectFileHeader => None,
-            Self::InvalidCurvePoints => None,
         }
     }
 }

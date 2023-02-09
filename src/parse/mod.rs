@@ -534,7 +534,7 @@ macro_rules! parse_hitobjects_body {
                         &mut vertices,
                     );
 
-                    if convert_res.is_err() {
+                    if convert_res == ConvertStatus::Err {
                         continue 'next_line;
                     }
 
@@ -552,7 +552,7 @@ macro_rules! parse_hitobjects_body {
                         &mut vertices,
                     );
 
-                    if convert_res.is_err() {
+                    if convert_res == ConvertStatus::Err {
                         continue 'next_line;
                     }
                 }
@@ -747,9 +747,13 @@ impl Beatmap {
 }
 
 mod slider_parsing {
-    use crate::ParseError;
-
     use super::{InRange, Pos2, MAX_COORDINATE_VALUE};
+
+    #[derive(PartialEq, Eq)]
+    pub(super) enum ConvertStatus {
+        Ok,
+        Err,
+    }
 
     pub(super) fn convert_points(
         points: &[&str],
@@ -758,7 +762,7 @@ mod slider_parsing {
         offset: Pos2,
         curve_points: &mut Vec<PathControlPoint>,
         vertices: &mut Vec<PathControlPoint>,
-    ) -> Result<(), ParseError> {
+    ) -> ConvertStatus {
         let mut path_kind = PathType::from_str(points[0]);
 
         let read_offset = first as usize;
@@ -773,12 +777,18 @@ mod slider_parsing {
 
         // * Parse into control points.
         for &point in points.iter().skip(1) {
-            vertices.push(read_point(point, offset)?);
+            match read_point(point, offset) {
+                Some(point) => vertices.push(point),
+                None => return ConvertStatus::Err,
+            }
         }
 
         // * If an endpoint is given, add it to the end.
         if let Some(end_point) = end_point {
-            vertices.push(read_point(end_point, offset)?);
+            match read_point(end_point, offset) {
+                Some(point) => vertices.push(point),
+                None => return ConvertStatus::Err,
+            }
         }
 
         // * Edge-case rules (to match stable).
@@ -846,19 +856,18 @@ mod slider_parsing {
             curve_points.extend(&vertices[start_idx..end_idx]);
         }
 
-        Ok(())
+        ConvertStatus::Ok
     }
 
-    pub(super) fn read_point(value: &str, start_pos: Pos2) -> Result<PathControlPoint, ParseError> {
+    pub(super) fn read_point(value: &str, start_pos: Pos2) -> Option<PathControlPoint> {
         let mut v = value
             .split(':')
             .flat_map(|s| f64::parse_in_custom_range(s, MAX_COORDINATE_VALUE as f64))
             .map(|n| n as i32 as f32);
 
-        match (v.next(), v.next()) {
-            (Some(x), Some(y)) => Ok(PathControlPoint::from(Pos2 { x, y } - start_pos)),
-            _ => Err(ParseError::InvalidCurvePoints),
-        }
+        v.next()
+            .zip(v.next())
+            .map(|(x, y)| PathControlPoint::from(Pos2 { x, y } - start_pos))
     }
 
     fn is_linear(p0: Pos2, p1: Pos2, p2: Pos2) -> bool {
