@@ -13,7 +13,7 @@
 
 - __Additions:__
   - Added the method `ScoreState::total_hits`
-  - Added the trait methods `BeatmapExt::{mode}_hitobjects` which return a list of mode-specific processed `HitObject`s
+  - Added the trait methods `BeatmapExt::{mode}_hitobjects` which return a list of mode-specific processed `HitObject`s ([#20])
 
 - __Fixes:__
   - Lines with invalid curve points are now ignored instead of throwing an error while parsing
@@ -238,3 +238,4 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
 [#14]: https://github.com/MaxOhn/rosu-pp/pull/14
 [#15]: https://github.com/MaxOhn/rosu-pp/pull/15
 [#18]: https://github.com/MaxOhn/rosu-pp/pull/18
+#[#20]: https://github.com/MaxOhn/rosu-pp/pull/20
