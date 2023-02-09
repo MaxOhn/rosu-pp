@@ -13,8 +13,6 @@ pub enum ParseError {
     IncorrectFileHeader,
     /// Line in `.osu` that contains a slider was not in the proper format.
     InvalidCurvePoints,
-    /// Failed to recognized specified type for hitobjects.
-    UnknownHitObjectKind,
 }
 
 impl fmt::Display for ParseError {
@@ -25,7 +23,6 @@ impl fmt::Display for ParseError {
                 write!(f, "expected `osu file format v` at file begin")
             }
             Self::InvalidCurvePoints => f.write_str("invalid curve point"),
-            Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
         }
     }
 }
@@ -36,7 +33,6 @@ impl StdError for ParseError {
             Self::IoError(inner) => Some(inner),
             Self::IncorrectFileHeader => None,
             Self::InvalidCurvePoints => None,
-            Self::UnknownHitObjectKind => None,
         }
     }
 }

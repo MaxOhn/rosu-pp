@@ -632,7 +632,7 @@ macro_rules! parse_hitobjects_body {
 
                 HitObjectKind::Hold { end_time }
             } else {
-                return Err(ParseError::UnknownHitObjectKind);
+                continue 'next_line;
             };
 
             $self.hit_objects.push(HitObject {
