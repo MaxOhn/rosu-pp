@@ -126,7 +126,7 @@ macro_rules! parse_general_body {
                     "1" => Some(GameMode::Taiko),
                     "2" => Some(GameMode::Catch),
                     "3" => Some(GameMode::Mania),
-                    _ => return Err(ParseError::InvalidMode),
+                    _ => continue,
                 };
             }
 

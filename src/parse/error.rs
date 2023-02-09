@@ -15,8 +15,6 @@ pub enum ParseError {
     InvalidCurvePoints,
     /// Expected a decimal number, got something else.
     InvalidDecimalNumber,
-    /// Failed to parse game mode.
-    InvalidMode,
     /// Failed to recognized specified type for hitobjects.
     UnknownHitObjectKind,
 }
@@ -30,7 +28,6 @@ impl fmt::Display for ParseError {
             }
             Self::InvalidCurvePoints => f.write_str("invalid curve point"),
             Self::InvalidDecimalNumber => f.write_str("invalid float number"),
-            Self::InvalidMode => f.write_str("invalid mode"),
             Self::UnknownHitObjectKind => f.write_str("unsupported hitobject kind"),
         }
     }
@@ -43,7 +40,6 @@ impl StdError for ParseError {
             Self::IncorrectFileHeader => None,
             Self::InvalidCurvePoints => None,
             Self::InvalidDecimalNumber => None,
-            Self::InvalidMode => None,
             Self::UnknownHitObjectKind => None,
         }
     }
