@@ -24,7 +24,7 @@ use self::{
     skills::{Peaks, PeaksDifficultyValues, PeaksRaw, Skill},
 };
 
-const SECTION_LEN: usize = 400;
+const SECTION_LEN: f64 = 400.0;
 
 const DIFFICULTY_MULTIPLIER: f64 = 1.35;
 
@@ -96,11 +96,9 @@ impl<'map> TaikoStars<'map> {
     /// Adjust the clock rate used in the calculation.
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
-    ///
-    /// The value cannot go below 0.001.
     #[inline]
     pub fn clock_rate(mut self, clock_rate: f64) -> Self {
-        self.clock_rate = Some(clock_rate.max(0.001));
+        self.clock_rate = Some(clock_rate);
 
         self
     }
@@ -182,7 +180,7 @@ impl<'map> TaikoStars<'map> {
         } = peaks.into_raw();
 
         TaikoStrains {
-            section_len: SECTION_LEN as f64,
+            section_len: SECTION_LEN,
             color: colour,
             rhythm,
             stamina,

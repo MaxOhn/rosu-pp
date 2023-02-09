@@ -24,7 +24,7 @@ pub(crate) trait StrainSkill: Skill {
     fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
         // * The first object doesn't generate a strain, so we begin with an incremented section end
         if curr.idx == 0 {
-            let section_len = SECTION_LEN as f64;
+            let section_len = SECTION_LEN;
             *self.curr_section_end() = (curr.start_time / section_len).ceil() * section_len;
         }
 
@@ -36,7 +36,19 @@ pub(crate) trait StrainSkill: Skill {
                 self.start_new_section_from(section_end, curr);
             }
 
-            *self.curr_section_end() += SECTION_LEN as f64;
+            *self.curr_section_end() += SECTION_LEN;
+
+            // Optimization to finish the loop early if
+            // the current peak is 0.0 i.e. it can't decay further.
+            // If final values don't coincide perfectly anymore,
+            // this should be looked at and maybe adjusted.
+            if self.curr_section_peak().abs() <= f64::EPSILON
+                && curr.start_time > *self.curr_section_end()
+            {
+                let remaining = curr.start_time - *self.curr_section_end();
+                let skip_iter_count = (remaining / SECTION_LEN).ceil();
+                *self.curr_section_end() += skip_iter_count * SECTION_LEN;
+            }
         }
 
         *self.curr_section_peak() = self

@@ -30,6 +30,18 @@ pub(crate) trait StrainSkill: Sized + Skill {
             self.save_curr_peak();
             self.start_new_section_from(self.curr_section_end(), curr, diff_objects);
             *self.curr_section_end_mut() += SECTION_LEN;
+
+            // Optimization to finish the loop early if
+            // the current peak is 0.0 i.e. it can't decay further.
+            // If final values don't coincide perfectly anymore,
+            // this should be looked at and maybe adjusted.
+            if self.curr_section_peak().abs() <= f64::EPSILON
+                && curr.start_time > self.curr_section_end()
+            {
+                let remaining = curr.start_time - self.curr_section_end();
+                let skip_iter_count = (remaining / SECTION_LEN).ceil();
+                *self.curr_section_end_mut() += skip_iter_count * SECTION_LEN;
+            }
         }
 
         *self.curr_section_peak_mut() = self.strain_value_at(curr).max(self.curr_section_peak());

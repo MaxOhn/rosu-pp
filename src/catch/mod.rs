@@ -84,11 +84,9 @@ impl<'map> CatchStars<'map> {
     /// Adjust the clock rate used in the calculation.
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
-    ///
-    /// The value cannot go below 0.001.
     #[inline]
     pub fn clock_rate(mut self, clock_rate: f64) -> Self {
-        self.clock_rate = Some(clock_rate.max(0.001));
+        self.clock_rate = Some(clock_rate);
 
         self
     }
@@ -218,6 +216,16 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
             movement.save_current_peak();
             movement.start_new_section_from(curr_section_end);
             curr_section_end += SECTION_LENGTH;
+
+            // Optimization to finish the loop early if
+            // the current peak is 0.0 i.e. it can't decay further.
+            // If final values don't coincide perfectly anymore,
+            // this should be looked at and maybe adjusted.
+            if movement.curr_section_peak.abs() <= f64::EPSILON && base_time > curr_section_end {
+                let remaining = base_time - curr_section_end;
+                let skip_iter_count = (remaining / SECTION_LENGTH).ceil();
+                curr_section_end += skip_iter_count * SECTION_LENGTH;
+            }
         }
 
         movement.process(&h);
