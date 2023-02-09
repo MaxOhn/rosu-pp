@@ -84,9 +84,11 @@ impl<'map> CatchStars<'map> {
     /// Adjust the clock rate used in the calculation.
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    ///
+    /// The value cannot go below 0.001.
     #[inline]
     pub fn clock_rate(mut self, clock_rate: f64) -> Self {
-        self.clock_rate = Some(clock_rate);
+        self.clock_rate = Some(clock_rate.max(0.001));
 
         self
     }
