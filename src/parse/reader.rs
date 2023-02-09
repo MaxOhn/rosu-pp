@@ -186,11 +186,15 @@ impl<R> FileReader<R> {
 
     /// Split the buffer at the first ':', then parse the second half into a string.
     ///
-    /// Returns `None` if there is no ':' or if the second half is invalid UTF-8.
+    /// Returns `None` if the second half is invalid UTF-8.
     pub(crate) fn split_colon(&self) -> Option<(&[u8], &str)> {
-        let idx = self.buf.iter().position(|&byte| byte == b':')?;
-        let front = &self.buf[..idx];
+        let idx = match self.buf.iter().position(|&byte| byte == b':') {
+            Some(idx) => idx,
+            None => return Some((&self.buf, "")),
+        };
+
         let back = std::str::from_utf8(&self.buf[idx + 1..]).ok()?;
+        let front = &self.buf[..idx];
 
         Some((front, back.trim_start()))
     }

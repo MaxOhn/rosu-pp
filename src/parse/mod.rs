@@ -115,7 +115,10 @@ macro_rules! parse_general_body {
                 break;
             }
 
-            let (key, value) = $reader.split_colon().ok_or(ParseError::BadLine)?;
+            let (key, value) = match $reader.split_colon() {
+                Some(tuple) => tuple,
+                None => continue,
+            };
 
             if key == b"Mode" {
                 mode = match value {
@@ -159,7 +162,10 @@ macro_rules! parse_difficulty_body {
                 break;
             }
 
-            let (key, value) = $reader.split_colon().ok_or(ParseError::BadLine)?;
+            let (key, value) = match $reader.split_colon() {
+                Some(tuple) => tuple,
+                None => continue,
+            };
 
             match key {
                 b"ApproachRate" => {
