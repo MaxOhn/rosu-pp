@@ -5,6 +5,7 @@
 
 - __Adjustments:__
   - Specified clock rates can no longer go below 0.001 to prevent crashing due to memory hogging.
+  - (technically breaking) The only reasons for parsing to fail are now IO errors or invalid file headers. All other `ParseError` variants have been removed and instead of throwing an error the line is just ignored.
 
 - __Fixes:__
   - The `Beatmap::bpm` method now works properly by considering the most common beat length instead of just the first one
