@@ -222,9 +222,9 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
             // If final values don't coincide perfectly anymore,
             // this should be looked at and maybe adjusted.
             if movement.curr_section_peak.abs() <= f64::EPSILON && base_time > curr_section_end {
-                let remaining = base_time - curr_section_end;
-                let skip_iter_count = (remaining / SECTION_LENGTH).ceil();
-                curr_section_end += skip_iter_count * SECTION_LENGTH;
+                let remaining_time = base_time - curr_section_end;
+                let remaining_iters = (remaining_time / SECTION_LENGTH).ceil();
+                curr_section_end += remaining_iters * SECTION_LENGTH;
             }
         }
 

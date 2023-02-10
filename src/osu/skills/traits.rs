@@ -55,9 +55,9 @@ pub(crate) trait StrainSkill: Skill + Sized {
             if self.curr_section_peak().abs() <= f64::EPSILON
                 && curr.start_time > *self.curr_section_end()
             {
-                let remaining = curr.start_time - *self.curr_section_end();
-                let skip_iter_count = (remaining / SECTION_LEN).ceil();
-                *self.curr_section_end() += skip_iter_count * SECTION_LEN;
+                let remaining_time = curr.start_time - *self.curr_section_end();
+                let remaining_iters = (remaining_time / SECTION_LEN).ceil();
+                *self.curr_section_end() += remaining_iters * SECTION_LEN;
             }
         }
 

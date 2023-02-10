@@ -1,6 +1,7 @@
 ## Upcoming
 
-Nothing as of now
+- __Adjustments:__
+  - Specified clock rates can go below 0.001 again
 
 # v0.9.4 (2023-02-09)
 
