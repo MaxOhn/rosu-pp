@@ -3,9 +3,12 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::taiko::{
-    colours::{AlternatingMonoPattern, MonoStreak, RepeatingHitPatterns},
-    difficulty_object::{ObjectLists, TaikoDifficultyObject},
+use crate::{
+    taiko::{
+        colours::{AlternatingMonoPattern, MonoStreak, RepeatingHitPatterns},
+        difficulty_object::{ObjectLists, TaikoDifficultyObject},
+    },
+    util::CompactZerosVec,
 };
 
 use super::{Skill, StrainDecaySkill, StrainSkill};
@@ -15,7 +18,7 @@ pub(crate) struct Colour {
     curr_strain: f64,
     curr_section_peak: f64,
     curr_section_end: f64,
-    pub(crate) strain_peaks: Vec<f64>,
+    pub(crate) strain_peaks: CompactZerosVec,
 }
 
 impl Colour {
@@ -24,7 +27,7 @@ impl Colour {
             curr_strain: 0.0,
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
-            strain_peaks: Vec::new(),
+            strain_peaks: CompactZerosVec::new(),
         }
     }
 }
@@ -43,7 +46,7 @@ impl Skill for Colour {
 
 impl StrainSkill for Colour {
     #[inline]
-    fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
+    fn strain_peaks_mut(&mut self) -> &mut CompactZerosVec {
         &mut self.strain_peaks
     }
 

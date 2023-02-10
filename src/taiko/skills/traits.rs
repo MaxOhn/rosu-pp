@@ -1,8 +1,11 @@
 use std::{cmp::Ordering, mem};
 
-use crate::taiko::{
-    difficulty_object::{ObjectLists, TaikoDifficultyObject},
-    SECTION_LEN,
+use crate::{
+    taiko::{
+        difficulty_object::{ObjectLists, TaikoDifficultyObject},
+        SECTION_LEN,
+    },
+    util::CompactZerosVec,
 };
 
 pub(crate) trait Skill: Sized {
@@ -13,7 +16,7 @@ pub(crate) trait Skill: Sized {
 pub(crate) trait StrainSkill: Skill {
     const DECAY_WEIGHT: f64 = 0.9;
 
-    fn strain_peaks_mut(&mut self) -> &mut Vec<f64>;
+    fn strain_peaks_mut(&mut self) -> &mut CompactZerosVec;
     fn curr_section_peak(&mut self) -> &mut f64;
     fn curr_section_end(&mut self) -> &mut f64;
 
@@ -76,9 +79,7 @@ pub(crate) trait StrainSkill: Skill {
 
         // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
         // * These sections will not contribute to the difficulty.
-        let mut peaks = self.get_curr_strain_peaks();
-
-        peaks.retain(|&peak| peak > 0.0);
+        let mut peaks = self.get_curr_strain_peaks().to_non_zeros();
         peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
         // * Difficulty is the weighted sum of the highest strains from every section.
@@ -92,7 +93,7 @@ pub(crate) trait StrainSkill: Skill {
     }
 
     #[inline]
-    fn get_curr_strain_peaks(mut self) -> Vec<f64> {
+    fn get_curr_strain_peaks(mut self) -> CompactZerosVec {
         let curr_peak = *self.curr_section_peak();
         let mut strain_peaks = mem::take(self.strain_peaks_mut());
         strain_peaks.push(curr_peak);

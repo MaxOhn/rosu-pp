@@ -181,9 +181,9 @@ impl<'map> TaikoStars<'map> {
 
         TaikoStrains {
             section_len: SECTION_LEN,
-            color: colour,
-            rhythm,
-            stamina,
+            color: colour.to_vec(),
+            rhythm: rhythm.to_vec(),
+            stamina: stamina.to_vec(),
         }
     }
 }

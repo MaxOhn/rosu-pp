@@ -1,6 +1,9 @@
 use std::cmp::Ordering;
 
-use crate::taiko::difficulty_object::{ObjectLists, TaikoDifficultyObject};
+use crate::{
+    taiko::difficulty_object::{ObjectLists, TaikoDifficultyObject},
+    util::CompactZerosVec,
+};
 
 use super::{colour::Colour, rhythm::Rhythm, stamina::Stamina, Skill, StrainSkill};
 
@@ -74,9 +77,9 @@ impl Skill for Peaks {
         let stamina_peaks = self.stamina.get_curr_strain_peaks();
 
         let zip = colour_peaks
-            .into_iter()
-            .zip(rhythm_peaks)
-            .zip(stamina_peaks);
+            .iter()
+            .zip(rhythm_peaks.iter())
+            .zip(stamina_peaks.iter());
 
         for ((mut colour_peak, mut rhythm_peak), mut stamina_peak) in zip {
             colour_peak *= Self::COLOUR_SKILL_MULTIPLIER;
@@ -116,7 +119,7 @@ pub(crate) struct PeaksDifficultyValues {
 }
 
 pub(crate) struct PeaksRaw {
-    pub(crate) colour: Vec<f64>,
-    pub(crate) rhythm: Vec<f64>,
-    pub(crate) stamina: Vec<f64>,
+    pub(crate) colour: CompactZerosVec,
+    pub(crate) rhythm: CompactZerosVec,
+    pub(crate) stamina: CompactZerosVec,
 }
