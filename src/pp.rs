@@ -140,6 +140,18 @@ impl<'map> AnyPP<'map> {
         }
     }
 
+    /// Specify whether the map is a convert.
+    ///
+    /// This only needs to be specified if the map was converted manually beforehand.
+    #[inline]
+    pub fn is_convert(self, is_convert: bool) -> Self {
+        match self {
+            Self::Osu(_) | Self::Catch(_) => self,
+            Self::Taiko(t) => Self::Taiko(t.is_convert(is_convert)),
+            Self::Mania(m) => Self::Mania(m.is_convert(is_convert)),
+        }
+    }
+
     /// Provide parameters through a [`ScoreState`].
     #[inline]
     pub fn state(self, state: ScoreState) -> Self {

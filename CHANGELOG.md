@@ -1,5 +1,8 @@
 ## Upcoming
 
+- __Additions:__
+  - Added the method `{AnyStars/AnyPP}::is_convert` which **needs** to be used if the map was manually converted beforehand
+
 - __Adjustments:__
   - Specified clock rates can go below 0.001 again
 
