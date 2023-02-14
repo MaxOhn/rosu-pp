@@ -1,6 +1,6 @@
 use crate::{
     taiko::difficulty_object::{ObjectLists, TaikoDifficultyObject},
-    util::CompactZerosVec,
+    util::CompactVec,
 };
 
 use super::{Skill, StrainDecaySkill, StrainSkill};
@@ -10,7 +10,7 @@ pub(crate) struct Stamina {
     curr_strain: f64,
     curr_section_peak: f64,
     curr_section_end: f64,
-    pub(crate) strain_peaks: CompactZerosVec,
+    pub(crate) strain_peaks: CompactVec,
 }
 
 impl Stamina {
@@ -19,7 +19,7 @@ impl Stamina {
             curr_strain: 0.0,
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
-            strain_peaks: CompactZerosVec::new(),
+            strain_peaks: CompactVec::new(),
         }
     }
 }
@@ -38,7 +38,7 @@ impl Skill for Stamina {
 
 impl StrainSkill for Stamina {
     #[inline]
-    fn strain_peaks_mut(&mut self) -> &mut CompactZerosVec {
+    fn strain_peaks_mut(&mut self) -> &mut CompactVec {
         &mut self.strain_peaks
     }
 

@@ -5,7 +5,7 @@ use crate::{
         difficulty_object::{ObjectLists, TaikoDifficultyObject},
         SECTION_LEN,
     },
-    util::CompactZerosVec,
+    util::CompactVec,
 };
 
 pub(crate) trait Skill: Sized {
@@ -16,7 +16,7 @@ pub(crate) trait Skill: Sized {
 pub(crate) trait StrainSkill: Skill {
     const DECAY_WEIGHT: f64 = 0.9;
 
-    fn strain_peaks_mut(&mut self) -> &mut CompactZerosVec;
+    fn strain_peaks_mut(&mut self) -> &mut CompactVec;
     fn curr_section_peak(&mut self) -> &mut f64;
     fn curr_section_end(&mut self) -> &mut f64;
 
@@ -52,7 +52,7 @@ pub(crate) trait StrainSkill: Skill {
                 let remaining_iters = (remaining_time / SECTION_LEN).ceil();
                 *self.curr_section_end() += remaining_iters * SECTION_LEN;
                 self.strain_peaks_mut()
-                    .push_n_zeros(remaining_iters as usize);
+                    .push_n(0.0, remaining_iters as usize);
             }
         }
 
@@ -81,7 +81,9 @@ pub(crate) trait StrainSkill: Skill {
 
         // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
         // * These sections will not contribute to the difficulty.
-        let mut peaks = self.get_curr_strain_peaks().to_non_zeros();
+        let mut peaks = self.get_curr_strain_peaks();
+        peaks.retain(|peak| peak > 0.0);
+        let mut peaks = peaks.to_vec();
         peaks.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
 
         // * Difficulty is the weighted sum of the highest strains from every section.
@@ -95,7 +97,7 @@ pub(crate) trait StrainSkill: Skill {
     }
 
     #[inline]
-    fn get_curr_strain_peaks(mut self) -> CompactZerosVec {
+    fn get_curr_strain_peaks(mut self) -> CompactVec {
         let curr_peak = *self.curr_section_peak();
         let mut strain_peaks = mem::take(self.strain_peaks_mut());
         strain_peaks.push(curr_peak);

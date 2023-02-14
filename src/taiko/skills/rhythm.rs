@@ -1,6 +1,6 @@
 use crate::{
     taiko::difficulty_object::{HitObjectRhythm, ObjectLists, TaikoDifficultyObject},
-    util::{CompactZerosVec, LimitedQueue},
+    util::{CompactVec, LimitedQueue},
 };
 
 use super::{Skill, StrainDecaySkill, StrainSkill};
@@ -17,7 +17,7 @@ pub(crate) struct Rhythm {
     history: LimitedQueue<HistoryElement, HISTORY_MAX_LEN>,
     curr_section_peak: f64,
     curr_section_end: f64,
-    pub(crate) strain_peaks: CompactZerosVec,
+    pub(crate) strain_peaks: CompactVec,
 }
 
 impl Rhythm {
@@ -31,7 +31,7 @@ impl Rhythm {
             history: LimitedQueue::new(),
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
-            strain_peaks: CompactZerosVec::new(),
+            strain_peaks: CompactVec::new(),
         }
     }
 
@@ -113,7 +113,7 @@ impl Skill for Rhythm {
 
 impl StrainSkill for Rhythm {
     #[inline]
-    fn strain_peaks_mut(&mut self) -> &mut CompactZerosVec {
+    fn strain_peaks_mut(&mut self) -> &mut CompactVec {
         &mut self.strain_peaks
     }
 

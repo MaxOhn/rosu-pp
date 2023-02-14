@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use crate::{
     taiko::difficulty_object::{ObjectLists, TaikoDifficultyObject},
-    util::CompactZerosVec,
+    util::CompactVec,
 };
 
 use super::{colour::Colour, rhythm::Rhythm, stamina::Stamina, Skill, StrainSkill};
@@ -119,7 +119,7 @@ pub(crate) struct PeaksDifficultyValues {
 }
 
 pub(crate) struct PeaksRaw {
-    pub(crate) colour: CompactZerosVec,
-    pub(crate) rhythm: CompactZerosVec,
-    pub(crate) stamina: CompactZerosVec,
+    pub(crate) colour: CompactVec,
+    pub(crate) rhythm: CompactVec,
+    pub(crate) stamina: CompactVec,
 }
