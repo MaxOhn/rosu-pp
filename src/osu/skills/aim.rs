@@ -1,6 +1,6 @@
 use std::f64::consts::{FRAC_PI_2, PI};
 
-use crate::osu::difficulty_object::OsuDifficultyObject;
+use crate::{osu::difficulty_object::OsuDifficultyObject, util::CompactVec};
 
 use super::{previous, previous_start_time, OsuStrainSkill, Skill, StrainSkill};
 
@@ -9,7 +9,7 @@ pub(crate) struct Aim {
     curr_strain: f64,
     curr_section_peak: f64,
     curr_section_end: f64,
-    pub(crate) strain_peaks: Vec<f64>,
+    pub(crate) strain_peaks: CompactVec,
     with_sliders: bool,
 }
 
@@ -22,7 +22,7 @@ impl Aim {
             curr_strain: 0.0,
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
-            strain_peaks: Vec::new(),
+            strain_peaks: CompactVec::new(),
             with_sliders,
         }
     }
@@ -50,7 +50,7 @@ impl Skill for Aim {
 
 impl StrainSkill for Aim {
     #[inline]
-    fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
+    fn strain_peaks_mut(&mut self) -> &mut CompactVec {
         &mut self.strain_peaks
     }
 

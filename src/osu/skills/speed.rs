@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, f64::consts::PI};
 
-use crate::osu::difficulty_object::OsuDifficultyObject;
+use crate::{osu::difficulty_object::OsuDifficultyObject, util::CompactVec};
 
 use super::{next, previous, previous_start_time, OsuStrainSkill, Skill, StrainSkill};
 
@@ -10,7 +10,7 @@ pub(crate) struct Speed {
     curr_section_peak: f64,
     curr_section_end: f64,
     curr_rhythm: f64,
-    pub(crate) strain_peaks: Vec<f64>,
+    pub(crate) strain_peaks: CompactVec,
     object_strains: Vec<f64>,
     hit_window: f64,
 }
@@ -25,7 +25,7 @@ impl Speed {
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
             curr_rhythm: 0.0,
-            strain_peaks: Vec::new(),
+            strain_peaks: CompactVec::new(),
             object_strains: Vec::new(),
             hit_window,
         }
@@ -67,7 +67,7 @@ impl Skill for Speed {
 
 impl StrainSkill for Speed {
     #[inline]
-    fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
+    fn strain_peaks_mut(&mut self) -> &mut CompactVec {
         &mut self.strain_peaks
     }
 

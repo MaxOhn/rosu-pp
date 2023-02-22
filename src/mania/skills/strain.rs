@@ -1,4 +1,4 @@
-use crate::mania::difficulty_object::ManiaDifficultyObject;
+use crate::{mania::difficulty_object::ManiaDifficultyObject, util::CompactVec};
 
 use super::{previous, Skill, StrainDecaySkill, StrainSkill};
 
@@ -15,7 +15,7 @@ pub(crate) struct Strain {
     curr_section_peak: f64,
     curr_section_end: f64,
 
-    pub(crate) strain_peaks: Vec<f64>,
+    pub(crate) strain_peaks: CompactVec,
 }
 
 impl Strain {
@@ -33,7 +33,7 @@ impl Strain {
             curr_strain: 0.0,
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
-            strain_peaks: Vec::new(),
+            strain_peaks: CompactVec::new(),
         }
     }
 
@@ -78,7 +78,7 @@ impl StrainSkill for Strain {
     }
 
     #[inline]
-    fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
+    fn strain_peaks_mut(&mut self) -> &mut CompactVec {
         &mut self.strain_peaks
     }
 

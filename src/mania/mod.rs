@@ -139,7 +139,7 @@ impl<'map> ManiaStars<'map> {
 
         ManiaStrains {
             section_len: SECTION_LEN,
-            strains: strain.strain_peaks,
+            strains: strain.strain_peaks.to_vec(),
         }
     }
 }

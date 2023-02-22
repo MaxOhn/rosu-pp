@@ -1,5 +1,6 @@
 use crate::{
     osu::{difficulty_object::OsuDifficultyObject, osu_object::OsuObjectKind},
+    util::CompactVec,
     Mods,
 };
 
@@ -10,7 +11,7 @@ pub(crate) struct Flashlight {
     curr_strain: f64,
     curr_section_peak: f64,
     curr_section_end: f64,
-    pub(crate) strain_peaks: Vec<f64>,
+    pub(crate) strain_peaks: CompactVec,
     has_hidden_mod: bool,
     scaling_factor: f64,
     time_preempt: f64,
@@ -26,7 +27,7 @@ impl Flashlight {
             curr_strain: 0.0,
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
-            strain_peaks: Vec::new(),
+            strain_peaks: CompactVec::new(),
             has_hidden_mod: mods.hd(),
             scaling_factor: 52.0 / radius as f64,
             time_preempt,
@@ -59,7 +60,7 @@ impl StrainSkill for Flashlight {
     const DECAY_WEIGHT: f64 = 0.9;
 
     #[inline]
-    fn strain_peaks_mut(&mut self) -> &mut Vec<f64> {
+    fn strain_peaks_mut(&mut self) -> &mut CompactVec {
         &mut self.strain_peaks
     }
 
@@ -104,7 +105,7 @@ impl StrainSkill for Flashlight {
 
     #[inline]
     fn difficulty_value(&mut self) -> f64 {
-        self.get_curr_strain_peaks().into_iter().sum::<f64>() * Self::DIFFICULTY_MULTIPLER
+        self.get_curr_strain_peaks().sum() * Self::DIFFICULTY_MULTIPLER
     }
 }
 

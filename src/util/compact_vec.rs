@@ -10,7 +10,7 @@ pub(crate) struct CompactVec {
 }
 
 impl CompactVec {
-    const ACCEPTABLE_DIFFERENCE: f64 = 1e-7;
+    const ACCEPTABLE_DIFFERENCE: f64 = 1e-16;
 
     pub(crate) fn new() -> Self {
         Self::default()
@@ -53,6 +53,12 @@ impl CompactVec {
         }
 
         nums
+    }
+
+    pub(crate) fn sum(&self) -> f64 {
+        self.inner
+            .iter()
+            .fold(0.0, |sum, entry| sum + entry.value * entry.count as f64)
     }
 }
 
