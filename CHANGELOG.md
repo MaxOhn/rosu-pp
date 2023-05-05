@@ -6,6 +6,9 @@
 - __Adjustments:__
   - Specified clock rates can go below 0.001 again
 
+- __Fixes:__
+  - Fixed underflow for osu!std scores that were FCs but quit mid-slider
+
 # v0.9.4 (2023-02-09)
 
 - __Additions:__

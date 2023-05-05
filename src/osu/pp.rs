@@ -500,7 +500,8 @@ impl OsuPpInner {
         if self.attrs.n_sliders > 0 {
             let estimate_slider_ends_dropped =
                 ((self.state.n100 + self.state.n50 + self.state.n_misses)
-                    .min(self.attrs.max_combo - self.state.max_combo) as f64)
+                    .min(self.attrs.max_combo.saturating_sub(self.state.max_combo))
+                    as f64)
                     .clamp(0.0, estimate_diff_sliders);
             let slider_nerf_factor = (1.0 - self.attrs.slider_factor)
                 * (1.0 - estimate_slider_ends_dropped / estimate_diff_sliders).powi(3)
