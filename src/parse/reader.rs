@@ -143,11 +143,11 @@ impl<R> FileReader<R> {
             .and_then(|mut num| {
                 let mut n = num
                     .next()
-                    .filter(|byte| (b'0'..=b'9').contains(byte))
+                    .filter(|byte| byte.is_ascii_digit())
                     .map(|&byte| byte & 0xF)?;
 
                 for byte in num {
-                    if !(b'0'..=b'9').contains(byte) {
+                    if !byte.is_ascii_digit() {
                         break;
                     }
 
