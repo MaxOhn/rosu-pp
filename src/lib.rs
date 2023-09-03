@@ -220,6 +220,8 @@ pub use mods::Mods;
 pub use parse::{ParseError, ParseResult};
 pub use util::SortedVec;
 
+use wasm_bindgen::prelude::*;
+
 /// The result of calculating the strains on a map.
 /// Suitable to plot the difficulty of a map over time.
 #[derive(Clone, Debug)]
@@ -425,3 +427,15 @@ impl From<mania::ManiaPerformanceAttributes> for PerformanceAttributes {
 
 #[cfg(all(feature = "async_tokio", feature = "async_std"))]
 compile_error!("Only one of the features `async_tokio` and `async_std` should be enabled");
+
+/// Calculates online SR locally
+#[wasm_bindgen]
+pub fn calculate_sr(str: &[u8], mods: u32) -> f32{
+
+    let sr = match Beatmap::from_bytes(str){
+        Ok(map) => map.stars().mods(mods).calculate().stars(),
+        Err(_reason) => -1.0,
+    };
+
+    sr as f32
+}
