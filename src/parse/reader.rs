@@ -138,7 +138,7 @@ impl<R> FileReader<R> {
             .and_then(|idx| {
                 self.buf[idx..]
                     .starts_with(b"osu file format v")
-                    .then_some(self.buf[idx + 17..].iter())
+                    .then(|| self.buf[idx + 17..].iter())
             })
             .and_then(|mut num| {
                 let mut n = num
