@@ -1,5 +1,9 @@
 ## Upcoming
 
+  Nothing as of now
+
+# v0.9.5 (2023-09-06)
+
 - __Additions:__
   - Added the method `{AnyStars/AnyPP}::is_convert` which **needs** to be used if the map was manually converted beforehand
 
@@ -10,7 +14,7 @@
   - Fixed underflow for osu!std scores that were FCs but quit mid-slider
   - Fixed panic on incorrect file headers ([#21])
 
-# v0.9.4 (2023-02-09)
+## v0.9.4 (2023-02-09)
 
 - __Additions:__
   - Added the method `{TaikoPP/ManiaPP}::is_convert` which **needs** to be used if the map was manually converted beforehand
