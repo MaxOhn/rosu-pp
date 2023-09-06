@@ -80,8 +80,8 @@ pub(crate) struct Iter<'a> {
 }
 
 impl<'a> Iter<'a> {
-    fn new(compact_zeros: &'a CompactVec) -> Self {
-        let mut iter = compact_zeros.inner.iter().copied();
+    fn new(vec: &'a CompactVec) -> Self {
+        let mut iter = vec.inner.iter().copied();
 
         Self {
             curr: iter.next(),
@@ -106,5 +106,56 @@ impl Iterator for Iter<'_> {
                 return Some(curr.value);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn compact_vec() -> CompactVec {
+        let mut vec = CompactVec::default();
+        vec.push_n(123.456, 3);
+        vec.push(0.0);
+        vec.push_n(0.0, 2);
+        vec.push(2.0);
+        vec.push_n(3.0, 2);
+
+        vec
+    }
+
+    #[test]
+    fn test_len() {
+        let vec = compact_vec();
+
+        assert_eq!(vec.inner.len(), 4);
+        assert_eq!(vec.len, 9);
+    }
+
+    #[test]
+    fn test_to_vec() {
+        let to_vec = compact_vec().to_vec();
+
+        assert_eq!(
+            to_vec,
+            vec![123.456, 123.456, 123.456, 0.0, 0.0, 0.0, 2.0, 3.0, 3.0]
+        );
+    }
+
+    #[test]
+    fn test_iter() {
+        let vec = compact_vec();
+        let mut iter = vec.iter();
+
+        assert_eq!(iter.next(), Some(123.456));
+        assert_eq!(iter.next(), Some(123.456));
+        assert_eq!(iter.next(), Some(123.456));
+        assert_eq!(iter.next(), Some(0.0));
+        assert_eq!(iter.next(), Some(0.0));
+        assert_eq!(iter.next(), Some(0.0));
+        assert_eq!(iter.next(), Some(2.0));
+        assert_eq!(iter.next(), Some(3.0));
+        assert_eq!(iter.next(), Some(3.0));
+        assert_eq!(iter.next(), None);
     }
 }
