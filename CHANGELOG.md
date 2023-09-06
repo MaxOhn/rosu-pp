@@ -8,6 +8,7 @@
 
 - __Fixes:__
   - Fixed underflow for osu!std scores that were FCs but quit mid-slider
+  - Fixed panic on incorrect file headers ([#21])
 
 # v0.9.4 (2023-02-09)
 
@@ -250,4 +251,5 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
 [#14]: https://github.com/MaxOhn/rosu-pp/pull/14
 [#15]: https://github.com/MaxOhn/rosu-pp/pull/15
 [#18]: https://github.com/MaxOhn/rosu-pp/pull/18
-#[#20]: https://github.com/MaxOhn/rosu-pp/pull/20
+[#20]: https://github.com/MaxOhn/rosu-pp/pull/20
+[#21]: https://github.com/MaxOhn/rosu-pp/pull/21
