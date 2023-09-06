@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 ///  Stores the sorted order for an initial list so that multiple
 ///  lists can be sorted based on that order.
 pub(crate) struct TandemSorter {
-    indices: Vec<usize>,
+    indices: Box<[usize]>,
 }
 
 impl TandemSorter {
@@ -13,7 +13,7 @@ impl TandemSorter {
     where
         T: PartialOrd,
     {
-        let mut indices: Vec<_> = (0..).take(slice.len()).collect();
+        let mut indices: Box<[usize]> = (0..).take(slice.len()).collect();
 
         let closure =
             |&i: &usize, &j: &usize| slice[i].partial_cmp(&slice[j]).unwrap_or(Ordering::Equal);
@@ -87,11 +87,8 @@ mod tests {
         assert_eq!(base, vec![1, 2, 3, 4, 5, 7, 8, 9]);
 
         sorter.toggle_marks();
-        let mut other = vec!['h', 'e', 'l', 'l', 'o', ' ', 'W', 'o', 'r', 'l', 'd'];
+        let mut other = "hello World".chars().collect::<Vec<_>>();
         sorter.sort(&mut other);
-        assert_eq!(
-            other,
-            vec!['l', 'o', ' ', 'o', 'W', 'e', 'l', 'h', 'r', 'l', 'd']
-        );
+        assert_eq!(other, "lo oWelhrld".chars().collect::<Vec<_>>());
     }
 }
