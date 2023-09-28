@@ -196,7 +196,7 @@ pub mod parse;
 
 /// Beatmap and contained types
 pub mod beatmap;
-pub use beatmap::{Beatmap, BeatmapExt, GameMode};
+pub use beatmap::{Beatmap, BeatmapExt, GameMode, SortedVec}; // TODO: remove SortedVec on next breaking release
 
 mod gradual;
 pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes, ScoreState};
@@ -218,7 +218,6 @@ pub use taiko::{TaikoPP, TaikoStars};
 
 pub use mods::Mods;
 pub use parse::{ParseError, ParseResult};
-pub use util::SortedVec;
 
 /// The result of calculating the strains on a map.
 /// Suitable to plot the difficulty of a map over time.

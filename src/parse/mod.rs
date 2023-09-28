@@ -29,8 +29,8 @@ use std::path::Path;
 use async_std::{fs::File, io::Read as AsyncRead, path::Path};
 
 use crate::{
-    beatmap::{Beatmap, Break, DifficultyPoint, EffectPoint, GameMode, TimingPoint},
-    util::{SortedVec, TandemSorter},
+    beatmap::{Beatmap, Break, DifficultyPoint, EffectPoint, GameMode, SortedVec, TimingPoint},
+    util::TandemSorter,
 };
 
 trait InRange: Sized + Copy + Neg<Output = Self> + PartialOrd + FromStr {
@@ -355,7 +355,7 @@ macro_rules! parse_timingpoints_body {
 
             if time != pending_diff_points_time {
                 if let Some(point) = pending_diff_point.take() {
-                    $self.difficulty_points.push_if_not_redundant(point);
+                    $self.difficulty_points.push(point);
                 }
             }
 
@@ -376,7 +376,7 @@ macro_rules! parse_timingpoints_body {
         }
 
         if let Some(point) = pending_diff_point {
-            $self.difficulty_points.push_if_not_redundant(point);
+            $self.difficulty_points.push(point);
         }
 
         Ok(empty)

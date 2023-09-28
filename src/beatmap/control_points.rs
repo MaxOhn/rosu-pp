@@ -73,7 +73,7 @@ impl DifficultyPoint {
         }
     }
 
-    pub(crate) fn is_redundant(&self, existing: &DifficultyPoint) -> bool {
+    pub(crate) fn is_redundant(&self, existing: &Self) -> bool {
         (self.slider_vel - existing.slider_vel).abs() <= f64::EPSILON
             && self.generate_ticks == existing.generate_ticks
     }
@@ -115,6 +115,13 @@ impl EffectPoint {
     #[inline]
     pub fn new(time: f64, kiai: bool) -> Self {
         Self { time, kiai }
+    }
+}
+
+impl PartialOrd for EffectPoint {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.time.partial_cmp(&other.time)
     }
 }
 
