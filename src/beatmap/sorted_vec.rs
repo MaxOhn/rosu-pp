@@ -47,6 +47,21 @@ impl<T> SortedVec<T> {
     pub unsafe fn as_inner_mut(&mut self) -> &mut Vec<T> {
         &mut self.inner
     }
+
+    /// Removes the last element and returns it, or `None` if the vec is empty.
+    pub fn pop(&mut self) -> Option<T> {
+        self.inner.pop()
+    }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// In other words, remove all items `i` for which `f(&i)` returns `false`.
+    pub fn retain<F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.inner.retain(f);
+    }
 }
 
 impl<T: Sortable> SortedVec<T> {
