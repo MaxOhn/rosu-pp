@@ -1,6 +1,7 @@
 ## Upcoming
 
-  Nothing as of now
+  - __Additions:__
+    - Added `From<u8>` impl for `GameMode`
 
 # v0.9.5 (2023-09-06)
 
