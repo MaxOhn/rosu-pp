@@ -2,6 +2,7 @@
 
   - __Additions:__
     - Added `From<u8>` impl for `GameMode`
+    - Added the method `AnyPP::hitresult_priority`
 
 # v0.9.5 (2023-09-06)
 

@@ -198,6 +198,19 @@ impl<'map> AnyPP<'map> {
         }
     }
 
+    /// Specify how hitresults should be generated.
+    ///
+    /// Defauls to [`HitResultPriority::BestCase`].
+    #[inline]
+    pub fn hitresult_priority(self, priority: HitResultPriority) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.hitresult_priority(priority)),
+            Self::Taiko(t) => Self::Taiko(t.hitresult_priority(priority)),
+            Self::Catch(_) => self, // FIXME: update when ctb hitresult generation is updated
+            Self::Mania(m) => Self::Mania(m.hitresult_priority(priority)),
+        }
+    }
+
     /// Specify the amount of 300s of a play.
     #[inline]
     pub fn n300(self, n300: usize) -> Self {
