@@ -21,7 +21,14 @@ async-std = { version = "1.9", optional = true }
 tokio = { version = "1.2", optional = true, default-features = false, features = ["fs", "io-util"] }
 
 [dev-dependencies]
+proptest = "1.3.1"
 tokio = { version = "1.2", default-features = false, features = ["fs", "rt"] }
+
+[profile.test.package.proptest]
+opt-level = 3
+
+[profile.test.package.rand_chacha]
+opt-level = 3
 
 [package.metadata.docs.rs]
 # document these features
