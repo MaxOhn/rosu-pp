@@ -950,8 +950,6 @@ mod test {
             n_misses in option::weighted(0.15, 0_usize..=N_OBJECTS),
             best_case in prop::bool::ANY,
         ) {
-            prop_assume!((n300, n100, n50) != (Some(0), Some(0), Some(0)));
-
             let (map, attrs) = test_data();
             let max_combo = attrs.max_combo();
 
