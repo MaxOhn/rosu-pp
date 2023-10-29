@@ -212,13 +212,15 @@ impl<'map> OsuPP<'map> {
         let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
         let priority = self.hitresult_priority.unwrap_or_default();
 
-        let mut n300 = self.n300.unwrap_or(0);
-        let mut n100 = self.n100.unwrap_or(0);
-        let mut n50 = self.n50.unwrap_or(0);
-        let n_misses = self.n_misses.unwrap_or(0);
+        let n_misses = self.n_misses.map_or(0, |n| n.min(n_objects));
+        let n_remaining = n_objects - n_misses;
+
+        let mut n300 = self.n300.map_or(0, |n| n.min(n_remaining));
+        let mut n100 = self.n100.map_or(0, |n| n.min(n_remaining));
+        let mut n50 = self.n50.map_or(0, |n| n.min(n_remaining));
 
         if let Some(acc) = self.acc {
-            let target_total = (acc * (n_objects * 6) as f64).round() as usize;
+            let target_total = acc * (6 * n_objects) as f64;
 
             match (self.n300, self.n100, self.n50) {
                 (Some(_), Some(_), Some(_)) => {
@@ -233,80 +235,110 @@ impl<'map> OsuPP<'map> {
                 (Some(_), None, Some(_)) => n100 = n_objects.saturating_sub(n300 + n50 + n_misses),
                 (None, Some(_), Some(_)) => n300 = n_objects.saturating_sub(n100 + n50 + n_misses),
                 (Some(_), None, None) => {
-                    let delta = (target_total - n_objects.saturating_sub(n_misses))
-                        .saturating_sub(n300 * 5);
+                    let mut best_dist = f64::MAX;
 
-                    n100 = delta % 5;
-                    n50 = n_objects.saturating_sub(n300 + n100 + n_misses);
+                    n300 = n300.min(n_remaining);
+                    let n_remaining = n_remaining - n300;
 
-                    let curr_total = 6 * n300 + 2 * n100 + n50;
+                    let raw_n100 = target_total - (n_remaining + 6 * n300) as f64;
+                    let min_n100 = n_remaining.min(raw_n100.floor() as usize);
+                    let max_n100 = n_remaining.min(raw_n100.ceil() as usize);
 
-                    if curr_total < target_total {
-                        let n = (target_total - curr_total).min(n50);
-                        n50 -= n;
-                        n100 += n;
-                    } else {
-                        let n = (curr_total - target_total).min(n100);
-                        n100 -= n;
-                        n50 += n;
+                    for new100 in min_n100..=max_n100 {
+                        let new50 = n_remaining - new100;
+                        let dist = (acc - accuracy(n300, new100, new50, n_misses)).abs();
+
+                        if dist < best_dist {
+                            best_dist = dist;
+                            n100 = new100;
+                            n50 = new50;
+                        }
                     }
                 }
                 (None, Some(_), None) => {
-                    let delta =
-                        (target_total - n_objects.saturating_sub(n_misses)).saturating_sub(n100);
+                    let mut best_dist = f64::MAX;
 
-                    n300 = delta / 5;
+                    n100 = n100.min(n_remaining);
+                    let n_remaining = n_remaining - n100;
 
-                    if n300 + n100 + n_misses > n_objects {
-                        n300 -= (n300 + n100 + n_misses) - n_objects;
-                    }
+                    let raw_n300 = (target_total - (n_remaining + 2 * n100) as f64) / 5.0;
+                    let min_n300 = n_remaining.min(raw_n300.floor() as usize);
+                    let max_n300 = n_remaining.min(raw_n300.ceil() as usize);
 
-                    n50 = n_objects - n300 - n100 - n_misses;
-                }
-                (None, None, Some(_)) => {
-                    let delta = target_total - n_objects.saturating_sub(n_misses);
+                    for new300 in min_n300..=max_n300 {
+                        let new50 = n_remaining - new300;
+                        let curr_dist = (acc - accuracy(new300, n100, new50, n_misses)).abs();
 
-                    n300 = delta / 5;
-                    n100 = delta % 5;
-
-                    if n300 + n100 + n50 + n_misses > n_objects {
-                        let too_many = n300 + n100 + n50 + n_misses - n_objects;
-
-                        if too_many > n100 {
-                            n300 -= too_many - n100;
-                            n100 = 0;
-                        } else {
-                            n100 -= too_many;
+                        if curr_dist < best_dist {
+                            best_dist = curr_dist;
+                            n300 = new300;
+                            n50 = new50;
                         }
                     }
+                }
+                (None, None, Some(_)) => {
+                    let mut best_dist = f64::MAX;
 
-                    n100 += n_objects.saturating_sub(n300 + n100 + n50 + n_misses);
+                    n50 = n50.min(n_remaining);
+                    let n_remaining = n_remaining - n50;
 
-                    let curr_total = 6 * n300 + 2 * n100 + n50;
+                    let raw_n300 =
+                        (target_total + (2 * n_misses + n50) as f64 - (2 * n_objects) as f64) / 4.0;
 
-                    if curr_total < target_total {
-                        let n = n100.min((target_total - curr_total) / 4);
-                        n100 -= n;
-                        n300 += n;
-                    } else {
-                        let n = n300.min((curr_total - target_total) / 4);
-                        n300 -= n;
-                        n100 += n;
+                    let min_n300 = n_remaining.min(raw_n300.floor() as usize);
+                    let max_n300 = n_remaining.min(raw_n300.ceil() as usize);
+
+                    for new300 in min_n300..=max_n300 {
+                        let new100 = n_remaining - new300;
+                        let curr_dist = (acc - accuracy(new300, new100, n50, n_misses)).abs();
+
+                        if curr_dist < best_dist {
+                            best_dist = curr_dist;
+                            n300 = new300;
+                            n100 = new100;
+                        }
                     }
                 }
                 (None, None, None) => {
-                    let delta = target_total - n_objects.saturating_sub(n_misses);
+                    let mut best_dist = f64::MAX;
 
-                    n300 = delta / 5;
-                    n100 = delta % 5;
-                    n50 = n_objects.saturating_sub(n300 + n100 + n_misses);
+                    let raw_n300 = (target_total - n_remaining as f64) / 5.0;
+                    let min_n300 = n_remaining.min(raw_n300.floor() as usize);
+                    let max_n300 = n_remaining.min(raw_n300.ceil() as usize);
 
-                    if let HitResultPriority::BestCase = priority {
-                        // Shift n50 to n100 by sacrificing n300
-                        let n = n300.min(n50 / 4);
-                        n300 -= n;
-                        n100 += 5 * n;
-                        n50 -= 4 * n;
+                    for new300 in min_n300..=max_n300 {
+                        let raw_n100 = target_total - (n_remaining + 5 * new300) as f64;
+                        let min_n100 = (raw_n100.floor() as usize).min(n_remaining - new300);
+                        let max_n100 = (raw_n100.ceil() as usize).min(n_remaining - new300);
+
+                        for new100 in min_n100..=max_n100 {
+                            let new50 = n_remaining - new300 - new100;
+                            let curr_dist = (acc - accuracy(new300, new100, new50, n_misses)).abs();
+
+                            if curr_dist < best_dist {
+                                best_dist = curr_dist;
+                                n300 = new300;
+                                n100 = new100;
+                                n50 = new50;
+                            }
+                        }
+                    }
+
+                    match priority {
+                        HitResultPriority::BestCase => {
+                            // Shift n50 to n100 by sacrificing n300
+                            let n = n300.min(n50 / 4);
+                            n300 -= n;
+                            n100 += 5 * n;
+                            n50 -= 4 * n;
+                        }
+                        HitResultPriority::WorstCase => {
+                            // Shift n100 to n50 by gaining n300
+                            let n = n100 / 5;
+                            n300 += n;
+                            n100 -= 5 * n;
+                            n50 += 4 * n;
+                        }
                     }
                 }
             }
@@ -314,33 +346,29 @@ impl<'map> OsuPP<'map> {
             let remaining = n_objects.saturating_sub(n300 + n100 + n50 + n_misses);
 
             match priority {
-                HitResultPriority::BestCase => {
-                    if self.n300.is_none() {
-                        n300 = remaining;
-                    } else if self.n100.is_none() {
-                        n100 = remaining;
-                    } else if self.n50.is_none() {
-                        n50 = remaining;
-                    } else {
-                        n300 += remaining;
-                    }
-                }
-                HitResultPriority::WorstCase => {
-                    if self.n50.is_none() {
-                        n50 = remaining;
-                    } else if self.n100.is_none() {
-                        n100 = remaining;
-                    } else if self.n300.is_none() {
-                        n300 = remaining;
-                    } else {
-                        n50 += remaining;
-                    }
-                }
+                HitResultPriority::BestCase => match (self.n300, self.n100, self.n50) {
+                    (None, ..) => n300 = remaining,
+                    (_, None, _) => n100 = remaining,
+                    (.., None) => n50 = remaining,
+                    _ => n300 += remaining,
+                },
+                HitResultPriority::WorstCase => match (self.n50, self.n100, self.n300) {
+                    (None, ..) => n50 = remaining,
+                    (_, None, _) => n100 = remaining,
+                    (.., None) => n300 = remaining,
+                    _ => n50 += remaining,
+                },
             }
         }
 
+        let max_possible_combo = max_combo.saturating_sub(n_misses);
+
+        let max_combo = self
+            .combo
+            .map_or(max_possible_combo, |combo| combo.min(max_possible_combo));
+
         OsuScoreState {
-            max_combo: self.combo.unwrap_or(max_combo),
+            max_combo,
             n300,
             n100,
             n50,
@@ -694,6 +722,13 @@ fn calculate_effective_misses(attrs: &OsuDifficultyAttributes, state: &OsuScoreS
         combo_based_miss_count.min((state.n100 + state.n50 + state.n_misses) as f64);
 
     combo_based_miss_count.max(state.n_misses as f64)
+}
+
+fn accuracy(n300: usize, n100: usize, n50: usize, n_misses: usize) -> f64 {
+    let numerator = 6 * n300 + 2 * n100 + n50;
+    let denominator = 6 * (n300 + n100 + n50 + n_misses);
+
+    numerator as f64 / denominator as f64
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
