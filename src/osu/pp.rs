@@ -833,106 +833,76 @@ mod test {
         n_misses: usize,
         best_case: bool,
     ) -> OsuScoreState {
-        let n_misses = n_misses.min(N_OBJECTS);
-
-        let mut best_dist = f64::MAX;
-
         let mut best_state = OsuScoreState {
             n_misses,
             ..Default::default()
         };
 
-        let mut bf_with_50 = |mut n300: usize, mut n100: usize, mut n50: usize, best_case: bool| {
-            let dist = (acc - accuracy(n300, n100, n50, n_misses)).abs();
+        let mut best_dist = f64::INFINITY;
 
-            let cond = (best_case && n50 < best_state.n50) || (!best_case && best_state.n50 < n50);
+        let n_remaining = N_OBJECTS - n_misses;
 
-            if dist < best_dist || ((dist - best_dist).abs() <= f64::EPSILON && cond) {
-                best_dist = dist;
-
-                if best_case {
-                    let n = n300.min(n50 / 4);
-                    n300 -= n;
-                    n100 += 5 * n;
-                    n50 -= 4 * n;
-                }
-
-                best_state.n300 = n300;
-                best_state.n100 = n100;
-                best_state.n50 = n50;
-            }
+        let (min_n300, max_n300) = match (n300, n100, n50) {
+            (Some(n300), ..) => (n_remaining.min(n300), n_remaining.min(n300)),
+            (None, Some(n100), Some(n50)) => (
+                n_remaining.saturating_sub(n100 + n50),
+                n_remaining.saturating_sub(n100 + n50),
+            ),
+            (None, ..) => (
+                0,
+                n_remaining.saturating_sub(n100.unwrap_or(0) + n50.unwrap_or(0)),
+            ),
         };
 
-        let mut bf_with_100 = |n300: usize, n100: usize, best_case: bool| match n50 {
-            Some(mut n50) => {
-                n50 = n50
-                    .min(N_OBJECTS - n_misses)
-                    .max(N_OBJECTS.saturating_sub(n300 + n100 + n_misses));
+        for new300 in min_n300..=max_n300 {
+            let (min_n100, max_n100) = match (n100, n50) {
+                (Some(n100), _) => (n_remaining.min(n100), n_remaining.min(n100)),
+                (None, Some(n50)) => (
+                    n_remaining.saturating_sub(new300 + n50),
+                    n_remaining.saturating_sub(new300 + n50),
+                ),
+                (None, None) => (0, n_remaining - new300),
+            };
 
-                bf_with_50(n300, n100, n50, false);
-            }
-            None => {
-                let n50 = N_OBJECTS.saturating_sub(n300 + n100 + n_misses);
-                bf_with_50(n300, n100, n50, best_case);
-            }
-        };
+            for new100 in min_n100..=max_n100 {
+                let new50 = match n50 {
+                    Some(n50) => n_remaining.min(n50),
+                    None => n_remaining.saturating_sub(new300 + new100),
+                };
 
-        let mut bf_with_300 = |n300: usize, best_case: bool| match (n100, n50) {
-            (Some(mut n100), _) => {
-                n100 = n100.min(N_OBJECTS - n_misses);
-                bf_with_100(n300, n100, false);
-            }
-            (None, Some(n50)) => {
-                let n100 = N_OBJECTS.saturating_sub(n300 + n50 + n_misses);
-                bf_with_100(n300, n100, best_case);
-            }
-            (None, None) => {
-                let n_remaining = N_OBJECTS.saturating_sub(n300 + n50.unwrap_or(0) + n_misses);
+                let curr_acc = accuracy(new300, new100, new50, n_misses);
+                let curr_dist = (acc - curr_acc).abs();
 
-                for n100 in 0..=n_remaining {
-                    bf_with_100(n300, n100, best_case);
+                if curr_dist < best_dist {
+                    best_dist = curr_dist;
+                    best_state.n300 = new300;
+                    best_state.n100 = new100;
+                    best_state.n50 = new50;
                 }
             }
-        };
+        }
 
-        match (n300, n100, n50) {
-            (Some(mut n300), Some(n100), Some(n50)) => {
-                n300 = n300.min(N_OBJECTS - n_misses);
+        if best_state.n300 + best_state.n100 + best_state.n50 < n_remaining {
+            let remaining = n_remaining - (best_state.n300 + best_state.n100 + best_state.n50);
 
-                if best_case {
-                    n300 = n300.max(N_OBJECTS.saturating_sub(n100 + n50 + n_misses));
-                }
-
-                bf_with_300(n300, false);
+            if best_case {
+                best_state.n300 += remaining;
+            } else {
+                best_state.n50 += remaining;
             }
-            (Some(mut n300), ..) => {
-                n300 = n300.min(N_OBJECTS - n_misses);
-                bf_with_300(n300, false);
-            }
-            (None, Some(n100), Some(n50)) => {
-                let n300 = N_OBJECTS.saturating_sub(n100 + n50 + n_misses);
-                bf_with_300(n300, best_case);
-            }
-            (None, Some(n100), None) => {
-                let n_remaining = N_OBJECTS.saturating_sub(n100 + n_misses);
+        }
 
-                for n300 in 0..=n_remaining {
-                    bf_with_300(n300, false);
-                }
-            }
-            (None, None, Some(n50)) => {
-                let n_remaining = N_OBJECTS.saturating_sub(n50 + n_misses);
-
-                for n300 in 0..=n_remaining {
-                    bf_with_300(n300, false);
-                }
-            }
-            (None, None, None) => {
-                let n_remaining = N_OBJECTS - n_misses;
-
-                for n300 in 0..=n_remaining {
-                    bf_with_300(n300, best_case);
-                }
+        if n300.is_none() && n100.is_none() && n50.is_none() {
+            if best_case {
+                let n = best_state.n300.min(best_state.n50 / 4);
+                best_state.n300 -= n;
+                best_state.n100 += 5 * n;
+                best_state.n50 -= 4 * n;
+            } else {
+                let n = best_state.n100 / 5;
+                best_state.n300 += n;
+                best_state.n100 -= 5 * n;
+                best_state.n50 += 4 * n;
             }
         }
 
@@ -940,7 +910,7 @@ mod test {
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(1000))]
+        #![proptest_config(ProptestConfig::with_cases(10_000))]
         #[test]
         fn osu_hitresults(
             acc in 0.0..=1.0,
