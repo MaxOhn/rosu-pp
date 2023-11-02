@@ -557,64 +557,48 @@ mod test {
         n_misses: usize,
         best_case: bool,
     ) -> TaikoScoreState {
-        let n_objects = MAX_COMBO;
-        let n_misses = n_misses.min(n_objects);
-
-        let mut best_dist = f64::MAX;
-
         let mut best_state = TaikoScoreState {
             n_misses,
             ..Default::default()
         };
 
-        let mut bf_with_100 = |n300: usize, n100: usize| {
-            let dist = (acc - accuracy(n300, n100, n_misses)).abs();
+        let mut best_dist = f64::INFINITY;
 
-            if dist < best_dist {
-                best_dist = dist;
-                best_state.n300 = n300;
-                best_state.n100 = n100;
-            }
+        let n_objects = MAX_COMBO;
+        let n_remaining = n_objects - n_misses;
+
+        let (min_n300, max_n300) = match (n300, n100) {
+            (Some(n300), _) => (n_remaining.min(n300), n_remaining.min(n300)),
+            (None, Some(n100)) => (
+                n_remaining.saturating_sub(n100),
+                n_remaining.saturating_sub(n100),
+            ),
+            (None, None) => (0, n_remaining),
         };
 
-        let mut bf_with_300 = |n300: usize| match n100 {
-            Some(mut n100) => {
-                n100 = n100
-                    .min(n_objects - n_misses)
-                    .max(n_objects.saturating_sub(n300 + n_misses));
+        for new300 in min_n300..=max_n300 {
+            let new100 = match n100 {
+                Some(n100) => n_remaining.min(n100),
+                None => n_remaining - new300,
+            };
 
-                bf_with_100(n300, n100);
-            }
-            None => {
-                let n100 = n_objects.saturating_sub(n300 + n_misses);
-                bf_with_100(n300, n100);
-            }
-        };
+            let curr_acc = accuracy(new300, new100, n_misses);
+            let curr_dist = (acc - curr_acc).abs();
 
-        match (n300, n100) {
-            (Some(mut n300), Some(n100)) => {
-                n300 = n300.min(n_objects - n_misses);
-
-                if best_case {
-                    n300 = n300.max(n_objects.saturating_sub(n100 + n_misses));
-                }
-
-                bf_with_300(n300);
+            if curr_dist < best_dist {
+                best_dist = curr_dist;
+                best_state.n300 = new300;
+                best_state.n100 = new100;
             }
-            (Some(mut n300), None) => {
-                n300 = n300.min(n_objects - n_misses);
-                bf_with_300(n300);
-            }
-            (None, Some(n100)) => {
-                let n300 = n_objects.saturating_sub(n100 + n_misses);
-                bf_with_300(n300);
-            }
-            (None, None) => {
-                let n_remaining = n_objects - n_misses;
+        }
 
-                for n300 in 0..=n_remaining {
-                    bf_with_300(n300);
-                }
+        if best_state.n300 + best_state.n100 < n_remaining {
+            let remaining = n_remaining - (best_state.n300 + best_state.n100);
+
+            if best_case {
+                best_state.n300 += remaining;
+            } else {
+                best_state.n100 += remaining;
             }
         }
 
