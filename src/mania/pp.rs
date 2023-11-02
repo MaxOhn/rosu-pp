@@ -257,17 +257,20 @@ impl<'map> ManiaPP<'map> {
         let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
         let priority = self.hitresult_priority.unwrap_or_default();
 
-        let mut n320 = self.n320.unwrap_or(0);
-        let mut n300 = self.n300.unwrap_or(0);
-        let mut n200 = self.n200.unwrap_or(0);
-        let mut n100 = self.n100.unwrap_or(0);
-        let mut n50 = self.n50.unwrap_or(0);
-        let n_misses = self.n_misses.unwrap_or(0);
+        let n_misses = self.n_misses.map_or(0, |n| n.min(n_objects));
+        let n_remaining = n_objects - n_misses;
+
+        let mut n320 = self.n320.map_or(0, |n| n.min(n_remaining));
+        let mut n300 = self.n300.map_or(0, |n| n.min(n_remaining));
+        let mut n200 = self.n200.map_or(0, |n| n.min(n_remaining));
+        let mut n100 = self.n100.map_or(0, |n| n.min(n_remaining));
+        let mut n50 = self.n50.map_or(0, |n| n.min(n_remaining));
 
         if let Some(acc) = self.acc {
-            let target_total = (acc * (n_objects * 6) as f64).round() as usize;
+            let target_total = acc * (6 * n_objects) as f64;
 
             match (self.n320, self.n300, self.n200, self.n100, self.n50) {
+                // All hitresults given
                 (Some(_), Some(_), Some(_), Some(_), Some(_)) => {
                     let remaining =
                         n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
@@ -277,189 +280,419 @@ impl<'map> ManiaPP<'map> {
                         HitResultPriority::WorstCase => n50 += remaining,
                     }
                 }
-                (Some(_), None, Some(_), Some(_), Some(_)) => {
-                    n300 = n_objects.saturating_sub(n320 + n200 + n100 + n50 + n_misses)
-                }
+
+                // All but one hitresults given
                 (None, Some(_), Some(_), Some(_), Some(_)) => {
                     n320 = n_objects.saturating_sub(n300 + n200 + n100 + n50 + n_misses)
                 }
-                (Some(_), _, Some(_), Some(_), None) | (_, Some(_), Some(_), Some(_), None) => {
+                (Some(_), None, Some(_), Some(_), Some(_)) => {
+                    n300 = n_objects.saturating_sub(n320 + n200 + n100 + n50 + n_misses)
+                }
+                (Some(_), Some(_), None, Some(_), Some(_)) => {
+                    n200 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses)
+                }
+                (Some(_), Some(_), Some(_), None, Some(_)) => {
+                    n100 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses)
+                }
+                (Some(_), Some(_), Some(_), Some(_), None) => {
                     n50 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
                 }
-                (Some(_), _, _, None, None) | (_, Some(_), _, None, None) => {
-                    let n3x0 = n320 + n300;
-                    let delta = (target_total - n_objects.saturating_sub(n_misses))
-                        .saturating_sub(n3x0 * 5 + n200 * 3);
 
-                    n100 = delta % 5;
-                    n50 = n_objects.saturating_sub(n3x0 + n200 + n100 + n_misses);
-
-                    let curr_total = 6 * n3x0 + 4 * n200 + 2 * n100 + n50;
-
-                    if curr_total < target_total {
-                        let n = (target_total - curr_total).min(n50);
-                        n50 -= n;
-                        n100 += n;
-                    } else {
-                        let n = (curr_total - target_total).min(n100);
-                        n100 -= n;
-                        n50 += n;
-                    }
-                }
-                (Some(_), _, None, Some(_), None) | (_, Some(_), None, Some(_), None) => {
-                    let n3x0 = n320 + n300;
-                    let delta = (target_total - n_objects.saturating_sub(n_misses))
-                        .saturating_sub(n3x0 * 5 + n100);
-
-                    n200 = delta / 3;
-                    n50 = n_objects.saturating_sub(n3x0 + n200 + n100 + n_misses);
-                }
-                (Some(_), _, None, None, Some(_)) | (_, Some(_), None, None, Some(_)) => {
-                    let remaining = n_objects.saturating_sub(n320 + n300 + n50 + n_misses);
-
-                    match priority {
-                        HitResultPriority::BestCase => n100 = remaining,
-                        HitResultPriority::WorstCase => n200 = remaining,
-                    }
-                }
-                (Some(_), _, None, Some(_), Some(_)) | (_, Some(_), None, Some(_), Some(_)) => {
-                    n200 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses);
-                }
-                (Some(_), _, Some(_), None, Some(_)) | (_, Some(_), Some(_), None, Some(_)) => {
-                    n100 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses);
-                }
+                // n200, n100, and n50 given
                 (None, None, Some(_), Some(_), Some(_)) => {
-                    let remaining = n_objects.saturating_sub(n200 + n100 + n50 + n_misses);
+                    let n_remaining =
+                        n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
 
                     match priority {
-                        HitResultPriority::BestCase => n320 = remaining,
-                        HitResultPriority::WorstCase => n300 = remaining,
+                        HitResultPriority::BestCase => n320 = n_remaining,
+                        HitResultPriority::WorstCase => n300 = n_remaining,
                     }
                 }
-                (None, None, None, Some(_), Some(_)) => {
-                    let delta =
-                        (target_total - n_objects.saturating_sub(n_misses)).saturating_sub(n100);
 
-                    match priority {
-                        HitResultPriority::BestCase => n320 = delta / 5,
-                        HitResultPriority::WorstCase => n300 = delta / 5,
-                    }
+                // n100 and n50 given
+                (.., None, Some(_), Some(_)) => {
+                    let mut best_dist = f64::INFINITY;
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses);
 
-                    n200 = n_objects.saturating_sub(n320 + n100 + n50 + n_misses);
+                    let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
+                        (Some(_), Some(_)) => (n320 + n300, n320 + n300),
+                        (Some(_), None) => (n320, n320),
+                        (None, Some(_)) => (n300, n300),
+                        (None, None) => {
+                            let raw_n3x0 = (target_total - (4 * n_remaining) as f64
+                                + (2 * n100 + 3 * n50) as f64)
+                                / 2.0;
+                            let min_n3x0 = (raw_n3x0.floor() as usize)
+                                .min(n_remaining.saturating_sub(n100 + n50));
+                            let max_n3x0 = (raw_n3x0.ceil() as usize)
+                                .min(n_remaining.saturating_sub(n100 + n50));
 
-                    let curr_total = 6 * (n320 + n300) + 4 * n200 + 2 * n100 + n50;
-
-                    if curr_total < target_total {
-                        let n = n200.min((target_total - curr_total) / 2);
-                        n200 -= n;
-
-                        match priority {
-                            HitResultPriority::BestCase => n320 += n,
-                            HitResultPriority::WorstCase => n300 += n,
+                            (min_n3x0, max_n3x0)
                         }
-                    } else {
-                        let n = (n320 + n300).min((curr_total - target_total) / 2);
-                        n200 += n;
+                    };
 
-                        match priority {
-                            HitResultPriority::BestCase => n320 -= n,
-                            HitResultPriority::WorstCase => n300 -= n,
-                        }
-                    }
-                }
-                (None, None, Some(_), None, None) => {
-                    let delta = (target_total - n_objects.saturating_sub(n_misses))
-                        .saturating_sub(n200 * 3);
+                    for new3x0 in min_n3x0..=max_n3x0 {
+                        let new200 = n_remaining.saturating_sub(new3x0 + n100 + n50);
+                        let curr_dist =
+                            (acc - accuracy(new3x0, 0, new200, n100, n50, n_misses)).abs();
 
-                    match priority {
-                        HitResultPriority::BestCase => n320 = delta / 5,
-                        HitResultPriority::WorstCase => n300 = delta / 5,
-                    }
-
-                    n100 = delta % 5;
-                    n50 = n_objects.saturating_sub(n320 + n200 + n100 + n_misses);
-
-                    let curr_total = 6 * (n320 + n300) + 4 * n200 * 2 * n100 + n50;
-
-                    if curr_total < target_total {
-                        let n = (target_total - curr_total).min(n50);
-                        n50 -= n;
-                        n100 += n;
-                    } else {
-                        let n = (curr_total - target_total).min(n100);
-                        n100 -= n;
-                        n50 += n;
-                    }
-
-                    if let HitResultPriority::BestCase = priority {
-                        // Shift n50 to n100
-                        let n = n320.min(n50 / 4);
-
-                        n320 -= n;
-                        n100 += 5 * n;
-                        n50 -= 4 * n;
-                    }
-                }
-                (None, None, _, Some(_), None) => {
-                    let delta = (target_total - n_objects.saturating_sub(n_misses))
-                        .saturating_sub(n200 * 3 + n100);
-
-                    match priority {
-                        HitResultPriority::BestCase => n320 = delta / 5,
-                        HitResultPriority::WorstCase => n300 = delta / 5,
-                    }
-
-                    n50 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
-                }
-                (None, None, _, None, Some(_)) => {
-                    let delta =
-                        target_total - n_objects.saturating_sub(n_misses).saturating_sub(n200 * 3);
-
-                    match priority {
-                        HitResultPriority::BestCase => n320 = delta / 5,
-                        HitResultPriority::WorstCase => n300 = delta / 5,
-                    }
-
-                    n100 = delta % 5;
-                    n100 += n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
-
-                    let curr_total = 6 * (n320 + n300) + 4 * n200 + 2 * n100 + n50;
-
-                    if curr_total < target_total {
-                        let n = n100.min((target_total - curr_total) / 4);
-                        n100 -= n;
-
-                        match priority {
-                            HitResultPriority::BestCase => n320 += n,
-                            HitResultPriority::WorstCase => n300 += n,
-                        }
-                    } else {
-                        let n = (n320 + n300).min((curr_total - target_total) / 4);
-                        n100 += n;
-
-                        match priority {
-                            HitResultPriority::BestCase => n320 -= n,
-                            HitResultPriority::WorstCase => n300 -= n,
+                        if curr_dist < best_dist {
+                            best_dist = curr_dist;
+                            n3x0 = new3x0;
+                            n200 = new200;
                         }
                     }
-                }
-                (None, None, None, None, None) => {
-                    let delta = target_total - n_objects.saturating_sub(n_misses);
 
-                    match priority {
-                        HitResultPriority::BestCase => n320 = delta / 5,
-                        HitResultPriority::WorstCase => n300 = delta / 5,
+                    match (self.n320, self.n300) {
+                        (None, None) => match priority {
+                            HitResultPriority::BestCase => n320 = n3x0,
+                            HitResultPriority::WorstCase => n300 = n3x0,
+                        },
+                        (Some(_), None) => n300 = n3x0 - n320,
+                        (None, Some(_)) => n320 = n3x0 - n300,
+                        _ => {}
+                    }
+                }
+
+                // n200 and n50 given
+                (.., Some(_), None, Some(_)) => {
+                    let mut best_dist = f64::INFINITY;
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses);
+
+                    let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
+                        (Some(_), Some(_)) => (n320 + n300, n320 + n300),
+                        (Some(_), None) => (n320, n320),
+                        (None, Some(_)) => (n300, n300),
+                        (None, None) => {
+                            let raw_n3x0 =
+                                (target_total - (2 * (n_remaining + n200) - n50) as f64) / 4.0;
+                            let min_n3x0 = (raw_n3x0.floor() as usize)
+                                .min(n_remaining.saturating_sub(n200 + n50));
+                            let max_n3x0 = (raw_n3x0.ceil() as usize)
+                                .min(n_remaining.saturating_sub(n200 + n50));
+
+                            (min_n3x0, max_n3x0)
+                        }
+                    };
+
+                    for new3x0 in min_n3x0..=max_n3x0 {
+                        let new100 = n_remaining.saturating_sub(new3x0 + n200 + n50);
+                        let curr_dist =
+                            (acc - accuracy(new3x0, 0, n200, new100, n50, n_misses)).abs();
+
+                        if curr_dist < best_dist {
+                            best_dist = curr_dist;
+                            n3x0 = new3x0;
+                            n100 = new100;
+                        }
                     }
 
-                    n100 = delta % 5;
-                    n50 = n_objects.saturating_sub(n320 + n300 + n100 + n_misses);
+                    match (self.n320, self.n300) {
+                        (None, None) => match priority {
+                            HitResultPriority::BestCase => n320 = n3x0,
+                            HitResultPriority::WorstCase => n300 = n3x0,
+                        },
+                        (Some(_), None) => n300 = n3x0 - n320,
+                        (None, Some(_)) => n320 = n3x0 - n300,
+                        _ => {}
+                    }
+                }
 
-                    if let HitResultPriority::BestCase = priority {
-                        // Shift n50 to n100
-                        let n = n320.min(n50 / 4);
-                        n320 -= n;
-                        n100 += 5 * n;
-                        n50 -= 4 * n;
+                // n200 and n100 given
+                (.., Some(_), Some(_), None) => {
+                    let mut best_dist = f64::INFINITY;
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
+
+                    let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
+                        (Some(_), Some(_)) => (n320 + n300, n320 + n300),
+                        (Some(_), None) => (n320, n320),
+                        (None, Some(_)) => (n300, n300),
+                        (None, None) => {
+                            let raw_n3x0 =
+                                (target_total - (n_remaining + 3 * n200 + n100) as f64) / 5.0;
+                            let min_n3x0 = (raw_n3x0.floor() as usize)
+                                .min(n_remaining.saturating_sub(n200 + n100));
+                            let max_n3x0 = (raw_n3x0.ceil() as usize)
+                                .min(n_remaining.saturating_sub(n200 + n100));
+
+                            (min_n3x0, max_n3x0)
+                        }
+                    };
+
+                    for new3x0 in min_n3x0..=max_n3x0 {
+                        let new50 = n_remaining.saturating_sub(new3x0 + n200 + n100);
+                        let curr_dist =
+                            (acc - accuracy(new3x0, 0, n200, n100, new50, n_misses)).abs();
+
+                        if curr_dist < best_dist {
+                            best_dist = curr_dist;
+                            n3x0 = new3x0;
+                            n50 = new50;
+                        }
+                    }
+
+                    match (self.n320, self.n300) {
+                        (None, None) => match priority {
+                            HitResultPriority::BestCase => n320 = n3x0,
+                            HitResultPriority::WorstCase => n300 = n3x0,
+                        },
+                        (Some(_), None) => n300 = n3x0 - n320,
+                        (None, Some(_)) => n320 = n3x0 - n300,
+                        _ => {}
+                    }
+                }
+
+                // n200 given
+                (.., Some(_), None, None) => {
+                    let mut best_dist = f64::INFINITY;
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n_misses);
+
+                    let min_n3x0 = (((target_total - (2 * (n_remaining + n200)) as f64) / 4.0)
+                        .floor() as usize)
+                        .min(n_remaining - n200);
+
+                    let max_n3x0 = (((target_total - (n_remaining + 3 * n200) as f64) / 5.0).ceil()
+                        as usize)
+                        .min(n_remaining - n200);
+
+                    let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
+                        (Some(_), Some(_)) => {
+                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
+                        }
+                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
+                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (None, None) => (min_n3x0, max_n3x0),
+                    };
+
+                    for new3x0 in min_n3x0..=max_n3x0 {
+                        let raw_n100 = target_total - (n_remaining + 5 * new3x0 + 3 * n200) as f64;
+                        let min_n100 = (raw_n100.floor() as usize)
+                            .min(n_remaining.saturating_sub(new3x0 + n200));
+                        let max_n100 = (raw_n100.ceil() as usize)
+                            .min(n_remaining.saturating_sub(new3x0 + n200));
+
+                        for new100 in min_n100..=max_n100 {
+                            let new50 = n_remaining.saturating_sub(new3x0 + n200 + new100);
+                            let curr_dist =
+                                (acc - accuracy(new3x0, 0, n200, new100, new50, n_misses)).abs();
+
+                            if curr_dist < best_dist {
+                                best_dist = curr_dist;
+                                n3x0 = new3x0;
+                                n100 = new100;
+                                n50 = new50;
+                            }
+                        }
+                    }
+
+                    match (self.n320, self.n300) {
+                        (None, None) => match priority {
+                            HitResultPriority::BestCase => n320 = n3x0,
+                            HitResultPriority::WorstCase => n300 = n3x0,
+                        },
+                        (Some(_), None) => n300 = n3x0 - n320,
+                        (None, Some(_)) => n320 = n3x0 - n300,
+                        _ => {}
+                    }
+                }
+
+                // n100 given
+                (.., None, Some(_), None) => {
+                    let mut best_dist = f64::INFINITY;
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n100 + n_misses);
+
+                    let min_n3x0 = ((acc * (3 * n_remaining) as f64
+                        - (2 * n_remaining - n100) as f64)
+                        .floor() as usize)
+                        .min(n_remaining - n100);
+
+                    let max_n3x0 = (((target_total - (n_remaining + n100) as f64) / 5.0).ceil()
+                        as usize)
+                        .min(n_remaining - n100);
+
+                    let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
+                        (Some(_), Some(_)) => {
+                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
+                        }
+                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
+                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (None, None) => (min_n3x0, max_n3x0),
+                    };
+
+                    for new3x0 in min_n3x0..=max_n3x0 {
+                        let raw_n200 =
+                            (target_total - (n_remaining + 5 * new3x0 + n100) as f64) / 3.0;
+                        let min_n200 = (raw_n200.floor() as usize)
+                            .min(n_remaining.saturating_sub(new3x0 + n100));
+                        let max_n200 = (raw_n200.ceil() as usize)
+                            .min(n_remaining.saturating_sub(new3x0 + n100));
+
+                        for new200 in min_n200..=max_n200 {
+                            let new50 = n_remaining.saturating_sub(new3x0 + new200 + n100);
+                            let curr_dist =
+                                (acc - accuracy(new3x0, 0, new200, n100, new50, n_misses)).abs();
+
+                            if curr_dist < best_dist {
+                                best_dist = curr_dist;
+                                n3x0 = new3x0;
+                                n200 = new200;
+                                n50 = new50;
+                            }
+                        }
+                    }
+
+                    match (self.n320, self.n300) {
+                        (None, None) => match priority {
+                            HitResultPriority::BestCase => n320 = n3x0,
+                            HitResultPriority::WorstCase => n300 = n3x0,
+                        },
+                        (Some(_), None) => n300 = n3x0 - n320,
+                        (None, Some(_)) => n320 = n3x0 - n300,
+                        _ => {}
+                    }
+                }
+
+                // n50 given
+                (.., None, None, Some(_)) => {
+                    let mut best_dist = f64::INFINITY;
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n50 + n_misses);
+
+                    let min_n3x0 = (((target_total - (4 * n_remaining - 3 * n50) as f64) / 2.0)
+                        .floor() as usize)
+                        .min(n_remaining - n50);
+
+                    let max_n3x0 = (((target_total - (2 * n_remaining - n50) as f64) / 4.0).ceil()
+                        as usize)
+                        .min(n_remaining - n50);
+
+                    let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
+                        (Some(_), Some(_)) => {
+                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
+                        }
+                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
+                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (None, None) => (min_n3x0, max_n3x0),
+                    };
+
+                    for new3x0 in min_n3x0..=max_n3x0 {
+                        let raw_n200 = (target_total - (2 * n_remaining + 4 * new3x0) as f64
+                            + n50 as f64)
+                            / 2.0;
+                        let min_n200 = (raw_n200.floor() as usize)
+                            .min(n_remaining.saturating_sub(new3x0 + n50));
+                        let max_n200 = (raw_n200.ceil() as usize)
+                            .min(n_remaining.saturating_sub(new3x0 + n50));
+
+                        for new200 in min_n200..=max_n200 {
+                            let new100 = n_remaining.saturating_sub(new3x0 + new200 + n50);
+                            let curr_dist =
+                                (acc - accuracy(new3x0, 0, new200, new100, n50, n_misses)).abs();
+
+                            if curr_dist < best_dist {
+                                best_dist = curr_dist;
+                                n3x0 = new3x0;
+                                n200 = new200;
+                                n100 = new100;
+                            }
+                        }
+                    }
+
+                    match (self.n320, self.n300) {
+                        (None, None) => match priority {
+                            HitResultPriority::BestCase => n320 = n3x0,
+                            HitResultPriority::WorstCase => n300 = n3x0,
+                        },
+                        (Some(_), None) => n300 = n3x0 - n320,
+                        (None, Some(_)) => n320 = n3x0 - n300,
+                        _ => {}
+                    }
+
+                    if self.n320.is_none() {
+                        if let HitResultPriority::BestCase = priority {
+                            // Distribute n200 onto n320 and n100
+                            let n = n200 / 2;
+                            n320 += n;
+                            n200 -= 2 * n;
+                            n100 += n;
+                        }
+                    }
+                }
+
+                // Neither n200, n100, nor n50 given
+                (.., None, None, None) => {
+                    let mut best_dist = f64::INFINITY;
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
+
+                    let min_n3x0 = (((target_total - (4 * n_remaining) as f64) / 5.0).floor()
+                        as usize)
+                        .min(n_remaining);
+
+                    let max_n3x0 = (((target_total - n_remaining as f64) / 5.0)
+                        .min(acc * (3 * n_objects) as f64 - n_remaining as f64)
+                        .ceil() as usize)
+                        .min(n_remaining);
+
+                    let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
+                        (Some(_), Some(_)) => {
+                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
+                        }
+                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
+                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (None, None) => (min_n3x0, max_n3x0),
+                    };
+
+                    for new3x0 in min_n3x0..=max_n3x0 {
+                        let min_n200 = ((acc * (3 * n_objects) as f64
+                            - (n_remaining + 2 * new3x0) as f64)
+                            .floor() as usize)
+                            .min(n_remaining - new3x0);
+
+                        let max_n200 = (((target_total - (n_remaining + 5 * new3x0) as f64) / 3.0)
+                            .ceil() as usize)
+                            .min(n_remaining - new3x0);
+
+                        for new200 in min_n200..=max_n200 {
+                            let raw_n100 =
+                                target_total - (n_remaining + 5 * new3x0 + 3 * new200) as f64;
+                            let min_n100 =
+                                (raw_n100.floor() as usize).min(n_remaining - (new3x0 + new200));
+                            let max_n100 =
+                                (raw_n100.ceil() as usize).min(n_remaining - (new3x0 + new200));
+
+                            for new100 in min_n100..=max_n100 {
+                                let new50 = n_remaining - new3x0 - new200 - new100;
+                                let curr_acc = accuracy(new3x0, 0, new200, new100, new50, n_misses);
+                                let curr_dist = (acc - curr_acc).abs();
+
+                                if curr_dist < best_dist {
+                                    best_dist = curr_dist;
+                                    n3x0 = new3x0;
+                                    n200 = new200;
+                                    n100 = new100;
+                                    n50 = new50;
+                                }
+                            }
+                        }
+                    }
+
+                    match (self.n320, self.n300) {
+                        (None, None) => match priority {
+                            HitResultPriority::BestCase => n320 = n3x0,
+                            HitResultPriority::WorstCase => n300 = n3x0,
+                        },
+                        (Some(_), None) => n300 = n3x0 - n320,
+                        (None, Some(_)) => n320 = n3x0 - n300,
+                        _ => {}
+                    }
+
+                    if self.n320.is_none() {
+                        if let HitResultPriority::BestCase = priority {
+                            // Distribute n200 onto n320 and n100
+                            let n = n200 / 2;
+                            n320 += n;
+                            n200 -= 2 * n;
+                            n100 += n;
+                        }
                     }
                 }
             }
@@ -468,33 +701,23 @@ impl<'map> ManiaPP<'map> {
 
             match priority {
                 HitResultPriority::BestCase => {
-                    if self.n320.is_none() {
-                        n320 = remaining;
-                    } else if self.n300.is_none() {
-                        n300 = remaining;
-                    } else if self.n200.is_none() {
-                        n200 = remaining;
-                    } else if self.n100.is_none() {
-                        n100 = remaining;
-                    } else if self.n50.is_none() {
-                        n50 = remaining;
-                    } else {
-                        n320 += remaining;
+                    match (self.n320, self.n300, self.n200, self.n100, self.n50) {
+                        (None, ..) => n320 = remaining,
+                        (_, None, ..) => n300 = remaining,
+                        (_, _, None, ..) => n200 = remaining,
+                        (.., None, _) => n100 = remaining,
+                        (.., None) => n50 = remaining,
+                        _ => n320 += remaining,
                     }
                 }
                 HitResultPriority::WorstCase => {
-                    if self.n50.is_none() {
-                        n50 = remaining;
-                    } else if self.n100.is_none() {
-                        n100 = remaining;
-                    } else if self.n200.is_none() {
-                        n200 = remaining;
-                    } else if self.n300.is_none() {
-                        n300 = remaining;
-                    } else if self.n320.is_none() {
-                        n320 = remaining;
-                    } else {
-                        n50 += remaining;
+                    match (self.n50, self.n100, self.n200, self.n300, self.n320) {
+                        (None, ..) => n50 = remaining,
+                        (_, None, ..) => n100 = remaining,
+                        (_, _, None, ..) => n200 = remaining,
+                        (.., None, _) => n300 = remaining,
+                        (.., None) => n320 = remaining,
+                        _ => n50 += remaining,
                     }
                 }
             }
@@ -570,10 +793,7 @@ impl ManiaPpInner {
             return 0.0;
         }
 
-        let numerator = *n320 * 32 + *n300 * 30 + *n200 * 20 + *n100 * 10 + *n50 * 5;
-        let denominator = total_hits * 32;
-
-        numerator as f64 / denominator as f64
+        custom_accuracy(*n320, *n300, *n200, *n100, *n50, total_hits)
     }
 }
 
@@ -614,6 +834,35 @@ impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
             hitresult_priority,
         }
     }
+}
+
+fn custom_accuracy(
+    n320: usize,
+    n300: usize,
+    n200: usize,
+    n100: usize,
+    n50: usize,
+    total_hits: usize,
+) -> f64 {
+    let numerator = n320 * 32 + n300 * 30 + n200 * 20 + n100 * 10 + n50 * 5;
+    let denominator = total_hits * 32;
+
+    numerator as f64 / denominator as f64
+}
+
+#[allow(unused)]
+fn accuracy(
+    n320: usize,
+    n300: usize,
+    n200: usize,
+    n100: usize,
+    n50: usize,
+    n_misses: usize,
+) -> f64 {
+    let numerator = 6 * (n320 + n300) + 4 * n200 + 2 * n100 + n50;
+    let denominator = 6 * (n320 + n300 + n200 + n100 + n50 + n_misses);
+
+    numerator as f64 / denominator as f64
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
@@ -663,370 +912,312 @@ impl ManiaAttributeProvider for PerformanceAttributes {
 mod tests {
     use super::*;
     use crate::Beatmap;
+    use proptest::{option, prelude::*};
+    use std::{cmp::Ordering, sync::OnceLock};
 
-    fn test_data() -> (Beatmap, ManiaDifficultyAttributes) {
-        let path = "./maps/1974394.osu";
-        let map = Beatmap::from_path(path).unwrap();
+    static DATA: OnceLock<(Beatmap, ManiaDifficultyAttributes)> = OnceLock::new();
 
-        let attrs = ManiaDifficultyAttributes {
-            stars: 4.824631127426499,
-            hit_window: 40.0,
-            max_combo: 5064,
-        };
+    const N_OBJECTS: usize = 594;
 
-        (map, attrs)
+    fn test_data() -> (&'static Beatmap, ManiaDifficultyAttributes) {
+        let (map, attrs) = DATA.get_or_init(|| {
+            let path = "./maps/1638954.osu";
+            let map = Beatmap::from_path(path).unwrap();
+
+            let attrs = ManiaStars::new(&map).calculate();
+
+            let expected = ManiaDifficultyAttributes {
+                stars: 3.441830819988125,
+                hit_window: 40.0,
+                max_combo: 956,
+            };
+
+            assert_eq!(attrs, expected);
+            assert_eq!(
+                N_OBJECTS,
+                (map.n_circles + map.n_sliders + map.n_spinners) as usize
+            );
+
+            (map, attrs)
+        });
+
+        (map, attrs.to_owned())
     }
 
-    #[test]
-    fn hitresults_acc_n320_n200_n_misses_best() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n320(2600)
-            .n200(400)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 2600,
-            n300: 0,
-            n200: 400,
-            n100: 49,
-            n50: 187,
-            n_misses: 2,
+    /// Checks most remaining hitresult combinations w.r.t. the given parameters
+    /// and returns the [`ManiaScoreState`] that matches `acc` the best.
+    ///
+    /// Very slow but accurate.
+    /// Only slight optimizations have been applied so that it doesn't run unreasonably long.
+    fn brute_force_best(
+        acc: f64,
+        n320: Option<usize>,
+        n300: Option<usize>,
+        n200: Option<usize>,
+        n100: Option<usize>,
+        n50: Option<usize>,
+        n_misses: usize,
+        best_case: bool,
+    ) -> ManiaScoreState {
+        let mut best_state = ManiaScoreState {
+            n_misses,
+            ..Default::default()
         };
 
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
+        let mut best_dist = f64::INFINITY;
+        let mut best_custom_acc = 0.0;
+
+        let n_remaining = N_OBJECTS - n_misses;
+
+        let multiple_given = (n320.is_some() as usize
+            + n300.is_some() as usize
+            + n200.is_some() as usize
+            + n100.is_some() as usize
+            + n50.is_some() as usize)
+            > 1;
+
+        let max_left = N_OBJECTS
+            .saturating_sub(n200.unwrap_or(0) + n100.unwrap_or(0) + n50.unwrap_or(0) + n_misses);
+
+        let min_n3x0 = max_left
+            .min((acc * (3 * N_OBJECTS) as f64 - (2 * n_remaining) as f64).floor() as usize);
+
+        let max_n3x0 = max_left
+            .min(((acc * (6 * N_OBJECTS) as f64 - n_remaining as f64) / 5.0).ceil() as usize);
+
+        let (min_n3x0, max_n3x0) = match (n320, n300) {
+            (Some(n320), Some(n300)) => {
+                (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
+            }
+            (Some(n320), None) => (
+                n_remaining.min(n320).max(min_n3x0),
+                max_n3x0.max(n320.min(n_remaining)),
+            ),
+            (None, Some(n300)) => (
+                n_remaining.min(n300).max(min_n3x0),
+                max_n3x0.max(n300.min(n_remaining)),
+            ),
+            (None, None) => (min_n3x0, max_n3x0),
+        };
+
+        for new3x0 in min_n3x0..=max_n3x0 {
+            let max_left =
+                n_remaining.saturating_sub(new3x0 + n100.unwrap_or(0) + n50.unwrap_or(0));
+
+            let (min_n200, max_n200) = match (n200, n100, n50) {
+                (Some(n200), ..) if multiple_given => {
+                    (n_remaining.min(n200), n_remaining.min(n200))
+                }
+                (Some(n200), ..) => (max_left.min(n200), max_left.min(n200)),
+                (None, Some(_), Some(_)) => (max_left, max_left),
+                _ => (0, max_left),
+            };
+
+            for new200 in min_n200..=max_n200 {
+                let max_left = n_remaining.saturating_sub(new3x0 + new200 + n50.unwrap_or(0));
+
+                let (min_n100, max_n100) = match (n100, n50) {
+                    (Some(n100), _) if multiple_given => {
+                        (n_remaining.min(n100), n_remaining.min(n100))
+                    }
+                    (Some(n100), _) => (max_left.min(n100), max_left.min(n100)),
+                    (None, Some(_)) => (max_left, max_left),
+                    (None, None) => (0, max_left),
+                };
+
+                for new100 in min_n100..=max_n100 {
+                    let max_left = n_remaining.saturating_sub(new3x0 + new200 + new100);
+
+                    let new50 = match n50 {
+                        Some(n50) if multiple_given => n_remaining.min(n50),
+                        Some(n50) => max_left.min(n50),
+                        None => max_left,
+                    };
+
+                    let (new320, new300) = match (n320, n300) {
+                        (Some(n320), Some(n300)) => (n_remaining.min(n320), n_remaining.min(n300)),
+                        (Some(n320), None) => {
+                            (n320.min(n_remaining), new3x0 - n320.min(n_remaining))
+                        }
+                        (None, Some(n300)) => {
+                            (new3x0 - n300.min(n_remaining), n300.min(n_remaining))
+                        }
+                        (None, None) if best_case => (new3x0, 0),
+                        (None, None) => (0, new3x0),
+                    };
+
+                    let curr_acc = accuracy(new320, new300, new200, new100, new50, n_misses);
+                    let curr_dist = (acc - curr_acc).abs();
+
+                    let curr_custom_acc =
+                        custom_accuracy(new320, new300, new200, new100, new50, N_OBJECTS);
+
+                    match curr_dist.partial_cmp(&best_dist).expect("non-NaN") {
+                        Ordering::Less => {
+                            best_dist = curr_dist;
+                            best_custom_acc = curr_custom_acc;
+                            best_state.n320 = new320;
+                            best_state.n300 = new300;
+                            best_state.n200 = new200;
+                            best_state.n100 = new100;
+                            best_state.n50 = new50;
+                        }
+                        Ordering::Equal if curr_custom_acc < best_custom_acc => {
+                            best_custom_acc = curr_custom_acc;
+                            best_state.n320 = new320;
+                            best_state.n300 = new300;
+                            best_state.n200 = new200;
+                            best_state.n100 = new100;
+                            best_state.n50 = new50;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        if best_state.n320 + best_state.n300 + best_state.n200 + best_state.n100 + best_state.n50
+            < n_remaining
+        {
+            let n_remaining = n_remaining
+                - (best_state.n320
+                    + best_state.n300
+                    + best_state.n200
+                    + best_state.n100
+                    + best_state.n50);
+
+            if best_case {
+                match (n320, n300, n200, n100, n50) {
+                    (None, ..) => best_state.n320 += n_remaining,
+                    (_, None, ..) => best_state.n300 += n_remaining,
+                    (_, _, None, ..) => best_state.n200 += n_remaining,
+                    (.., None, _) => best_state.n100 += n_remaining,
+                    (.., None) => best_state.n50 += n_remaining,
+                    _ => best_state.n320 += n_remaining,
+                }
+            } else {
+                match (n50, n100, n200, n300, n320) {
+                    (None, ..) => best_state.n50 += n_remaining,
+                    (_, None, ..) => best_state.n100 += n_remaining,
+                    (_, _, None, ..) => best_state.n200 += n_remaining,
+                    (.., None, _) => best_state.n300 += n_remaining,
+                    (.., None) => best_state.n320 += n_remaining,
+                    _ => best_state.n50 += n_remaining,
+                }
+            }
+        }
+
+        if best_case {
+            if n320.is_none() && n200.is_none() && n100.is_none() {
+                let n = best_state.n200 / 2;
+                best_state.n320 += n;
+                best_state.n200 -= 2 * n;
+                best_state.n100 += n;
+            }
+
+            if n100.is_none() && n50.is_none() {
+                let n = if n320.is_none() && n300.is_none() {
+                    let n = (best_state.n320 + best_state.n300).min(best_state.n50 / 4);
+
+                    let removed320 = best_state.n320.min(n);
+                    let removed300 = n - removed320;
+
+                    best_state.n320 -= removed320;
+                    best_state.n300 -= removed300;
+
+                    n
+                } else if n320.is_none() {
+                    let n = best_state.n320.min(best_state.n50 / 4);
+                    best_state.n320 -= n;
+
+                    n
+                } else if n300.is_none() {
+                    let n = best_state.n300.min(best_state.n50 / 4);
+                    best_state.n300 -= n;
+
+                    n
+                } else {
+                    0
+                };
+
+                best_state.n100 += 5 * n;
+                best_state.n50 -= 4 * n;
+            }
+        } else if n320.is_none() && n200.is_none() && n100.is_none() {
+            let n = best_state.n320.min(best_state.n100);
+            best_state.n320 -= n;
+            best_state.n200 += 2 * n;
+            best_state.n100 -= n;
+        }
+
+        best_state
     }
 
-    #[test]
-    fn hitresults_acc_n320_n300_n200_n_misses_best() {
-        let (map, attrs) = test_data();
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(500))]
+        #[test]
+        fn mania_hitresults(
+            acc in 0.0..=1.0,
+            n320 in option::weighted(0.10, 0_usize..=N_OBJECTS),
+            n300 in option::weighted(0.10, 0_usize..=N_OBJECTS),
+            n200 in option::weighted(0.10, 0_usize..=N_OBJECTS),
+            n100 in option::weighted(0.10, 0_usize..=N_OBJECTS),
+            n50 in option::weighted(0.10, 0_usize..=N_OBJECTS),
+            n_misses in option::weighted(0.15, 0_usize..=N_OBJECTS),
+            best_case in prop::bool::ANY,
+        ) {
+            let (map, attrs) = test_data();
 
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n320(2250)
-            .n300(500)
-            .n200(100)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
+            let priority = if best_case {
+                HitResultPriority::BestCase
+            } else {
+                HitResultPriority::WorstCase
+            };
 
-        let expected = ManiaScoreState {
-            n320: 2250,
-            n300: 500,
-            n200: 100,
-            n100: 199,
-            n50: 187,
-            n_misses: 2,
-        };
+            let mut state = ManiaPP::new(map)
+                .attributes(attrs)
+                .accuracy(acc * 100.0)
+                .hitresult_priority(priority);
 
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
+            if let Some(n320) = n320 {
+                state = state.n320(n320);
+            }
 
-    #[test]
-    fn hitresults_acc_n320_n300_n100_n_misses_best() {
-        let (map, attrs) = test_data();
+            if let Some(n300) = n300 {
+                state = state.n300(n300);
+            }
 
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n320(2000)
-            .n300(500)
-            .n100(100)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
+            if let Some(n200) = n200 {
+                state = state.n200(n200);
+            }
 
-        let expected = ManiaScoreState {
-            n320: 2000,
-            n300: 500,
-            n200: 549,
-            n100: 100,
-            n50: 87,
-            n_misses: 2,
-        };
+            if let Some(n100) = n100 {
+                state = state.n100(n100);
+            }
 
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
+            if let Some(n50) = n50 {
+                state = state.n50(n50);
+            }
 
-    #[test]
-    fn hitresults_acc_n320_n100_n50_n_misses_best() {
-        let (map, attrs) = test_data();
+            if let Some(n_misses) = n_misses {
+                state = state.n_misses(n_misses);
+            }
 
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n320(2700)
-            .n100(200)
-            .n50(10)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
+            let hitresults = state.generate_hitresults();
 
-        let expected = ManiaScoreState {
-            n320: 2700,
-            n300: 0,
-            n200: 326,
-            n100: 200,
-            n50: 10,
-            n_misses: 2,
-        };
+            let expected = brute_force_best(
+                acc,
+                n320,
+                n300,
+                n200,
+                n100,
+                n50,
+                n_misses.unwrap_or(0),
+                best_case,
+            );
 
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
-
-    #[test]
-    fn hitresults_acc_n320_n50_n_misses_worst() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n320(2000)
-            .n50(50)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::WorstCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 2000,
-            n300: 0,
-            n200: 1186,
-            n100: 0,
-            n50: 50,
-            n_misses: 2,
-        };
-
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
-
-    #[test]
-    fn hitresults_acc_n100_n50_n_misses_best() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n100(200)
-            .n50(50)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 2546,
-            n300: 0,
-            n200: 440,
-            n100: 200,
-            n50: 50,
-            n_misses: 2,
-        };
-
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
-
-    #[test]
-    fn hitresults_acc_n200_n_misses_best() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n200(500)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 2503,
-            n300: 0,
-            n200: 500,
-            n100: 230,
-            n50: 3,
-            n_misses: 2,
-        };
-
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
-
-    #[test]
-    fn hitresults_acc_n200_n100_n_misses_best() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n200(500)
-            .n100(200)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 2509,
-            n300: 0,
-            n200: 500,
-            n100: 200,
-            n50: 27,
-            n_misses: 2,
-        };
-
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
-
-    #[test]
-    fn hitresults_acc_n50_n_misses_best() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n50(200)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 2804,
-            n300: 0,
-            n200: 0,
-            n100: 232,
-            n50: 200,
-            n_misses: 2,
-        };
-
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
-
-    #[test]
-    fn hitresults_acc_n200_n100_n50_n_misses_best() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n200(500)
-            .n100(300)
-            .n50(100)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 2336,
-            n300: 0,
-            n200: 500,
-            n100: 300,
-            n50: 100,
-            n_misses: 2,
-        };
-
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
-    }
-
-    #[test]
-    fn hitresults_acc_n_misses_worst() {
-        let (map, attrs) = test_data();
-
-        let state = ManiaPP::new(&map)
-            .attributes(attrs)
-            .accuracy(90.0)
-            .n_misses(2)
-            .hitresult_priority(HitResultPriority::WorstCase)
-            .generate_hitresults();
-
-        let expected = ManiaScoreState {
-            n320: 0,
-            n300: 2849,
-            n200: 0,
-            n100: 4,
-            n50: 383,
-            n_misses: 2,
-        };
-
-        assert_eq!(
-            state,
-            expected,
-            "{}% vs {}%",
-            state.accuracy(),
-            expected.accuracy()
-        );
-        assert_eq!(state.total_hits(), 3238);
+            assert_eq!(hitresults, expected);
+        }
     }
 
     #[test]
@@ -1035,14 +1226,14 @@ mod tests {
 
         let state = ManiaPP::new(&map)
             .attributes(attrs)
-            .n320(2000)
+            .n320(500)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
             .generate_hitresults();
 
         let expected = ManiaScoreState {
-            n320: 2000,
-            n300: 1236,
+            n320: 500,
+            n300: 92,
             n200: 0,
             n100: 0,
             n50: 0,
@@ -1050,7 +1241,7 @@ mod tests {
         };
 
         assert_eq!(state, expected);
-        assert_eq!(state.total_hits(), 3238);
+        assert_eq!(state.total_hits(), N_OBJECTS);
     }
 
     #[test]
@@ -1059,8 +1250,8 @@ mod tests {
 
         let state = ManiaPP::new(&map)
             .attributes(attrs)
-            .n100(500)
-            .n50(100)
+            .n100(200)
+            .n50(50)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::WorstCase)
             .generate_hitresults();
@@ -1068,13 +1259,13 @@ mod tests {
         let expected = ManiaScoreState {
             n320: 0,
             n300: 0,
-            n200: 2636,
-            n100: 500,
-            n50: 100,
+            n200: 342,
+            n100: 200,
+            n50: 50,
             n_misses: 2,
         };
 
         assert_eq!(state, expected);
-        assert_eq!(state.total_hits(), 3238);
+        assert_eq!(state.total_hits(), N_OBJECTS);
     }
 }
