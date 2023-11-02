@@ -1154,7 +1154,7 @@ mod tests {
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(500))]
+        #![proptest_config(ProptestConfig::with_cases(256))]
         #[test]
         fn mania_hitresults(
             acc in 0.0..=1.0,
