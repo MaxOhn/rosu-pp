@@ -193,7 +193,7 @@ impl<'map> CatchPP<'map> {
         self
     }
 
-    /// Create the hitresults that will be used for performance calculation.
+    /// Create the [`CatchScoreState`] that will be used for performance calculation.
     pub fn generate_state(&mut self) -> CatchScoreState {
         let attrs = match self.attributes {
             Some(ref attrs) => attrs,
@@ -737,7 +737,7 @@ mod test {
                 state = state.misses(n_misses);
             }
 
-            let hitresults = state.generate_hitresults();
+            let state = state.generate_state();
 
             let expected = brute_force_best(
                 acc,
@@ -748,7 +748,7 @@ mod test {
                 n_misses.unwrap_or(0),
             );
 
-            assert_eq!(hitresults, expected);
+            assert_eq!(state, expected);
         }
     }
 

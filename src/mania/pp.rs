@@ -226,34 +226,8 @@ impl<'map> ManiaPP<'map> {
         self
     }
 
-    /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(self) -> ManiaPerformanceAttributes {
-        let attrs = self.attributes.unwrap_or_else(|| {
-            let mut calculator = ManiaStars::new(self.map.as_ref())
-                .mods(self.mods)
-                .is_convert(matches!(self.map, Cow::Owned(_)));
-
-            if let Some(passed_objects) = self.passed_objects {
-                calculator = calculator.passed_objects(passed_objects);
-            }
-
-            if let Some(clock_rate) = self.clock_rate {
-                calculator = calculator.clock_rate(clock_rate);
-            }
-
-            calculator.calculate()
-        });
-
-        let inner = ManiaPpInner {
-            attrs,
-            mods: self.mods,
-            state: self.generate_hitresults(),
-        };
-
-        inner.calculate()
-    }
-
-    fn generate_hitresults(&self) -> ManiaScoreState {
+    /// Create the [`ManiaScoreState`] that will be used for performance calculation.
+    pub fn generate_state(&self) -> ManiaScoreState {
         let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
         let priority = self.hitresult_priority.unwrap_or_default();
 
@@ -732,6 +706,39 @@ impl<'map> ManiaPP<'map> {
             n_misses,
         }
     }
+
+    /// Calculate all performance related values, including pp and stars.
+    pub fn calculate(self) -> ManiaPerformanceAttributes {
+        let state = self.generate_state();
+
+        let attrs = self
+            .attributes
+            .unwrap_or_else(|| self.generate_attributes());
+
+        let inner = ManiaPpInner {
+            mods: self.mods,
+            attrs,
+            state,
+        };
+
+        inner.calculate()
+    }
+
+    fn generate_attributes(&self) -> ManiaDifficultyAttributes {
+        let mut calculator = ManiaStars::new(self.map.as_ref())
+            .mods(self.mods)
+            .is_convert(self.is_convert);
+
+        if let Some(passed_objects) = self.passed_objects {
+            calculator = calculator.passed_objects(passed_objects);
+        }
+
+        if let Some(clock_rate) = self.clock_rate {
+            calculator = calculator.clock_rate(clock_rate);
+        }
+
+        calculator.calculate()
+    }
 }
 
 struct ManiaPpInner {
@@ -1203,7 +1210,7 @@ mod tests {
                 state = state.n_misses(n_misses);
             }
 
-            let hitresults = state.generate_hitresults();
+            let state = state.generate_state();
 
             let expected = brute_force_best(
                 acc,
@@ -1216,7 +1223,7 @@ mod tests {
                 best_case,
             );
 
-            assert_eq!(hitresults, expected);
+            assert_eq!(state, expected);
         }
     }
 
@@ -1229,7 +1236,7 @@ mod tests {
             .n320(500)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults();
+            .generate_state();
 
         let expected = ManiaScoreState {
             n320: 500,
@@ -1254,7 +1261,7 @@ mod tests {
             .n50(50)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::WorstCase)
-            .generate_hitresults();
+            .generate_state();
 
         let expected = ManiaScoreState {
             n320: 0,

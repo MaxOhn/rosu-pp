@@ -208,7 +208,13 @@ impl<'map> OsuPP<'map> {
         self
     }
 
-    fn generate_hitresults(&self, max_combo: usize) -> OsuScoreState {
+    /// Create the [`OsuScoreState`] that will be used for performance calculation.
+    pub fn generate_state(&mut self) -> OsuScoreState {
+        let max_combo = match self.attributes {
+            Some(ref attrs) => attrs.max_combo,
+            None => self.attributes.insert(self.generate_attributes()).max_combo,
+        };
+
         let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
         let priority = self.hitresult_priority.unwrap_or_default();
 
@@ -378,21 +384,13 @@ impl<'map> OsuPP<'map> {
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> OsuPerformanceAttributes {
-        let attrs = self.attributes.take().unwrap_or_else(|| {
-            let mut calculator = OsuStars::new(self.map).mods(self.mods);
+        let state = self.generate_state();
 
-            if let Some(passed_objects) = self.passed_objects {
-                calculator = calculator.passed_objects(passed_objects);
-            }
+        let attrs = self
+            .attributes
+            .take()
+            .unwrap_or_else(|| self.generate_attributes());
 
-            if let Some(clock_rate) = self.clock_rate {
-                calculator = calculator.clock_rate(clock_rate);
-            }
-
-            calculator.calculate()
-        });
-
-        let state = self.generate_hitresults(attrs.max_combo);
         let effective_miss_count = calculate_effective_misses(&attrs, &state);
 
         let inner = OsuPpInner {
@@ -404,6 +402,20 @@ impl<'map> OsuPP<'map> {
         };
 
         inner.calculate()
+    }
+
+    fn generate_attributes(&self) -> OsuDifficultyAttributes {
+        let mut calculator = OsuStars::new(self.map).mods(self.mods);
+
+        if let Some(passed_objects) = self.passed_objects {
+            calculator = calculator.passed_objects(passed_objects);
+        }
+
+        if let Some(clock_rate) = self.clock_rate {
+            calculator = calculator.clock_rate(clock_rate);
+        }
+
+        calculator.calculate()
     }
 }
 
@@ -953,7 +965,7 @@ mod test {
                 state = state.n_misses(n_misses);
             }
 
-            let hitresults = state.generate_hitresults(max_combo);
+            let state = state.generate_state();
 
             let mut expected = brute_force_best(
                 acc,
@@ -965,14 +977,13 @@ mod test {
             );
             expected.max_combo = max_combo.saturating_sub(n_misses.unwrap_or(0));
 
-            assert_eq!(hitresults, expected);
+            assert_eq!(state, expected);
         }
     }
 
     #[test]
     fn hitresults_n300_n100_n_misses_best() {
         let (map, attrs) = test_data();
-        let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(map)
             .attributes(attrs)
@@ -981,7 +992,7 @@ mod test {
             .n100(20)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults(max_combo);
+            .generate_state();
 
         let expected = OsuScoreState {
             max_combo: 500,
@@ -997,7 +1008,6 @@ mod test {
     #[test]
     fn hitresults_n300_n50_n_misses_best() {
         let (map, attrs) = test_data();
-        let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(map)
             .attributes(attrs)
@@ -1006,7 +1016,7 @@ mod test {
             .n50(10)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
-            .generate_hitresults(max_combo);
+            .generate_state();
 
         let expected = OsuScoreState {
             max_combo: 500,
@@ -1022,7 +1032,6 @@ mod test {
     #[test]
     fn hitresults_n50_n_misses_worst() {
         let (map, attrs) = test_data();
-        let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(map)
             .attributes(attrs)
@@ -1030,7 +1039,7 @@ mod test {
             .n50(10)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::WorstCase)
-            .generate_hitresults(max_combo);
+            .generate_state();
 
         let expected = OsuScoreState {
             max_combo: 500,
@@ -1046,7 +1055,6 @@ mod test {
     #[test]
     fn hitresults_n300_n100_n50_n_misses_worst() {
         let (map, attrs) = test_data();
-        let max_combo = attrs.max_combo();
 
         let state = OsuPP::new(map)
             .attributes(attrs)
@@ -1056,7 +1064,7 @@ mod test {
             .n50(10)
             .n_misses(2)
             .hitresult_priority(HitResultPriority::WorstCase)
-            .generate_hitresults(max_combo);
+            .generate_state();
 
         let expected = OsuScoreState {
             max_combo: 500,

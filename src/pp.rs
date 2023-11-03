@@ -274,6 +274,17 @@ impl<'map> AnyPP<'map> {
             Self::Mania(m) => Self::Mania(m.n320(n_geki)),
         }
     }
+
+    /// Create the [`ScoreState`] that will be used for performance calculation.
+    #[inline]
+    pub fn generate_state(&mut self) -> ScoreState {
+        match self {
+            Self::Osu(o) => o.generate_state().into(),
+            Self::Taiko(t) => t.generate_state().into(),
+            Self::Catch(f) => f.generate_state().into(),
+            Self::Mania(m) => m.generate_state().into(),
+        }
+    }
 }
 
 /// While generating remaining hitresults, decide how they should be distributed.
