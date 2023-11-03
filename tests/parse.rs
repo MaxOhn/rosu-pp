@@ -159,20 +159,20 @@ fn assert_catch(map: Beatmap) {
 fn assert_mania(map: Beatmap) {
     assert_eq!(map.mode, GameMode::Mania);
     assert_eq!(map.version, 14);
-    assert_eq!(map.n_circles, 2815);
-    assert_eq!(map.n_sliders, 423);
+    assert_eq!(map.n_circles, 473);
+    assert_eq!(map.n_sliders, 121);
     assert_eq!(map.n_spinners, 0);
     assert!((map.ar - 5.0).abs() <= f32::EPSILON);
     assert!((map.od - 8.0).abs() <= f32::EPSILON);
     assert!((map.cs - 4.0).abs() <= f32::EPSILON);
-    assert!((map.hp - 9.0).abs() <= f32::EPSILON);
+    assert!((map.hp - 8.0).abs() <= f32::EPSILON);
     assert!((map.slider_mult - 1.4).abs() <= f64::EPSILON);
     assert!((map.tick_rate - 1.0).abs() <= f64::EPSILON);
-    assert_eq!(map.hit_objects.len(), 3238);
-    assert_eq!(map.sounds.len(), 3238);
+    assert_eq!(map.hit_objects.len(), 594);
+    assert_eq!(map.sounds.len(), 594);
     assert_eq!(map.timing_points.len(), 1);
-    assert_eq!(map.difficulty_points.len(), 1740);
-    assert_eq!(map.effect_points.len(), 1762);
+    assert_eq!(map.difficulty_points.len(), 0);
+    assert_eq!(map.effect_points.len(), 1);
     assert!((map.stack_leniency - 0.7).abs() <= f32::EPSILON);
     assert_eq!(map.breaks.len(), 0)
 }
