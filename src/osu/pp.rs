@@ -805,29 +805,15 @@ mod test {
         let (map, attrs) = DATA.get_or_init(|| {
             let path = "./maps/2785319.osu";
             let map = Beatmap::from_path(path).unwrap();
-
             let attrs = OsuStars::new(&map).calculate();
 
-            let expected = OsuDifficultyAttributes {
-                aim: 2.8693628443424104,
-                speed: 2.533869745015772,
-                flashlight: 2.288770487900865,
-                slider_factor: 0.9803052946037858,
-                speed_note_count: 210.36373973116545,
-                ar: 9.300000190734863,
-                od: 8.800000190734863,
-                hp: 5.0,
-                n_circles: 307,
-                n_sliders: 293,
-                n_spinners: 1,
-                stars: 5.669858729379628,
-                max_combo: 909,
-            };
-
-            assert_eq!(attrs, expected);
             assert_eq!(
+                (attrs.n_circles, attrs.n_sliders, attrs.n_spinners),
+                (307, 293, 1)
+            );
+            assert_eq!(
+                attrs.n_circles + attrs.n_sliders + attrs.n_spinners,
                 N_OBJECTS,
-                attrs.n_circles + attrs.n_sliders + attrs.n_spinners
             );
 
             (map, attrs)

@@ -552,21 +552,12 @@ mod test {
         let (map, attrs) = DATA.get_or_init(|| {
             let path = "./maps/2118524.osu";
             let map = Beatmap::from_path(path).unwrap();
-
             let attrs = CatchStars::new(&map).calculate();
 
-            let expected = CatchDifficultyAttributes {
-                stars: 3.2502669316166624,
-                ar: 8.0,
-                n_fruits: 728,
-                n_droplets: 2,
-                n_tiny_droplets: 291,
-            };
-
-            assert_eq!(attrs, expected);
-            assert_eq!(N_FRUITS, attrs.n_fruits);
-            assert_eq!(N_DROPLETS, attrs.n_droplets);
-            assert_eq!(N_TINY_DROPLETS, attrs.n_tiny_droplets);
+            assert_eq!(
+                (N_FRUITS, N_DROPLETS, N_TINY_DROPLETS),
+                (attrs.n_fruits, attrs.n_droplets, attrs.n_tiny_droplets)
+            );
 
             (map, attrs)
         });

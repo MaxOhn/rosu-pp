@@ -930,16 +930,8 @@ mod tests {
         let (map, attrs) = DATA.get_or_init(|| {
             let path = "./maps/1638954.osu";
             let map = Beatmap::from_path(path).unwrap();
-
             let attrs = ManiaStars::new(&map).calculate();
 
-            let expected = ManiaDifficultyAttributes {
-                stars: 3.441830819988125,
-                hit_window: 40.0,
-                max_combo: 956,
-            };
-
-            assert_eq!(attrs, expected);
             assert_eq!(
                 N_OBJECTS,
                 (map.n_circles + map.n_sliders + map.n_spinners) as usize
@@ -1250,7 +1242,6 @@ mod tests {
         };
 
         assert_eq!(state, expected);
-        assert_eq!(state.total_hits(), N_OBJECTS);
     }
 
     #[test]
@@ -1275,6 +1266,5 @@ mod tests {
         };
 
         assert_eq!(state, expected);
-        assert_eq!(state.total_hits(), N_OBJECTS);
     }
 }

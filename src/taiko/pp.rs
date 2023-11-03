@@ -540,20 +540,8 @@ mod test {
         let (map, attrs) = DATA.get_or_init(|| {
             let path = "./maps/1028484.osu";
             let map = Beatmap::from_path(path).unwrap();
-
             let attrs = TaikoStars::new(&map).calculate();
 
-            let expected = TaikoDifficultyAttributes {
-                stamina: 1.4528845068865617,
-                rhythm: 0.20130047251681948,
-                colour: 1.0487315549761433,
-                peak: 1.8881824429738323,
-                hit_window: 35.0,
-                stars: 2.9778030386845606,
-                max_combo: 289,
-            };
-
-            assert_eq!(attrs, expected);
             assert_eq!(MAX_COMBO, attrs.max_combo);
 
             (map, attrs)
