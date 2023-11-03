@@ -206,7 +206,7 @@ impl<'map> AnyPP<'map> {
         match self {
             Self::Osu(o) => Self::Osu(o.hitresult_priority(priority)),
             Self::Taiko(t) => Self::Taiko(t.hitresult_priority(priority)),
-            Self::Catch(_) => self, // FIXME: update when ctb hitresult generation is updated
+            Self::Catch(_) => self,
             Self::Mania(m) => Self::Mania(m.hitresult_priority(priority)),
         }
     }

@@ -1,0 +1,14 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc c75ef0e1156e1fb7c3eec623d7bb3ff00373825b76fe5a699be004eabfab596f # shrinks to acc = 0.0, n_fruits = None, n_droplets = None, n_tiny_droplets = None, n_tiny_droplet_misses = None, n_misses = None
+cc 7bf5d798492945aadd68cf23a1d25c530171b4e396be8c7c8b7b5273e3fb5a75 # shrinks to acc = 0.0, n_fruits = Some(0), n_droplets = None, n_tiny_droplets = None, n_tiny_droplet_misses = None, n_misses = None
+cc 3b895b7f5cf43539ab1536bb51a0212bc354b0de7959cd0f548c8eb19085f99c # shrinks to acc = 0.9572076425636069, n_fruits = None, n_droplets = None, n_tiny_droplets = None, n_tiny_droplet_misses = None, n_misses = Some(2)
+cc fffc517d7d7aeadfd6e7e9514cdfe04239233e7fb9c35dca2a6fe47b6bb3c215 # shrinks to acc = 0.0, n_fruits = None, n_droplets = Some(0), n_tiny_droplets = None, n_tiny_droplet_misses = None, n_misses = None
+cc fdeec58e1c568f52970c0a74a824ab6cf0300892af19f4bd3826f2af19a38d08 # shrinks to acc = 0.0, n_fruits = Some(10), n_droplets = None, n_tiny_droplets = None, n_tiny_droplet_misses = None, n_misses = Some(721)
+cc dd03c40dec8e5efd5031fca53c2a1804e9537a3e864b0c21136169b8d411ec23 # shrinks to acc = 0.0, n_fruits = None, n_droplets = None, n_tiny_droplets = Some(0), n_tiny_droplet_misses = Some(0), n_misses = None
+cc dd7bf3c50e5165f9e2f265336af23a38c78a0bfafd9b1dc54d32f50dfeb84c79 # shrinks to acc = 0.9407007157860147, n_fruits = Some(671), n_droplets = Some(0), n_tiny_droplets = None, n_tiny_droplet_misses = None, n_misses = Some(61)
+cc 6e78f69d0a44ad58d5a2408cbadf7913cc3b77934b6c16eb1f41587fc151545d # shrinks to acc = 0.0, n_fruits = None, n_droplets = None, n_tiny_droplets = None, n_tiny_droplet_misses = Some(292), n_misses = None
