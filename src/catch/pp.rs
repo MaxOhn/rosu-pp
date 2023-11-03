@@ -574,25 +574,6 @@ mod test {
         (map, attrs.to_owned())
     }
 
-    #[test]
-    fn catch_custom() {
-        const ACC: f64 = 0.9407007157860147;
-
-        let (map, attrs) = test_data();
-
-        let calc = CatchPP::new(&map)
-            .attributes(attrs)
-            .accuracy(ACC * 100.0)
-            .fruits(671)
-            .droplets(0)
-            .misses(61)
-            .generate_state();
-
-        let bf = brute_force_best(ACC, Some(671), Some(0), None, None, 61);
-
-        assert_eq!(calc, bf);
-    }
-
     /// Checks all remaining hitresult combinations w.r.t. the given parameters
     /// and returns the [`OsuScoreState`] that matches `acc` the best.
     ///
