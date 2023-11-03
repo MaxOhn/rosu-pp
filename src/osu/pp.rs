@@ -848,6 +848,8 @@ mod test {
         n_misses: usize,
         best_case: bool,
     ) -> OsuScoreState {
+        let n_misses = n_misses.min(N_OBJECTS);
+
         let mut best_state = OsuScoreState {
             n_misses,
             ..Default::default()
@@ -929,10 +931,10 @@ mod test {
         #[test]
         fn osu_hitresults(
             acc in 0.0..=1.0,
-            n300 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n100 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n50 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n_misses in option::weighted(0.15, 0_usize..=N_OBJECTS),
+            n300 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n100 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n50 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n_misses in option::weighted(0.15, 0_usize..=N_OBJECTS + 10),
             best_case in prop::bool::ANY,
         ) {
             let (map, attrs) = test_data();
@@ -975,7 +977,7 @@ mod test {
                 n_misses.unwrap_or(0),
                 best_case,
             );
-            expected.max_combo = max_combo.saturating_sub(n_misses.unwrap_or(0));
+            expected.max_combo = max_combo.saturating_sub(n_misses.map_or(0, |n| n.min(N_OBJECTS)));
 
             assert_eq!(state, expected);
         }

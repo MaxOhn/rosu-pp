@@ -966,6 +966,8 @@ mod tests {
         n_misses: usize,
         best_case: bool,
     ) -> ManiaScoreState {
+        let n_misses = n_misses.min(N_OBJECTS);
+
         let mut best_state = ManiaScoreState {
             n_misses,
             ..Default::default()
@@ -1165,12 +1167,12 @@ mod tests {
         #[test]
         fn mania_hitresults(
             acc in 0.0..=1.0,
-            n320 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n300 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n200 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n100 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n50 in option::weighted(0.10, 0_usize..=N_OBJECTS),
-            n_misses in option::weighted(0.15, 0_usize..=N_OBJECTS),
+            n320 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n300 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n200 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n100 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n50 in option::weighted(0.10, 0_usize..=N_OBJECTS + 10),
+            n_misses in option::weighted(0.15, 0_usize..=N_OBJECTS + 10),
             best_case in prop::bool::ANY,
         ) {
             let (map, attrs) = test_data();

@@ -573,6 +573,8 @@ mod test {
         n_misses: usize,
         best_case: bool,
     ) -> TaikoScoreState {
+        let n_misses = n_misses.min(MAX_COMBO);
+
         let mut best_state = TaikoScoreState {
             n_misses,
             ..Default::default()
@@ -626,9 +628,9 @@ mod test {
         #[test]
         fn taiko_hitresults(
             acc in 0.0..=1.0,
-            n300 in option::weighted(0.10, 0_usize..=MAX_COMBO),
-            n100 in option::weighted(0.10, 0_usize..=MAX_COMBO),
-            n_misses in option::weighted(0.15, 0_usize..=MAX_COMBO),
+            n300 in option::weighted(0.10, 0_usize..=MAX_COMBO + 10),
+            n100 in option::weighted(0.10, 0_usize..=MAX_COMBO + 10),
+            n_misses in option::weighted(0.15, 0_usize..=MAX_COMBO + 10),
             best_case in prop::bool::ANY,
         ) {
             let (map, attrs) = test_data();

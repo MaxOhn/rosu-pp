@@ -11,3 +11,4 @@ cc 6df5e623c62ffa2830f17f4e7a9bb573cb3eb4c4c45bc3c0793aad26aa72cf95 # shrinks to
 cc e5a861f6c665dd09e46423e71d7596edf98897d4130d3144aa6f5be580f31a8b # shrinks to acc = 0.0, combo = None, n300 = None, n100 = Some(293), n50 = None, n_misses = Some(309), best_case = false
 cc 2cd5c105bcca0b4255afccc15bee3894b06bd20ac3f5c5d3b785f7e0ef99df46 # shrinks to acc = 0.0, combo = None, n300 = Some(0), n100 = None, n50 = Some(479), n_misses = Some(123), best_case = false
 cc 2cba8a76243aac7233e9207a3162aaa1f08f933c0cb3a2ac79580ece3a7329fc # shrinks to acc = 0.0, n300 = Some(0), n100 = Some(0), n50 = Some(0), n_misses = None, best_case = false
+cc e93787ad8a849ec6d05750c8d09494b8f5a9fa785f843d9a8e2db986c0b32645 # shrinks to acc = 0.0, n300 = None, n100 = None, n50 = None, n_misses = Some(602), best_case = false
