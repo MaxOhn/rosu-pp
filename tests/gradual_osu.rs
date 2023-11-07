@@ -1,4 +1,7 @@
-#![cfg(not(any(feature = "async_tokio", feature = "async_std")))]
+#![cfg(all(
+    not(any(feature = "async_tokio", feature = "async_std")),
+    feature = "gradual"
+))]
 
 use rosu_pp::{
     osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
@@ -35,10 +38,10 @@ fn correct_empty() {
     let mut gradual = OsuGradualPerformanceAttributes::new(&map, 0);
     let state = OsuScoreState::default();
 
-    let first_attrs = gradual.process_next_n_objects(state.clone(), usize::MAX);
+    let first_attrs = gradual.nth(state.clone(), usize::MAX);
 
     assert!(first_attrs.is_some());
-    assert!(gradual.process_next_object(state).is_none());
+    assert!(gradual.next(state).is_none());
 }
 
 #[test]
@@ -50,14 +53,14 @@ fn next_and_next_n() {
     let mut gradual2 = OsuGradualPerformanceAttributes::new(&map, 0);
 
     for _ in 0..20 {
-        let _ = gradual1.process_next_object(state.clone());
-        let _ = gradual2.process_next_object(state.clone());
+        let _ = gradual1.next(state.clone());
+        let _ = gradual2.next(state.clone());
     }
 
     let n = 80;
 
     for _ in 1..n {
-        let _ = gradual1.process_next_object(state.clone());
+        let _ = gradual1.next(state.clone());
     }
 
     let state = OsuScoreState {
@@ -68,8 +71,8 @@ fn next_and_next_n() {
         n_misses: 2,
     };
 
-    let next = gradual1.process_next_object(state.clone());
-    let next_n = gradual2.process_next_n_objects(state, n);
+    let next = gradual1.next(state.clone());
+    let next_n = gradual2.nth(state, n - 1);
 
     assert_eq!(next_n, next);
 }
@@ -88,7 +91,7 @@ fn gradual_end_eq_regular() {
         n_misses: 0,
     };
 
-    let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
+    let gradual_end = gradual.nth(state, usize::MAX).unwrap();
 
     assert_eq!(regular, gradual_end);
 }
@@ -109,7 +112,7 @@ fn gradual_eq_regular_passed() {
         n_misses: 0,
     };
 
-    let gradual = gradual.process_next_n_objects(state, n).unwrap();
+    let gradual = gradual.nth(state, n - 1).unwrap();
 
     assert_eq!(regular, gradual);
 }

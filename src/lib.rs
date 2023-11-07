@@ -198,14 +198,19 @@ pub mod parse;
 pub mod beatmap;
 pub use beatmap::{Beatmap, BeatmapExt, GameMode};
 
+#[cfg(feature = "gradual")]
 mod gradual;
-pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes, ScoreState};
+#[cfg(feature = "gradual")]
+pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes};
 
 mod pp;
 pub use pp::{AnyPP, AttributeProvider, HitResultPriority};
 
 mod stars;
 pub use stars::AnyStars;
+
+mod score_state;
+pub use score_state::*;
 
 mod curve;
 mod mods;

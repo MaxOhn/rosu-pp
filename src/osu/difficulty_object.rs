@@ -2,6 +2,7 @@ use crate::{
     osu::osu_object::{NestedObjectKind, OsuObjectKind},
     parse::Pos2,
 };
+use std::pin::Pin;
 
 use super::{osu_object::OsuSlider, OsuObject, ScalingFactor};
 
@@ -9,7 +10,7 @@ use super::{osu_object::OsuSlider, OsuObject, ScalingFactor};
 pub(crate) struct OsuDifficultyObject<'h> {
     pub(crate) start_time: f64,
     pub(crate) delta_time: f64,
-    pub(crate) base: &'h OsuObject,
+    pub(crate) base: Pin<&'h OsuObject>,
     pub(crate) strain_time: f64,
     pub(crate) dists: Distances,
     pub(crate) idx: usize,
@@ -19,7 +20,7 @@ impl<'h> OsuDifficultyObject<'h> {
     pub(crate) const MIN_DELTA_TIME: u32 = 25;
 
     pub(crate) fn new(
-        base: &'h OsuObject,
+        base: Pin<&'h OsuObject>,
         last: &'h OsuObject,
         clock_rate: f64,
         idx: usize,
@@ -89,36 +90,40 @@ impl Distances {
     const MAXIMUM_SLIDER_RADIUS: f32 = Self::NORMALISED_RADIUS * 2.4;
     const ASSUMED_SLIDER_RADIUS: f32 = Self::NORMALISED_RADIUS * 1.8;
 
+    /// Create a new instance of [`Distances`].
+    ///
+    /// By taking in [`Pin<&mut OsuObject>`](Pin), we imply that the argument will be
+    /// modified but it won't be moved.
     pub(crate) fn new(
-        base: &mut OsuObject,
+        base: &mut Pin<&mut OsuObject>,
         last: &OsuObject,
         last_last: Option<&OsuObject>,
         clock_rate: f64,
         strain_time: f64,
         scaling_factor_: &ScalingFactor,
     ) -> Self {
-        let mut this =
-            if let Some(slider_values) = Self::compute_slider_cursor_pos(base, scaling_factor_) {
-                let SliderValues {
-                    lazy_travel_dist,
-                    slider,
-                } = slider_values;
+        let pos = base.pos();
+        let stack_offset = base.stack_offset;
 
-                let repeat_count = slider.repeat_count();
+        let mut this = if let OsuObjectKind::Slider(ref mut slider) = base.kind {
+            let lazy_travel_dist =
+                Self::compute_slider_travel_dist(pos, stack_offset, slider, scaling_factor_);
 
-                Self {
-                    // * Bonus for repeat sliders until a better per nested object strain system can be achieved.
-                    travel_dist: (lazy_travel_dist
-                        * (1.0 + repeat_count as f64 / 2.5).powf(1.0 / 2.5) as f32)
-                        as f64,
-                    travel_time: (base.lazy_travel_time() / clock_rate)
-                        .max(OsuDifficultyObject::MIN_DELTA_TIME as f64),
-                    lazy_travel_dist,
-                    ..Default::default()
-                }
-            } else {
-                Self::default()
-            };
+            let repeat_count = slider.repeat_count();
+
+            Self {
+                // * Bonus for repeat sliders until a better per nested object strain system can be achieved.
+                travel_dist: (lazy_travel_dist
+                    * (1.0 + repeat_count as f64 / 2.5).powf(1.0 / 2.5) as f32)
+                    as f64,
+                travel_time: (base.lazy_travel_time() / clock_rate)
+                    .max(OsuDifficultyObject::MIN_DELTA_TIME as f64),
+                lazy_travel_dist,
+                ..Default::default()
+            }
+        } else {
+            Self::default()
+        };
 
         // * We don't need to calculate either angle or distance when
         // * one of the last->curr objects is a spinner
@@ -196,26 +201,19 @@ impl Distances {
         this
     }
 
-    pub(crate) fn compute_slider_cursor_pos<'h>(
-        hit_object: &'h mut OsuObject,
+    pub(crate) fn compute_slider_travel_dist(
+        pos: Pos2,
+        stack_offset: Pos2,
+        slider: &mut OsuSlider,
         scaling_factor_: &ScalingFactor,
-    ) -> Option<SliderValues<'h>> {
-        let pos = hit_object.pos();
-
-        let slider = if let OsuObjectKind::Slider(slider) = &mut hit_object.kind {
-            slider
-        } else {
-            return None;
-        };
-
-        let mut curr_cursor_pos = pos + hit_object.stack_offset;
+    ) -> f32 {
+        let mut curr_cursor_pos = pos + stack_offset;
         let scaling_factor = Self::NORMALISED_RADIUS as f64 / scaling_factor_.radius as f64;
 
         let mut lazy_travel_dist: f32 = 0.0;
 
         for (curr_movement_obj, i) in slider.nested_objects.iter().zip(1..) {
-            let mut curr_movement =
-                (curr_movement_obj.pos + hit_object.stack_offset) - curr_cursor_pos;
+            let mut curr_movement = (curr_movement_obj.pos + stack_offset) - curr_cursor_pos;
             let mut curr_movement_len = scaling_factor * curr_movement.length() as f64;
 
             // * Amount of movement required so that the cursor position needs to be updated.
@@ -253,18 +251,10 @@ impl Distances {
 
         slider.lazy_end_pos = curr_cursor_pos;
 
-        Some(SliderValues {
-            lazy_travel_dist,
-            slider,
-        })
+        lazy_travel_dist
     }
 
     fn get_end_cursor_pos(hit_object: &OsuObject) -> Pos2 {
         hit_object.lazy_end_pos()
     }
-}
-
-pub(crate) struct SliderValues<'s> {
-    lazy_travel_dist: f32,
-    slider: &'s OsuSlider,
 }

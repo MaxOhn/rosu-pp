@@ -8,9 +8,8 @@ use crate::{
     osu::{OsuDifficultyAttributes, OsuObject, ScalingFactor},
     taiko::{IntoTaikoObjectIter, TaikoObject},
     util::FloatExt,
-    AnyPP, AnyStars, Beatmap, CatchPP, CatchStars, GameMode, GradualDifficultyAttributes,
-    GradualPerformanceAttributes, ManiaPP, ManiaStars, Mods, OsuPP, OsuStars,
-    PerformanceAttributes, Strains, TaikoPP, TaikoStars,
+    AnyPP, AnyStars, Beatmap, CatchPP, CatchStars, GameMode, ManiaPP, ManiaStars, Mods, OsuPP,
+    OsuStars, PerformanceAttributes, Strains, TaikoPP, TaikoStars,
 };
 
 /// Provides some additional methods on [`Beatmap`].
@@ -34,17 +33,6 @@ pub trait BeatmapExt {
     ///
     /// Suitable to plot the difficulty of a map over time.
     fn strains(&self, mods: u32) -> Strains;
-
-    /// Return an iterator that gives you the [`DifficultyAttributes`](crate::DifficultyAttributes) after each hit object.
-    ///
-    /// Suitable to efficiently get the map's star rating after multiple different locations.
-    fn gradual_difficulty(&self, mods: u32) -> GradualDifficultyAttributes<'_>;
-
-    /// Return a struct that gives you the [`PerformanceAttributes`] after every (few) hit object(s).
-    ///
-    /// Suitable to efficiently get a score's performance after multiple different locations,
-    /// i.e. live update a score's pp.
-    fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_>;
 
     /// Process each [`HitObject`](crate::parse::HitObject) into a an osu!-specific [`OsuObject`],
     /// just like the difficulty calculation does.
@@ -110,16 +98,6 @@ impl BeatmapExt for Beatmap {
             GameMode::Catch => Strains::Catch(CatchStars::new(self).mods(mods).strains()),
             GameMode::Mania => Strains::Mania(ManiaStars::new(self).mods(mods).strains()),
         }
-    }
-
-    #[inline]
-    fn gradual_difficulty(&self, mods: u32) -> GradualDifficultyAttributes<'_> {
-        GradualDifficultyAttributes::new(self, mods)
-    }
-
-    #[inline]
-    fn gradual_performance(&self, mods: u32) -> GradualPerformanceAttributes<'_> {
-        GradualPerformanceAttributes::new(self, mods)
     }
 
     fn osu_hitobjects(&self, mods: u32) -> Vec<OsuObject> {

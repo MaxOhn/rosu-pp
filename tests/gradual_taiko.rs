@@ -1,4 +1,4 @@
-#![cfg(not(any(feature = "async_tokio", feature = "async_std")))]
+#![cfg(all(not(any(feature = "async_tokio", feature = "async_std")), feature = "gradual"))]
 
 use rosu_pp::{
     taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
