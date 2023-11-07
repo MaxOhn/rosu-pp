@@ -151,7 +151,7 @@
 //! };
 //!
 //! // Process the next 10 objects in one go
-//! let curr_performance = match gradual_performance.process_next_n_objects(state, 10) {
+//! let curr_performance = match gradual_performance.nth(state, 10) {
 //!     Some(perf) => perf,
 //!     None => panic!("the last `process_next_object` already processed the last object"),
 //! };

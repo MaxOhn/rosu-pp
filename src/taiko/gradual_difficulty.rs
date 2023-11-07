@@ -1,3 +1,5 @@
+#![cfg(feature = "gradual")]
+
 use std::{borrow::Cow, cell::RefCell, rc::Rc, vec::IntoIter};
 
 use crate::{beatmap::BeatmapHitWindows, taiko::rescale, Beatmap, GameMode, Mods};
@@ -40,15 +42,15 @@ use super::{
 ///     // ...
 /// }
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct TaikoGradualDifficultyAttributes {
+    pub(crate) idx: usize,
     attrs: TaikoDifficultyAttributes,
-    hit_objects: IntoIter<Rc<RefCell<TaikoDifficultyObject>>>,
+    diff_objects: IntoIter<Rc<RefCell<TaikoDifficultyObject>>>,
     lists: ObjectLists,
     peaks: Peaks,
     total_hits: usize,
     is_convert: bool,
-    pub(crate) started: bool,
 }
 
 impl TaikoGradualDifficultyAttributes {
@@ -77,67 +79,62 @@ impl TaikoGradualDifficultyAttributes {
 
         if map.hit_objects.len() < 2 {
             return Self {
-                hit_objects: Vec::new().into_iter(),
+                idx: 0,
+                diff_objects: Vec::new().into_iter(),
                 lists: ObjectLists::default(),
                 peaks,
                 attrs,
                 total_hits: 0,
                 is_convert,
-                started: false,
             };
         }
 
         attrs.max_combo += map.hit_objects[0].is_circle() as usize;
         attrs.max_combo += map.hit_objects[1].is_circle() as usize;
         let mut total_hits = attrs.max_combo;
+        let mut diff_objects = ObjectLists::default();
 
-        let mut diff_objects = map
-            .taiko_objects()
+        map.taiko_objects()
             .skip(2)
             .zip(map.hit_objects.iter().skip(1))
             .zip(map.hit_objects.iter())
             .enumerate()
-            .fold(
-                ObjectLists::default(),
-                |mut lists, (idx, (((base, base_start_time), last), last_last))| {
-                    total_hits += base.is_hit as usize;
+            .for_each(|(idx, (((base, base_start_time), last), last_last))| {
+                total_hits += base.is_hit as usize;
 
-                    let diff_obj = TaikoDifficultyObject::new(
-                        base,
-                        base_start_time,
-                        last.start_time,
-                        last_last.start_time,
-                        clock_rate,
-                        &lists,
-                        idx,
-                    );
+                let diff_obj = TaikoDifficultyObject::new(
+                    base,
+                    base_start_time,
+                    last.start_time,
+                    last_last.start_time,
+                    clock_rate,
+                    &diff_objects,
+                    idx,
+                );
 
-                    match &diff_obj.mono_idx {
-                        MonoIndex::Centre(_) => lists.centres.push(idx),
-                        MonoIndex::Rim(_) => lists.rims.push(idx),
-                        MonoIndex::None => {}
-                    }
+                match &diff_obj.mono_idx {
+                    MonoIndex::Centre(_) => diff_objects.centres.push(idx),
+                    MonoIndex::Rim(_) => diff_objects.rims.push(idx),
+                    MonoIndex::None => {}
+                }
 
-                    if diff_obj.note_idx.is_some() {
-                        lists.notes.push(idx);
-                    }
+                if diff_obj.note_idx.is_some() {
+                    diff_objects.notes.push(idx);
+                }
 
-                    lists.all.push(Rc::new(RefCell::new(diff_obj)));
-
-                    lists
-                },
-            );
+                diff_objects.all.push(Rc::new(RefCell::new(diff_obj)));
+            });
 
         ColourDifficultyPreprocessor::process_and_assign(&mut diff_objects);
 
         Self {
-            hit_objects: diff_objects.all.clone().into_iter(),
+            idx: 0,
+            diff_objects: diff_objects.all.clone().into_iter(),
             lists: diff_objects,
             peaks,
             attrs,
             total_hits,
             is_convert,
-            started: false,
         }
     }
 }
@@ -146,19 +143,27 @@ impl Iterator for TaikoGradualDifficultyAttributes {
     type Item = TaikoDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.started = true;
+        // The first difficulty object belongs to the third note since each difficulty
+        // object requires the current the last, and the second to last note. Hence, if we're still
+        // on the first or second object, we don't have a difficulty object yet and just skip
+        // processing.
+        if self.idx >= 2 {
+            loop {
+                let curr = self.diff_objects.next()?;
+                let borrowed = curr.borrow();
+                self.peaks.process(&borrowed, &self.lists);
 
-        loop {
-            let curr = self.hit_objects.next()?;
-            let borrowed = curr.borrow();
-            self.peaks.process(&borrowed, &self.lists);
+                if borrowed.base.is_hit {
+                    self.attrs.max_combo += 1;
 
-            if borrowed.base.is_hit {
-                self.attrs.max_combo += 1;
-
-                break;
+                    break;
+                }
             }
+        } else if self.lists.all.is_empty() {
+            return None;
         }
+
+        self.idx += 1;
 
         let PeaksDifficultyValues {
             mut colour_rating,
@@ -203,18 +208,24 @@ impl Iterator for TaikoGradualDifficultyAttributes {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let skip = n
-            .min(self.total_hits - self.attrs.max_combo)
-            .saturating_sub(1);
+        let mut take = n.min(self.len().saturating_sub(1));
 
-        for _ in 0..skip {
+        // The first two notes have no difficulty object
+        if self.idx < 2 && take > 0 {
+            let skipped = take.min(2);
+            take -= skipped;
+            self.idx += skipped;
+        }
+
+        for _ in 0..take {
             loop {
-                let curr = self.hit_objects.next()?;
+                let curr = self.diff_objects.next()?;
                 let borrowed = curr.borrow();
                 self.peaks.process(&borrowed, &self.lists);
 
                 if borrowed.base.is_hit {
                     self.attrs.max_combo += 1;
+                    self.idx += 1;
 
                     break;
                 }
@@ -228,6 +239,6 @@ impl Iterator for TaikoGradualDifficultyAttributes {
 impl ExactSizeIterator for TaikoGradualDifficultyAttributes {
     #[inline]
     fn len(&self) -> usize {
-        self.hit_objects.len()
+        self.total_hits - self.idx
     }
 }
