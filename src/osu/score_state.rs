@@ -1,7 +1,7 @@
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
 ///
-/// This struct is used for [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformanceAttributes).
+/// This struct is used for [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformance).
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct OsuScoreState {
     /// Maximum combo that the score has had so far.

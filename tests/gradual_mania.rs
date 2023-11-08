@@ -4,7 +4,7 @@
 ))]
 
 use rosu_pp::{
-    mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes, ManiaScoreState},
+    mania::{ManiaGradualDifficulty, ManiaGradualPerformance, ManiaScoreState},
     Beatmap, ManiaPP, ManiaStars,
 };
 
@@ -15,7 +15,7 @@ mod common;
 #[test]
 fn empty_map() {
     let map = Beatmap::default();
-    let mut attributes = ManiaGradualDifficultyAttributes::new(&map, 0);
+    let mut attributes = ManiaGradualDifficulty::new(&map, 0);
 
     assert!(attributes.next().is_none());
 }
@@ -25,7 +25,7 @@ fn iter_end_eq_regular() {
     let map = test_map!(Mania);
     let regular = ManiaStars::new(&map).calculate();
 
-    let iter_end = ManiaGradualDifficultyAttributes::new(&map, 0)
+    let iter_end = ManiaGradualDifficulty::new(&map, 0)
         .last()
         .expect("empty iter");
 
@@ -35,7 +35,7 @@ fn iter_end_eq_regular() {
 #[test]
 fn correct_empty() {
     let map = test_map!(Mania);
-    let mut gradual = ManiaGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = ManiaGradualPerformance::new(&map, 0);
 
     let state = ManiaScoreState::default();
 
@@ -51,8 +51,8 @@ fn next_and_next_n() {
 
     let mut state = ManiaScoreState::default();
 
-    let mut gradual1 = ManiaGradualPerformanceAttributes::new(&map, 0);
-    let mut gradual2 = ManiaGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual1 = ManiaGradualPerformance::new(&map, 0);
+    let mut gradual2 = ManiaGradualPerformance::new(&map, 0);
 
     for _ in 0..20 {
         let _ = gradual1.next(state.clone());
@@ -78,7 +78,7 @@ fn gradual_end_eq_regular() {
     let map = test_map!(Mania);
     let regular = ManiaPP::new(&map).calculate();
 
-    let mut gradual = ManiaGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = ManiaGradualPerformance::new(&map, 0);
 
     let state = ManiaScoreState {
         n320: map.hit_objects.len(),
@@ -105,7 +105,7 @@ fn gradual_eq_regular_passed() {
         .state(state.clone())
         .calculate();
 
-    let gradual = ManiaGradualPerformanceAttributes::new(&map, 0)
+    let gradual = ManiaGradualPerformance::new(&map, 0)
         .nth(state, n - 1)
         .unwrap();
 

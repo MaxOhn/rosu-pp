@@ -2,7 +2,7 @@
 
 use crate::{Beatmap, OsuPP};
 
-use super::{OsuGradualDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState};
+use super::{OsuGradualDifficulty, OsuPerformanceAttributes, OsuScoreState};
 
 /// Gradually calculate the performance attributes of an osu!standard map.
 ///
@@ -15,12 +15,12 @@ use super::{OsuGradualDifficultyAttributes, OsuPerformanceAttributes, OsuScoreSt
 /// hitresults as well as the maximum combo so far.
 ///
 /// If you only want to calculate difficulty attributes use
-/// [`OsuGradualDifficultyAttributes`] instead.
+/// [`OsuGradualDifficulty`] instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, osu::{OsuGradualPerformanceAttributes, OsuScoreState}};
+/// use rosu_pp::{Beatmap, osu::{OsuGradualPerformance, OsuScoreState}};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -28,7 +28,7 @@ use super::{OsuGradualDifficultyAttributes, OsuPerformanceAttributes, OsuScoreSt
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut gradual_perf = OsuGradualPerformanceAttributes::new(&map, mods);
+/// let mut gradual_perf = OsuGradualPerformance::new(&map, mods);
 /// let mut state = OsuScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s and there are no sliders for additional combo
@@ -91,15 +91,15 @@ use super::{OsuGradualDifficultyAttributes, OsuPerformanceAttributes, OsuScoreSt
 /// assert!(gradual_perf.next(state).is_none());
 /// ```
 #[derive(Debug)]
-pub struct OsuGradualPerformanceAttributes<'map> {
-    difficulty: OsuGradualDifficultyAttributes,
+pub struct OsuGradualPerformance<'map> {
+    difficulty: OsuGradualDifficulty,
     performance: OsuPP<'map>,
 }
 
-impl<'map> OsuGradualPerformanceAttributes<'map> {
+impl<'map> OsuGradualPerformance<'map> {
     /// Create a new gradual performance calculator for osu!standard maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
-        let difficulty = OsuGradualDifficultyAttributes::new(map, mods);
+        let difficulty = OsuGradualDifficulty::new(map, mods);
         let performance = OsuPP::new(map).mods(mods).passed_objects(0);
 
         Self {

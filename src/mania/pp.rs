@@ -109,7 +109,7 @@ impl<'map> ManiaPP<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`ManiaPP`] multiple times with different `passed_objects`, you should use
-    /// [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformanceAttributes).
+    /// [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformance).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

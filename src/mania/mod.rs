@@ -17,8 +17,7 @@ pub use self::{mania_object::ManiaObject, pp::*, score_state::ManiaScoreState};
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::ManiaGradualDifficultyAttributes,
-    gradual_performance::ManiaGradualPerformanceAttributes,
+    gradual_difficulty::ManiaGradualDifficulty, gradual_performance::ManiaGradualPerformance,
 };
 
 pub(crate) use self::mania_object::ObjectParameters;
@@ -88,7 +87,7 @@ impl<'map> ManiaStars<'map> {
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
     /// using [`ManiaStars`] multiple times with different `passed_objects`, you should use
-    /// [`ManiaGradualDifficultyAttributes`](crate::mania::ManiaGradualDifficultyAttributes).
+    /// [`ManiaGradualDifficultyAttributes`](crate::mania::ManiaGradualDifficulty).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

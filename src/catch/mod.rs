@@ -17,8 +17,7 @@ pub use self::{catch_object::CatchObject, pp::*, score_state::CatchScoreState};
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::CatchGradualDifficultyAttributes,
-    gradual_performance::CatchGradualPerformanceAttributes,
+    gradual_difficulty::CatchGradualDifficulty, gradual_performance::CatchGradualPerformance,
 };
 
 pub(crate) use self::fruit_or_juice::{FruitOrJuice, FruitParams};
@@ -83,7 +82,7 @@ impl<'map> CatchStars<'map> {
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
     /// using [`CatchStars`] multiple times with different `passed_objects`, you should use
-    /// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficultyAttributes).
+    /// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficulty).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

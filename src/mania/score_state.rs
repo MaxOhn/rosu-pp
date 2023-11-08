@@ -1,6 +1,6 @@
 /// Aggregation for a score's current state i.e. what are the current hitresults.
 ///
-/// This struct is used for [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformanceAttributes).
+/// This struct is used for [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformance).
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ManiaScoreState {
     /// Amount of current 320s.

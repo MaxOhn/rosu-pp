@@ -4,7 +4,7 @@
 ))]
 
 use rosu_pp::{
-    osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
+    osu::{OsuGradualDifficulty, OsuGradualPerformance, OsuScoreState},
     Beatmap, OsuPP, OsuStars,
 };
 
@@ -15,7 +15,7 @@ mod common;
 #[test]
 fn empty_map() {
     let map = Beatmap::default();
-    let mut attributes = OsuGradualDifficultyAttributes::new(&map, 0);
+    let mut attributes = OsuGradualDifficulty::new(&map, 0);
 
     assert!(attributes.next().is_none());
 }
@@ -25,7 +25,7 @@ fn iter_end_eq_regular() {
     let map = test_map!(Osu);
     let regular = OsuStars::new(&map).calculate();
 
-    let iter_end = OsuGradualDifficultyAttributes::new(&map, 0)
+    let iter_end = OsuGradualDifficulty::new(&map, 0)
         .last()
         .expect("empty iter");
 
@@ -35,7 +35,7 @@ fn iter_end_eq_regular() {
 #[test]
 fn correct_empty() {
     let map = test_map!(Osu);
-    let mut gradual = OsuGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = OsuGradualPerformance::new(&map, 0);
     let state = OsuScoreState::default();
 
     let first_attrs = gradual.nth(state.clone(), usize::MAX);
@@ -49,8 +49,8 @@ fn next_and_next_n() {
     let map = test_map!(Osu);
     let state = OsuScoreState::default();
 
-    let mut gradual1 = OsuGradualPerformanceAttributes::new(&map, 0);
-    let mut gradual2 = OsuGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual1 = OsuGradualPerformance::new(&map, 0);
+    let mut gradual2 = OsuGradualPerformance::new(&map, 0);
 
     for _ in 0..20 {
         let _ = gradual1.next(state.clone());
@@ -81,7 +81,7 @@ fn next_and_next_n() {
 fn gradual_end_eq_regular() {
     let map = test_map!(Osu);
     let regular = OsuPP::new(&map).calculate();
-    let mut gradual = OsuGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = OsuGradualPerformance::new(&map, 0);
 
     let state = OsuScoreState {
         max_combo: 909,
@@ -102,7 +102,7 @@ fn gradual_eq_regular_passed() {
     let n = 100;
 
     let regular = OsuPP::new(&map).passed_objects(n).calculate();
-    let mut gradual = OsuGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = OsuGradualPerformance::new(&map, 0);
 
     let state = OsuScoreState {
         max_combo: 122,

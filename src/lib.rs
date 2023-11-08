@@ -79,11 +79,11 @@
 //! This could be done by using `passed_objects` as the amount of objects that were passed so far.
 //! However, this requires to recalculate the beginning again and again, we can be more efficient than that.
 //!
-//! Instead, you should use [`GradualDifficultyAttributes`] and [`GradualPerformanceAttributes`]:
+//! Instead, you should use [`GradualDifficulty`] and [`GradualPerformance`]:
 //!
 //! ```no_run
 //! use rosu_pp::{
-//!     Beatmap, BeatmapExt, GradualPerformanceAttributes, ScoreState,
+//!     Beatmap, BeatmapExt, GradualPerformance, ScoreState,
 //!     taiko::TaikoScoreState,
 //! };
 //!
@@ -138,7 +138,7 @@
 //! // Instead of starting off with `BeatmapExt::gradual_performance` one could have
 //! // created the struct via `TaikoGradualPerformanceAttributes::new`.
 //! let mut gradual_performance = match gradual_performance {
-//!     GradualPerformanceAttributes::Taiko(gradual) => gradual,
+//!     GradualPerformance::Taiko(gradual) => gradual,
 //!     _ => panic!("the map was not taiko but {:?}", map.mode),
 //! };
 //!
@@ -201,7 +201,7 @@ pub use beatmap::{Beatmap, BeatmapExt, GameMode};
 #[cfg(feature = "gradual")]
 mod gradual;
 #[cfg(feature = "gradual")]
-pub use gradual::{GradualDifficultyAttributes, GradualPerformanceAttributes};
+pub use gradual::{GradualDifficulty, GradualPerformance};
 
 mod pp;
 pub use pp::{AnyPP, AttributeProvider, HitResultPriority};

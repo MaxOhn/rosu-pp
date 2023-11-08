@@ -75,7 +75,7 @@ impl<'map> AnyStars<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`AnyStars`] multiple times with different `passed_objects`, you should use
-    /// [`GradualDifficultyAttributes`](crate::GradualDifficultyAttributes).
+    /// [`GradualDifficultyAttributes`](crate::GradualDifficulty).
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {

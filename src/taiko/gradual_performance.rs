@@ -2,7 +2,7 @@
 
 use crate::{taiko::TaikoScoreState, Beatmap, TaikoPP};
 
-use super::{TaikoGradualDifficultyAttributes, TaikoPerformanceAttributes};
+use super::{TaikoGradualDifficulty, TaikoPerformanceAttributes};
 
 /// Gradually calculate the performance attributes of an osu!taiko map.
 ///
@@ -15,12 +15,12 @@ use super::{TaikoGradualDifficultyAttributes, TaikoPerformanceAttributes};
 /// hitresults as well as the maximum combo so far.
 ///
 /// If you only want to calculate difficulty attributes use
-/// [`TaikoGradualDifficultyAttributes`] instead.
+/// [`TaikoGradualDifficulty`] instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, taiko::{TaikoGradualPerformanceAttributes, TaikoScoreState}};
+/// use rosu_pp::{Beatmap, taiko::{TaikoGradualPerformance, TaikoScoreState}};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -28,7 +28,7 @@ use super::{TaikoGradualDifficultyAttributes, TaikoPerformanceAttributes};
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut gradual_perf = TaikoGradualPerformanceAttributes::new(&map, mods);
+/// let mut gradual_perf = TaikoGradualPerformance::new(&map, mods);
 /// let mut state = TaikoScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s
@@ -89,15 +89,15 @@ use super::{TaikoGradualDifficultyAttributes, TaikoPerformanceAttributes};
 /// assert!(gradual_perf.next(state).is_none());
 /// ```
 #[derive(Debug)]
-pub struct TaikoGradualPerformanceAttributes<'map> {
-    difficulty: TaikoGradualDifficultyAttributes,
+pub struct TaikoGradualPerformance<'map> {
+    difficulty: TaikoGradualDifficulty,
     performance: TaikoPP<'map>,
 }
 
-impl<'map> TaikoGradualPerformanceAttributes<'map> {
+impl<'map> TaikoGradualPerformance<'map> {
     /// Create a new gradual performance calculator for osu!taiko maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
-        let difficulty = TaikoGradualDifficultyAttributes::new(map, mods);
+        let difficulty = TaikoGradualDifficulty::new(map, mods);
         let performance = TaikoPP::new(map).mods(mods).passed_objects(0);
 
         Self {

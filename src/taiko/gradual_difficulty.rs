@@ -19,12 +19,12 @@ use super::{
 /// be processed and the [`TaikoDifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use
-/// [`TaikoGradualPerformanceAttributes`](crate::taiko::TaikoGradualPerformanceAttributes) instead.
+/// [`TaikoGradualPerformanceAttributes`](crate::taiko::TaikoGradualPerformance) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, taiko::TaikoGradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, taiko::TaikoGradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -32,7 +32,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = TaikoGradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = TaikoGradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -43,7 +43,7 @@ use super::{
 /// }
 /// ```
 #[derive(Debug)]
-pub struct TaikoGradualDifficultyAttributes {
+pub struct TaikoGradualDifficulty {
     pub(crate) idx: usize,
     attrs: TaikoDifficultyAttributes,
     diff_objects: IntoIter<Rc<RefCell<TaikoDifficultyObject>>>,
@@ -53,7 +53,7 @@ pub struct TaikoGradualDifficultyAttributes {
     is_convert: bool,
 }
 
-impl TaikoGradualDifficultyAttributes {
+impl TaikoGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!taiko maps.
     pub fn new(map: &Beatmap, mods: u32) -> Self {
         let map = map.convert_mode(GameMode::Taiko);
@@ -139,7 +139,7 @@ impl TaikoGradualDifficultyAttributes {
     }
 }
 
-impl Iterator for TaikoGradualDifficultyAttributes {
+impl Iterator for TaikoGradualDifficulty {
     type Item = TaikoDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -236,7 +236,7 @@ impl Iterator for TaikoGradualDifficultyAttributes {
     }
 }
 
-impl ExactSizeIterator for TaikoGradualDifficultyAttributes {
+impl ExactSizeIterator for TaikoGradualDifficulty {
     #[inline]
     fn len(&self) -> usize {
         self.total_hits - self.idx

@@ -1,10 +1,10 @@
 #![cfg(feature = "gradual")]
 
 use crate::{
-    catch::{CatchGradualDifficultyAttributes, CatchGradualPerformanceAttributes},
-    mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes},
-    osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes},
-    taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes},
+    catch::{CatchGradualDifficulty, CatchGradualPerformance},
+    mania::{ManiaGradualDifficulty, ManiaGradualPerformance},
+    osu::{OsuGradualDifficulty, OsuGradualPerformance},
+    taiko::{TaikoGradualDifficulty, TaikoGradualPerformance},
     Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes, ScoreState,
 };
 
@@ -14,12 +14,12 @@ use crate::{
 /// On every call of [`Iterator::next`](Iterator::next), the map's next hit object will
 /// be processed and the [`DifficultyAttributes`] will be updated and returned.
 ///
-/// If you want to calculate performance attributes, use [`GradualPerformanceAttributes`] instead.
+/// If you want to calculate performance attributes, use [`GradualPerformance`] instead.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use rosu_pp::{Beatmap, GradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, GradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -27,7 +27,7 @@ use crate::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = GradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = GradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -38,51 +38,51 @@ use crate::{
 /// }
 /// ```
 #[derive(Debug)]
-pub enum GradualDifficultyAttributes<'map> {
+pub enum GradualDifficulty<'map> {
     /// Gradual osu!standard difficulty attributes.
-    Osu(OsuGradualDifficultyAttributes),
+    Osu(OsuGradualDifficulty),
     /// Gradual osu!taiko difficulty attributes.
-    Taiko(TaikoGradualDifficultyAttributes),
+    Taiko(TaikoGradualDifficulty),
     /// Gradual osu!catch difficulty attributes.
-    Catch(CatchGradualDifficultyAttributes<'map>),
+    Catch(CatchGradualDifficulty<'map>),
     /// Gradual osu!mania difficulty attributes.
-    Mania(ManiaGradualDifficultyAttributes<'map>),
+    Mania(ManiaGradualDifficulty<'map>),
 }
 
-impl<'map> GradualDifficultyAttributes<'map> {
+impl<'map> GradualDifficulty<'map> {
     // FIXME: converted catch maps will always count as osu!std since their mode is not modified
     /// Create a new gradual difficulty calculator for maps of any mode.
     #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
-            GameMode::Osu => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
-            GameMode::Taiko => Self::Taiko(TaikoGradualDifficultyAttributes::new(map, mods)),
-            GameMode::Catch => Self::Catch(CatchGradualDifficultyAttributes::new(map, mods)),
-            GameMode::Mania => Self::Mania(ManiaGradualDifficultyAttributes::new(map, mods)),
+            GameMode::Osu => Self::Osu(OsuGradualDifficulty::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualDifficulty::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchGradualDifficulty::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaGradualDifficulty::new(map, mods)),
         }
     }
 }
 
-impl Iterator for GradualDifficultyAttributes<'_> {
+impl Iterator for GradualDifficulty<'_> {
     type Item = DifficultyAttributes;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            GradualDifficultyAttributes::Osu(o) => o.next().map(DifficultyAttributes::Osu),
-            GradualDifficultyAttributes::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
-            GradualDifficultyAttributes::Catch(f) => f.next().map(DifficultyAttributes::Catch),
-            GradualDifficultyAttributes::Mania(m) => m.next().map(DifficultyAttributes::Mania),
+            GradualDifficulty::Osu(o) => o.next().map(DifficultyAttributes::Osu),
+            GradualDifficulty::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
+            GradualDifficulty::Catch(f) => f.next().map(DifficultyAttributes::Catch),
+            GradualDifficulty::Mania(m) => m.next().map(DifficultyAttributes::Mania),
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            GradualDifficultyAttributes::Osu(o) => o.size_hint(),
-            GradualDifficultyAttributes::Taiko(t) => t.size_hint(),
-            GradualDifficultyAttributes::Catch(f) => f.size_hint(),
-            GradualDifficultyAttributes::Mania(m) => m.size_hint(),
+            GradualDifficulty::Osu(o) => o.size_hint(),
+            GradualDifficulty::Taiko(t) => t.size_hint(),
+            GradualDifficulty::Catch(f) => f.size_hint(),
+            GradualDifficulty::Mania(m) => m.size_hint(),
         }
     }
 }
@@ -101,15 +101,15 @@ impl Iterator for GradualDifficultyAttributes<'_> {
 ///
 /// Alternatively, you can match on the map's mode yourself and use the gradual
 /// performance attribute struct for the corresponding mode, i.e.
-/// [`OsuGradualPerformanceAttributes`], [`TaikoGradualPerformanceAttributes`],
-/// [`CatchGradualPerformanceAttributes`], or [`ManiaGradualPerformanceAttributes`].
+/// [`OsuGradualPerformance`], [`TaikoGradualPerformance`],
+/// [`CatchGradualPerformance`], or [`ManiaGradualPerformance`].
 ///
-/// If you only want to calculate difficulty attributes use [`GradualDifficultyAttributes`] instead.
+/// If you only want to calculate difficulty attributes use [`GradualDifficulty`] instead.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use rosu_pp::{Beatmap, GradualPerformanceAttributes, ScoreState};
+/// use rosu_pp::{Beatmap, GradualPerformance, ScoreState};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -117,7 +117,7 @@ impl Iterator for GradualDifficultyAttributes<'_> {
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut gradual_perf = GradualPerformanceAttributes::new(&map, mods);
+/// let mut gradual_perf = GradualPerformance::new(&map, mods);
 /// let mut state = ScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s
@@ -169,27 +169,27 @@ impl Iterator for GradualDifficultyAttributes<'_> {
 /// ```
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
-pub enum GradualPerformanceAttributes<'map> {
+pub enum GradualPerformance<'map> {
     /// Gradual osu!standard performance attributes.
-    Osu(OsuGradualPerformanceAttributes<'map>),
+    Osu(OsuGradualPerformance<'map>),
     /// Gradual osu!taiko performance attributes.
-    Taiko(TaikoGradualPerformanceAttributes<'map>),
+    Taiko(TaikoGradualPerformance<'map>),
     /// Gradual osu!catch performance attributes.
-    Catch(CatchGradualPerformanceAttributes<'map>),
+    Catch(CatchGradualPerformance<'map>),
     /// Gradual osu!mania performance attributes.
-    Mania(ManiaGradualPerformanceAttributes<'map>),
+    Mania(ManiaGradualPerformance<'map>),
 }
 
-impl<'map> GradualPerformanceAttributes<'map> {
+impl<'map> GradualPerformance<'map> {
     // FIXME: converted catch maps will always count as osu!std since their mode is not modified
     /// Create a new gradual performance calculator for maps of any mode.
     #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
-            GameMode::Osu => Self::Osu(OsuGradualPerformanceAttributes::new(map, mods)),
-            GameMode::Taiko => Self::Taiko(TaikoGradualPerformanceAttributes::new(map, mods)),
-            GameMode::Catch => Self::Catch(CatchGradualPerformanceAttributes::new(map, mods)),
-            GameMode::Mania => Self::Mania(ManiaGradualPerformanceAttributes::new(map, mods)),
+            GameMode::Osu => Self::Osu(OsuGradualPerformance::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualPerformance::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchGradualPerformance::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaGradualPerformance::new(map, mods)),
         }
     }
 
@@ -213,10 +213,10 @@ impl<'map> GradualPerformanceAttributes<'map> {
     #[inline]
     pub fn nth(&mut self, state: ScoreState, n: usize) -> Option<PerformanceAttributes> {
         match self {
-            GradualPerformanceAttributes::Osu(o) => o.nth(state.into(), n).map(From::from),
-            GradualPerformanceAttributes::Taiko(t) => t.nth(state.into(), n).map(From::from),
-            GradualPerformanceAttributes::Catch(f) => f.nth(state.into(), n).map(From::from),
-            GradualPerformanceAttributes::Mania(m) => m.nth(state.into(), n).map(From::from),
+            GradualPerformance::Osu(o) => o.nth(state.into(), n).map(From::from),
+            GradualPerformance::Taiko(t) => t.nth(state.into(), n).map(From::from),
+            GradualPerformance::Catch(f) => f.nth(state.into(), n).map(From::from),
+            GradualPerformance::Mania(m) => m.nth(state.into(), n).map(From::from),
         }
     }
 }

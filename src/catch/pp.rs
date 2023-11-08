@@ -141,7 +141,7 @@ impl<'map> CatchPP<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`CatchPP`] multiple times with different `passed_objects`, you should use
-    /// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformanceAttributes).
+    /// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformance).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects.replace(passed_objects);

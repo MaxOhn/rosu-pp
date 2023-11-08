@@ -2,7 +2,7 @@
 
 use crate::{Beatmap, ManiaPP};
 
-use super::{ManiaGradualDifficultyAttributes, ManiaPerformanceAttributes, ManiaScoreState};
+use super::{ManiaGradualDifficulty, ManiaPerformanceAttributes, ManiaScoreState};
 
 /// Gradually calculate the performance attributes of an osu!mania map.
 ///
@@ -15,12 +15,12 @@ use super::{ManiaGradualDifficultyAttributes, ManiaPerformanceAttributes, ManiaS
 /// Be sure the given score is adjusted with respect to mods.
 ///
 /// If you only want to calculate difficulty attributes use
-/// [`ManiaGradualDifficultyAttributes`] instead.
+/// [`ManiaGradualDifficulty`] instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, mania::{ManiaGradualPerformanceAttributes, ManiaScoreState}};
+/// use rosu_pp::{Beatmap, mania::{ManiaGradualPerformance, ManiaScoreState}};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -28,7 +28,7 @@ use super::{ManiaGradualDifficultyAttributes, ManiaPerformanceAttributes, ManiaS
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut gradual_perf = ManiaGradualPerformanceAttributes::new(&map, mods);
+/// let mut gradual_perf = ManiaGradualPerformance::new(&map, mods);
 /// let mut state = ManiaScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 320s
@@ -77,15 +77,15 @@ use super::{ManiaGradualDifficultyAttributes, ManiaPerformanceAttributes, ManiaS
 /// assert!(gradual_perf.next(state).is_none());
 /// ```
 #[derive(Clone, Debug)]
-pub struct ManiaGradualPerformanceAttributes<'map> {
-    difficulty: ManiaGradualDifficultyAttributes<'map>,
+pub struct ManiaGradualPerformance<'map> {
+    difficulty: ManiaGradualDifficulty<'map>,
     performance: ManiaPP<'map>,
 }
 
-impl<'map> ManiaGradualPerformanceAttributes<'map> {
+impl<'map> ManiaGradualPerformance<'map> {
     /// Create a new gradual performance calculator for osu!mania maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
-        let difficulty = ManiaGradualDifficultyAttributes::new(map, mods);
+        let difficulty = ManiaGradualDifficulty::new(map, mods);
         let performance = ManiaPP::new(map).mods(mods).passed_objects(0);
 
         Self {

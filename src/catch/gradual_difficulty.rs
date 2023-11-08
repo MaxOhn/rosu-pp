@@ -24,12 +24,12 @@ use super::{
 /// Note that it does not return attributes after a tiny droplet. Only for fruits and droplets.
 ///
 /// If you want to calculate performance attributes, use
-/// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformanceAttributes) instead.
+/// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformance) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, catch::CatchGradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, catch::CatchGradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -37,7 +37,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = CatchGradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = CatchGradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -48,7 +48,7 @@ use super::{
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct CatchGradualDifficultyAttributes<'map> {
+pub struct CatchGradualDifficulty<'map> {
     pub(crate) idx: usize,
     clock_rate: f64,
     hit_objects: CatchObjectIter<'map>,
@@ -61,7 +61,7 @@ pub struct CatchGradualDifficultyAttributes<'map> {
     strain_peak_buf: Vec<f64>,
 }
 
-impl<'map> CatchGradualDifficultyAttributes<'map> {
+impl<'map> CatchGradualDifficulty<'map> {
     /// Create a new difficulty attributes iterator for osu!catch maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         let map_attributes = map.attributes().mods(mods).build();
@@ -105,7 +105,7 @@ impl<'map> CatchGradualDifficultyAttributes<'map> {
     }
 }
 
-impl Iterator for CatchGradualDifficultyAttributes<'_> {
+impl Iterator for CatchGradualDifficulty<'_> {
     type Item = CatchDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {

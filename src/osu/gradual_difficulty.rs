@@ -26,12 +26,12 @@ use super::{
 /// be processed and the [`OsuDifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use
-/// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformanceAttributes) instead.
+/// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformance) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, osu::OsuGradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, osu::OsuGradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -39,7 +39,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = OsuGradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = OsuGradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -49,7 +49,7 @@ use super::{
 ///     // ...
 /// }
 /// ```
-pub struct OsuGradualDifficultyAttributes {
+pub struct OsuGradualDifficulty {
     pub(crate) idx: usize,
     mods: u32,
     attrs: OsuDifficultyAttributes,
@@ -61,7 +61,7 @@ pub struct OsuGradualDifficultyAttributes {
     skills: Skills,
 }
 
-impl Debug for OsuGradualDifficultyAttributes {
+impl Debug for OsuGradualDifficulty {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("OsuGradualDifficultyAttributes")
             .field("idx", &self.idx)
@@ -72,7 +72,7 @@ impl Debug for OsuGradualDifficultyAttributes {
     }
 }
 
-impl OsuGradualDifficultyAttributes {
+impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
     pub fn new(map: &Beatmap, mods: u32) -> Self {
         let clock_rate = mods.clock_rate();
@@ -216,7 +216,7 @@ fn extend_lifetime(
     unsafe { mem::transmute(diff_objects) }
 }
 
-impl Iterator for OsuGradualDifficultyAttributes {
+impl Iterator for OsuGradualDifficulty {
     type Item = OsuDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -330,7 +330,7 @@ impl Iterator for OsuGradualDifficultyAttributes {
     }
 }
 
-impl ExactSizeIterator for OsuGradualDifficultyAttributes {
+impl ExactSizeIterator for OsuGradualDifficulty {
     #[inline]
     fn len(&self) -> usize {
         self.diff_objects.len() + 1 - self.idx

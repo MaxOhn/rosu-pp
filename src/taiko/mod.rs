@@ -17,8 +17,7 @@ pub use self::{pp::*, score_state::TaikoScoreState, taiko_object::TaikoObjectPub
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::TaikoGradualDifficultyAttributes,
-    gradual_performance::TaikoGradualPerformanceAttributes,
+    gradual_difficulty::TaikoGradualDifficulty, gradual_performance::TaikoGradualPerformance,
 };
 
 pub(crate) use self::taiko_object::IntoTaikoObjectIter;
@@ -92,7 +91,7 @@ impl<'map> TaikoStars<'map> {
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
     /// using [`TaikoStars`] multiple times with different `passed_objects`, you should use
-    /// [`TaikoGradualDifficultyAttributes`](crate::taiko::TaikoGradualDifficultyAttributes).
+    /// [`TaikoGradualDifficultyAttributes`](crate::taiko::TaikoGradualDifficulty).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

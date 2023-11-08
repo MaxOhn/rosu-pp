@@ -22,8 +22,7 @@ pub use self::{osu_object::*, pp::*, score_state::OsuScoreState};
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::OsuGradualDifficultyAttributes,
-    gradual_performance::OsuGradualPerformanceAttributes,
+    gradual_difficulty::OsuGradualDifficulty, gradual_performance::OsuGradualPerformance,
 };
 
 pub(crate) use self::scaling_factor::ScalingFactor;
@@ -102,7 +101,7 @@ impl<'map> OsuStars<'map> {
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
     /// using [`OsuStars`] multiple times with different `passed_objects`, you should use
-    /// [`OsuGradualDifficultyAttributes`].
+    /// [`OsuGradualDifficulty`].
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
@@ -326,8 +325,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
 
         let curr = curr.into_ref();
 
-        let diff_obj =
-            OsuDifficultyObject::new(curr, last.get_ref(), clock_rate, i, dists);
+        let diff_obj = OsuDifficultyObject::new(curr, last.get_ref(), clock_rate, i, dists);
         diff_objects.push(diff_obj);
 
         last_last = Some(last);

@@ -1,6 +1,6 @@
 use crate::{Beatmap, CatchPP};
 
-use super::{CatchGradualDifficultyAttributes, CatchPerformanceAttributes, CatchScoreState};
+use super::{CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState};
 
 /// Gradually calculate the performance attributes of an osu!catch map.
 ///
@@ -17,12 +17,12 @@ use super::{CatchGradualDifficultyAttributes, CatchPerformanceAttributes, CatchS
 /// to be processed. Only fruits and droplets do.
 ///
 /// If you only want to calculate difficulty attributes use
-/// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficultyAttributes) instead.
+/// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficulty) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, catch::{CatchGradualPerformanceAttributes, CatchScoreState}};
+/// use rosu_pp::{Beatmap, catch::{CatchGradualPerformance, CatchScoreState}};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -30,7 +30,7 @@ use super::{CatchGradualDifficultyAttributes, CatchPerformanceAttributes, CatchS
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut gradual_perf = CatchGradualPerformanceAttributes::new(&map, mods);
+/// let mut gradual_perf = CatchGradualPerformance::new(&map, mods);
 /// let mut state = CatchScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are only fruits
@@ -96,15 +96,15 @@ use super::{CatchGradualDifficultyAttributes, CatchPerformanceAttributes, CatchS
 /// assert!(gradual_perf.next(state).is_none());
 /// ```
 #[derive(Clone, Debug)]
-pub struct CatchGradualPerformanceAttributes<'map> {
-    difficulty: CatchGradualDifficultyAttributes<'map>,
+pub struct CatchGradualPerformance<'map> {
+    difficulty: CatchGradualDifficulty<'map>,
     performance: CatchPP<'map>,
 }
 
-impl<'map> CatchGradualPerformanceAttributes<'map> {
+impl<'map> CatchGradualPerformance<'map> {
     /// Create a new gradual performance calculator for osu!standard maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
-        let difficulty = CatchGradualDifficultyAttributes::new(map, mods);
+        let difficulty = CatchGradualDifficulty::new(map, mods);
         let performance = CatchPP::new(map).mods(mods).passed_objects(0);
 
         Self {

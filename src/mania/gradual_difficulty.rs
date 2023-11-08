@@ -23,12 +23,12 @@ use super::{
 /// be processed and the [`ManiaDifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use
-/// [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformanceAttributes) instead.
+/// [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformance) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, mania::ManiaGradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, mania::ManiaGradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -36,7 +36,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = ManiaGradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = ManiaGradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -47,7 +47,7 @@ use super::{
 /// }
 /// ```
 #[derive(Clone, Debug)]
-pub struct ManiaGradualDifficultyAttributes<'map> {
+pub struct ManiaGradualDifficulty<'map> {
     pub(crate) idx: usize,
     map: Cow<'map, Beatmap>,
     hit_window: f64,
@@ -57,7 +57,7 @@ pub struct ManiaGradualDifficultyAttributes<'map> {
     clock_rate: f64,
 }
 
-impl<'map> ManiaGradualDifficultyAttributes<'map> {
+impl<'map> ManiaGradualDifficulty<'map> {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         let map = map.convert_mode(GameMode::Mania);
@@ -148,7 +148,7 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
     }
 }
 
-impl Iterator for ManiaGradualDifficultyAttributes<'_> {
+impl Iterator for ManiaGradualDifficulty<'_> {
     type Item = ManiaDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -206,7 +206,7 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
     }
 }
 
-impl ExactSizeIterator for ManiaGradualDifficultyAttributes<'_> {
+impl ExactSizeIterator for ManiaGradualDifficulty<'_> {
     #[inline]
     fn len(&self) -> usize {
         self.diff_objects.len() + 1 - self.idx
