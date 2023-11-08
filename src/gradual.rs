@@ -1,3 +1,5 @@
+#![cfg(feature = "gradual")]
+
 use crate::{
     catch::{CatchGradualDifficultyAttributes, CatchGradualPerformanceAttributes},
     mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes},
@@ -8,12 +10,11 @@ use crate::{
 
 /// Gradually calculate the difficulty attributes on maps of any mode.
 ///
-/// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next hit object will
+/// Note that this struct implements [`Iterator`].
+/// On every call of [`Iterator::next`](Iterator::next), the map's next hit object will
 /// be processed and the [`DifficultyAttributes`] will be updated and returned.
 ///
-/// If you want to calculate performance attributes, use
-/// [`GradualPerformanceAttributes`](crate::GradualPerformanceAttributes) instead.
+/// If you want to calculate performance attributes, use [`GradualPerformanceAttributes`] instead.
 ///
 /// # Example
 ///
@@ -49,6 +50,7 @@ pub enum GradualDifficultyAttributes<'map> {
 }
 
 impl<'map> GradualDifficultyAttributes<'map> {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
     /// Create a new gradual difficulty calculator for maps of any mode.
     #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
@@ -87,11 +89,10 @@ impl Iterator for GradualDifficultyAttributes<'_> {
 
 /// Gradually calculate the performance attributes on maps of any mode.
 ///
-/// After each hit object you can call
-/// [`process_next_object`](`GradualPerformanceAttributes::process_next_object`)
+/// After each hit object you can call [`next`](`GradualPerformanceAttributes::next`)
 /// and it will return the resulting current [`PerformanceAttributes`].
 /// To process multiple objects at once, use
-/// [`process_next_n_objects`](`GradualPerformanceAttributes::process_next_n_objects`) instead.
+/// [`nth`](`GradualPerformanceAttributes::nth`) instead.
 ///
 /// Both methods require a [`ScoreState`] that contains the current hitresults
 /// as well as the maximum combo so far or just the current score for osu!mania.
@@ -100,13 +101,10 @@ impl Iterator for GradualDifficultyAttributes<'_> {
 ///
 /// Alternatively, you can match on the map's mode yourself and use the gradual
 /// performance attribute struct for the corresponding mode, i.e.
-/// [`OsuGradualPerformanceAttributes`],
-/// [`TaikoGradualPerformanceAttributes`],
-/// [`CatchGradualPerformanceAttributes`], or
-/// [`ManiaGradualPerformanceAttributes`].
+/// [`OsuGradualPerformanceAttributes`], [`TaikoGradualPerformanceAttributes`],
+/// [`CatchGradualPerformanceAttributes`], or [`ManiaGradualPerformanceAttributes`].
 ///
-/// If you only want to calculate difficulty attributes use
-/// [`GradualDifficultyAttributes`](crate::GradualDifficultyAttributes) instead.
+/// If you only want to calculate difficulty attributes use [`GradualDifficultyAttributes`] instead.
 ///
 /// # Example
 ///
@@ -122,62 +120,52 @@ impl Iterator for GradualDifficultyAttributes<'_> {
 /// let mut gradual_perf = GradualPerformanceAttributes::new(&map, mods);
 /// let mut state = ScoreState::new(); // empty state, everything is on 0.
 ///
-/// // The first 10 hitresults are 300s and increase the score by 123 each.
+/// // The first 10 hitresults are 300s
 /// for _ in 0..10 {
 ///     state.n300 += 1;
 ///     state.max_combo += 1;
 ///
-///     # /*
-///     let performance = gradual_perf.process_next_object(state.clone()).unwrap();
-///     println!("PP: {}", performance.pp);
-///     # */
-///     # let _ = gradual_perf.process_next_object(state.clone());
+///     let performance = gradual_perf.next(state.clone()).unwrap();
+///     println!("PP: {}", performance.pp());
 /// }
 ///
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
 /// state.n_misses += 1;
-/// # /*
-/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
-/// # */
-/// # let _ = gradual_perf.process_next_object(state.clone());
+///
+/// let performance = gradual_perf.next(state.clone()).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // The next 10 objects will be a mixture of 300s, 100s, and 50s.
 /// // Notice how all 10 objects will be processed in one go.
 /// state.n300 += 2;
 /// state.n100 += 7;
 /// state.n50 += 1;
-/// // Don't forget state.n_katu
-/// # /*
-/// let performance = gradual_perf.process_next_n_objects(state.clone(), 10).unwrap();
-/// println!("PP: {}", performance.pp);
-/// # */
-/// # let _ = gradual_perf.process_next_n_objects(state.clone(), 10);
+///
+/// // The `nth` method takes a zero-based value.
+/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
-/// # /*
-/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
-/// # */
-/// # let _ = gradual_perf.process_next_object(state.clone());
+///
+/// let performance = gradual_perf.next(state.clone()).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // Skip to the end
 /// # /*
 /// state.max_combo = ...
 /// state.n300 = ...
 /// ...
-/// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
-/// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state.clone(), usize::MAX);
+/// let final_performance = gradual_perf.last(state.clone()).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // Once the final performance was calculated,
 /// // attempting to process further objects will return `None`.
-/// assert!(gradual_perf.process_next_object(state).is_none());
+/// assert!(gradual_perf.next(state).is_none());
 /// ```
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
@@ -193,6 +181,7 @@ pub enum GradualPerformanceAttributes<'map> {
 }
 
 impl<'map> GradualPerformanceAttributes<'map> {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
     /// Create a new gradual performance calculator for maps of any mode.
     #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
@@ -207,35 +196,27 @@ impl<'map> GradualPerformanceAttributes<'map> {
     /// Process the next hit object and calculate the
     /// performance attributes for the resulting score.
     #[inline]
-    pub fn process_next_object(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
-        self.process_next_n_objects(state, 1)
+    pub fn next(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, 0)
     }
 
-    /// Same as [`process_next_object`](`GradualPerformanceAttributes::process_next_object`)
-    /// but instead of processing only one object it process `n` many.
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    pub fn last(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
     ///
-    /// If `n` is 0 it will be considered as 1.
-    /// If there are still objects to be processed but `n` is larger than the amount
-    /// of remaining objects, `n` will be considered as the amount of remaining objects.
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
     #[inline]
-    pub fn process_next_n_objects(
-        &mut self,
-        state: ScoreState,
-        n: usize,
-    ) -> Option<PerformanceAttributes> {
+    pub fn nth(&mut self, state: ScoreState, n: usize) -> Option<PerformanceAttributes> {
         match self {
-            GradualPerformanceAttributes::Osu(o) => {
-                o.nth(state.into(), n).map(PerformanceAttributes::Osu)
-            }
-            GradualPerformanceAttributes::Taiko(t) => t
-                .nth(state.into(), n)
-                .map(PerformanceAttributes::Taiko),
-            GradualPerformanceAttributes::Catch(f) => f
-                .nth(state.into(), n)
-                .map(PerformanceAttributes::Catch),
-            GradualPerformanceAttributes::Mania(m) => m
-                .nth(state.into(), n)
-                .map(PerformanceAttributes::Mania),
+            GradualPerformanceAttributes::Osu(o) => o.nth(state.into(), n).map(From::from),
+            GradualPerformanceAttributes::Taiko(t) => t.nth(state.into(), n).map(From::from),
+            GradualPerformanceAttributes::Catch(f) => f.nth(state.into(), n).map(From::from),
+            GradualPerformanceAttributes::Mania(m) => m.nth(state.into(), n).map(From::from),
         }
     }
 }
