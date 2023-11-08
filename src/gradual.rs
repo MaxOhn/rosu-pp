@@ -11,7 +11,7 @@ use crate::{
 /// Gradually calculate the difficulty attributes on maps of any mode.
 ///
 /// Note that this struct implements [`Iterator`].
-/// On every call of [`Iterator::next`](Iterator::next), the map's next hit object will
+/// On every call of [`Iterator::next`], the map's next hit object will
 /// be processed and the [`DifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use [`GradualPerformance`] instead.
@@ -89,10 +89,9 @@ impl Iterator for GradualDifficulty<'_> {
 
 /// Gradually calculate the performance attributes on maps of any mode.
 ///
-/// After each hit object you can call [`next`](`GradualPerformanceAttributes::next`)
+/// After each hit object you can call [`next`](`GradualPerformance::next`)
 /// and it will return the resulting current [`PerformanceAttributes`].
-/// To process multiple objects at once, use
-/// [`nth`](`GradualPerformanceAttributes::nth`) instead.
+/// To process multiple objects at once, use [`nth`](`GradualPerformance::nth`) instead.
 ///
 /// Both methods require a [`ScoreState`] that contains the current hitresults
 /// as well as the maximum combo so far or just the current score for osu!mania.
@@ -100,9 +99,8 @@ impl Iterator for GradualDifficulty<'_> {
 /// and should be updated properly.
 ///
 /// Alternatively, you can match on the map's mode yourself and use the gradual
-/// performance attribute struct for the corresponding mode, i.e.
-/// [`OsuGradualPerformance`], [`TaikoGradualPerformance`],
-/// [`CatchGradualPerformance`], or [`ManiaGradualPerformance`].
+/// performance attribute struct for the corresponding mode, i.e. [`OsuGradualPerformance`],
+/// [`TaikoGradualPerformance`], [`CatchGradualPerformance`], or [`ManiaGradualPerformance`].
 ///
 /// If you only want to calculate difficulty attributes use [`GradualDifficulty`] instead.
 ///

@@ -6,10 +6,9 @@ use super::{ManiaGradualDifficulty, ManiaPerformanceAttributes, ManiaScoreState}
 
 /// Gradually calculate the performance attributes of an osu!mania map.
 ///
-/// After each hit object you can call [`next`](`ManiaGradualPerformanceAttributes::next`)
+/// After each hit object you can call [`next`](`ManiaGradualPerformance::next`)
 /// and it will return the resulting current [`ManiaPerformanceAttributes`].
-/// To process multiple objects at once, use
-/// [`nth`](`ManiaGradualPerformanceAttributes::nth`) instead.
+/// To process multiple objects at once, use [`nth`](`ManiaGradualPerformance::nth`) instead.
 ///
 /// Both methods require a play's current score so far.
 /// Be sure the given score is adjusted with respect to mods.

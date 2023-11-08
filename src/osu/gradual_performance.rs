@@ -6,10 +6,9 @@ use super::{OsuGradualDifficulty, OsuPerformanceAttributes, OsuScoreState};
 
 /// Gradually calculate the performance attributes of an osu!standard map.
 ///
-/// After each hit object you can call [`next`](`OsuGradualPerformanceAttributes::next`)
+/// After each hit object you can call [`next`](`OsuGradualPerformance::next`)
 /// and it will return the resulting current [`OsuPerformanceAttributes`].
-/// To process multiple objects at once, use
-/// [`nth`](`OsuGradualPerformanceAttributes::nth`) instead.
+/// To process multiple objects at once, use [`nth`](`OsuGradualPerformance::nth`) instead.
 ///
 /// Both methods require an [`OsuScoreState`] that contains the current
 /// hitresults as well as the maximum combo so far.

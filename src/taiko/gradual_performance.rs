@@ -6,10 +6,9 @@ use super::{TaikoGradualDifficulty, TaikoPerformanceAttributes};
 
 /// Gradually calculate the performance attributes of an osu!taiko map.
 ///
-/// After each hit object you can call [`next`](`TaikoGradualPerformanceAttributes::next`)
+/// After each hit object you can call [`next`](`TaikoGradualPerformance::next`)
 /// and it will return the resulting current [`TaikoPerformanceAttributes`].
-/// To process multiple objects at once, use
-/// [`nth`](`TaikoGradualPerformanceAttributes::nth`) instead.
+/// To process multiple objects at once, use [`nth`](`TaikoGradualPerformance::nth`) instead.
 ///
 /// Both methods require a [`TaikoScoreState`] that contains the current
 /// hitresults as well as the maximum combo so far.

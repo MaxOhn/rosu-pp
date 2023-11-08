@@ -1,7 +1,5 @@
 /// Aggregation for a score's current state i.e. what was the
 /// maximum combo so far and what are the current hitresults.
-///
-/// This struct is used for [`CatchGradualPerformanceAttributes`].
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CatchScoreState {
     /// Maximum combo that the score has had so far.

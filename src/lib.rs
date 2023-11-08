@@ -168,7 +168,7 @@
 //! | `async_std` | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
 //!
 
-#![cfg_attr(docsrs, feature(doc_cfg), deny(broken_intra_doc_links))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(
     clippy::all,
     nonstandard_style,
@@ -176,7 +176,8 @@
     unused,
     warnings,
     missing_debug_implementations,
-    missing_docs
+    missing_docs,
+    rustdoc::broken_intra_doc_links
 )]
 
 /// Everything about osu!catch.

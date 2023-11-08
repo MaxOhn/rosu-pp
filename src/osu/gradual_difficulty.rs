@@ -21,12 +21,12 @@ use super::{
 
 /// Gradually calculate the difficulty attributes of an osu!standard map.
 ///
-/// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next hit object will
+/// Note that this struct implements [`Iterator`].
+/// On every call of [`Iterator::next`], the map's next hit object will
 /// be processed and the [`OsuDifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use
-/// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformance) instead.
+/// [`OsuGradualPerformance`](crate::osu::OsuGradualPerformance) instead.
 ///
 /// # Example
 ///

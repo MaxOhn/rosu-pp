@@ -919,7 +919,7 @@ impl Beatmap {
     /// Parse a beatmap from a `.osu` file.
     ///
     /// As argument you can give anything that implements [`std::io::Read`].
-    /// You'll likely want to pass (a reference of) a [`File`](std::fs::File)
+    /// You'll likely want to pass (a reference of) a [`File`]
     /// or the file's content as a slice of bytes (`&[u8]`).
     pub fn parse<R: Read>(input: R) -> ParseResult<Self> {
         parse_body!(input)
@@ -967,7 +967,7 @@ impl Beatmap {
 
     /// Pass the path to a `.osu` file.
     ///
-    /// Useful when you don't want to create the [`File`](std::fs::File) manually.
+    /// Useful when you don't want to create the [`File`] manually.
     /// If you have the file lying around already though (and plan on re-using it),
     /// passing `&file` to [`parse`](Beatmap::parse) should be preferred.
     pub fn from_path<P: AsRef<Path>>(path: P) -> ParseResult<Self> {

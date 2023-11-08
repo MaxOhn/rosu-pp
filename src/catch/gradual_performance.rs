@@ -4,11 +4,9 @@ use super::{CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState}
 
 /// Gradually calculate the performance attributes of an osu!catch map.
 ///
-/// After each hit object you can call
-/// [`next`](`CatchGradualPerformanceAttributes::next`)
+/// After each hit object you can call [`next`](`CatchGradualPerformance::next`)
 /// and it will return the resulting current [`CatchPerformanceAttributes`].
-/// To process multiple objects at once, use
-/// [`nth`](`CatchGradualPerformanceAttributes::nth`) instead.
+/// To process multiple objects at once, use [`nth`](`CatchGradualPerformance::nth`) instead.
 ///
 /// Both methods require a [`CatchScoreState`] that contains the current
 /// hitresults as well as the maximum combo so far.
@@ -16,8 +14,7 @@ use super::{CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState}
 /// Note that neither hits nor misses of tiny droplets require
 /// to be processed. Only fruits and droplets do.
 ///
-/// If you only want to calculate difficulty attributes use
-/// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficulty) instead.
+/// If you only want to calculate difficulty attributes use [`CatchGradualDifficulty`] instead.
 ///
 /// # Example
 ///

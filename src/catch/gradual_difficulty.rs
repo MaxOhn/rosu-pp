@@ -17,14 +17,14 @@ use super::{
 
 /// Gradually calculate the difficulty attributes of an osu!catch map.
 ///
-/// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next fruit or droplet
+/// Note that this struct implements [`Iterator`].
+/// On every call of [`Iterator::next`], the map's next fruit or droplet
 /// will be processed and the [`CatchDifficultyAttributes`] will be updated and returned.
 ///
 /// Note that it does not return attributes after a tiny droplet. Only for fruits and droplets.
 ///
 /// If you want to calculate performance attributes, use
-/// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformance) instead.
+/// [`CatchGradualPerformance`](crate::catch::CatchGradualPerformance) instead.
 ///
 /// # Example
 ///

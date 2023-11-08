@@ -19,11 +19,11 @@ use super::{
 /// Gradually calculate the difficulty attributes of an osu!mania map.
 ///
 /// Note that this struct implements [`Iterator`].
-/// On every call of [`Iterator::next`](Iterator::next), the map's next hit object will
+/// On every call of [`Iterator::next`], the map's next hit object will
 /// be processed and the [`ManiaDifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use
-/// [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformance) instead.
+/// [`ManiaGradualPerformance`](crate::mania::ManiaGradualPerformance) instead.
 ///
 /// # Example
 ///
