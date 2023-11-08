@@ -1,3 +1,5 @@
+#![cfg(feature = "gradual")]
+
 use std::borrow::Cow;
 
 use crate::{
@@ -16,8 +18,8 @@ use super::{
 
 /// Gradually calculate the difficulty attributes of an osu!mania map.
 ///
-/// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next hit object will
+/// Note that this struct implements [`Iterator`].
+/// On every call of [`Iterator::next`](Iterator::next), the map's next hit object will
 /// be processed and the [`ManiaDifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use
@@ -50,7 +52,7 @@ pub struct ManiaGradualDifficultyAttributes<'map> {
     map: Cow<'map, Beatmap>,
     hit_window: f64,
     strain: Strain,
-    diff_objects: Vec<ManiaDifficultyObject>,
+    diff_objects: Box<[ManiaDifficultyObject]>,
     curr_combo: usize,
     clock_rate: f64,
 }
@@ -71,24 +73,34 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
             .hit_windows();
 
         let mut params = ObjectParameters::new(map.as_ref());
+        let mut curr_combo = 0;
         let mut hit_objects = map.hit_objects.iter();
 
         let first = match hit_objects.next() {
-            Some(h) => ManiaObject::new(h, total_columns, &mut params),
+            Some(h) => {
+                let hit_object = ManiaObject::new(h, total_columns, &mut params);
+
+                Self::increment_combo_raw(
+                    h,
+                    hit_object.start_time,
+                    hit_object.end_time,
+                    &mut curr_combo,
+                );
+
+                hit_object
+            }
             None => {
                 return Self {
                     idx: 0,
                     map,
                     hit_window,
                     strain,
-                    diff_objects: Vec::new(),
+                    diff_objects: Box::from([]),
                     curr_combo: 0,
                     clock_rate,
                 }
             }
         };
-
-        let curr_combo = params.max_combo;
 
         let diff_objects_iter = hit_objects.enumerate().scan(first, |last, (i, h)| {
             let base = ManiaObject::new(h, total_columns, &mut params);
@@ -98,15 +110,17 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
             Some(diff_object)
         });
 
-        let mut diff_objects = Vec::with_capacity(map.hit_objects.len().saturating_sub(1));
+        let mut diff_objects = Vec::with_capacity(map.hit_objects.len() - 1);
         diff_objects.extend(diff_objects_iter);
+
+        debug_assert_eq!(diff_objects.len(), diff_objects.capacity());
 
         Self {
             idx: 0,
             map,
             hit_window,
             strain,
-            diff_objects,
+            diff_objects: diff_objects.into_boxed_slice(),
             curr_combo,
             clock_rate,
         }
@@ -118,15 +132,18 @@ impl<'map> ManiaGradualDifficultyAttributes<'map> {
         curr_combo: &mut usize,
         clock_rate: f64,
     ) {
-        match &h.kind {
-            HitObjectKind::Circle => *curr_combo += 1,
-            _ => {
-                let start_time = diff_obj.start_time * clock_rate;
-                let end_time = diff_obj.end_time * clock_rate;
-                let duration = end_time - start_time;
+        Self::increment_combo_raw(
+            h,
+            diff_obj.start_time * clock_rate,
+            diff_obj.end_time * clock_rate,
+            curr_combo,
+        );
+    }
 
-                *curr_combo += 1 + (duration / 100.0) as usize;
-            }
+    fn increment_combo_raw(h: &HitObject, start_time: f64, end_time: f64, curr_combo: &mut usize) {
+        match h.kind {
+            HitObjectKind::Circle => *curr_combo += 1,
+            _ => *curr_combo += 1 + ((end_time - start_time) / 100.0) as usize,
         }
     }
 }
@@ -135,14 +152,20 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
     type Item = ManiaDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.diff_objects.get(self.idx)?;
-        self.idx += 1;
+        // The first difficulty object belongs to the second note since each difficulty
+        // object requires the current and the last note. Hence, if we're still on the first
+        // object, we don't have a difficulty object yet and just skip processing.
+        if self.idx > 0 {
+            let curr = self.diff_objects.get(self.idx - 1)?;
+            self.strain.process(curr, &self.diff_objects);
 
-        if let Some(h) = self.map.hit_objects.get(self.idx) {
+            let h = &self.map.hit_objects[self.idx];
             Self::increment_combo(h, curr, &mut self.curr_combo, self.clock_rate);
+        } else if self.map.hit_objects.is_empty() {
+            return None;
         }
 
-        self.strain.process(curr, &self.diff_objects);
+        self.idx += 1;
 
         Some(ManiaDifficultyAttributes {
             stars: self.strain.clone().difficulty_value() * STAR_SCALING_FACTOR,
@@ -159,17 +182,24 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let skip = n.min(self.len()).saturating_sub(1);
+        let skip_iter = self
+            .diff_objects
+            .iter()
+            .zip(self.map.hit_objects.iter().skip(1))
+            .skip(self.idx.saturating_sub(1));
 
-        for _ in 0..skip {
-            let curr = self.diff_objects.get(self.idx)?;
+        let mut take = n.min(self.len().saturating_sub(1));
+
+        // The first note has no difficulty object
+        if self.idx == 0 && take > 0 {
+            take -= 1;
             self.idx += 1;
+        }
 
-            if let Some(h) = self.map.hit_objects.get(self.idx) {
-                Self::increment_combo(h, curr, &mut self.curr_combo, self.clock_rate);
-            }
-
+        for (curr, h) in skip_iter.take(take) {
+            Self::increment_combo(h, curr, &mut self.curr_combo, self.clock_rate);
             self.strain.process(curr, &self.diff_objects);
+            self.idx += 1;
         }
 
         self.next()
@@ -179,6 +209,6 @@ impl Iterator for ManiaGradualDifficultyAttributes<'_> {
 impl ExactSizeIterator for ManiaGradualDifficultyAttributes<'_> {
     #[inline]
     fn len(&self) -> usize {
-        self.diff_objects.len() - self.idx
+        self.diff_objects.len() + 1 - self.idx
     }
 }

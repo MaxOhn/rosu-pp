@@ -1,15 +1,25 @@
 mod difficulty_object;
-mod gradual_difficulty;
-mod gradual_performance;
 mod mania_object;
 mod pp;
+mod score_state;
 mod skills;
+
+#[cfg(feature = "gradual")]
+mod gradual_difficulty;
+#[cfg(feature = "gradual")]
+mod gradual_performance;
 
 use std::borrow::Cow;
 
 use crate::{beatmap::BeatmapHitWindows, util::FloatExt, Beatmap, GameMode, Mods, OsuStars};
 
-pub use self::{gradual_difficulty::*, gradual_performance::*, mania_object::ManiaObject, pp::*};
+pub use self::{mania_object::ManiaObject, pp::*, score_state::ManiaScoreState};
+
+#[cfg(feature = "gradual")]
+pub use self::{
+    gradual_difficulty::ManiaGradualDifficultyAttributes,
+    gradual_performance::ManiaGradualPerformanceAttributes,
+};
 
 pub(crate) use self::mania_object::ObjectParameters;
 
