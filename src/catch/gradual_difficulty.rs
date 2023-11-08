@@ -153,11 +153,15 @@ impl Iterator for CatchGradualDifficultyAttributes<'_> {
             *last = self.movement.curr_section_peak;
         }
 
-        let mut attributes = self.hit_objects.attributes();
-        attributes.stars =
+        let stars =
             Movement::difficulty_value(&mut self.strain_peak_buf).sqrt() * STAR_SCALING_FACTOR;
 
-        Some(attributes)
+        let attrs = CatchDifficultyAttributes {
+            stars,
+            ..self.hit_objects.attributes()
+        };
+
+        Some(attrs)
     }
 }
 
@@ -196,16 +200,22 @@ impl Iterator for CatchObjectIter<'_> {
     type Item = CatchObject;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(h) = self.last_object.as_mut().and_then(Iterator::next) {
-            return Some(h);
+        if let opt @ Some(_) = self.last_object.as_mut().and_then(Iterator::next) {
+            return opt;
         }
 
-        for h in &mut self.hit_objects {
-            if let Some(h) = FruitOrJuice::new(h, &mut self.params) {
-                return self.last_object.insert(h).next();
-            }
-        }
+        self.hit_objects
+            .find_map(|h| FruitOrJuice::new(h, &mut self.params))
+            .and_then(|h| self.last_object.insert(h).next())
+    }
 
-        None
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let min = self
+            .last_object
+            .as_ref()
+            .map(ExactSizeIterator::len)
+            .unwrap_or(0);
+
+        (min, None)
     }
 }

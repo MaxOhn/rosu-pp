@@ -231,7 +231,7 @@ impl<'map> GradualPerformanceAttributes<'map> {
                 .nth(state.into(), n)
                 .map(PerformanceAttributes::Taiko),
             GradualPerformanceAttributes::Catch(f) => f
-                .process_next_n_objects(state.into(), n)
+                .nth(state.into(), n)
                 .map(PerformanceAttributes::Catch),
             GradualPerformanceAttributes::Mania(m) => m
                 .nth(state.into(), n)
