@@ -85,6 +85,16 @@ impl Iterator for GradualDifficulty<'_> {
             GradualDifficulty::Mania(m) => m.size_hint(),
         }
     }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        match self {
+            Self::Osu(o) => o.nth(n).map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.nth(n).map(DifficultyAttributes::Taiko),
+            Self::Catch(c) => c.nth(n).map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.nth(n).map(DifficultyAttributes::Mania),
+        }
+    }
 }
 
 /// Gradually calculate the performance attributes on maps of any mode.
