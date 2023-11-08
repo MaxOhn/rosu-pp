@@ -114,6 +114,11 @@ impl<'map> OsuGradualPerformanceAttributes<'map> {
         self.nth(state, 0)
     }
 
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    pub fn last(&mut self, state: OsuScoreState) -> Option<OsuPerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
     /// Process everything up the the next `n`th hit object and calculate the performance
     /// attributes for the resulting score state.
     ///
