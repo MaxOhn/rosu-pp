@@ -113,6 +113,7 @@ impl Iterator for CatchOwnedGradualDifficulty {
 
 #[derive(Clone, Debug)]
 struct CatchObjectIter {
+    hit_object_idx: usize,
     last_object: Option<FruitOrJuice>,
     params: FruitParams,
 }
@@ -129,6 +130,7 @@ impl CatchObjectIter {
         };
 
         Self {
+            hit_object_idx: 0,
             last_object: None,
             params,
         }
@@ -138,21 +140,25 @@ impl CatchObjectIter {
         self.params.attributes.clone()
     }
 
-    fn next(&mut self, map: &Beatmap, idx: usize) -> Option<CatchObject> {
+    fn next(&mut self, map: &Beatmap) -> Option<CatchObject> {
         if let opt @ Some(_) = self.last_object.as_mut().and_then(Iterator::next) {
             return opt;
         }
 
-        map.hit_objects[idx..]
+        map.hit_objects[self.hit_object_idx..]
             .iter()
-            .find_map(|h| FruitOrJuice::new(h, &mut self.params, map))
+            .find_map(|h| {
+                self.hit_object_idx += 1;
+
+                FruitOrJuice::new(h, &mut self.params, map)
+            })
             .and_then(|h| self.last_object.insert(h).next())
     }
 }
 
 #[derive(Clone, Debug)]
 struct CatchGradualDifficultyInner {
-    pub(crate) idx: usize,
+    idx: usize,
     clock_rate: f64,
     hit_objects: CatchObjectIter,
     movement: Movement,
@@ -207,7 +213,7 @@ impl CatchGradualDifficultyInner {
     }
 
     fn next(&mut self, map: &Beatmap) -> Option<CatchDifficultyAttributes> {
-        let curr = self.hit_objects.next(map, self.idx)?;
+        let curr = self.hit_objects.next(map)?;
         self.idx += 1;
 
         if self.idx == 1 {
