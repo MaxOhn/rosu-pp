@@ -54,17 +54,22 @@ pub struct OsuGradualDifficulty {
     pub(crate) idx: usize,
     mods: u32,
     attrs: OsuDifficultyAttributes,
-    // Lifetimes actually depend on `_osu_objects` so this type is self-referential.
-    // This field must be treated with great caution, moving `_osu_objects` will immediately
+    skills: Skills,
+    // Lifetimes actually depend on `osu_objects` so this type is self-referential.
+    // This field must be treated with great caution, moving `osu_objects` will immediately
     // invalidate `diff_objects`.
     diff_objects: Vec<OsuDifficultyObject<'static>>,
     osu_objects: OsuObjects,
-    skills: Skills,
+    // Additional safety measure that this type can't be cloned which would invalidate
+    // `diff_objects`.
+    _not_clonable: NotClonable,
 }
+
+struct NotClonable;
 
 impl Debug for OsuGradualDifficulty {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("OsuGradualDifficultyAttributes")
+        f.debug_struct("OsuGradualDifficulty")
             .field("idx", &self.idx)
             .field("attrs", &self.attrs)
             .field("diff_objects", &self.diff_objects)
@@ -135,9 +140,10 @@ impl OsuGradualDifficulty {
                 idx: 0,
                 mods,
                 attrs,
+                skills,
                 diff_objects: Vec::new(),
                 osu_objects: OsuObjects::new(Vec::new()),
-                skills,
+                _not_clonable: NotClonable,
             };
         };
 
@@ -189,9 +195,10 @@ impl OsuGradualDifficulty {
             idx: 0,
             mods,
             attrs,
+            skills,
             diff_objects: extend_lifetime(diff_objects),
             osu_objects,
-            skills,
+            _not_clonable: NotClonable,
         }
     }
 
