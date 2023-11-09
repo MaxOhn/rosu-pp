@@ -14,7 +14,10 @@ jobs:
 
     strategy:
       matrix:
-        feature: [default, async_tokio, async_std]
+        feature:
+          - default,gradual
+          - async_tokio
+          - async_std
 
     steps:
       - name: Checkout project
@@ -35,7 +38,10 @@ jobs:
 
     strategy:
       matrix:
-        feature: [default, async_tokio, async_std]
+        feature:
+          - default,gradual
+          - async_tokio
+          - async_std
 
     steps:
       - name: Checkout project
