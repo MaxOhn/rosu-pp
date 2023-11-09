@@ -11,7 +11,7 @@ description = "osu! difficulty and pp calculation for all modes"
 keywords = ["osu", "pp", "stars", "async"]
 
 [features]
-default = ["gradual"]
+default = []
 async_std = ["async-std"]
 async_tokio = ["tokio"]
 gradual = []
