@@ -138,3 +138,57 @@ impl<'map> OsuGradualPerformance<'map> {
         Some(performance)
     }
 }
+
+/// Gradually calculate the performance attributes of an osu!standard map.
+///
+/// Check [`OsuGradualPerformance`] for more information. This struct does the same
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Debug)]
+pub struct OsuOwnedGradualPerformance {
+    difficulty: OsuGradualDifficulty,
+    map: Beatmap,
+    mods: u32,
+}
+
+impl OsuOwnedGradualPerformance {
+    /// Create a new gradual performance calculator for osu!standard maps.
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        let difficulty = OsuGradualDifficulty::new(&map, mods);
+
+        Self {
+            difficulty,
+            map,
+            mods,
+        }
+    }
+
+    /// Process the next hit object and calculate the
+    /// performance attributes for the resulting score state.
+    pub fn next(&mut self, state: OsuScoreState) -> Option<OsuPerformanceAttributes> {
+        self.nth(state, 0)
+    }
+
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    pub fn last(&mut self, state: OsuScoreState) -> Option<OsuPerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
+    ///
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
+    pub fn nth(&mut self, state: OsuScoreState, n: usize) -> Option<OsuPerformanceAttributes> {
+        let difficulty = self.difficulty.nth(n)?;
+
+        let performance = OsuPP::new(&self.map)
+            .mods(self.mods)
+            .attributes(difficulty)
+            .state(state)
+            .passed_objects(self.difficulty.idx)
+            .calculate();
+
+        Some(performance)
+    }
+}

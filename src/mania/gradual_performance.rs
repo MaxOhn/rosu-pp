@@ -2,7 +2,10 @@
 
 use crate::{Beatmap, ManiaPP};
 
-use super::{ManiaGradualDifficulty, ManiaPerformanceAttributes, ManiaScoreState};
+use super::{
+    ManiaGradualDifficulty, ManiaOwnedGradualDifficulty, ManiaPerformanceAttributes,
+    ManiaScoreState,
+};
 
 /// Gradually calculate the performance attributes of an osu!mania map.
 ///
@@ -116,6 +119,55 @@ impl<'map> ManiaGradualPerformance<'map> {
         let performance = self
             .performance
             .clone()
+            .attributes(difficulty)
+            .state(state)
+            .passed_objects(self.difficulty.idx())
+            .calculate();
+
+        Some(performance)
+    }
+}
+
+/// Gradually calculate the performance attributes of an osu!mania map.
+///
+/// Check [`ManiaGradualPerformance`] for more information. This struct does the same
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Clone, Debug)]
+pub struct ManiaOwnedGradualPerformance {
+    difficulty: ManiaOwnedGradualDifficulty,
+    mods: u32,
+}
+
+impl ManiaOwnedGradualPerformance {
+    /// Create a new gradual performance calculator for osu!mania maps.
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        let difficulty = ManiaOwnedGradualDifficulty::new(map, mods);
+
+        Self { difficulty, mods }
+    }
+
+    /// Process the next hit object and calculate the
+    /// performance attributes for the resulting score.
+    pub fn next(&mut self, state: ManiaScoreState) -> Option<ManiaPerformanceAttributes> {
+        self.nth(state, 0)
+    }
+
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    pub fn last(&mut self, state: ManiaScoreState) -> Option<ManiaPerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
+    ///
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
+    pub fn nth(&mut self, state: ManiaScoreState, n: usize) -> Option<ManiaPerformanceAttributes> {
+        let difficulty = self.difficulty.nth(n)?;
+
+        let performance = ManiaPP::new(&self.difficulty.map)
+            .mods(self.mods)
             .attributes(difficulty)
             .state(state)
             .passed_objects(self.difficulty.idx())

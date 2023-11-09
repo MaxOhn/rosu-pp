@@ -18,7 +18,7 @@ pub use self::{catch_object::CatchObject, pp::*, score_state::CatchScoreState};
 #[cfg(feature = "gradual")]
 pub use self::{
     gradual_difficulty::{CatchGradualDifficulty, CatchOwnedGradualDifficulty},
-    gradual_performance::CatchGradualPerformance,
+    gradual_performance::{CatchGradualPerformance, CatchOwnedGradualPerformance},
 };
 
 pub(crate) use self::fruit_or_juice::{FruitOrJuice, FruitParams};

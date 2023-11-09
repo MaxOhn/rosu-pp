@@ -17,7 +17,8 @@ pub use self::{pp::*, score_state::TaikoScoreState, taiko_object::TaikoObjectPub
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::TaikoGradualDifficulty, gradual_performance::TaikoGradualPerformance,
+    gradual_difficulty::TaikoGradualDifficulty,
+    gradual_performance::{TaikoGradualPerformance, TaikoOwnedGradualPerformance},
 };
 
 pub(crate) use self::taiko_object::IntoTaikoObjectIter;

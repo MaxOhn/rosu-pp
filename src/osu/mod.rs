@@ -22,7 +22,8 @@ pub use self::{osu_object::*, pp::*, score_state::OsuScoreState};
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::OsuGradualDifficulty, gradual_performance::OsuGradualPerformance,
+    gradual_difficulty::OsuGradualDifficulty,
+    gradual_performance::{OsuGradualPerformance, OsuOwnedGradualPerformance},
 };
 
 pub(crate) use self::scaling_factor::ScalingFactor;

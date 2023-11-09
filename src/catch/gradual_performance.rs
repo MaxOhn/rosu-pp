@@ -1,6 +1,9 @@
 use crate::{Beatmap, CatchPP};
 
-use super::{CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState};
+use super::{
+    CatchGradualDifficulty, CatchOwnedGradualDifficulty, CatchPerformanceAttributes,
+    CatchScoreState,
+};
 
 /// Gradually calculate the performance attributes of an osu!catch map.
 ///
@@ -136,6 +139,58 @@ impl<'map> CatchGradualPerformance<'map> {
         let performance = self
             .performance
             .clone()
+            .attributes(difficulty)
+            .state(state)
+            .passed_objects(self.difficulty.idx())
+            .calculate();
+
+        Some(performance)
+    }
+}
+
+/// Gradually calculate the performance attributes of an osu!catch map.
+///
+/// Check [`CatchGradualPerformance`] for more information. This struct does the same
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Clone, Debug)]
+pub struct CatchOwnedGradualPerformance {
+    difficulty: CatchOwnedGradualDifficulty,
+    mods: u32,
+}
+
+impl CatchOwnedGradualPerformance {
+    /// Create a new gradual performance calculator for osu!standard maps.
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        let difficulty = CatchOwnedGradualDifficulty::new(map, mods);
+
+        Self { difficulty, mods }
+    }
+
+    /// Process the next hit object and calculate the
+    /// performance attributes for the resulting score state.
+    ///
+    /// Note that neither hits nor misses of tiny droplets require
+    /// to be processed. Only fruits and droplets do.
+    pub fn next(&mut self, state: CatchScoreState) -> Option<CatchPerformanceAttributes> {
+        self.nth(state, 0)
+    }
+
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    pub fn last(&mut self, state: CatchScoreState) -> Option<CatchPerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
+    ///
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
+    pub fn nth(&mut self, state: CatchScoreState, n: usize) -> Option<CatchPerformanceAttributes> {
+        let difficulty = self.difficulty.by_ref().take(n.saturating_add(1)).last()?;
+
+        let performance = CatchPP::new(&self.difficulty.map)
+            .mods(self.mods)
             .attributes(difficulty)
             .state(state)
             .passed_objects(self.difficulty.idx())

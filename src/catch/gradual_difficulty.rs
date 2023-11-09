@@ -79,11 +79,11 @@ impl Iterator for CatchGradualDifficulty<'_> {
 /// Gradually calculate the difficulty attributes of an osu!catch map.
 ///
 /// Check [`CatchGradualDifficulty`] for more information. This struct does the same
-/// but includes an up-front allocation to avoid being bound to a lifetime.
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
 #[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Clone, Debug)]
 pub struct CatchOwnedGradualDifficulty {
-    map: Box<Beatmap>,
+    pub(crate) map: Beatmap,
     inner: CatchGradualDifficultyInner,
 }
 
@@ -91,7 +91,6 @@ impl CatchOwnedGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!catch maps.
     pub fn new(map: Beatmap, mods: u32) -> Self {
         let inner = CatchGradualDifficultyInner::new(&map, mods);
-        let map = Box::new(map);
 
         Self { map, inner }
     }

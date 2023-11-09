@@ -97,27 +97,29 @@ impl ExactSizeIterator for ManiaGradualDifficulty<'_> {
 /// Gradually calculate the difficulty attributes of an osu!mania map.
 ///
 /// Check [`ManiaGradualDifficulty`] for more information. This struct does the same
-/// but includes an up-front clone to avoid being bound to a lifetime.
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
 #[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Clone, Debug)]
 pub struct ManiaOwnedGradualDifficulty {
-    hit_objects: Vec<HitObject>,
+    // Technically only `Beatmap::hit_objects` are required here but storing
+    // the full map lets us get away with not storing the map in `ManiaOwnedGradualPerformance`.
+    pub(crate) map: Beatmap,
     inner: ManiaGradualDifficultyInner,
 }
 
 impl ManiaOwnedGradualDifficulty {
     /// Create a new owned difficulty attributes iterator for osu!mania maps.
-    pub fn new(map: &Beatmap, mods: u32) -> Self {
-        let map = map.convert_mode(GameMode::Mania);
-        let is_convert = matches!(map, Cow::Owned(_));
-        let inner = ManiaGradualDifficultyInner::new(&map, is_convert, mods);
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        let converted_map = map.convert_mode(GameMode::Mania);
+        let is_convert = matches!(converted_map, Cow::Owned(_));
+        let inner = ManiaGradualDifficultyInner::new(&converted_map, is_convert, mods);
 
-        let hit_objects = match map {
-            Cow::Owned(map) => map.hit_objects,
-            Cow::Borrowed(map) => map.hit_objects.clone(),
+        let map = match converted_map {
+            Cow::Owned(map) => map,
+            Cow::Borrowed(_) => map,
         };
 
-        Self { hit_objects, inner }
+        Self { map, inner }
     }
 
     #[allow(unused)]
@@ -131,7 +133,7 @@ impl Iterator for ManiaOwnedGradualDifficulty {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next(&self.hit_objects)
+        self.inner.next(&self.map.hit_objects)
     }
 
     #[inline]
@@ -141,7 +143,7 @@ impl Iterator for ManiaOwnedGradualDifficulty {
 
     #[inline]
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.inner.nth(n, &self.hit_objects)
+        self.inner.nth(n, &self.map.hit_objects)
     }
 }
 

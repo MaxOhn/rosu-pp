@@ -1,6 +1,7 @@
 #![cfg(feature = "gradual")]
 
-use crate::{taiko::TaikoScoreState, Beatmap, TaikoPP};
+use std::borrow::Cow;
+use crate::{taiko::TaikoScoreState, Beatmap, TaikoPP, GameMode};
 
 use super::{TaikoGradualDifficulty, TaikoPerformanceAttributes};
 
@@ -128,6 +129,65 @@ impl<'map> TaikoGradualPerformance<'map> {
         let performance = self
             .performance
             .clone()
+            .attributes(difficulty)
+            .state(state)
+            .passed_objects(self.difficulty.idx)
+            .calculate();
+
+        Some(performance)
+    }
+}
+
+/// Gradually calculate the performance attributes of an osu!taiko map.
+///
+/// Check [`TaikoGradualPerformance`] for more information. This struct does the same
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Debug)]
+pub struct TaikoOwnedGradualPerformance {
+    difficulty: TaikoGradualDifficulty,
+    map: Beatmap,
+    mods: u32,
+}
+
+impl TaikoOwnedGradualPerformance {
+    /// Create a new gradual performance calculator for osu!taiko maps.
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        let map = match map.convert_mode(GameMode::Taiko) {
+            Cow::Owned(map) => map,
+            Cow::Borrowed(_) => map,
+        };
+
+        let difficulty = TaikoGradualDifficulty::new(&map, mods);
+
+        Self {
+            difficulty,
+            map,
+            mods,
+        }
+    }
+
+    /// Process the next hit object and calculate the
+    /// performance attributes for the resulting score.
+    pub fn next(&mut self, state: TaikoScoreState) -> Option<TaikoPerformanceAttributes> {
+        self.nth(state, 0)
+    }
+
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    pub fn last(&mut self, state: TaikoScoreState) -> Option<TaikoPerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
+    ///
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
+    pub fn nth(&mut self, state: TaikoScoreState, n: usize) -> Option<TaikoPerformanceAttributes> {
+        let difficulty = self.difficulty.nth(n)?;
+
+        let performance = TaikoPP::new(&self.map)
+            .mods(self.mods)
             .attributes(difficulty)
             .state(state)
             .passed_objects(self.difficulty.idx)
