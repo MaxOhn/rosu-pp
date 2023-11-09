@@ -1,9 +1,9 @@
-use std::{iter, slice::Iter};
+use std::iter;
 
 use crate::{
     catch::{difficulty_object::DifficultyObject, SECTION_LENGTH, STAR_SCALING_FACTOR},
     curve::CurveBuffers,
-    parse::{HitObject, Pos2},
+    parse::Pos2,
     Beatmap, Mods,
 };
 
@@ -50,9 +50,111 @@ use super::{
 #[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Clone, Debug)]
 pub struct CatchGradualDifficulty<'map> {
+    map: &'map Beatmap,
+    inner: CatchGradualDifficultyInner,
+}
+
+impl<'map> CatchGradualDifficulty<'map> {
+    /// Create a new difficulty attributes iterator for osu!catch maps.
+    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
+        let inner = CatchGradualDifficultyInner::new(map, mods);
+
+        Self { map, inner }
+    }
+
+    pub(crate) fn idx(&self) -> usize {
+        self.inner.idx
+    }
+}
+
+impl Iterator for CatchGradualDifficulty<'_> {
+    type Item = CatchDifficultyAttributes;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next(self.map)
+    }
+}
+
+/// Gradually calculate the difficulty attributes of an osu!catch map.
+///
+/// Check [`CatchGradualDifficulty`] for more information. This struct does the same
+/// but includes an up-front allocation to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Clone, Debug)]
+pub struct CatchOwnedGradualDifficulty {
+    map: Box<Beatmap>,
+    inner: CatchGradualDifficultyInner,
+}
+
+impl CatchOwnedGradualDifficulty {
+    /// Create a new difficulty attributes iterator for osu!catch maps.
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        let inner = CatchGradualDifficultyInner::new(&map, mods);
+        let map = Box::new(map);
+
+        Self { map, inner }
+    }
+
+    #[allow(unused)]
+    pub(crate) fn idx(&self) -> usize {
+        self.inner.idx
+    }
+}
+
+impl Iterator for CatchOwnedGradualDifficulty {
+    type Item = CatchDifficultyAttributes;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next(&self.map)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CatchObjectIter {
+    last_object: Option<FruitOrJuice>,
+    params: FruitParams,
+}
+
+impl CatchObjectIter {
+    fn new(mods: impl Mods, attributes: CatchDifficultyAttributes) -> Self {
+        let params = FruitParams {
+            attributes,
+            curve_bufs: CurveBuffers::default(),
+            last_pos: None,
+            last_time: 0.0,
+            ticks: Vec::new(),
+            with_hr: mods.hr(),
+        };
+
+        Self {
+            last_object: None,
+            params,
+        }
+    }
+
+    fn attributes(&self) -> CatchDifficultyAttributes {
+        self.params.attributes.clone()
+    }
+
+    fn next(&mut self, map: &Beatmap, idx: usize) -> Option<CatchObject> {
+        if let opt @ Some(_) = self.last_object.as_mut().and_then(Iterator::next) {
+            return opt;
+        }
+
+        map.hit_objects[idx..]
+            .iter()
+            .find_map(|h| FruitOrJuice::new(h, &mut self.params, map))
+            .and_then(|h| self.last_object.insert(h).next())
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CatchGradualDifficultyInner {
     pub(crate) idx: usize,
     clock_rate: f64,
-    hit_objects: CatchObjectIter<'map>,
+    hit_objects: CatchObjectIter,
     movement: Movement,
     prev: CatchObject,
     half_catcher_width: f64,
@@ -62,9 +164,8 @@ pub struct CatchGradualDifficulty<'map> {
     strain_peak_buf: Vec<f64>,
 }
 
-impl<'map> CatchGradualDifficulty<'map> {
-    /// Create a new difficulty attributes iterator for osu!catch maps.
-    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
+impl CatchGradualDifficultyInner {
+    fn new(map: &Beatmap, mods: u32) -> Self {
         let map_attributes = map.attributes().mods(mods).build();
 
         let attributes = CatchDifficultyAttributes {
@@ -72,7 +173,7 @@ impl<'map> CatchGradualDifficulty<'map> {
             ..Default::default()
         };
 
-        let hit_objects = CatchObjectIter::new(map, mods, attributes);
+        let hit_objects = CatchObjectIter::new(mods, attributes);
 
         let half_catcher_width =
             (calculate_catch_width(map_attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
@@ -104,13 +205,9 @@ impl<'map> CatchGradualDifficulty<'map> {
             &mut self.last_excess,
         );
     }
-}
 
-impl Iterator for CatchGradualDifficulty<'_> {
-    type Item = CatchDifficultyAttributes;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.hit_objects.next()?;
+    fn next(&mut self, map: &Beatmap) -> Option<CatchDifficultyAttributes> {
+        let curr = self.hit_objects.next(map, self.idx)?;
         self.idx += 1;
 
         if self.idx == 1 {
@@ -163,60 +260,5 @@ impl Iterator for CatchGradualDifficulty<'_> {
         };
 
         Some(attrs)
-    }
-}
-
-#[derive(Clone, Debug)]
-struct CatchObjectIter<'map> {
-    last_object: Option<FruitOrJuice>,
-    hit_objects: Iter<'map, HitObject>,
-    params: FruitParams<'map>,
-}
-
-impl<'map> CatchObjectIter<'map> {
-    fn new(map: &'map Beatmap, mods: impl Mods, attributes: CatchDifficultyAttributes) -> Self {
-        let params = FruitParams {
-            attributes,
-            curve_bufs: CurveBuffers::default(),
-            last_pos: None,
-            last_time: 0.0,
-            map,
-            ticks: Vec::new(),
-            with_hr: mods.hr(),
-        };
-
-        Self {
-            last_object: None,
-            hit_objects: map.hit_objects.iter(),
-            params,
-        }
-    }
-
-    fn attributes(&self) -> CatchDifficultyAttributes {
-        self.params.attributes.clone()
-    }
-}
-
-impl Iterator for CatchObjectIter<'_> {
-    type Item = CatchObject;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let opt @ Some(_) = self.last_object.as_mut().and_then(Iterator::next) {
-            return opt;
-        }
-
-        self.hit_objects
-            .find_map(|h| FruitOrJuice::new(h, &mut self.params))
-            .and_then(|h| self.last_object.insert(h).next())
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let min = self
-            .last_object
-            .as_ref()
-            .map(ExactSizeIterator::len)
-            .unwrap_or(0);
-
-        (min, None)
     }
 }

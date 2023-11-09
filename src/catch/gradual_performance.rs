@@ -138,7 +138,7 @@ impl<'map> CatchGradualPerformance<'map> {
             .clone()
             .attributes(difficulty)
             .state(state)
-            .passed_objects(self.difficulty.idx)
+            .passed_objects(self.difficulty.idx())
             .calculate();
 
         Some(performance)

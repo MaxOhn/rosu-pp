@@ -137,7 +137,6 @@ impl BeatmapExt for Beatmap {
             curve_bufs: CurveBuffers::default(),
             last_pos: None,
             last_time: 0.0,
-            map: self,
             ticks: Vec::new(),
             with_hr: mods.hr(),
         };
@@ -145,7 +144,7 @@ impl BeatmapExt for Beatmap {
         let mut hit_objects: Vec<_> = self
             .hit_objects
             .iter()
-            .filter_map(|h| FruitOrJuice::new(h, &mut params))
+            .filter_map(|h| FruitOrJuice::new(h, &mut params, self))
             .flatten()
             .collect();
 

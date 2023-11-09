@@ -17,7 +17,8 @@ pub use self::{catch_object::CatchObject, pp::*, score_state::CatchScoreState};
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::CatchGradualDifficulty, gradual_performance::CatchGradualPerformance,
+    gradual_difficulty::{CatchGradualDifficulty, CatchOwnedGradualDifficulty},
+    gradual_performance::CatchGradualPerformance,
 };
 
 pub(crate) use self::fruit_or_juice::{FruitOrJuice, FruitParams};
@@ -165,7 +166,6 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
         curve_bufs: CurveBuffers::default(),
         last_pos: None,
         last_time: 0.0,
-        map,
         ticks: Vec::new(), // using the same buffer for all sliders
         with_hr: mods.hr(),
     };
@@ -174,7 +174,7 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
     let mut hit_objects = map
         .hit_objects
         .iter()
-        .filter_map(|h| FruitOrJuice::new(h, &mut params))
+        .filter_map(|h| FruitOrJuice::new(h, &mut params, map))
         .flatten()
         .take(take);
 

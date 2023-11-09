@@ -29,7 +29,7 @@ impl CatchObject {
         }
     }
 
-    pub(crate) fn with_hr(mut self, params: &mut FruitParams<'_>) -> Self {
+    pub(crate) fn with_hr(mut self, params: &mut FruitParams) -> Self {
         let mut offset_pos = self.pos;
         let time_diff = self.time - params.last_time;
 
