@@ -17,7 +17,8 @@ pub use self::{mania_object::ManiaObject, pp::*, score_state::ManiaScoreState};
 
 #[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::ManiaGradualDifficulty, gradual_performance::ManiaGradualPerformance,
+    gradual_difficulty::{ManiaGradualDifficulty, ManiaOwnedGradualDifficulty},
+    gradual_performance::ManiaGradualPerformance,
 };
 
 pub(crate) use self::mania_object::ObjectParameters;
