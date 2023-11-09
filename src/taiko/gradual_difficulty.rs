@@ -42,6 +42,7 @@ use super::{
 ///     // ...
 /// }
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Debug)]
 pub struct TaikoGradualDifficulty {
     pub(crate) idx: usize,

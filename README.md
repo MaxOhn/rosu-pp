@@ -158,10 +158,11 @@ println!("PP after the first 11 objects: {}", curr_performance.pp());
 ### Features
 
 | Flag          | Description                                                                              |
-| ------------- | ---------------------------------------------------------------------------------------- |
+| ------------- |------------------------------------------------------------------------------------------|
 | `default`     | Beatmap parsing will be non-async                                                        |
 | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio)         |
 | `async_std`   | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
+| `gradual`     | Enable gradual difficulty and performance calculation                                    |
 
 ### Version
 

@@ -37,6 +37,7 @@ use crate::{
 ///     // ...
 /// }
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Debug)]
 pub enum GradualDifficulty<'map> {
     /// Gradual osu!standard difficulty attributes.
@@ -175,6 +176,7 @@ impl Iterator for GradualDifficulty<'_> {
 /// // attempting to process further objects will return `None`.
 /// assert!(gradual_perf.next(state).is_none());
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum GradualPerformance<'map> {

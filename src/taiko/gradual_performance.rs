@@ -87,6 +87,7 @@ use super::{TaikoGradualDifficulty, TaikoPerformanceAttributes};
 /// // attempting to process further objects will return `None`.
 /// assert!(gradual_perf.next(state).is_none());
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Debug)]
 pub struct TaikoGradualPerformance<'map> {
     difficulty: TaikoGradualDifficulty,

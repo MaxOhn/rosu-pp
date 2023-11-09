@@ -75,6 +75,7 @@ use super::{ManiaGradualDifficulty, ManiaPerformanceAttributes, ManiaScoreState}
 /// // attempting to process further objects will return `None`.
 /// assert!(gradual_perf.next(state).is_none());
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Clone, Debug)]
 pub struct ManiaGradualPerformance<'map> {
     difficulty: ManiaGradualDifficulty<'map>,

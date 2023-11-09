@@ -46,6 +46,7 @@ use super::{
 ///     // ...
 /// }
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Clone, Debug)]
 pub struct ManiaGradualDifficulty<'map> {
     pub(crate) idx: usize,

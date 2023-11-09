@@ -49,6 +49,7 @@ use super::{
 ///     // ...
 /// }
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 pub struct OsuGradualDifficulty {
     pub(crate) idx: usize,
     mods: u32,

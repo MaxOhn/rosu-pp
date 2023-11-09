@@ -22,3 +22,9 @@ tokio = { version = "1.2", optional = true, default-features = false, features =
 
 [dev-dependencies]
 tokio = { version = "1.2", default-features = false, features = ["fs", "rt"] }
+
+[package.metadata.docs.rs]
+# document these features
+features = ["gradual"]
+# defines the configuration attribute `docsrs`
+rustdoc-args = ["--cfg", "docsrs"]
