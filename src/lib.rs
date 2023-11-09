@@ -86,7 +86,9 @@
 //! println!("PP: {}", result.pp());
 //! ```
 //!
-#![cfg_attr(feature = "gradual", doc = r#"
+#![cfg_attr(
+    feature = "gradual",
+    doc = r#"
  ## Gradual calculation
  Sometimes you might want to calculate the difficulty of a map or performance of a score after each hit object.
  This could be done by using `passed_objects` as the amount of objects that were passed so far.
@@ -110,7 +112,7 @@
 
  let mods = 8 + 64; // HDDT
 
- // If you're only interested in the star rating or other difficulty value,
+ // If you're only interested in the star rating or other difficulty values,
  // use `GradualDifficulty`.
  let gradual_difficulty = GradualDifficulty::new(&map, mods);
 
@@ -171,7 +173,8 @@
  println!("PP after the first 11 objects: {}", curr_performance.pp());
  ```
 
-"#)]
+"#
+)]
 //! ## Features
 //!
 //! | Flag          | Description |
@@ -204,7 +207,9 @@ pub use beatmap::{Beatmap, BeatmapExt, GameMode};
 #[cfg(feature = "gradual")]
 mod gradual;
 #[cfg(feature = "gradual")]
-pub use gradual::{GradualDifficulty, GradualPerformance};
+pub use gradual::{
+    GradualDifficulty, GradualPerformance, OwnedGradualDifficulty, OwnedGradualPerformance,
+};
 
 mod pp;
 pub use pp::{AnyPP, AttributeProvider, HitResultPriority};

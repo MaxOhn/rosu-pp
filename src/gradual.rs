@@ -1,5 +1,9 @@
 #![cfg(feature = "gradual")]
 
+use crate::catch::{CatchOwnedGradualDifficulty, CatchOwnedGradualPerformance};
+use crate::mania::{ManiaOwnedGradualDifficulty, ManiaOwnedGradualPerformance};
+use crate::osu::OsuOwnedGradualPerformance;
+use crate::taiko::TaikoOwnedGradualPerformance;
 use crate::{
     catch::{CatchGradualDifficulty, CatchGradualPerformance},
     mania::{ManiaGradualDifficulty, ManiaGradualPerformance},
@@ -70,20 +74,86 @@ impl Iterator for GradualDifficulty<'_> {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            GradualDifficulty::Osu(o) => o.next().map(DifficultyAttributes::Osu),
-            GradualDifficulty::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
-            GradualDifficulty::Catch(f) => f.next().map(DifficultyAttributes::Catch),
-            GradualDifficulty::Mania(m) => m.next().map(DifficultyAttributes::Mania),
+            Self::Osu(o) => o.next().map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
+            Self::Catch(f) => f.next().map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.next().map(DifficultyAttributes::Mania),
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            GradualDifficulty::Osu(o) => o.size_hint(),
-            GradualDifficulty::Taiko(t) => t.size_hint(),
-            GradualDifficulty::Catch(f) => f.size_hint(),
-            GradualDifficulty::Mania(m) => m.size_hint(),
+            Self::Osu(o) => o.size_hint(),
+            Self::Taiko(t) => t.size_hint(),
+            Self::Catch(f) => f.size_hint(),
+            Self::Mania(m) => m.size_hint(),
+        }
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        match self {
+            Self::Osu(o) => o.nth(n).map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.nth(n).map(DifficultyAttributes::Taiko),
+            Self::Catch(c) => c.nth(n).map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.nth(n).map(DifficultyAttributes::Mania),
+        }
+    }
+}
+
+/// Gradually calculate the difficulty attributes on maps of any mode.
+///
+/// Check [`GradualDifficulty`] for more information. This type does the same
+/// but depending on the mode it might clone [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
+pub enum OwnedGradualDifficulty {
+    /// Gradual osu!standard difficulty attributes.
+    Osu(OsuGradualDifficulty),
+    /// Gradual osu!taiko difficulty attributes.
+    Taiko(TaikoGradualDifficulty),
+    /// Gradual osu!catch difficulty attributes.
+    Catch(CatchOwnedGradualDifficulty),
+    /// Gradual osu!mania difficulty attributes.
+    Mania(ManiaOwnedGradualDifficulty),
+}
+
+impl OwnedGradualDifficulty {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
+    /// Create a new gradual difficulty calculator for maps of any mode.
+    #[inline]
+    pub fn new(map: &Beatmap, mods: u32) -> Self {
+        match map.mode {
+            GameMode::Osu => Self::Osu(OsuGradualDifficulty::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualDifficulty::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchOwnedGradualDifficulty::new(map.to_owned(), mods)),
+            GameMode::Mania => Self::Mania(ManiaOwnedGradualDifficulty::new(map.to_owned(), mods)),
+        }
+    }
+}
+
+impl Iterator for OwnedGradualDifficulty {
+    type Item = DifficultyAttributes;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Osu(o) => o.next().map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
+            Self::Catch(f) => f.next().map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.next().map(DifficultyAttributes::Mania),
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::Osu(o) => o.size_hint(),
+            Self::Taiko(t) => t.size_hint(),
+            Self::Catch(f) => f.size_hint(),
+            Self::Mania(m) => m.size_hint(),
         }
     }
 
@@ -180,13 +250,13 @@ impl Iterator for GradualDifficulty<'_> {
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
 pub enum GradualPerformance<'map> {
-    /// Gradual osu!standard performance attributes.
+    /// Gradual osu!standard performance calculator.
     Osu(OsuGradualPerformance<'map>),
-    /// Gradual osu!taiko performance attributes.
+    /// Gradual osu!taiko performance calculator.
     Taiko(TaikoGradualPerformance<'map>),
-    /// Gradual osu!catch performance attributes.
+    /// Gradual osu!catch performance calculator.
     Catch(CatchGradualPerformance<'map>),
-    /// Gradual osu!mania performance attributes.
+    /// Gradual osu!mania performance calculator.
     Mania(ManiaGradualPerformance<'map>),
 }
 
@@ -211,6 +281,7 @@ impl<'map> GradualPerformance<'map> {
     }
 
     /// Process all remaining hit objects and calculate the final performance attributes.
+    #[inline]
     pub fn last(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
         self.nth(state, usize::MAX)
     }
@@ -223,10 +294,70 @@ impl<'map> GradualPerformance<'map> {
     #[inline]
     pub fn nth(&mut self, state: ScoreState, n: usize) -> Option<PerformanceAttributes> {
         match self {
-            GradualPerformance::Osu(o) => o.nth(state.into(), n).map(From::from),
-            GradualPerformance::Taiko(t) => t.nth(state.into(), n).map(From::from),
-            GradualPerformance::Catch(f) => f.nth(state.into(), n).map(From::from),
-            GradualPerformance::Mania(m) => m.nth(state.into(), n).map(From::from),
+            Self::Osu(o) => o.nth(state.into(), n).map(PerformanceAttributes::Osu),
+            Self::Taiko(t) => t.nth(state.into(), n).map(PerformanceAttributes::Taiko),
+            Self::Catch(f) => f.nth(state.into(), n).map(PerformanceAttributes::Catch),
+            Self::Mania(m) => m.nth(state.into(), n).map(PerformanceAttributes::Mania),
+        }
+    }
+}
+
+/// Gradually calculate the performance attributes on maps of any mode.
+///
+/// Check [`GradualPerformance`] for more information. This type does the same
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
+pub enum OwnedGradualPerformance {
+    /// Gradual osu!standard performance calculator.
+    Osu(OsuOwnedGradualPerformance),
+    /// Gradual osu!taiko performance calculator.
+    Taiko(TaikoOwnedGradualPerformance),
+    /// Gradual osu!catch performance calculator.
+    Catch(CatchOwnedGradualPerformance),
+    /// Gradual osu!mania performance calculator.
+    Mania(ManiaOwnedGradualPerformance),
+}
+
+impl OwnedGradualPerformance {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
+    /// Create a new gradual performance calculator for maps of any mode.
+    #[inline]
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        match map.mode {
+            GameMode::Osu => Self::Osu(OsuOwnedGradualPerformance::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoOwnedGradualPerformance::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchOwnedGradualPerformance::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaOwnedGradualPerformance::new(map, mods)),
+        }
+    }
+
+    /// Process the next hit object and calculate the
+    /// performance attributes for the resulting score.
+    #[inline]
+    pub fn next(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, 0)
+    }
+
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    #[inline]
+    pub fn last(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
+    ///
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
+    #[inline]
+    pub fn nth(&mut self, state: ScoreState, n: usize) -> Option<PerformanceAttributes> {
+        match self {
+            Self::Osu(o) => o.nth(state.into(), n).map(PerformanceAttributes::Osu),
+            Self::Taiko(t) => t.nth(state.into(), n).map(PerformanceAttributes::Taiko),
+            Self::Catch(f) => f.nth(state.into(), n).map(PerformanceAttributes::Catch),
+            Self::Mania(m) => m.nth(state.into(), n).map(PerformanceAttributes::Mania),
         }
     }
 }
