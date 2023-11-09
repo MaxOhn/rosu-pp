@@ -3,6 +3,18 @@
   - __Additions:__
     - Added `From<u8>` impl for `GameMode`
     - Added the method `AnyPP::hitresult_priority`
+  
+- __Breaking adjustments:__
+  - Overhauled gradual calculation. All relevant types are now gated behind the `gradual` feature which must be enabled.
+  - `*GradualDifficultyAttributes` has been renamed to `*GradualDifficulty` and `*GradualPerformanceAttributes`
+    has been renamed to `*GradualPerformance`.
+  - Types for gradual calculation that depend on a lifetime now have a counterpart without a lifetime that might clone
+    underlying data along the way. E.g. now there is `CatchOwnedGradualDifficulty` and `[Mode]OwnedGradualPerformance`.
+  - `OsuGradualDifficulty` and thus `GradualDifficulty` no longer implement `Clone`.
+  - Gradual performance calculators' method `process_next_object` has been renamed to `next` and `process_next_n_objects`
+    has been renamed to `nth`. They now also have the new method `last`.
+  - Similar to `Iterator::nth`, gradual performance calculators' method `nth` is now zero-indexed i.e. passing `n=0`
+    will process 1 object, `n=1` will process 2, and so on.
 
 # v0.9.5 (2023-09-06)
 
