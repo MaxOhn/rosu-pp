@@ -3,6 +3,7 @@ Cargo.lock
 output*
 /.idea
 /tests/custom.rs
+/.idea
 
 /pp-gen/.env
 /pp-gen/target
