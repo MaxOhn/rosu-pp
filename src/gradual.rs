@@ -168,66 +168,6 @@ impl Iterator for OwnedGradualDifficulty {
     }
 }
 
-impl From<OsuScoreState> for ScoreState {
-    #[inline]
-    fn from(state: OsuScoreState) -> Self {
-        Self {
-            max_combo: state.max_combo,
-            n_geki: 0,
-            n_katu: 0,
-            n300: state.n300,
-            n100: state.n100,
-            n50: state.n50,
-            n_misses: state.n_misses,
-        }
-    }
-}
-
-impl From<TaikoScoreState> for ScoreState {
-    #[inline]
-    fn from(state: TaikoScoreState) -> Self {
-        Self {
-            max_combo: state.max_combo,
-            n_geki: 0,
-            n_katu: 0,
-            n300: state.n300,
-            n100: state.n100,
-            n50: 0,
-            n_misses: state.n_misses,
-        }
-    }
-}
-
-impl From<CatchScoreState> for ScoreState {
-    #[inline]
-    fn from(state: CatchScoreState) -> Self {
-        Self {
-            max_combo: state.max_combo,
-            n_geki: 0,
-            n_katu: state.n_tiny_droplet_misses,
-            n300: state.n_fruits,
-            n100: state.n_droplets,
-            n50: state.n_tiny_droplets,
-            n_misses: state.n_misses,
-        }
-    }
-}
-
-impl From<ManiaScoreState> for ScoreState {
-    #[inline]
-    fn from(state: ManiaScoreState) -> Self {
-        Self {
-            max_combo: 0,
-            n_geki: state.n320,
-            n_katu: state.n200,
-            n300: state.n300,
-            n100: state.n100,
-            n50: state.n50,
-            n_misses: state.n_misses,
-        }
-    }
-}
-
 /// Gradually calculate the performance attributes on maps of any mode.
 ///
 /// After each hit object you can call [`next`](`GradualPerformance::next`)
