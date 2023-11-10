@@ -1,9 +1,9 @@
-use std::{iter, slice::Iter};
+use std::iter;
 
 use crate::{
     catch::{difficulty_object::DifficultyObject, SECTION_LENGTH, STAR_SCALING_FACTOR},
     curve::CurveBuffers,
-    parse::{HitObject, Pos2},
+    parse::Pos2,
     Beatmap, Mods,
 };
 
@@ -17,19 +17,19 @@ use super::{
 
 /// Gradually calculate the difficulty attributes of an osu!catch map.
 ///
-/// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next fruit or droplet
+/// Note that this struct implements [`Iterator`].
+/// On every call of [`Iterator::next`], the map's next fruit or droplet
 /// will be processed and the [`CatchDifficultyAttributes`] will be updated and returned.
 ///
 /// Note that it does not return attributes after a tiny droplet. Only for fruits and droplets.
 ///
 /// If you want to calculate performance attributes, use
-/// [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformanceAttributes) instead.
+/// [`CatchGradualPerformance`](crate::catch::CatchGradualPerformance) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, catch::CatchGradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, catch::CatchGradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -37,7 +37,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = CatchGradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = CatchGradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -47,11 +47,119 @@ use super::{
 ///     // ...
 /// }
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Clone, Debug)]
-pub struct CatchGradualDifficultyAttributes<'map> {
-    pub(crate) idx: usize,
+pub struct CatchGradualDifficulty<'map> {
+    map: &'map Beatmap,
+    inner: CatchGradualDifficultyInner,
+}
+
+impl<'map> CatchGradualDifficulty<'map> {
+    /// Create a new difficulty attributes iterator for osu!catch maps.
+    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
+        let inner = CatchGradualDifficultyInner::new(map, mods);
+
+        Self { map, inner }
+    }
+
+    pub(crate) fn idx(&self) -> usize {
+        self.inner.idx
+    }
+}
+
+impl Iterator for CatchGradualDifficulty<'_> {
+    type Item = CatchDifficultyAttributes;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next(self.map)
+    }
+}
+
+/// Gradually calculate the difficulty attributes of an osu!catch map.
+///
+/// Check [`CatchGradualDifficulty`] for more information. This struct does the same
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Clone, Debug)]
+pub struct CatchOwnedGradualDifficulty {
+    pub(crate) map: Beatmap,
+    inner: CatchGradualDifficultyInner,
+}
+
+impl CatchOwnedGradualDifficulty {
+    /// Create a new difficulty attributes iterator for osu!catch maps.
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        let inner = CatchGradualDifficultyInner::new(&map, mods);
+
+        Self { map, inner }
+    }
+
+    #[allow(unused)]
+    pub(crate) fn idx(&self) -> usize {
+        self.inner.idx
+    }
+}
+
+impl Iterator for CatchOwnedGradualDifficulty {
+    type Item = CatchDifficultyAttributes;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next(&self.map)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CatchObjectIter {
+    hit_object_idx: usize,
+    last_object: Option<FruitOrJuice>,
+    params: FruitParams,
+}
+
+impl CatchObjectIter {
+    fn new(mods: impl Mods, attributes: CatchDifficultyAttributes) -> Self {
+        let params = FruitParams {
+            attributes,
+            curve_bufs: CurveBuffers::default(),
+            last_pos: None,
+            last_time: 0.0,
+            ticks: Vec::new(),
+            with_hr: mods.hr(),
+        };
+
+        Self {
+            hit_object_idx: 0,
+            last_object: None,
+            params,
+        }
+    }
+
+    fn attributes(&self) -> CatchDifficultyAttributes {
+        self.params.attributes.clone()
+    }
+
+    fn next(&mut self, map: &Beatmap) -> Option<CatchObject> {
+        if let opt @ Some(_) = self.last_object.as_mut().and_then(Iterator::next) {
+            return opt;
+        }
+
+        map.hit_objects[self.hit_object_idx..]
+            .iter()
+            .find_map(|h| {
+                self.hit_object_idx += 1;
+
+                FruitOrJuice::new(h, &mut self.params, map)
+            })
+            .and_then(|h| self.last_object.insert(h).next())
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CatchGradualDifficultyInner {
+    idx: usize,
     clock_rate: f64,
-    hit_objects: CatchObjectIter<'map>,
+    hit_objects: CatchObjectIter,
     movement: Movement,
     prev: CatchObject,
     half_catcher_width: f64,
@@ -61,9 +169,8 @@ pub struct CatchGradualDifficultyAttributes<'map> {
     strain_peak_buf: Vec<f64>,
 }
 
-impl<'map> CatchGradualDifficultyAttributes<'map> {
-    /// Create a new difficulty attributes iterator for osu!catch maps.
-    pub fn new(map: &'map Beatmap, mods: u32) -> Self {
+impl CatchGradualDifficultyInner {
+    fn new(map: &Beatmap, mods: u32) -> Self {
         let map_attributes = map.attributes().mods(mods).build();
 
         let attributes = CatchDifficultyAttributes {
@@ -71,7 +178,7 @@ impl<'map> CatchGradualDifficultyAttributes<'map> {
             ..Default::default()
         };
 
-        let hit_objects = CatchObjectIter::new(map, mods, attributes);
+        let hit_objects = CatchObjectIter::new(mods, attributes);
 
         let half_catcher_width =
             (calculate_catch_width(map_attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
@@ -103,13 +210,9 @@ impl<'map> CatchGradualDifficultyAttributes<'map> {
             &mut self.last_excess,
         );
     }
-}
 
-impl Iterator for CatchGradualDifficultyAttributes<'_> {
-    type Item = CatchDifficultyAttributes;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.hit_objects.next()?;
+    fn next(&mut self, map: &Beatmap) -> Option<CatchDifficultyAttributes> {
+        let curr = self.hit_objects.next(map)?;
         self.idx += 1;
 
         if self.idx == 1 {
@@ -153,59 +256,14 @@ impl Iterator for CatchGradualDifficultyAttributes<'_> {
             *last = self.movement.curr_section_peak;
         }
 
-        let mut attributes = self.hit_objects.attributes();
-        attributes.stars =
+        let stars =
             Movement::difficulty_value(&mut self.strain_peak_buf).sqrt() * STAR_SCALING_FACTOR;
 
-        Some(attributes)
-    }
-}
-
-#[derive(Clone, Debug)]
-struct CatchObjectIter<'map> {
-    last_object: Option<FruitOrJuice>,
-    hit_objects: Iter<'map, HitObject>,
-    params: FruitParams<'map>,
-}
-
-impl<'map> CatchObjectIter<'map> {
-    fn new(map: &'map Beatmap, mods: impl Mods, attributes: CatchDifficultyAttributes) -> Self {
-        let params = FruitParams {
-            attributes,
-            curve_bufs: CurveBuffers::default(),
-            last_pos: None,
-            last_time: 0.0,
-            map,
-            ticks: Vec::new(),
-            with_hr: mods.hr(),
+        let attrs = CatchDifficultyAttributes {
+            stars,
+            ..self.hit_objects.attributes()
         };
 
-        Self {
-            last_object: None,
-            hit_objects: map.hit_objects.iter(),
-            params,
-        }
-    }
-
-    fn attributes(&self) -> CatchDifficultyAttributes {
-        self.params.attributes.clone()
-    }
-}
-
-impl Iterator for CatchObjectIter<'_> {
-    type Item = CatchObject;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(h) = self.last_object.as_mut().and_then(Iterator::next) {
-            return Some(h);
-        }
-
-        for h in &mut self.hit_objects {
-            if let Some(h) = FruitOrJuice::new(h, &mut self.params) {
-                return self.last_object.insert(h).next();
-            }
-        }
-
-        None
+        Some(attrs)
     }
 }

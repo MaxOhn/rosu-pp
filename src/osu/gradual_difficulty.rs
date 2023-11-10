@@ -1,33 +1,37 @@
+#![cfg(feature = "gradual")]
+
 use std::{
     fmt::{Debug, Formatter, Result as FmtResult},
     mem,
+    pin::Pin,
 };
 
-use crate::{curve::CurveBuffers, Beatmap, Mods};
+use crate::{Beatmap, Mods};
+
+use self::osu_objects::OsuObjects;
 
 use super::{
     difficulty_object::{Distances, OsuDifficultyObject},
-    old_stacking,
-    osu_object::{ObjectParameters, OsuObject, OsuObjectKind},
+    osu_object::{OsuObject, OsuObjectKind},
     scaling_factor::ScalingFactor,
     skills::{Skill, Skills},
-    stacking, OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, FADE_IN_DURATION_MULTIPLIER,
+    OsuDifficultyAttributes, DIFFICULTY_MULTIPLIER, FADE_IN_DURATION_MULTIPLIER,
     PERFORMANCE_BASE_MULTIPLIER, PREEMPT_MIN,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!standard map.
 ///
-/// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next hit object will
+/// Note that this struct implements [`Iterator`].
+/// On every call of [`Iterator::next`], the map's next hit object will
 /// be processed and the [`OsuDifficultyAttributes`] will be updated and returned.
 ///
 /// If you want to calculate performance attributes, use
-/// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformanceAttributes) instead.
+/// [`OsuGradualPerformance`](crate::osu::OsuGradualPerformance) instead.
 ///
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, osu::OsuGradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, osu::OsuGradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -35,7 +39,7 @@ use super::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = OsuGradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = OsuGradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -45,21 +49,27 @@ use super::{
 ///     // ...
 /// }
 /// ```
-#[derive(Clone)]
-pub struct OsuGradualDifficultyAttributes {
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+pub struct OsuGradualDifficulty {
     pub(crate) idx: usize,
     mods: u32,
     attrs: OsuDifficultyAttributes,
-    // Unused but `diff_objects`' lifetimes secretly depend on it
-    #[allow(unused)]
-    hit_objects: Vec<OsuObject>,
-    diff_objects: Vec<OsuDifficultyObject<'static>>,
     skills: Skills,
+    // Lifetimes actually depend on `osu_objects` so this type is self-referential.
+    // This field must be treated with great caution, moving `osu_objects` will immediately
+    // invalidate `diff_objects`.
+    diff_objects: Vec<OsuDifficultyObject<'static>>,
+    osu_objects: OsuObjects,
+    // Additional safety measure that this type can't be cloned which would invalidate
+    // `diff_objects`.
+    _not_clonable: NotClonable,
 }
 
-impl Debug for OsuGradualDifficultyAttributes {
+struct NotClonable;
+
+impl Debug for OsuGradualDifficulty {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("OsuGradualDifficultyAttributes")
+        f.debug_struct("OsuGradualDifficulty")
             .field("idx", &self.idx)
             .field("attrs", &self.attrs)
             .field("diff_objects", &self.diff_objects)
@@ -68,7 +78,7 @@ impl Debug for OsuGradualDifficultyAttributes {
     }
 }
 
-impl OsuGradualDifficultyAttributes {
+impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
     pub fn new(map: &Beatmap, mods: u32) -> Self {
         let clock_rate = mods.clock_rate();
@@ -99,37 +109,21 @@ impl OsuGradualDifficultyAttributes {
             ..Default::default()
         };
 
-        let mut params = ObjectParameters {
+        let hit_objects = crate::osu::create_osu_objects(
             map,
-            attrs: &mut attrs,
-            ticks: Vec::new(),
-            curve_bufs: CurveBuffers::default(),
-        };
+            &mut attrs,
+            &scaling_factor,
+            map.hit_objects.len(),
+            hr,
+            time_preempt,
+        );
 
-        let mut hit_objects: Vec<_> = map
-            .hit_objects
-            .iter()
-            .map(|h| OsuObject::new(h, &mut params))
-            .collect();
+        let mut osu_objects = OsuObjects::new(hit_objects);
 
         attrs.n_circles = 0;
         attrs.n_sliders = 0;
         attrs.n_spinners = 0;
         attrs.max_combo = 0;
-
-        let stack_threshold = time_preempt * map.stack_leniency as f64;
-
-        if map.version >= 6 {
-            stacking(&mut hit_objects, stack_threshold);
-        } else {
-            old_stacking(&mut hit_objects, stack_threshold);
-        }
-
-        let mut hit_objects_iter = hit_objects.iter_mut().map(|h| {
-            h.post_process(hr, &scaling_factor);
-
-            h
-        });
 
         let skills = Skills::new(
             mods,
@@ -139,59 +133,72 @@ impl OsuGradualDifficultyAttributes {
             hit_window,
         );
 
-        let last = match hit_objects_iter.next() {
-            Some(prev) => prev,
-            None => {
-                return Self {
-                    idx: 0,
-                    mods,
-                    attrs,
-                    hit_objects: Vec::new(),
-                    diff_objects: Vec::new(),
-                    skills,
-                }
-            }
+        let mut osu_objects_iter = osu_objects.iter_mut();
+
+        let Some(mut last) = osu_objects_iter.next() else {
+            return Self {
+                idx: 0,
+                mods,
+                attrs,
+                skills,
+                diff_objects: Vec::new(),
+                osu_objects: OsuObjects::new(Vec::new()),
+                _not_clonable: NotClonable,
+            };
         };
 
-        Self::increment_combo(last, &mut attrs);
+        Self::increment_combo(last.as_ref().get_ref(), &mut attrs);
 
         let mut last_last = None;
 
         // Prepare `lazy_travel_dist` and `lazy_end_pos` for `last` manually
-        Distances::compute_slider_cursor_pos(last, &scaling_factor);
+        let last_pos = last.pos();
+        let last_stack_offset = last.stack_offset;
 
-        let mut last = &*last;
+        if let OsuObjectKind::Slider(ref mut slider) = last.kind {
+            Distances::compute_slider_travel_dist(
+                last_pos,
+                last_stack_offset,
+                slider,
+                &scaling_factor,
+            );
+        }
+
+        let mut last = last.into_ref();
         let mut diff_objects = Vec::with_capacity(map.hit_objects.len().saturating_sub(2));
 
-        for (i, curr) in hit_objects_iter.enumerate() {
+        for (i, mut curr) in osu_objects_iter.enumerate() {
             let delta_time = (curr.start_time - last.start_time) / clock_rate;
 
             // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
             let strain_time = delta_time.max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
 
             let dists = Distances::new(
-                curr,
-                last,
-                last_last,
+                &mut curr,
+                last.get_ref(),
+                last_last.map(Pin::get_ref),
                 clock_rate,
                 strain_time,
                 &scaling_factor,
             );
 
-            let diff_obj = OsuDifficultyObject::new(curr, last, clock_rate, i, dists);
+            let curr = curr.into_ref();
+
+            let diff_obj = OsuDifficultyObject::new(curr, last.get_ref(), clock_rate, i, dists);
             diff_objects.push(diff_obj);
 
             last_last = Some(last);
-            last = &*curr;
+            last = curr;
         }
 
         Self {
             idx: 0,
             mods,
             attrs,
-            diff_objects: extend_lifetime(diff_objects),
-            hit_objects,
             skills,
+            diff_objects: extend_lifetime(diff_objects),
+            osu_objects,
+            _not_clonable: NotClonable,
         }
     }
 
@@ -212,21 +219,27 @@ impl OsuGradualDifficultyAttributes {
 fn extend_lifetime(
     diff_objects: Vec<OsuDifficultyObject<'_>>,
 ) -> Vec<OsuDifficultyObject<'static>> {
-    // SAFETY: Owned values of the references will be contained
-    // in the same struct and hence live just as long as this vec.
+    // SAFETY: Owned values of the references will be contained in the same struct (same lifetime).
+    // Also, the only mutable access wraps them in `Pin` to ensure that they won't move.
     unsafe { mem::transmute(diff_objects) }
 }
 
-impl Iterator for OsuGradualDifficultyAttributes {
+impl Iterator for OsuGradualDifficulty {
     type Item = OsuDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.diff_objects.get(self.idx)?;
+        // The first difficulty object belongs to the second note since each difficulty
+        // object requires the current and the last note. Hence, if we're still on the first
+        // object, we don't have a difficulty object yet and just skip processing.
+        if self.idx > 0 {
+            let curr = self.diff_objects.get(self.idx - 1)?;
+            self.skills.process(curr, &self.diff_objects);
+            Self::increment_combo(curr.base.get_ref(), &mut self.attrs);
+        } else if self.osu_objects.is_empty() {
+            return None;
+        }
+
         self.idx += 1;
-
-        self.skills.process(curr, &self.diff_objects);
-
-        Self::increment_combo(curr.base, &mut self.attrs);
 
         let Skills {
             mut aim,
@@ -284,13 +297,15 @@ impl Iterator for OsuGradualDifficultyAttributes {
             0.0
         };
 
-        let mut attrs = self.attrs.clone();
-        attrs.aim = aim_rating;
-        attrs.speed = speed_rating;
-        attrs.flashlight = flashlight_rating;
-        attrs.slider_factor = slider_factor;
-        attrs.stars = star_rating;
-        attrs.speed_note_count = speed_notes;
+        let attrs = OsuDifficultyAttributes {
+            aim: aim_rating,
+            speed: speed_rating,
+            flashlight: flashlight_rating,
+            slider_factor,
+            stars: star_rating,
+            speed_note_count: speed_notes,
+            ..self.attrs.clone()
+        };
 
         Some(attrs)
     }
@@ -303,24 +318,55 @@ impl Iterator for OsuGradualDifficultyAttributes {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let skip = n.min(self.len()).saturating_sub(1);
+        let skip_iter = self.diff_objects.iter().skip(self.idx.saturating_sub(1));
 
-        for _ in 0..skip {
-            let curr = self.diff_objects.get(self.idx)?;
+        let mut take = n.min(self.len().saturating_sub(1));
+
+        // The first note has no difficulty object
+        if self.idx == 0 && take > 0 {
+            take -= 1;
             self.idx += 1;
+        }
 
+        for curr in skip_iter.take(take) {
             self.skills.process(curr, &self.diff_objects);
-
-            Self::increment_combo(curr.base, &mut self.attrs);
+            Self::increment_combo(curr.base.get_ref(), &mut self.attrs);
+            self.idx += 1;
         }
 
         self.next()
     }
 }
 
-impl ExactSizeIterator for OsuGradualDifficultyAttributes {
+impl ExactSizeIterator for OsuGradualDifficulty {
     #[inline]
     fn len(&self) -> usize {
-        self.diff_objects.len() - self.idx
+        self.diff_objects.len() + 1 - self.idx
+    }
+}
+
+mod osu_objects {
+    use crate::osu::OsuObject;
+    use std::pin::Pin;
+
+    // Wrapper to ensure that the data will not be moved
+    pub(super) struct OsuObjects {
+        objects: Box<[OsuObject]>,
+    }
+
+    impl OsuObjects {
+        pub(super) fn new(objects: Vec<OsuObject>) -> Self {
+            Self {
+                objects: objects.into_boxed_slice(),
+            }
+        }
+
+        pub(super) fn is_empty(&self) -> bool {
+            self.objects.is_empty()
+        }
+
+        pub(super) fn iter_mut(&mut self) -> impl Iterator<Item = Pin<&mut OsuObject>> {
+            self.objects.iter_mut().map(Pin::new)
+        }
     }
 }

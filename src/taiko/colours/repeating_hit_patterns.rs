@@ -62,21 +62,21 @@ impl RepeatingHitPatterns {
     }
 
     pub(crate) fn find_repetition_interval(&mut self) {
-        let mut other = match self.prev.as_ref().and_then(Weak::upgrade) {
-            Some(prev) => prev,
-            None => return self.repetition_interval = Self::MAX_REPETITION_INTERVAL + 1,
+        let Some(mut other) = self.prev.as_ref().and_then(Weak::upgrade) else {
+            return self.repetition_interval = Self::MAX_REPETITION_INTERVAL + 1;
         };
 
         let mut interval = 1;
 
         while interval < Self::MAX_REPETITION_INTERVAL {
             if self.is_repetition_of(&other.borrow()) {
-                return self.repetition_interval = interval.min(Self::MAX_REPETITION_INTERVAL);
+                self.repetition_interval = interval.min(Self::MAX_REPETITION_INTERVAL);
+
+                return;
             }
 
-            let next = match other.borrow().prev.as_ref().and_then(Weak::upgrade) {
-                Some(prev) => prev,
-                None => break,
+            let Some(next) = other.borrow().prev.as_ref().and_then(Weak::upgrade) else {
+                break;
             };
 
             // gotta love NLL...

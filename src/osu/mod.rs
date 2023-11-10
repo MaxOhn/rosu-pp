@@ -1,19 +1,30 @@
 mod difficulty_object;
-mod gradual_difficulty;
-mod gradual_performance;
 mod osu_object;
 mod pp;
 mod scaling_factor;
+mod score_state;
 mod skills;
 
+#[cfg(feature = "gradual")]
+mod gradual_difficulty;
+#[cfg(feature = "gradual")]
+mod gradual_performance;
+
 use crate::{curve::CurveBuffers, parse::Pos2, AnyStars, Beatmap, GameMode, Mods};
+use std::pin::Pin;
 
 use self::{
     difficulty_object::{Distances, OsuDifficultyObject},
     skills::{Skill, Skills},
 };
 
-pub use self::{gradual_difficulty::*, gradual_performance::*, osu_object::*, pp::*};
+pub use self::{osu_object::*, pp::*, score_state::OsuScoreState};
+
+#[cfg(feature = "gradual")]
+pub use self::{
+    gradual_difficulty::OsuGradualDifficulty,
+    gradual_performance::{OsuGradualPerformance, OsuOwnedGradualPerformance},
+};
 
 pub(crate) use self::scaling_factor::ScalingFactor;
 
@@ -91,7 +102,7 @@ impl<'map> OsuStars<'map> {
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
     /// using [`OsuStars`] multiple times with different `passed_objects`, you should use
-    /// [`OsuGradualDifficultyAttributes`](crate::osu::OsuGradualDifficultyAttributes).
+    /// [`OsuGradualDifficulty`].
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
@@ -271,7 +282,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
 
     let mut hit_objects =
         create_osu_objects(map, &mut attrs, &scaling_factor, take, hr, time_preempt);
-    let mut hit_objects_iter = hit_objects.iter_mut();
+    let mut hit_objects_iter = hit_objects.iter_mut().map(Pin::new);
 
     let mut skills = Skills::new(
         mods,
@@ -281,39 +292,45 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         hit_window,
     );
 
-    let last = match hit_objects_iter.next() {
-        Some(prev) => prev,
-        None => return (skills, attrs),
+    let Some(mut last) = hit_objects_iter.next() else {
+        return (skills, attrs);
     };
 
     let mut last_last = None;
 
     // Prepare `lazy_travel_dist` and `lazy_end_pos` for `last` manually
-    Distances::compute_slider_cursor_pos(last, &scaling_factor);
+    let last_pos = last.pos();
+    let last_stack_offset = last.stack_offset;
 
-    let mut last = &*last;
+    if let OsuObjectKind::Slider(ref mut slider) = last.kind {
+        Distances::compute_slider_travel_dist(last_pos, last_stack_offset, slider, &scaling_factor);
+    }
+
+    let mut last = last.into_ref();
     let mut diff_objects = Vec::with_capacity(hit_objects_iter.len());
 
-    for (i, curr) in hit_objects_iter.enumerate() {
+    for (i, mut curr) in hit_objects_iter.enumerate() {
         let delta_time = (curr.start_time - last.start_time) / clock_rate;
 
         // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
         let strain_time = delta_time.max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
 
         let dists = Distances::new(
-            curr,
-            last,
-            last_last,
+            &mut curr,
+            last.get_ref(),
+            last_last.map(Pin::get_ref),
             clock_rate,
             strain_time,
             &scaling_factor,
         );
 
-        let diff_obj = OsuDifficultyObject::new(curr, last, clock_rate, i, dists);
+        let curr = curr.into_ref();
+
+        let diff_obj = OsuDifficultyObject::new(curr, last.get_ref(), clock_rate, i, dists);
         diff_objects.push(diff_obj);
 
         last_last = Some(last);
-        last = &*curr;
+        last = curr;
     }
 
     for curr in diff_objects.iter() {
@@ -363,9 +380,8 @@ pub(crate) fn create_osu_objects(
 fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
     let mut extended_start_idx = 0;
 
-    let extended_end_idx = match hit_objects.len().checked_sub(1) {
-        Some(idx) => idx,
-        None => return,
+    let Some(extended_end_idx) = hit_objects.len().checked_sub(1) else {
+        return;
     };
 
     // First big `if` in osu!lazer's function can be skipped

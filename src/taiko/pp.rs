@@ -151,7 +151,7 @@ impl<'map> TaikoPP<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`TaikoPP`] multiple times with different `passed_objects`, you should use
-    /// [`TaikoGradualPerformanceAttributes`](crate::taiko::TaikoGradualPerformanceAttributes).
+    /// [`TaikoGradualPerformanceAttributes`](crate::taiko::TaikoGradualPerformance).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

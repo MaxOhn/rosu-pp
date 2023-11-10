@@ -116,7 +116,7 @@ impl<'map> AnyPP<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`AnyPP`] multiple times with different `passed_objects`, you should use
-    /// [`GradualPerformanceAttributes`](crate::GradualPerformanceAttributes).
+    /// [`GradualPerformanceAttributes`](crate::GradualPerformance).
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {

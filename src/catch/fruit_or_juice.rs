@@ -12,12 +12,11 @@ const LEGACY_LAST_TICK_OFFSET: f64 = 36.0;
 const BASE_SCORING_DISTANCE: f64 = 100.0;
 
 #[derive(Clone, Debug)]
-pub(crate) struct FruitParams<'a> {
+pub(crate) struct FruitParams {
     pub(crate) attributes: CatchDifficultyAttributes,
     pub(crate) curve_bufs: CurveBuffers,
     pub(crate) last_pos: Option<f32>,
     pub(crate) last_time: f64,
-    pub(crate) map: &'a Beatmap,
     pub(crate) ticks: Vec<(Pos2, f64)>,
     pub(crate) with_hr: bool,
 }
@@ -31,7 +30,7 @@ pub(crate) enum FruitOrJuice {
 }
 
 impl FruitOrJuice {
-    pub(crate) fn new(h: &HitObject, params: &mut FruitParams<'_>) -> Option<Self> {
+    pub(crate) fn new(h: &HitObject, params: &mut FruitParams, map: &Beatmap) -> Option<Self> {
         match &h.kind {
             HitObjectKind::Circle => {
                 let mut h = CatchObject::new((h.pos, h.start_time));
@@ -54,17 +53,12 @@ impl FruitOrJuice {
                 params.last_pos = Some(h.pos.x + control_points[control_points.len() - 1].pos.x);
                 params.last_time = h.start_time;
 
-                let timing_point = params.map.timing_point_at(h.start_time);
+                let timing_point = map.timing_point_at(h.start_time);
 
-                let difficulty_point = params
-                    .map
-                    .difficulty_point_at(h.start_time)
-                    .unwrap_or_default();
+                let difficulty_point = map.difficulty_point_at(h.start_time).unwrap_or_default();
 
-                let vel_factor =
-                    BASE_SCORING_DISTANCE * params.map.slider_mult / timing_point.beat_len;
-                let tick_dist_factor =
-                    BASE_SCORING_DISTANCE * params.map.slider_mult / params.map.tick_rate;
+                let vel_factor = BASE_SCORING_DISTANCE * map.slider_mult / timing_point.beat_len;
+                let tick_dist_factor = BASE_SCORING_DISTANCE * map.slider_mult / map.tick_rate;
 
                 let vel = vel_factor * difficulty_point.slider_vel;
 

@@ -154,7 +154,7 @@ impl ColourDifficultyPreprocessor {
         mut data: VecDeque<Rc<RefCell<AlternatingMonoPattern>>>,
     ) -> Vec<Rc<RefCell<RepeatingHitPatterns>>> {
         let mut hit_patterns = Vec::new();
-        let mut curr_hit_pattern: Option<Rc<std::cell::RefCell<_>>> = None;
+        let mut curr_hit_pattern: Option<Rc<RefCell<_>>> = None;
 
         while !data.is_empty() {
             let old = curr_hit_pattern.as_ref().map(Rc::downgrade);

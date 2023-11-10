@@ -161,7 +161,7 @@ impl<'map> OsuPP<'map> {
     ///
     /// If you want to calculate the performance after every few objects, instead of
     /// using [`OsuPP`] multiple times with different `passed_objects`, you should use
-    /// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformanceAttributes).
+    /// [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformance).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

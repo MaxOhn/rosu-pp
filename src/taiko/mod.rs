@@ -1,17 +1,24 @@
 mod colours;
 mod difficulty_object;
-mod gradual_difficulty;
-mod gradual_performance;
 mod pp;
 mod rim;
+mod score_state;
 mod skills;
 mod taiko_object;
 
+#[cfg(feature = "gradual")]
+mod gradual_difficulty;
+#[cfg(feature = "gradual")]
+mod gradual_performance;
+
 use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
+pub use self::{pp::*, score_state::TaikoScoreState, taiko_object::TaikoObjectPub as TaikoObject};
+
+#[cfg(feature = "gradual")]
 pub use self::{
-    gradual_difficulty::*, gradual_performance::*, pp::*,
-    taiko_object::TaikoObjectPub as TaikoObject,
+    gradual_difficulty::TaikoGradualDifficulty,
+    gradual_performance::{TaikoGradualPerformance, TaikoOwnedGradualPerformance},
 };
 
 pub(crate) use self::taiko_object::IntoTaikoObjectIter;
@@ -85,7 +92,7 @@ impl<'map> TaikoStars<'map> {
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
     /// using [`TaikoStars`] multiple times with different `passed_objects`, you should use
-    /// [`TaikoGradualDifficultyAttributes`](crate::taiko::TaikoGradualDifficultyAttributes).
+    /// [`TaikoGradualDifficultyAttributes`](crate::taiko::TaikoGradualDifficulty).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
@@ -226,8 +233,9 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
     let mut peaks = Peaks::new();
     let mut max_combo = 0;
 
-    let mut diff_objects = map
-        .taiko_objects()
+    let mut diff_objects = ObjectLists::default();
+
+    map.taiko_objects()
         .take_while(|(h, _)| {
             if h.is_hit {
                 if take == 0 {
@@ -244,34 +252,29 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
         .zip(map.hit_objects.iter().skip(1))
         .zip(map.hit_objects.iter())
         .enumerate()
-        .fold(
-            ObjectLists::default(),
-            |mut lists, (idx, (((base, base_start_time), last), last_last))| {
-                let diff_obj = TaikoDifficultyObject::new(
-                    base,
-                    base_start_time,
-                    last.start_time,
-                    last_last.start_time,
-                    clock_rate,
-                    &lists,
-                    idx,
-                );
+        .for_each(|(idx, (((base, base_start_time), last), last_last))| {
+            let diff_obj = TaikoDifficultyObject::new(
+                base,
+                base_start_time,
+                last.start_time,
+                last_last.start_time,
+                clock_rate,
+                &diff_objects,
+                idx,
+            );
 
-                match &diff_obj.mono_idx {
-                    MonoIndex::Centre(_) => lists.centres.push(idx),
-                    MonoIndex::Rim(_) => lists.rims.push(idx),
-                    MonoIndex::None => {}
-                }
+            match &diff_obj.mono_idx {
+                MonoIndex::Centre(_) => diff_objects.centres.push(idx),
+                MonoIndex::Rim(_) => diff_objects.rims.push(idx),
+                MonoIndex::None => {}
+            }
 
-                if diff_obj.note_idx.is_some() {
-                    lists.notes.push(idx);
-                }
+            if diff_obj.note_idx.is_some() {
+                diff_objects.notes.push(idx);
+            }
 
-                lists.all.push(Rc::new(RefCell::new(diff_obj)));
-
-                lists
-            },
-        );
+            diff_objects.all.push(Rc::new(RefCell::new(diff_obj)));
+        });
 
     ColourDifficultyPreprocessor::process_and_assign(&mut diff_objects);
 

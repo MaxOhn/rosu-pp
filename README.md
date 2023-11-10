@@ -79,11 +79,12 @@ Sometimes you might want to calculate the difficulty of a map or performance of 
 This could be done by using `passed_objects` as the amount of objects that were passed so far.
 However, this requires to recalculate the beginning again and again, we can be more efficient than that.
 
-Instead, you should use `GradualDifficultyAttributes` and `GradualPerformanceAttributes`:
+Instead, you should enable the `gradual` feature and use `GradualDifficulty` and `GradualPerformance`:
 
 ```rust
 use rosu_pp::{
-    Beatmap, BeatmapExt, GradualPerformanceAttributes, ScoreState, taiko::TaikoScoreState,
+    Beatmap, BeatmapExt, GradualDifficulty, GradualPerformance, ScoreState,
+    taiko::TaikoScoreState,
 };
 
 let map = match Beatmap::from_path("/path/to/file.osu") {
@@ -93,12 +94,11 @@ let map = match Beatmap::from_path("/path/to/file.osu") {
 
 let mods = 8 + 64; // HDDT
 
-// If you're only interested in the star rating or other difficulty value,
-// use `GradualDifficultyAttributes`, either through its function `new`
-// or through the method `BeatmapExt::gradual_difficulty`.
-let gradual_difficulty = map.gradual_difficulty(mods);
+// If you're only interested in the star rating or other difficulty values,
+// use `GradualDifficulty`.
+let gradual_difficulty = GradualDifficulty::new(&map, mods);
 
-// Since `GradualDifficultyAttributes` implements `Iterator`, you can use
+// Since `GradualDifficulty` implements `Iterator`, you can use
 // any iterate function on it, use it in loops, collect them into a `Vec`, ...
 for (i, difficulty) in gradual_difficulty.enumerate() {
     println!("Stars after object {}: {}", i, difficulty.stars());
@@ -107,7 +107,7 @@ for (i, difficulty) in gradual_difficulty.enumerate() {
 // Gradually calculating performance values does the same as calculating
 // difficulty attributes but it goes the extra step and also evaluates
 // the state of a score for these difficulty attributes.
-let mut gradual_performance = map.gradual_performance(mods);
+let mut gradual_performance = GradualPerformance::new(&map, mods);
 
 // The default score state is kinda chunky because it considers all modes.
 let state = ScoreState {
@@ -121,7 +121,7 @@ let state = ScoreState {
 };
 
 // Process the score state after the first object
-let curr_performance = match gradual_performance.process_next_object(state) {
+let curr_performance = match gradual_performance.next(state) {
     Some(perf) => perf,
     None => panic!("the map has no hit objects"),
 };
@@ -131,8 +131,8 @@ println!("PP after the first object: {}", curr_performance.pp());
 // If you're only interested in maps of a specific mode, consider
 // using the mode's gradual calculator instead of the general one.
 // Let's assume it's a taiko map.
-// Instead of starting off with `BeatmapExt::gradual_performance` one could have
-// created the struct via `TaikoGradualPerformanceAttributes::new`.
+// Instead of starting off with `GradualPerformance` one could have
+// used `TaikoGradualPerformance`.
 let mut gradual_performance = match gradual_performance {
     GradualPerformanceAttributes::Taiko(gradual) => gradual,
     _ => panic!("the map was not taiko but {:?}", map.mode),
@@ -146,10 +146,10 @@ let state = TaikoScoreState {
     n_misses: 1,
 };
 
-// Process the next 10 objects in one go
-let curr_performance = match gradual_performance.process_next_n_objects(state, 10) {
+// Process the next 10 objects in one go (`nth` takes a zero-based value).
+let curr_performance = match gradual_performance.nth(state, 9) {
     Some(perf) => perf,
-    None => panic!("the last `process_next_object` already processed the last object"),
+    None => panic!("the previous `next` already processed the last object"),
 };
 
 println!("PP after the first 11 objects: {}", curr_performance.pp());
@@ -158,10 +158,11 @@ println!("PP after the first 11 objects: {}", curr_performance.pp());
 ### Features
 
 | Flag          | Description                                                                              |
-| ------------- | ---------------------------------------------------------------------------------------- |
+| ------------- |------------------------------------------------------------------------------------------|
 | `default`     | Beatmap parsing will be non-async                                                        |
 | `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio)         |
 | `async_std`   | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
+| `gradual`     | Enable gradual difficulty and performance calculation                                    |
 
 ### Version
 

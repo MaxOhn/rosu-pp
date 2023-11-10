@@ -1,15 +1,25 @@
 mod catch_object;
 mod difficulty_object;
 mod fruit_or_juice;
-mod gradual_difficulty;
-mod gradual_performance;
 mod movement;
 mod pp;
+mod score_state;
+
+#[cfg(feature = "gradual")]
+mod gradual_difficulty;
+#[cfg(feature = "gradual")]
+mod gradual_performance;
 
 use difficulty_object::DifficultyObject;
 use movement::Movement;
 
-pub use self::{catch_object::CatchObject, gradual_difficulty::*, gradual_performance::*, pp::*};
+pub use self::{catch_object::CatchObject, pp::*, score_state::CatchScoreState};
+
+#[cfg(feature = "gradual")]
+pub use self::{
+    gradual_difficulty::{CatchGradualDifficulty, CatchOwnedGradualDifficulty},
+    gradual_performance::{CatchGradualPerformance, CatchOwnedGradualPerformance},
+};
 
 pub(crate) use self::fruit_or_juice::{FruitOrJuice, FruitParams};
 
@@ -73,7 +83,7 @@ impl<'map> CatchStars<'map> {
     ///
     /// If you want to calculate the difficulty after every few objects, instead of
     /// using [`CatchStars`] multiple times with different `passed_objects`, you should use
-    /// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficultyAttributes).
+    /// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficulty).
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
@@ -156,7 +166,6 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
         curve_bufs: CurveBuffers::default(),
         last_pos: None,
         last_time: 0.0,
-        map,
         ticks: Vec::new(), // using the same buffer for all sliders
         with_hr: mods.hr(),
     };
@@ -165,7 +174,7 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
     let mut hit_objects = map
         .hit_objects
         .iter()
-        .filter_map(|h| FruitOrJuice::new(h, &mut params))
+        .filter_map(|h| FruitOrJuice::new(h, &mut params, map))
         .flatten()
         .take(take);
 

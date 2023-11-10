@@ -1,7 +1,10 @@
-#![cfg(not(any(feature = "async_tokio", feature = "async_std")))]
+#![cfg(all(
+    not(any(feature = "async_tokio", feature = "async_std")),
+    feature = "gradual"
+))]
 
 use rosu_pp::{
-    taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
+    taiko::{TaikoGradualDifficulty, TaikoGradualPerformance, TaikoScoreState},
     Beatmap, TaikoPP, TaikoStars,
 };
 
@@ -12,7 +15,7 @@ mod common;
 #[test]
 fn empty_map() {
     let map = Beatmap::default();
-    let mut attrs = TaikoGradualDifficultyAttributes::new(&map, 0);
+    let mut attrs = TaikoGradualDifficulty::new(&map, 0);
 
     assert!(attrs.next().is_none());
 }
@@ -22,7 +25,7 @@ fn iter_end_eq_regular() {
     let map = test_map!(Taiko);
     let regular = TaikoStars::new(&map).calculate();
 
-    let iter_end = TaikoGradualDifficultyAttributes::new(&map, 0)
+    let iter_end = TaikoGradualDifficulty::new(&map, 0)
         .last()
         .expect("empty iter");
 
@@ -32,13 +35,13 @@ fn iter_end_eq_regular() {
 #[test]
 fn correct_empty() {
     let map = test_map!(Taiko);
-    let mut gradual = TaikoGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = TaikoGradualPerformance::new(&map, 0);
     let state = TaikoScoreState::default();
 
-    let first_attrs = gradual.process_next_n_objects(state.clone(), usize::MAX);
+    let first_attrs = gradual.nth(state.clone(), usize::MAX);
 
     assert!(first_attrs.is_some());
-    assert!(gradual.process_next_object(state).is_none());
+    assert!(gradual.next(state).is_none());
 }
 
 #[test]
@@ -46,18 +49,18 @@ fn next_and_next_n() {
     let map = test_map!(Taiko);
     let state = TaikoScoreState::default();
 
-    let mut gradual1 = TaikoGradualPerformanceAttributes::new(&map, 0);
-    let mut gradual2 = TaikoGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual1 = TaikoGradualPerformance::new(&map, 0);
+    let mut gradual2 = TaikoGradualPerformance::new(&map, 0);
 
     for _ in 0..50 {
-        let _ = gradual1.process_next_object(state.clone());
-        let _ = gradual2.process_next_object(state.clone());
+        let _ = gradual1.next(state.clone());
+        let _ = gradual2.next(state.clone());
     }
 
     let n = 200;
 
     for _ in 1..n {
-        let _ = gradual1.process_next_object(state.clone());
+        let _ = gradual1.next(state.clone());
     }
 
     let state = TaikoScoreState {
@@ -67,8 +70,8 @@ fn next_and_next_n() {
         n_misses: 6,
     };
 
-    let next = gradual1.process_next_object(state.clone());
-    let next_n = gradual2.process_next_n_objects(state, n);
+    let next = gradual1.next(state.clone());
+    let next_n = gradual2.nth(state, n - 1);
 
     assert_eq!(next_n, next);
 }
@@ -77,7 +80,7 @@ fn next_and_next_n() {
 fn gradual_end_eq_regular() {
     let map = test_map!(Taiko);
     let regular = TaikoPP::new(&map).calculate();
-    let mut gradual = TaikoGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = TaikoGradualPerformance::new(&map, 0);
 
     let state = TaikoScoreState {
         max_combo: 289,
@@ -86,7 +89,7 @@ fn gradual_end_eq_regular() {
         n_misses: 0,
     };
 
-    let gradual_end = gradual.process_next_n_objects(state, usize::MAX).unwrap();
+    let gradual_end = gradual.nth(state, usize::MAX).unwrap();
 
     assert_eq!(regular, gradual_end);
 }
@@ -97,7 +100,7 @@ fn gradual_eq_regular_passed() {
     let n = 250;
 
     let regular = TaikoPP::new(&map).passed_objects(n).calculate();
-    let mut gradual = TaikoGradualPerformanceAttributes::new(&map, 0);
+    let mut gradual = TaikoGradualPerformance::new(&map, 0);
 
     let state = TaikoScoreState {
         max_combo: 250,
@@ -106,7 +109,7 @@ fn gradual_eq_regular_passed() {
         n_misses: 0,
     };
 
-    let gradual = gradual.process_next_n_objects(state, n).unwrap();
+    let gradual = gradual.nth(state, n - 1).unwrap();
 
     assert_eq!(regular, gradual);
 }

@@ -1,24 +1,29 @@
+#![cfg(feature = "gradual")]
+
+use crate::catch::{CatchOwnedGradualDifficulty, CatchOwnedGradualPerformance};
+use crate::mania::{ManiaOwnedGradualDifficulty, ManiaOwnedGradualPerformance};
+use crate::osu::OsuOwnedGradualPerformance;
+use crate::taiko::TaikoOwnedGradualPerformance;
 use crate::{
-    catch::{CatchGradualDifficultyAttributes, CatchGradualPerformanceAttributes, CatchScoreState},
-    mania::{ManiaGradualDifficultyAttributes, ManiaGradualPerformanceAttributes, ManiaScoreState},
-    osu::{OsuGradualDifficultyAttributes, OsuGradualPerformanceAttributes, OsuScoreState},
-    taiko::{TaikoGradualDifficultyAttributes, TaikoGradualPerformanceAttributes, TaikoScoreState},
-    Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes,
+    catch::{CatchGradualDifficulty, CatchGradualPerformance},
+    mania::{ManiaGradualDifficulty, ManiaGradualPerformance},
+    osu::{OsuGradualDifficulty, OsuGradualPerformance},
+    taiko::{TaikoGradualDifficulty, TaikoGradualPerformance},
+    Beatmap, DifficultyAttributes, GameMode, PerformanceAttributes, ScoreState,
 };
 
 /// Gradually calculate the difficulty attributes on maps of any mode.
 ///
-/// Note that this struct implements [`Iterator`](std::iter::Iterator).
-/// On every call of [`Iterator::next`](std::iter::Iterator::next), the map's next hit object will
+/// Note that this struct implements [`Iterator`].
+/// On every call of [`Iterator::next`], the map's next hit object will
 /// be processed and the [`DifficultyAttributes`] will be updated and returned.
 ///
-/// If you want to calculate performance attributes, use
-/// [`GradualPerformanceAttributes`](crate::GradualPerformanceAttributes) instead.
+/// If you want to calculate performance attributes, use [`GradualPerformance`] instead.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use rosu_pp::{Beatmap, GradualDifficultyAttributes};
+/// use rosu_pp::{Beatmap, GradualDifficulty};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -26,7 +31,7 @@ use crate::{
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut iter = GradualDifficultyAttributes::new(&map, mods);
+/// let mut iter = GradualDifficulty::new(&map, mods);
 ///
 /// let attrs1 = iter.next(); // the difficulty of the map after the first hit object
 /// let attrs2 = iter.next(); //                           after the second hit object
@@ -36,169 +41,138 @@ use crate::{
 ///     // ...
 /// }
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Debug)]
-#[allow(clippy::large_enum_variant)]
-pub enum GradualDifficultyAttributes<'map> {
+pub enum GradualDifficulty<'map> {
     /// Gradual osu!standard difficulty attributes.
-    Osu(OsuGradualDifficultyAttributes),
+    Osu(OsuGradualDifficulty),
     /// Gradual osu!taiko difficulty attributes.
-    Taiko(TaikoGradualDifficultyAttributes),
+    Taiko(TaikoGradualDifficulty),
     /// Gradual osu!catch difficulty attributes.
-    Catch(CatchGradualDifficultyAttributes<'map>),
+    Catch(CatchGradualDifficulty<'map>),
     /// Gradual osu!mania difficulty attributes.
-    Mania(ManiaGradualDifficultyAttributes<'map>),
+    Mania(ManiaGradualDifficulty<'map>),
 }
 
-impl<'map> GradualDifficultyAttributes<'map> {
+impl<'map> GradualDifficulty<'map> {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
     /// Create a new gradual difficulty calculator for maps of any mode.
     #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
-            GameMode::Osu => Self::Osu(OsuGradualDifficultyAttributes::new(map, mods)),
-            GameMode::Taiko => Self::Taiko(TaikoGradualDifficultyAttributes::new(map, mods)),
-            GameMode::Catch => Self::Catch(CatchGradualDifficultyAttributes::new(map, mods)),
-            GameMode::Mania => Self::Mania(ManiaGradualDifficultyAttributes::new(map, mods)),
+            GameMode::Osu => Self::Osu(OsuGradualDifficulty::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualDifficulty::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchGradualDifficulty::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaGradualDifficulty::new(map, mods)),
         }
     }
 }
 
-impl Iterator for GradualDifficultyAttributes<'_> {
+impl Iterator for GradualDifficulty<'_> {
     type Item = DifficultyAttributes;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            GradualDifficultyAttributes::Osu(o) => o.next().map(DifficultyAttributes::Osu),
-            GradualDifficultyAttributes::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
-            GradualDifficultyAttributes::Catch(f) => f.next().map(DifficultyAttributes::Catch),
-            GradualDifficultyAttributes::Mania(m) => m.next().map(DifficultyAttributes::Mania),
+            Self::Osu(o) => o.next().map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
+            Self::Catch(f) => f.next().map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.next().map(DifficultyAttributes::Mania),
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            GradualDifficultyAttributes::Osu(o) => o.size_hint(),
-            GradualDifficultyAttributes::Taiko(t) => t.size_hint(),
-            GradualDifficultyAttributes::Catch(f) => f.size_hint(),
-            GradualDifficultyAttributes::Mania(m) => m.size_hint(),
+            Self::Osu(o) => o.size_hint(),
+            Self::Taiko(t) => t.size_hint(),
+            Self::Catch(f) => f.size_hint(),
+            Self::Mania(m) => m.size_hint(),
+        }
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        match self {
+            Self::Osu(o) => o.nth(n).map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.nth(n).map(DifficultyAttributes::Taiko),
+            Self::Catch(c) => c.nth(n).map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.nth(n).map(DifficultyAttributes::Mania),
         }
     }
 }
 
-/// Aggregation for a score's current state i.e. what is
-/// the maximum combo so far, what are the current
-/// hitresults and what is the current score.
+/// Gradually calculate the difficulty attributes on maps of any mode.
 ///
-/// This struct is used for [`GradualPerformanceAttributes`].
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct ScoreState {
-    /// Maximum combo that the score has had so far.
-    /// **Not** the maximum possible combo of the map so far.
-    ///
-    /// Note that for osu!catch only fruits and droplets are considered for combo.
-    ///
-    /// Irrelevant for osu!mania.
-    pub max_combo: usize,
-    /// Amount of current gekis (n320 for osu!mania).
-    pub n_geki: usize,
-    /// Amount of current katus (tiny droplet misses for osu!catch / n200 for osu!mania).
-    pub n_katu: usize,
-    /// Amount of current 300s (fruits for osu!catch).
-    pub n300: usize,
-    /// Amount of current 100s (droplets for osu!catch).
-    pub n100: usize,
-    /// Amount of current 50s (tiny droplets for osu!catch).
-    pub n50: usize,
-    /// Amount of current misses (fruits + droplets for osu!catch).
-    pub n_misses: usize,
+/// Check [`GradualDifficulty`] for more information. This type does the same
+/// but depending on the mode it might clone [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
+pub enum OwnedGradualDifficulty {
+    /// Gradual osu!standard difficulty attributes.
+    Osu(OsuGradualDifficulty),
+    /// Gradual osu!taiko difficulty attributes.
+    Taiko(TaikoGradualDifficulty),
+    /// Gradual osu!catch difficulty attributes.
+    Catch(CatchOwnedGradualDifficulty),
+    /// Gradual osu!mania difficulty attributes.
+    Mania(ManiaOwnedGradualDifficulty),
 }
 
-impl ScoreState {
-    /// Create a new empty score state.
+impl OwnedGradualDifficulty {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
+    /// Create a new gradual difficulty calculator for maps of any mode.
     #[inline]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Return the total amount of hits by adding everything up based on the mode.
-    #[inline]
-    pub fn total_hits(&self, mode: GameMode) -> usize {
-        let mut amount = self.n300 + self.n100 + self.n_misses;
-
-        if mode != GameMode::Taiko {
-            amount += self.n50;
-
-            if mode != GameMode::Osu {
-                amount += self.n_katu;
-                amount += (mode != GameMode::Catch) as usize * self.n_geki;
-            }
-        }
-
-        amount
-    }
-}
-
-impl From<ScoreState> for OsuScoreState {
-    #[inline]
-    fn from(state: ScoreState) -> Self {
-        Self {
-            max_combo: state.max_combo,
-            n300: state.n300,
-            n100: state.n100,
-            n50: state.n50,
-            n_misses: state.n_misses,
+    pub fn new(map: &Beatmap, mods: u32) -> Self {
+        match map.mode {
+            GameMode::Osu => Self::Osu(OsuGradualDifficulty::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualDifficulty::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchOwnedGradualDifficulty::new(map.to_owned(), mods)),
+            GameMode::Mania => Self::Mania(ManiaOwnedGradualDifficulty::new(map.to_owned(), mods)),
         }
     }
 }
 
-impl From<ScoreState> for TaikoScoreState {
+impl Iterator for OwnedGradualDifficulty {
+    type Item = DifficultyAttributes;
+
     #[inline]
-    fn from(state: ScoreState) -> Self {
-        Self {
-            max_combo: state.max_combo,
-            n300: state.n300,
-            n100: state.n100,
-            n_misses: state.n_misses,
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Osu(o) => o.next().map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.next().map(DifficultyAttributes::Taiko),
+            Self::Catch(f) => f.next().map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.next().map(DifficultyAttributes::Mania),
         }
     }
-}
 
-impl From<ScoreState> for CatchScoreState {
     #[inline]
-    fn from(state: ScoreState) -> Self {
-        Self {
-            max_combo: state.max_combo,
-            n_fruits: state.n300,
-            n_droplets: state.n100,
-            n_tiny_droplets: state.n50,
-            n_tiny_droplet_misses: state.n_katu,
-            n_misses: state.n_misses,
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::Osu(o) => o.size_hint(),
+            Self::Taiko(t) => t.size_hint(),
+            Self::Catch(f) => f.size_hint(),
+            Self::Mania(m) => m.size_hint(),
         }
     }
-}
 
-impl From<ScoreState> for ManiaScoreState {
     #[inline]
-    fn from(state: ScoreState) -> Self {
-        Self {
-            n320: state.n_geki,
-            n300: state.n300,
-            n200: state.n_katu,
-            n100: state.n100,
-            n50: state.n50,
-            n_misses: state.n_misses,
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        match self {
+            Self::Osu(o) => o.nth(n).map(DifficultyAttributes::Osu),
+            Self::Taiko(t) => t.nth(n).map(DifficultyAttributes::Taiko),
+            Self::Catch(c) => c.nth(n).map(DifficultyAttributes::Catch),
+            Self::Mania(m) => m.nth(n).map(DifficultyAttributes::Mania),
         }
     }
 }
 
 /// Gradually calculate the performance attributes on maps of any mode.
 ///
-/// After each hit object you can call
-/// [`process_next_object`](`GradualPerformanceAttributes::process_next_object`)
+/// After each hit object you can call [`next`](`GradualPerformance::next`)
 /// and it will return the resulting current [`PerformanceAttributes`].
-/// To process multiple objects at once, use
-/// [`process_next_n_objects`](`GradualPerformanceAttributes::process_next_n_objects`) instead.
+/// To process multiple objects at once, use [`nth`](`GradualPerformance::nth`) instead.
 ///
 /// Both methods require a [`ScoreState`] that contains the current hitresults
 /// as well as the maximum combo so far or just the current score for osu!mania.
@@ -206,19 +180,15 @@ impl From<ScoreState> for ManiaScoreState {
 /// and should be updated properly.
 ///
 /// Alternatively, you can match on the map's mode yourself and use the gradual
-/// performance attribute struct for the corresponding mode, i.e.
-/// [`OsuGradualPerformanceAttributes`],
-/// [`TaikoGradualPerformanceAttributes`],
-/// [`CatchGradualPerformanceAttributes`], or
-/// [`ManiaGradualPerformanceAttributes`].
+/// performance attribute struct for the corresponding mode, i.e. [`OsuGradualPerformance`],
+/// [`TaikoGradualPerformance`], [`CatchGradualPerformance`], or [`ManiaGradualPerformance`].
 ///
-/// If you only want to calculate difficulty attributes use
-/// [`GradualDifficultyAttributes`](crate::GradualDifficultyAttributes) instead.
+/// If you only want to calculate difficulty attributes use [`GradualDifficulty`] instead.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use rosu_pp::{Beatmap, GradualPerformanceAttributes, ScoreState};
+/// use rosu_pp::{Beatmap, GradualPerformance, ScoreState};
 ///
 /// # /*
 /// let map: Beatmap = ...
@@ -226,123 +196,168 @@ impl From<ScoreState> for ManiaScoreState {
 /// # let map = Beatmap::default();
 ///
 /// let mods = 64; // DT
-/// let mut gradual_perf = GradualPerformanceAttributes::new(&map, mods);
+/// let mut gradual_perf = GradualPerformance::new(&map, mods);
 /// let mut state = ScoreState::new(); // empty state, everything is on 0.
 ///
-/// // The first 10 hitresults are 300s and increase the score by 123 each.
+/// // The first 10 hitresults are 300s
 /// for _ in 0..10 {
 ///     state.n300 += 1;
 ///     state.max_combo += 1;
 ///
-///     # /*
-///     let performance = gradual_perf.process_next_object(state.clone()).unwrap();
-///     println!("PP: {}", performance.pp);
-///     # */
-///     # let _ = gradual_perf.process_next_object(state.clone());
+///     let performance = gradual_perf.next(state.clone()).unwrap();
+///     println!("PP: {}", performance.pp());
 /// }
 ///
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
 /// state.n_misses += 1;
-/// # /*
-/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
-/// # */
-/// # let _ = gradual_perf.process_next_object(state.clone());
+///
+/// let performance = gradual_perf.next(state.clone()).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // The next 10 objects will be a mixture of 300s, 100s, and 50s.
 /// // Notice how all 10 objects will be processed in one go.
 /// state.n300 += 2;
 /// state.n100 += 7;
 /// state.n50 += 1;
-/// // Don't forget state.n_katu
-/// # /*
-/// let performance = gradual_perf.process_next_n_objects(state.clone(), 10).unwrap();
-/// println!("PP: {}", performance.pp);
-/// # */
-/// # let _ = gradual_perf.process_next_n_objects(state.clone(), 10);
+///
+/// // The `nth` method takes a zero-based value.
+/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
-/// # /*
-/// let performance = gradual_perf.process_next_object(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
-/// # */
-/// # let _ = gradual_perf.process_next_object(state.clone());
+///
+/// let performance = gradual_perf.next(state.clone()).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // Skip to the end
 /// # /*
 /// state.max_combo = ...
 /// state.n300 = ...
 /// ...
-/// let final_performance = gradual_perf.process_next_n_objects(state.clone(), usize::MAX).unwrap();
-/// println!("PP: {}", performance.pp);
 /// # */
-/// # let _ = gradual_perf.process_next_n_objects(state.clone(), usize::MAX);
+/// let final_performance = gradual_perf.last(state.clone()).unwrap();
+/// println!("PP: {}", performance.pp());
 ///
 /// // Once the final performance was calculated,
 /// // attempting to process further objects will return `None`.
-/// assert!(gradual_perf.process_next_object(state).is_none());
+/// assert!(gradual_perf.next(state).is_none());
 /// ```
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
 #[derive(Debug)]
 #[allow(clippy::large_enum_variant)]
-pub enum GradualPerformanceAttributes<'map> {
-    /// Gradual osu!standard performance attributes.
-    Osu(OsuGradualPerformanceAttributes<'map>),
-    /// Gradual osu!taiko performance attributes.
-    Taiko(TaikoGradualPerformanceAttributes<'map>),
-    /// Gradual osu!catch performance attributes.
-    Catch(CatchGradualPerformanceAttributes<'map>),
-    /// Gradual osu!mania performance attributes.
-    Mania(ManiaGradualPerformanceAttributes<'map>),
+pub enum GradualPerformance<'map> {
+    /// Gradual osu!standard performance calculator.
+    Osu(OsuGradualPerformance<'map>),
+    /// Gradual osu!taiko performance calculator.
+    Taiko(TaikoGradualPerformance<'map>),
+    /// Gradual osu!catch performance calculator.
+    Catch(CatchGradualPerformance<'map>),
+    /// Gradual osu!mania performance calculator.
+    Mania(ManiaGradualPerformance<'map>),
 }
 
-impl<'map> GradualPerformanceAttributes<'map> {
+impl<'map> GradualPerformance<'map> {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
     /// Create a new gradual performance calculator for maps of any mode.
     #[inline]
     pub fn new(map: &'map Beatmap, mods: u32) -> Self {
         match map.mode {
-            GameMode::Osu => Self::Osu(OsuGradualPerformanceAttributes::new(map, mods)),
-            GameMode::Taiko => Self::Taiko(TaikoGradualPerformanceAttributes::new(map, mods)),
-            GameMode::Catch => Self::Catch(CatchGradualPerformanceAttributes::new(map, mods)),
-            GameMode::Mania => Self::Mania(ManiaGradualPerformanceAttributes::new(map, mods)),
+            GameMode::Osu => Self::Osu(OsuGradualPerformance::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoGradualPerformance::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchGradualPerformance::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaGradualPerformance::new(map, mods)),
         }
     }
 
     /// Process the next hit object and calculate the
     /// performance attributes for the resulting score.
     #[inline]
-    pub fn process_next_object(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
-        self.process_next_n_objects(state, 1)
+    pub fn next(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, 0)
     }
 
-    /// Same as [`process_next_object`](`GradualPerformanceAttributes::process_next_object`)
-    /// but instead of processing only one object it process `n` many.
-    ///
-    /// If `n` is 0 it will be considered as 1.
-    /// If there are still objects to be processed but `n` is larger than the amount
-    /// of remaining objects, `n` will be considered as the amount of remaining objects.
+    /// Process all remaining hit objects and calculate the final performance attributes.
     #[inline]
-    pub fn process_next_n_objects(
-        &mut self,
-        state: ScoreState,
-        n: usize,
-    ) -> Option<PerformanceAttributes> {
+    pub fn last(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
+    ///
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
+    #[inline]
+    pub fn nth(&mut self, state: ScoreState, n: usize) -> Option<PerformanceAttributes> {
         match self {
-            GradualPerformanceAttributes::Osu(o) => o
-                .process_next_n_objects(state.into(), n)
-                .map(PerformanceAttributes::Osu),
-            GradualPerformanceAttributes::Taiko(t) => t
-                .process_next_n_objects(state.into(), n)
-                .map(PerformanceAttributes::Taiko),
-            GradualPerformanceAttributes::Catch(f) => f
-                .process_next_n_objects(state.into(), n)
-                .map(PerformanceAttributes::Catch),
-            GradualPerformanceAttributes::Mania(m) => m
-                .process_next_n_objects(state.into(), n)
-                .map(PerformanceAttributes::Mania),
+            Self::Osu(o) => o.nth(state.into(), n).map(PerformanceAttributes::Osu),
+            Self::Taiko(t) => t.nth(state.into(), n).map(PerformanceAttributes::Taiko),
+            Self::Catch(f) => f.nth(state.into(), n).map(PerformanceAttributes::Catch),
+            Self::Mania(m) => m.nth(state.into(), n).map(PerformanceAttributes::Mania),
+        }
+    }
+}
+
+/// Gradually calculate the performance attributes on maps of any mode.
+///
+/// Check [`GradualPerformance`] for more information. This type does the same
+/// but takes ownership of [`Beatmap`] to avoid being bound to a lifetime.
+#[cfg_attr(docsrs, doc(cfg(feature = "gradual")))]
+#[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
+pub enum OwnedGradualPerformance {
+    /// Gradual osu!standard performance calculator.
+    Osu(OsuOwnedGradualPerformance),
+    /// Gradual osu!taiko performance calculator.
+    Taiko(TaikoOwnedGradualPerformance),
+    /// Gradual osu!catch performance calculator.
+    Catch(CatchOwnedGradualPerformance),
+    /// Gradual osu!mania performance calculator.
+    Mania(ManiaOwnedGradualPerformance),
+}
+
+impl OwnedGradualPerformance {
+    // FIXME: converted catch maps will always count as osu!std since their mode is not modified
+    /// Create a new gradual performance calculator for maps of any mode.
+    #[inline]
+    pub fn new(map: Beatmap, mods: u32) -> Self {
+        match map.mode {
+            GameMode::Osu => Self::Osu(OsuOwnedGradualPerformance::new(map, mods)),
+            GameMode::Taiko => Self::Taiko(TaikoOwnedGradualPerformance::new(map, mods)),
+            GameMode::Catch => Self::Catch(CatchOwnedGradualPerformance::new(map, mods)),
+            GameMode::Mania => Self::Mania(ManiaOwnedGradualPerformance::new(map, mods)),
+        }
+    }
+
+    /// Process the next hit object and calculate the
+    /// performance attributes for the resulting score.
+    #[inline]
+    pub fn next(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, 0)
+    }
+
+    /// Process all remaining hit objects and calculate the final performance attributes.
+    #[inline]
+    pub fn last(&mut self, state: ScoreState) -> Option<PerformanceAttributes> {
+        self.nth(state, usize::MAX)
+    }
+
+    /// Process everything up the the next `n`th hit object and calculate the performance
+    /// attributes for the resulting score state.
+    ///
+    /// Note that the count is zero-indexed, so `n=0` will process 1 object, `n=1` will process 2,
+    /// and so on.
+    #[inline]
+    pub fn nth(&mut self, state: ScoreState, n: usize) -> Option<PerformanceAttributes> {
+        match self {
+            Self::Osu(o) => o.nth(state.into(), n).map(PerformanceAttributes::Osu),
+            Self::Taiko(t) => t.nth(state.into(), n).map(PerformanceAttributes::Taiko),
+            Self::Catch(f) => f.nth(state.into(), n).map(PerformanceAttributes::Catch),
+            Self::Mania(m) => m.nth(state.into(), n).map(PerformanceAttributes::Mania),
         }
     }
 }
