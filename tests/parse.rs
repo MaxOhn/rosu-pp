@@ -1,7 +1,5 @@
 use rosu_pp::{Beatmap, GameMode};
 
-use crate::common::{Catch, Mania, Osu, Taiko};
-
 mod common;
 
 #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
@@ -93,7 +91,7 @@ mod async_tokio {
     }
 }
 
-fn assert_osu(map: Beatmap) {
+fn assert_osu(map: &Beatmap) {
     assert_eq!(map.mode, GameMode::Osu);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 307);
@@ -114,7 +112,7 @@ fn assert_osu(map: Beatmap) {
     assert_eq!(map.breaks.len(), 1)
 }
 
-fn assert_taiko(map: Beatmap) {
+fn assert_taiko(map: &Beatmap) {
     assert_eq!(map.mode, GameMode::Taiko);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 289);
@@ -135,7 +133,7 @@ fn assert_taiko(map: Beatmap) {
     assert_eq!(map.breaks.len(), 0)
 }
 
-fn assert_catch(map: Beatmap) {
+fn assert_catch(map: &Beatmap) {
     assert_eq!(map.mode, GameMode::Catch);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 249);
@@ -156,7 +154,7 @@ fn assert_catch(map: Beatmap) {
     assert_eq!(map.breaks.len(), 0)
 }
 
-fn assert_mania(map: Beatmap) {
+fn assert_mania(map: &Beatmap) {
     assert_eq!(map.mode, GameMode::Mania);
     assert_eq!(map.version, 14);
     assert_eq!(map.n_circles, 473);
