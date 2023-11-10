@@ -6,6 +6,7 @@
   
 - __Breaking adjustments:__
   - Removed the method `HitObject::end_time` from the public api.
+  - The fields `control_points` and `edge_sounds` of `HitObjectKind::Slider` are now stored in a `Box` rather than a `Vec`.
   - Overhauled gradual calculation. All relevant types are now gated behind the `gradual` feature which must be enabled.
   - `*GradualDifficultyAttributes` has been renamed to `*GradualDifficulty` and `*GradualPerformanceAttributes`
     has been renamed to `*GradualPerformance`.

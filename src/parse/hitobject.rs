@@ -64,10 +64,10 @@ pub enum HitObjectKind {
         /// The amount of repeat points of the slider.
         repeats: usize,
         /// The control points of the slider.
-        control_points: Vec<PathControlPoint>,
+        control_points: Box<[PathControlPoint]>,
         /// Sample sounds for the slider head, end, and repeat points.
         /// Required for converts.
-        edge_sounds: Vec<u8>,
+        edge_sounds: Box<[u8]>,
     },
     /// A spinner object.
     Spinner {
