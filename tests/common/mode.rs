@@ -60,9 +60,9 @@ impl_mode! {
         n_droplets: 2,
         n_tiny_droplets: 291,
     };
-    Mania: 1974394, ManiaDifficultyAttributes {
-        stars: 4.824631127426499,
+    Mania: 1638954, ManiaDifficultyAttributes {
+        stars: 3.441830819988125,
         hit_window: 40.0,
-        max_combo: 5064,
+        max_combo: 956,
     };
 }

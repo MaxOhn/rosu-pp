@@ -24,4 +24,29 @@ impl CatchScoreState {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Return the total amount of hits by adding everything up.
+    #[inline]
+    pub fn total_hits(&self) -> usize {
+        self.n_fruits
+            + self.n_droplets
+            + self.n_tiny_droplets
+            + self.n_tiny_droplet_misses
+            + self.n_misses
+    }
+
+    /// Calculate the accuracy between `0.0` and `1.0` for this state.
+    #[inline]
+    pub fn accuracy(&self) -> f64 {
+        let total_hits = self.total_hits();
+
+        if total_hits == 0 {
+            return 0.0;
+        }
+
+        let numerator = self.n_fruits + self.n_droplets + self.n_tiny_droplets;
+        let denominator = total_hits;
+
+        numerator as f64 / denominator as f64
+    }
 }
