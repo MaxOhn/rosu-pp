@@ -16,8 +16,7 @@ pub struct HitObject {
 
 impl HitObject {
     /// The end time of the object.
-    #[inline]
-    pub fn end_time(&self) -> f64 {
+    pub(crate) fn end_time(&self) -> f64 {
         match &self.kind {
             HitObjectKind::Circle => self.start_time,
             // incorrect, only called in mania which has no sliders though
