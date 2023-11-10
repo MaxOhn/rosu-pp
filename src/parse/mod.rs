@@ -395,8 +395,9 @@ macro_rules! parse_hitobjects_body {
         // the actual `&str` elements transmuted into `(usize, usize)`.
         let mut point_split_raw: Vec<(usize, usize)> = Vec::new();
 
-        // Buffer to re-use for all sliders
+        // Buffers to re-use for all sliders
         let mut vertices = Vec::new();
+        let mut control_points = Vec::new();
 
         'next_line: while next_line!($reader)? != 0 {
             if let Some(bytes) = $reader.get_section() {
@@ -482,8 +483,7 @@ macro_rules! parse_hitobjects_body {
             } else if kind & Self::SLIDER_FLAG > 0 {
                 $self.n_sliders += 1;
 
-                // Control Points: [1, 94872] | Median=3 | Mean=2.9984
-                let mut control_points = Vec::with_capacity(3);
+                control_points.clear();
 
                 let control_point_iter = match split.next() {
                     Some(s) => s.split('|'),
@@ -569,7 +569,7 @@ macro_rules! parse_hitobjects_body {
                         None => None,
                     };
 
-                    let mut edge_sounds = vec![sound; repeats + 2];
+                    let mut edge_sounds = vec![sound; repeats + 2].into_boxed_slice();
 
                     split
                         .next()
@@ -590,7 +590,7 @@ macro_rules! parse_hitobjects_body {
                     HitObjectKind::Slider {
                         repeats,
                         pixel_len,
-                        control_points,
+                        control_points: Box::from(control_points.as_slice()),
                         edge_sounds,
                     }
                 }
