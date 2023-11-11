@@ -355,12 +355,36 @@ pub(crate) fn create_osu_objects(
         curve_bufs: CurveBuffers::default(),
     };
 
-    let mut hit_objects: Vec<_> = map
-        .hit_objects
-        .iter()
+    let mut hit_objects = Vec::with_capacity(map.hit_objects.len());
+    let mut iter = map.hit_objects.iter();
+
+    let hit_object_iter = iter
+        .by_ref()
         .take(take)
-        .map(|h| OsuObject::new(h, &mut params))
-        .collect();
+        .map(|h| OsuObject::new(h, &mut params));
+    hit_objects.extend(hit_object_iter);
+
+    // remaining objects unfortunately still need to be processed since they might influence stacking
+    if take < map.hit_objects.len() {
+        let ObjectParameters {
+            map,
+            attrs,
+            ticks,
+            curve_bufs,
+        } = params;
+
+        // use a new instance for attributes so that max combo & co remain correct in the original
+        let mut throw_away_attrs = attrs.clone();
+
+        let mut params = ObjectParameters {
+            map,
+            attrs: &mut throw_away_attrs,
+            ticks,
+            curve_bufs,
+        };
+
+        hit_objects.extend(iter.map(|h| OsuObject::new(h, &mut params)));
+    }
 
     let stack_threshold = time_preempt * map.stack_leniency as f64;
 
@@ -369,6 +393,8 @@ pub(crate) fn create_osu_objects(
     } else {
         old_stacking(&mut hit_objects, stack_threshold);
     }
+
+    hit_objects.truncate(take);
 
     hit_objects
         .iter_mut()
