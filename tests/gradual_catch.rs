@@ -8,8 +8,6 @@ use rosu_pp::{
     Beatmap, CatchPP, CatchStars,
 };
 
-use crate::common::Catch;
-
 mod common;
 
 #[test]

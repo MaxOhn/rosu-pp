@@ -8,8 +8,6 @@ use rosu_pp::{
     Beatmap, ManiaPP, ManiaStars,
 };
 
-use crate::common::Mania;
-
 mod common;
 
 #[test]

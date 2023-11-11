@@ -148,9 +148,7 @@ impl FlashlightEvaluator {
 
         // * This is iterating backwards in time from the current object.
         for i in 0..curr.idx.min(10) {
-            let curr_obj = if let Some(curr_obj) = previous(diff_objects, curr.idx, i) {
-                curr_obj
-            } else {
+            let Some(curr_obj) = previous(diff_objects, curr.idx, i) else {
                 break;
             };
 

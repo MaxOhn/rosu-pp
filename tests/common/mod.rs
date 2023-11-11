@@ -12,9 +12,9 @@ static MAPS: OnceLock<[Beatmap; 4]> = OnceLock::new();
 macro_rules! test_map {
     ($mode:ident) => {{
         #[cfg(not(any(feature = "async_tokio", feature = "async_std")))]
-        { common::test_map(GameMode::$mode) }
+        { common::test_map(rosu_pp::GameMode::$mode) }
         #[cfg(any(feature = "async_tokio", feature = "async_std"))]
-        { common::test_map(GameMode::$mode).await }
+        { common::test_map(rosu_pp::GameMode::$mode).await }
     }};
 }
 

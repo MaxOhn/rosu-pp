@@ -8,8 +8,6 @@ use rosu_pp::{
     Beatmap, TaikoPP, TaikoStars,
 };
 
-use crate::common::Taiko;
-
 mod common;
 
 #[test]

@@ -3,12 +3,11 @@
     feature = "gradual"
 ))]
 
+use rosu_pp::osu::OsuOwnedGradualPerformance;
 use rosu_pp::{
     osu::{OsuGradualDifficulty, OsuGradualPerformance, OsuScoreState},
-    Beatmap, OsuPP, OsuStars,
+    Beatmap, OsuPP,
 };
-
-use crate::common::Osu;
 
 mod common;
 
@@ -18,63 +17,6 @@ fn empty_map() {
     let mut attributes = OsuGradualDifficulty::new(&map, 0);
 
     assert!(attributes.next().is_none());
-}
-
-#[test]
-fn iter_end_eq_regular() {
-    let map = test_map!(Osu);
-    let regular = OsuStars::new(&map).calculate();
-
-    let iter_end = OsuGradualDifficulty::new(&map, 0)
-        .last()
-        .expect("empty iter");
-
-    assert_eq!(regular, iter_end);
-}
-
-#[test]
-fn correct_empty() {
-    let map = test_map!(Osu);
-    let mut gradual = OsuGradualPerformance::new(&map, 0);
-    let state = OsuScoreState::default();
-
-    let first_attrs = gradual.nth(state.clone(), usize::MAX);
-
-    assert!(first_attrs.is_some());
-    assert!(gradual.next(state).is_none());
-}
-
-#[test]
-fn next_and_next_n() {
-    let map = test_map!(Osu);
-    let state = OsuScoreState::default();
-
-    let mut gradual1 = OsuGradualPerformance::new(&map, 0);
-    let mut gradual2 = OsuGradualPerformance::new(&map, 0);
-
-    for _ in 0..20 {
-        let _ = gradual1.next(state.clone());
-        let _ = gradual2.next(state.clone());
-    }
-
-    let n = 80;
-
-    for _ in 1..n {
-        let _ = gradual1.next(state.clone());
-    }
-
-    let state = OsuScoreState {
-        max_combo: 122,
-        n300: 88,
-        n100: 8,
-        n50: 2,
-        n_misses: 2,
-    };
-
-    let next = gradual1.next(state.clone());
-    let next_n = gradual2.nth(state, n - 1);
-
-    assert_eq!(next_n, next);
 }
 
 #[test]
@@ -91,28 +33,58 @@ fn gradual_end_eq_regular() {
         n_misses: 0,
     };
 
-    let gradual_end = gradual.nth(state, usize::MAX).unwrap();
+    let gradual_end = gradual.last(state.clone()).unwrap();
 
     assert_eq!(regular, gradual_end);
+    assert!(gradual.next(state).is_none());
 }
 
 #[test]
-fn gradual_eq_regular_passed() {
+fn gradual_complete_next() {
     let map = test_map!(Osu);
-    let n = 100;
+    let mods = 88; // HDHRDT
 
-    let regular = OsuPP::new(&map).passed_objects(n).calculate();
-    let mut gradual = OsuGradualPerformance::new(&map, 0);
+    let mut gradual = OsuGradualPerformance::new(map, mods);
+    let mut gradual_2nd = OsuGradualPerformance::new(map, mods);
+    let mut gradual_3rd = OsuGradualPerformance::new(map, mods);
+    let mut gradual_owned = OsuOwnedGradualPerformance::new(map.to_owned(), mods);
 
-    let state = OsuScoreState {
-        max_combo: 122,
-        n300: 100,
-        n100: 0,
-        n50: 0,
-        n_misses: 0,
-    };
+    let mut state = OsuScoreState::default();
 
-    let gradual = gradual.nth(state, n - 1).unwrap();
+    for i in 1.. {
+        state.n_misses += 1;
 
-    assert_eq!(regular, gradual);
+        let Some(next_gradual) = gradual.next(state.clone()) else {
+            assert_eq!(i, map.hit_objects.len() + 1);
+            assert!(gradual_2nd.last(state.clone()).is_some() || map.hit_objects.len() % 2 == 0);
+            assert!(gradual_3rd.last(state.clone()).is_some() || map.hit_objects.len() % 3 == 0);
+            assert!(gradual_owned.next(state.clone()).is_none());
+            break;
+        };
+
+        if i % 2 == 0 {
+            let next_gradual_2nd = gradual_2nd.nth(state.clone(), 1).unwrap();
+            assert_eq!(next_gradual, next_gradual_2nd, "i={i}");
+        }
+
+        if i % 3 == 0 {
+            let next_gradual_3rd = gradual_3rd.nth(state.clone(), 2).unwrap();
+            assert_eq!(next_gradual, next_gradual_3rd, "i={i}");
+        }
+
+        let next_gradual_owned = gradual_owned.next(state.clone()).unwrap();
+
+        let mut regular_calc = OsuPP::new(&map)
+            .mods(mods)
+            .passed_objects(i)
+            .state(state.clone());
+
+        let regular_state = regular_calc.generate_state();
+        assert_eq!(state, regular_state);
+
+        let regular = regular_calc.calculate();
+
+        assert_eq!(next_gradual, next_gradual_owned, "i={i}");
+        assert_eq!(next_gradual, regular, "i={i}");
+    }
 }
