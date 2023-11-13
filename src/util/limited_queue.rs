@@ -118,7 +118,7 @@ mod test {
         assert!(!queue.is_empty());
         assert_eq!(queue.len(), 1);
         assert_eq!(queue.last(), Some(&elem));
-        assert!(queue.iter().eq(vec![elem].iter()));
+        assert!(queue.iter().eq([elem].iter()));
         assert_eq!(queue[0], elem);
     }
 

@@ -24,18 +24,16 @@ fn empty_map() {
 #[test]
 fn gradual_end_eq_regular() {
     let map = test_map!(Mania);
-    let regular = ManiaPP::new(&map).calculate();
-
-    let mut gradual = ManiaGradualPerformance::new(&map, 0);
+    let regular = ManiaPP::new(map).calculate();
 
     let state = ManiaScoreState {
         n320: map.hit_objects.len(),
         ..Default::default()
     };
 
-    let gradual_end = gradual.nth(state, usize::MAX).unwrap();
+    let gradual = ManiaGradualPerformance::new(map, 0).last(state).unwrap();
 
-    assert_eq!(regular, gradual_end);
+    assert_eq!(regular, gradual);
 }
 
 #[test]
@@ -73,7 +71,7 @@ fn gradual_complete_next() {
 
         let next_gradual_owned = gradual_owned.next(state.clone()).unwrap();
 
-        let regular_calc = ManiaPP::new(&map)
+        let regular_calc = ManiaPP::new(map)
             .mods(mods)
             .passed_objects(i)
             .state(state.clone());

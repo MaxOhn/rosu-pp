@@ -728,7 +728,7 @@ mod test {
     fn fruits_missing_objects() {
         let (map, attrs) = test_data();
 
-        let state = CatchPP::new(&map)
+        let state = CatchPP::new(map)
             .attributes(attrs)
             .fruits(N_FRUITS - 10)
             .droplets(N_DROPLETS - 1)

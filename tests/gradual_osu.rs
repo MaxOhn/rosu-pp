@@ -22,8 +22,8 @@ fn empty_map() {
 #[test]
 fn gradual_end_eq_regular() {
     let map = test_map!(Osu);
-    let regular = OsuPP::new(&map).calculate();
-    let mut gradual = OsuGradualPerformance::new(&map, 0);
+    let regular = OsuPP::new(map).calculate();
+    let mut gradual = OsuGradualPerformance::new(map, 0);
 
     let state = OsuScoreState {
         max_combo: 909,
@@ -74,7 +74,7 @@ fn gradual_complete_next() {
 
         let next_gradual_owned = gradual_owned.next(state.clone()).unwrap();
 
-        let mut regular_calc = OsuPP::new(&map)
+        let mut regular_calc = OsuPP::new(map)
             .mods(mods)
             .passed_objects(i)
             .state(state.clone());

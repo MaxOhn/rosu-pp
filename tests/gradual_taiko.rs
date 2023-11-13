@@ -24,8 +24,8 @@ fn empty_map() {
 #[test]
 fn gradual_end_eq_regular() {
     let map = test_map!(Taiko);
-    let regular = TaikoPP::new(&map).calculate();
-    let mut gradual = TaikoGradualPerformance::new(&map, 0);
+    let regular = TaikoPP::new(map).calculate();
+    let mut gradual = TaikoGradualPerformance::new(map, 0);
 
     let state = TaikoScoreState {
         max_combo: 289,
@@ -74,7 +74,7 @@ fn gradual_complete_next() {
 
         let next_gradual_owned = gradual_owned.next(state.clone()).unwrap();
 
-        let mut regular_calc = TaikoPP::new(&map)
+        let mut regular_calc = TaikoPP::new(map)
             .mods(mods)
             .passed_objects(i)
             .state(state.clone());

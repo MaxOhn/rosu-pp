@@ -21,9 +21,9 @@ fn empty_map() {
 #[test]
 fn iter_end_eq_regular() {
     let map = test_map!(Catch);
-    let regular = CatchStars::new(&map).calculate();
+    let regular = CatchStars::new(map).calculate();
 
-    let iter_end = CatchGradualDifficulty::new(&map, 0)
+    let iter_end = CatchGradualDifficulty::new(map, 0)
         .last()
         .expect("empty iter");
 
@@ -33,7 +33,7 @@ fn iter_end_eq_regular() {
 #[test]
 fn correct_empty() {
     let map = test_map!(Catch);
-    let mut gradual = CatchGradualPerformance::new(&map, 0);
+    let mut gradual = CatchGradualPerformance::new(map, 0);
     let state = CatchScoreState::default();
 
     let first_attrs = gradual.nth(state.clone(), usize::MAX);
@@ -47,8 +47,8 @@ fn next_and_next_n() {
     let map = test_map!(Catch);
     let state = CatchScoreState::default();
 
-    let mut gradual1 = CatchGradualPerformance::new(&map, 0);
-    let mut gradual2 = CatchGradualPerformance::new(&map, 0);
+    let mut gradual1 = CatchGradualPerformance::new(map, 0);
+    let mut gradual2 = CatchGradualPerformance::new(map, 0);
 
     for _ in 0..20 {
         let _ = gradual1.next(state.clone());
@@ -79,9 +79,9 @@ fn next_and_next_n() {
 #[test]
 fn gradual_end_eq_regular() {
     let map = test_map!(Catch);
-    let regular = CatchPP::new(&map).calculate();
+    let regular = CatchPP::new(map).calculate();
 
-    let mut gradual = CatchGradualPerformance::new(&map, 0);
+    let mut gradual = CatchGradualPerformance::new(map, 0);
 
     let state = CatchScoreState {
         max_combo: 730,
@@ -102,8 +102,8 @@ fn gradual_eq_regular_passed() {
     let map = test_map!(Catch);
     let n = 100;
 
-    let regular = CatchPP::new(&map).passed_objects(n).calculate();
-    let mut gradual = CatchGradualPerformance::new(&map, 0);
+    let regular = CatchPP::new(map).passed_objects(n).calculate();
+    let mut gradual = CatchGradualPerformance::new(map, 0);
 
     let state = CatchScoreState {
         max_combo: 101,

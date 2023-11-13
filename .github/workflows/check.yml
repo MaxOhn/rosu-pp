@@ -30,7 +30,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run clippy
-        run: cargo clippy --no-default-features --features ${{ matrix.feature }}
+        run: cargo clippy --no-default-features --features ${{ matrix.feature }} --all-targets
 
   tests:
     name: Tests

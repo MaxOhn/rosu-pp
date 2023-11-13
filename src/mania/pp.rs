@@ -948,6 +948,7 @@ mod tests {
     ///
     /// Very slow but accurate.
     /// Only slight optimizations have been applied so that it doesn't run unreasonably long.
+    #[allow(clippy::too_many_arguments)]
     fn brute_force_best(
         acc: f64,
         n320: Option<usize>,
@@ -1225,7 +1226,7 @@ mod tests {
     fn hitresults_n320_n_misses_best() {
         let (map, attrs) = test_data();
 
-        let state = ManiaPP::new(&map)
+        let state = ManiaPP::new(map)
             .attributes(attrs)
             .n320(500)
             .n_misses(2)
@@ -1248,7 +1249,7 @@ mod tests {
     fn hitresults_n100_n50_n_misses_worst() {
         let (map, attrs) = test_data();
 
-        let state = ManiaPP::new(&map)
+        let state = ManiaPP::new(map)
             .attributes(attrs)
             .n100(200)
             .n50(50)
