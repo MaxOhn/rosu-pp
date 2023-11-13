@@ -4,8 +4,11 @@
 ))]
 
 use rosu_pp::{
-    mania::{ManiaGradualDifficulty, ManiaGradualPerformance, ManiaScoreState},
-    Beatmap, ManiaPP, ManiaStars,
+    mania::{
+        ManiaGradualDifficulty, ManiaGradualPerformance, ManiaOwnedGradualPerformance,
+        ManiaScoreState,
+    },
+    Beatmap, ManiaPP,
 };
 
 mod common;
@@ -16,59 +19,6 @@ fn empty_map() {
     let mut attributes = ManiaGradualDifficulty::new(&map, 0);
 
     assert!(attributes.next().is_none());
-}
-
-#[test]
-fn iter_end_eq_regular() {
-    let map = test_map!(Mania);
-    let regular = ManiaStars::new(&map).calculate();
-
-    let iter_end = ManiaGradualDifficulty::new(&map, 0)
-        .last()
-        .expect("empty iter");
-
-    assert_eq!(regular, iter_end);
-}
-
-#[test]
-fn correct_empty() {
-    let map = test_map!(Mania);
-    let mut gradual = ManiaGradualPerformance::new(&map, 0);
-
-    let state = ManiaScoreState::default();
-
-    let first_attrs = gradual.nth(state.clone(), usize::MAX);
-
-    assert!(first_attrs.is_some());
-    assert!(gradual.next(state).is_none());
-}
-
-#[test]
-fn next_and_next_n() {
-    let map = test_map!(Mania);
-
-    let mut state = ManiaScoreState::default();
-
-    let mut gradual1 = ManiaGradualPerformance::new(&map, 0);
-    let mut gradual2 = ManiaGradualPerformance::new(&map, 0);
-
-    for _ in 0..20 {
-        let _ = gradual1.next(state.clone());
-        let _ = gradual2.next(state.clone());
-        state.n320 += 1;
-    }
-
-    let n = 80;
-
-    for _ in 1..n {
-        let _ = gradual1.next(state.clone());
-        state.n320 += 1;
-    }
-
-    let next = gradual1.next(state.clone());
-    let next_n = gradual2.nth(state, n - 1);
-
-    assert_eq!(next_n, next);
 }
 
 #[test]
@@ -89,23 +39,51 @@ fn gradual_end_eq_regular() {
 }
 
 #[test]
-fn gradual_eq_regular_passed() {
+fn gradual_complete_next() {
     let map = test_map!(Mania);
-    let n = 100;
+    let mods = 67; // NFEZDT
 
-    let state = ManiaScoreState {
-        n320: 100,
-        ..Default::default()
-    };
+    let mut gradual = ManiaGradualPerformance::new(map, mods);
+    let mut gradual_2nd = ManiaGradualPerformance::new(map, mods);
+    let mut gradual_3rd = ManiaGradualPerformance::new(map, mods);
+    let mut gradual_owned = ManiaOwnedGradualPerformance::new(map.to_owned(), mods);
 
-    let regular = ManiaPP::new(&map)
-        .passed_objects(n)
-        .state(state.clone())
-        .calculate();
+    let mut state = ManiaScoreState::default();
 
-    let gradual = ManiaGradualPerformance::new(&map, 0)
-        .nth(state, n - 1)
-        .unwrap();
+    for i in 1.. {
+        state.n320 += 1;
 
-    assert_eq!(regular, gradual);
+        let Some(next_gradual) = gradual.next(state.clone()) else {
+            assert_eq!(i, map.hit_objects.len() + 1);
+            assert!(gradual_2nd.last(state.clone()).is_some() || map.hit_objects.len() % 2 == 0);
+            assert!(gradual_3rd.last(state.clone()).is_some() || map.hit_objects.len() % 3 == 0);
+            assert!(gradual_owned.next(state.clone()).is_none());
+            break;
+        };
+
+        if i % 2 == 0 {
+            let next_gradual_2nd = gradual_2nd.nth(state.clone(), 1).unwrap();
+            assert_eq!(next_gradual, next_gradual_2nd, "i={i}");
+        }
+
+        if i % 3 == 0 {
+            let next_gradual_3rd = gradual_3rd.nth(state.clone(), 2).unwrap();
+            assert_eq!(next_gradual, next_gradual_3rd, "i={i}");
+        }
+
+        let next_gradual_owned = gradual_owned.next(state.clone()).unwrap();
+
+        let regular_calc = ManiaPP::new(&map)
+            .mods(mods)
+            .passed_objects(i)
+            .state(state.clone());
+
+        let regular_state = regular_calc.generate_state();
+        assert_eq!(state, regular_state);
+
+        let regular = regular_calc.calculate();
+
+        assert_eq!(next_gradual, next_gradual_owned, "i={i}");
+        assert_eq!(next_gradual, regular, "i={i}");
+    }
 }
