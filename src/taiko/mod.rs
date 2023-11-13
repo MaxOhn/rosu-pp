@@ -227,26 +227,19 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
         is_convert: _,
     } = params;
 
-    let mut take = passed_objects.unwrap_or(map.hit_objects.len());
+    let take = passed_objects.unwrap_or(map.hit_objects.len());
     let clock_rate = clock_rate.unwrap_or_else(|| mods.clock_rate());
 
     let mut peaks = Peaks::new();
     let mut max_combo = 0;
+    let mut n_diff_objects = 0;
 
-    let mut diff_objects = ObjectLists::default();
+    let mut diff_objects = ObjectLists::with_capacity(map.hit_objects.len().saturating_sub(2));
 
     map.taiko_objects()
-        .take_while(|(h, _)| {
-            if h.is_hit {
-                if take == 0 {
-                    return false;
-                }
-
-                max_combo += 1;
-                take -= 1;
-            }
-
-            true
+        .inspect(|(h, _)| {
+            n_diff_objects += (max_combo < take) as usize;
+            max_combo += (max_combo < take && h.is_hit) as usize;
         })
         .skip(2)
         .zip(map.hit_objects.iter().skip(1))
@@ -276,9 +269,14 @@ fn calculate_skills(params: TaikoStars<'_>) -> (Peaks, usize) {
             diff_objects.all.push(Rc::new(RefCell::new(diff_obj)));
         });
 
+    map.hit_objects
+        .iter()
+        .take(2)
+        .for_each(|h| n_diff_objects = n_diff_objects.saturating_sub(h.is_circle() as usize));
+
     ColourDifficultyPreprocessor::process_and_assign(&mut diff_objects);
 
-    for hit_object in diff_objects.all.iter() {
+    for hit_object in diff_objects.all.iter().take(n_diff_objects) {
         peaks.process(&hit_object.borrow(), &diff_objects);
     }
 

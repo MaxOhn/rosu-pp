@@ -111,8 +111,7 @@ fn closest_rhythm(
         .unwrap()
 }
 
-// TODO: Remove Default impl and replace with `with_capacity` method for efficiency
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub(crate) struct ObjectLists {
     pub(crate) all: Vec<Rc<RefCell<TaikoDifficultyObject>>>,
     pub(crate) centres: Vec<usize>,
@@ -121,6 +120,15 @@ pub(crate) struct ObjectLists {
 }
 
 impl ObjectLists {
+    pub(crate) fn with_capacity(capacity: usize) -> Self {
+        Self {
+            all: Vec::with_capacity(capacity),
+            centres: Vec::new(),
+            rims: Vec::new(),
+            notes: Vec::new(),
+        }
+    }
+
     pub(crate) fn prev_mono(
         &self,
         curr: usize,

@@ -51,7 +51,16 @@ pub struct TaikoGradualDifficulty {
     lists: ObjectLists,
     peaks: Peaks,
     total_hits: usize,
+    first_combos: FirstTwoCombos,
     is_convert: bool,
+}
+
+#[derive(Copy, Clone, Debug)]
+enum FirstTwoCombos {
+    None,
+    OnlyFirst,
+    OnlySecond,
+    Both,
 }
 
 impl TaikoGradualDifficulty {
@@ -68,41 +77,44 @@ impl TaikoGradualDifficulty {
             .clock_rate(clock_rate)
             .hit_windows();
 
-        let mut attrs = TaikoDifficultyAttributes {
-            stamina: 0.0,
-            rhythm: 0.0,
-            colour: 0.0,
-            peak: 0.0,
+        let attrs = TaikoDifficultyAttributes {
             hit_window,
-            stars: 0.0,
-            max_combo: 0,
+            ..Default::default()
         };
 
         if map.hit_objects.len() < 2 {
             return Self {
                 idx: 0,
                 diff_objects: Vec::new().into_iter(),
-                lists: ObjectLists::default(),
+                lists: ObjectLists::with_capacity(0),
                 peaks,
                 attrs,
                 total_hits: 0,
+                first_combos: FirstTwoCombos::None,
                 is_convert,
             };
         }
 
-        attrs.max_combo += map.hit_objects[0].is_circle() as usize;
-        attrs.max_combo += map.hit_objects[1].is_circle() as usize;
-        let mut total_hits = attrs.max_combo;
-        let mut diff_objects = ObjectLists::default();
+        let first_combos = match (
+            map.hit_objects[0].is_circle(),
+            map.hit_objects[1].is_circle(),
+        ) {
+            (false, false) => FirstTwoCombos::None,
+            (true, false) => FirstTwoCombos::OnlyFirst,
+            (false, true) => FirstTwoCombos::OnlySecond,
+            (true, true) => FirstTwoCombos::Both,
+        };
+
+        let mut total_hits = 0;
+        let mut diff_objects = ObjectLists::with_capacity(map.hit_objects.len().saturating_sub(2));
 
         map.taiko_objects()
+            .inspect(|(h, _)| total_hits += h.is_hit as usize)
             .skip(2)
             .zip(map.hit_objects.iter().skip(1))
             .zip(map.hit_objects.iter())
             .enumerate()
             .for_each(|(idx, (((base, base_start_time), last), last_last))| {
-                total_hits += base.is_hit as usize;
-
                 let diff_obj = TaikoDifficultyObject::new(
                     base,
                     base_start_time,
@@ -135,6 +147,7 @@ impl TaikoGradualDifficulty {
             peaks,
             attrs,
             total_hits,
+            first_combos,
             is_convert,
         }
     }
@@ -162,6 +175,14 @@ impl Iterator for TaikoGradualDifficulty {
             }
         } else if self.lists.all.is_empty() {
             return None;
+        } else {
+            match self.first_combos {
+                FirstTwoCombos::OnlyFirst => self.attrs.max_combo = 1,
+                FirstTwoCombos::OnlySecond if self.idx == 1 => self.attrs.max_combo = 1,
+                FirstTwoCombos::Both if self.idx == 0 => self.attrs.max_combo = 1,
+                FirstTwoCombos::Both if self.idx == 1 => self.attrs.max_combo = 2,
+                _ => {}
+            }
         }
 
         self.idx += 1;
@@ -211,11 +232,43 @@ impl Iterator for TaikoGradualDifficulty {
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         let mut take = n.min(self.len().saturating_sub(1));
 
-        // The first two notes have no difficulty object
-        if self.idx < 2 && take > 0 {
-            let skipped = take.min(2);
-            take -= skipped;
-            self.idx += skipped;
+        // The first two notes have no difficulty object but might add to combo
+        match (take, self.idx) {
+            (_, 2..) | (0, _) => {}
+            (1, 0) => {
+                take -= 1;
+                self.idx += 1;
+
+                match self.first_combos {
+                    FirstTwoCombos::None => {}
+                    FirstTwoCombos::OnlyFirst => self.attrs.max_combo = 1,
+                    FirstTwoCombos::OnlySecond => {}
+                    FirstTwoCombos::Both => self.attrs.max_combo = 1,
+                }
+            }
+            (_, 0) => {
+                take -= 2;
+                self.idx += 2;
+
+                match self.first_combos {
+                    FirstTwoCombos::None => {}
+                    FirstTwoCombos::OnlyFirst => self.attrs.max_combo = 1,
+                    FirstTwoCombos::OnlySecond => self.attrs.max_combo = 1,
+                    FirstTwoCombos::Both => self.attrs.max_combo = 2,
+                }
+            }
+            (_, 1) => {
+                take -= 1;
+                self.idx += 1;
+
+                match self.first_combos {
+                    FirstTwoCombos::None => {}
+                    FirstTwoCombos::OnlyFirst => self.attrs.max_combo = 1,
+                    FirstTwoCombos::OnlySecond => self.attrs.max_combo = 1,
+                    FirstTwoCombos::Both => self.attrs.max_combo = 2,
+                }
+            }
+            _ => unreachable!(),
         }
 
         for _ in 0..take {
