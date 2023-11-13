@@ -472,7 +472,9 @@ impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
 }
 
 fn accuracy(n300: usize, n100: usize, n_misses: usize) -> f64 {
-    debug_assert_ne!(n300 + n100 + n_misses, 0);
+    if n300 + n100 + n_misses == 0 {
+        return 0.0;
+    }
 
     let numerator = 2 * n300 + n100;
     let denominator = 2 * (n300 + n100 + n_misses);

@@ -737,7 +737,9 @@ fn calculate_effective_misses(attrs: &OsuDifficultyAttributes, state: &OsuScoreS
 }
 
 fn accuracy(n300: usize, n100: usize, n50: usize, n_misses: usize) -> f64 {
-    debug_assert_ne!(n300 + n100 + n50 + n_misses, 0);
+    if n300 + n100 + n50 + n_misses == 0 {
+        return 0.0;
+    }
 
     let numerator = 6 * n300 + 2 * n100 + n50;
     let denominator = 6 * (n300 + n100 + n50 + n_misses);
