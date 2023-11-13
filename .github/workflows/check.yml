@@ -58,3 +58,6 @@ jobs:
 
       - name: Run tests
         run: cargo nextest run --no-default-features --features ${{ matrix.feature }} --no-fail-fast --failure-output=immediate-final
+
+      - name: Run doctests
+        run: cargo test --doc
