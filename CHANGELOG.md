@@ -3,11 +3,13 @@
   - __Additions:__
     - Added `From<u8>` impl for `GameMode`
     - Added the method `AnyPP::hitresult_priority`
+    - Added the method `[Mode]PP::generate_state` which returns the score state that will be used for performance calculation ([#23])
+    - The struct `SortedVec` has now an improved public interface so it can be constructed and pushed onto ([#22])
   
 - __Breaking adjustments:__
-  - Removed the method `HitObject::end_time` from the public api.
-  - The fields `control_points` and `edge_sounds` of `HitObjectKind::Slider` are now stored in a `Box` rather than a `Vec`.
-  - Overhauled gradual calculation. All relevant types are now gated behind the `gradual` feature which must be enabled.
+  - Removed the method `HitObject::end_time` from the public api. ([#25])
+  - The fields `control_points` and `edge_sounds` of `HitObjectKind::Slider` are now stored in a `Box` rather than a `Vec`. ([#26])
+  - Overhauled gradual calculation. All relevant types are now gated behind the `gradual` feature which must be enabled. ([#24])
   - `*GradualDifficultyAttributes` has been renamed to `*GradualDifficulty` and `*GradualPerformanceAttributes`
     has been renamed to `*GradualPerformance`.
   - Types for gradual calculation that depend on a lifetime now have a counterpart without a lifetime that might clone
@@ -273,3 +275,8 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
 [#18]: https://github.com/MaxOhn/rosu-pp/pull/18
 [#20]: https://github.com/MaxOhn/rosu-pp/pull/20
 [#21]: https://github.com/MaxOhn/rosu-pp/pull/21
+[#22]: https://github.com/MaxOhn/rosu-pp/pull/22
+[#23]: https://github.com/MaxOhn/rosu-pp/pull/23
+[#24]: https://github.com/MaxOhn/rosu-pp/pull/24
+[#25]: https://github.com/MaxOhn/rosu-pp/pull/25
+[#26]: https://github.com/MaxOhn/rosu-pp/pull/26
