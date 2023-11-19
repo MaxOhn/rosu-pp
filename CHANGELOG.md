@@ -1,10 +1,16 @@
 ## Upcoming
 
-  - __Additions:__
-    - Added `From<u8>` impl for `GameMode`
-    - Added the method `AnyPP::hitresult_priority`
-    - Added the method `[Mode]PP::generate_state` which returns the score state that will be used for performance calculation ([#23])
-    - The struct `SortedVec` has now an improved public interface so it can be constructed and pushed onto ([#22])
+Nothing as of now
+
+# v0.10.0 (2023-11-19)
+
+Essentially only adjustments to the API so bindings won't need an update.
+
+- __Additions:__
+  - Added `From<u8>` impl for `GameMode`
+  - Added the method `AnyPP::hitresult_priority`
+  - Added the method `[Mode]PP::generate_state` which returns the score state that will be used for performance calculation ([#23])
+  - The struct `SortedVec` has now an improved public interface so it can be constructed and pushed onto ([#22])
   
 - __Breaking adjustments:__
   - Removed the method `HitObject::end_time` from the public api. ([#25])
@@ -20,7 +26,7 @@
   - Similar to `Iterator::nth`, gradual performance calculators' method `nth` is now zero-indexed i.e. passing `n=0`
     will process 1 object, `n=1` will process 2, and so on.
 
-# v0.9.5 (2023-09-06)
+## v0.9.5 (2023-09-06)
 
 - __Additions:__
   - Added the method `{AnyStars/AnyPP}::is_convert` which **needs** to be used if the map was manually converted beforehand
