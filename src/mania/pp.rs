@@ -288,21 +288,19 @@ impl<'map> ManiaPP<'map> {
                     let mut best_dist = f64::INFINITY;
                     let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses);
 
+                    let raw_n3x0 = (target_total - (4 * n_remaining) as f64
+                        + (2 * n100 + 3 * n50) as f64)
+                        / 2.0;
+                    let min_n3x0 =
+                        (raw_n3x0.floor() as usize).min(n_remaining.saturating_sub(n100 + n50));
+                    let max_n3x0 =
+                        (raw_n3x0.ceil() as usize).min(n_remaining.saturating_sub(n100 + n50));
+
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
                         (Some(_), Some(_)) => (n320 + n300, n320 + n300),
-                        (Some(_), None) => (n320, n320),
-                        (None, Some(_)) => (n300, n300),
-                        (None, None) => {
-                            let raw_n3x0 = (target_total - (4 * n_remaining) as f64
-                                + (2 * n100 + 3 * n50) as f64)
-                                / 2.0;
-                            let min_n3x0 = (raw_n3x0.floor() as usize)
-                                .min(n_remaining.saturating_sub(n100 + n50));
-                            let max_n3x0 = (raw_n3x0.ceil() as usize)
-                                .min(n_remaining.saturating_sub(n100 + n50));
-
-                            (min_n3x0, max_n3x0)
-                        }
+                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
+                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (None, None) => (min_n3x0, max_n3x0),
                     };
 
                     for new3x0 in min_n3x0..=max_n3x0 {
@@ -333,20 +331,17 @@ impl<'map> ManiaPP<'map> {
                     let mut best_dist = f64::INFINITY;
                     let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses);
 
+                    let raw_n3x0 = (target_total - (2 * (n_remaining + n200) - n50) as f64) / 4.0;
+                    let min_n3x0 =
+                        (raw_n3x0.floor() as usize).min(n_remaining.saturating_sub(n200 + n50));
+                    let max_n3x0 =
+                        (raw_n3x0.ceil() as usize).min(n_remaining.saturating_sub(n200 + n50));
+
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
                         (Some(_), Some(_)) => (n320 + n300, n320 + n300),
-                        (Some(_), None) => (n320, n320),
-                        (None, Some(_)) => (n300, n300),
-                        (None, None) => {
-                            let raw_n3x0 =
-                                (target_total - (2 * (n_remaining + n200) - n50) as f64) / 4.0;
-                            let min_n3x0 = (raw_n3x0.floor() as usize)
-                                .min(n_remaining.saturating_sub(n200 + n50));
-                            let max_n3x0 = (raw_n3x0.ceil() as usize)
-                                .min(n_remaining.saturating_sub(n200 + n50));
-
-                            (min_n3x0, max_n3x0)
-                        }
+                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
+                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (None, None) => (min_n3x0, max_n3x0),
                     };
 
                     for new3x0 in min_n3x0..=max_n3x0 {
@@ -377,20 +372,17 @@ impl<'map> ManiaPP<'map> {
                     let mut best_dist = f64::INFINITY;
                     let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
 
+                    let raw_n3x0 = (target_total - (n_remaining + 3 * n200 + n100) as f64) / 5.0;
+                    let min_n3x0 =
+                        (raw_n3x0.floor() as usize).min(n_remaining.saturating_sub(n200 + n100));
+                    let max_n3x0 =
+                        (raw_n3x0.ceil() as usize).min(n_remaining.saturating_sub(n200 + n100));
+
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
                         (Some(_), Some(_)) => (n320 + n300, n320 + n300),
-                        (Some(_), None) => (n320, n320),
-                        (None, Some(_)) => (n300, n300),
-                        (None, None) => {
-                            let raw_n3x0 =
-                                (target_total - (n_remaining + 3 * n200 + n100) as f64) / 5.0;
-                            let min_n3x0 = (raw_n3x0.floor() as usize)
-                                .min(n_remaining.saturating_sub(n200 + n100));
-                            let max_n3x0 = (raw_n3x0.ceil() as usize)
-                                .min(n_remaining.saturating_sub(n200 + n100));
-
-                            (min_n3x0, max_n3x0)
-                        }
+                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
+                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (None, None) => (min_n3x0, max_n3x0),
                     };
 
                     for new3x0 in min_n3x0..=max_n3x0 {
