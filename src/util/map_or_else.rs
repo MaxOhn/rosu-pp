@@ -10,19 +10,6 @@ impl<M, E> MapOrElse<M, E>
 where
     M: AsRef<Beatmap>,
 {
-    // /// Take out the `Else` value of `self` and return it.
-    // ///
-    // /// If `self` is of variant `Else`, `E::default()` will be left in place.
-    // pub(crate) fn take(&mut self) -> MapOrElse<MapRef<'_>, E>
-    // where
-    //     E: Default,
-    // {
-    //     match self {
-    //         Self::Map(ref map) => MapOrElse::from(map.deref()),
-    //         Self::Else(ref mut other) => MapOrElse::Else(mem::take(other)),
-    //     }
-    // }
-
     /// Return a mutable reference to `Else`.
     ///
     /// If `self` is of variant `Map`, store `other` in `self`, and return a
