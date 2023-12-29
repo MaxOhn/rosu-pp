@@ -170,6 +170,7 @@ impl<'map> TaikoStars<'map> {
             hit_window,
             stars: star_rating,
             max_combo,
+            is_convert,
         }
     }
 
@@ -309,6 +310,8 @@ pub struct TaikoDifficultyAttributes {
     pub stars: f64,
     /// The maximum combo.
     pub max_combo: usize,
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    pub is_convert: bool,
 }
 
 impl TaikoDifficultyAttributes {
@@ -316,6 +319,12 @@ impl TaikoDifficultyAttributes {
     #[inline]
     pub fn max_combo(&self) -> usize {
         self.max_combo
+    }
+
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(&self) -> bool {
+        self.is_convert
     }
 }
 
@@ -351,6 +360,12 @@ impl TaikoPerformanceAttributes {
     #[inline]
     pub fn max_combo(&self) -> usize {
         self.difficulty.max_combo
+    }
+
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(&self) -> bool {
+        self.difficulty.is_convert
     }
 }
 

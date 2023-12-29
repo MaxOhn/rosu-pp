@@ -139,6 +139,7 @@ impl<'map> ManiaStars<'map> {
             hit_window,
             max_combo,
             n_objects,
+            is_convert,
         }
     }
 
@@ -239,6 +240,8 @@ pub struct ManiaDifficultyAttributes {
     pub n_objects: usize,
     /// The maximum achievable combo.
     pub max_combo: usize,
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    pub is_convert: bool,
 }
 
 impl ManiaDifficultyAttributes {
@@ -252,6 +255,12 @@ impl ManiaDifficultyAttributes {
     #[inline]
     pub fn n_objects(&self) -> usize {
         self.n_objects
+    }
+
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(&self) -> bool {
+        self.is_convert
     }
 }
 
@@ -289,6 +298,12 @@ impl ManiaPerformanceAttributes {
     #[inline]
     pub fn n_objects(&self) -> usize {
         self.difficulty.n_objects
+    }
+
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(&self) -> bool {
+        self.difficulty.is_convert
     }
 }
 

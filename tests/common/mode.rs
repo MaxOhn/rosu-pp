@@ -52,6 +52,7 @@ impl_mode! {
         hit_window: 35.0,
         stars: 2.9778030386845606,
         max_combo: 289,
+        is_convert: false,
     };
     Catch: 2118524, CatchDifficultyAttributes {
         stars: 3.2502669316166624,
@@ -65,5 +66,6 @@ impl_mode! {
         hit_window: 40.0,
         max_combo: 956,
         n_objects: 594,
+        is_convert: false,
     };
 }
