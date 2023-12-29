@@ -741,7 +741,13 @@ impl<'map> ManiaPP<'map> {
         calculator.calculate()
     }
 
-    /// TODO: docs
+    /// Try to create [`ManiaPP`] through [`OsuPP`].
+    ///
+    /// Returns `None` if [`OsuPP`] already replaced its internal [`Beatmap`]
+    /// with [`OsuDifficultyAttributes`], i.e. if [`OsuPP::attributes`]
+    /// or [`OsuPP::generate_state`] was called.
+    ///
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
     #[inline]
     pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
         let OsuPP {
@@ -778,6 +784,37 @@ impl<'map> ManiaPP<'map> {
             n_misses,
             acc,
             hitresult_priority,
+        })
+    }
+
+    /// Try to create [`ManiaPP`] through a [`ManiaAttributeProvider`].
+    ///
+    /// If you already calculated the attributes for the current map-mod
+    /// combination, the [`Beatmap`] is no longer necessary to calculate
+    /// performance attributes so this method can be used instead of
+    /// [`ManiaPP::new`].
+    ///
+    /// Returns `None` only if the [`ManiaAttributeProvider`] did not contain
+    /// attributes for mania e.g. if it's [`DifficultyAttributes::Taiko`].
+    #[inline]
+    pub fn try_from_attributes(
+        attributes: impl ManiaAttributeProvider,
+        is_convert: bool,
+    ) -> Option<Self> {
+        attributes.attributes().map(|attrs| Self {
+            is_convert,
+            map_or_attrs: MapOrElse::Else(attrs),
+            mods: 0,
+            passed_objects: None,
+            clock_rate: None,
+            n320: None,
+            n300: None,
+            n200: None,
+            n100: None,
+            n50: None,
+            n_misses: None,
+            acc: None,
+            hitresult_priority: None,
         })
     }
 }

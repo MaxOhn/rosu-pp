@@ -60,6 +60,8 @@ impl<'map> AnyPP<'map> {
         }
     }
 
+    // TODO: from_attributes method
+
     /// Consume the performance calculator and calculate
     /// performance attributes for the given parameters.
     #[inline]

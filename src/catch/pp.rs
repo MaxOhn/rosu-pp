@@ -71,8 +71,6 @@ impl<'map> CatchPP<'map> {
         }
     }
 
-    // TODO: new_with_attributes function
-
     /// Provide the result of a previous difficulty or performance calculation.
     /// If you already calculated the attributes for the current map-mod combination,
     /// be sure to put them in here so that they don't have to be recalculated.
@@ -367,7 +365,13 @@ impl<'map> CatchPP<'map> {
         calculator.calculate()
     }
 
-    /// TODO: docs
+    /// Try to create [`CatchPP`] through [`OsuPP`].
+    ///
+    /// Returns `None` if [`OsuPP`] already replaced its internal [`Beatmap`]
+    /// with [`OsuDifficultyAttributes`], i.e. if [`OsuPP::attributes`]
+    /// or [`OsuPP::generate_state`] was called.
+    ///
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
     #[inline]
     pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
         let OsuPP {
@@ -400,6 +404,33 @@ impl<'map> CatchPP<'map> {
             n_misses,
             passed_objects,
             clock_rate,
+        })
+    }
+
+    /// Try to create [`CatchPP`] through a [`CatchAttributeProvider`].
+    ///
+    /// If you already calculated the attributes for the current map-mod
+    /// combination, the [`Beatmap`] is no longer necessary to calculate
+    /// performance attributes so this method can be used instead of
+    /// [`CatchPP::new`].
+    ///
+    /// Returns `None` only if the [`CatchAttributeProvider`] did not contain
+    /// attributes for catch e.g. if it's [`DifficultyAttributes::Taiko`].
+    #[inline]
+    pub fn try_from_attributes(attributes: impl CatchAttributeProvider) -> Option<Self> {
+        attributes.attributes().map(|attrs| Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            mods: 0,
+            acc: None,
+            combo: None,
+
+            n_fruits: None,
+            n_droplets: None,
+            n_tiny_droplets: None,
+            n_tiny_droplet_misses: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
         })
     }
 }
@@ -521,7 +552,6 @@ impl CatchAttributeProvider for CatchPerformanceAttributes {
 impl CatchAttributeProvider for DifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<CatchDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Catch(attributes) = self {
             Some(attributes)
         } else {
@@ -533,7 +563,6 @@ impl CatchAttributeProvider for DifficultyAttributes {
 impl CatchAttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<CatchDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Catch(attributes) = self {
             Some(attributes.difficulty)
         } else {

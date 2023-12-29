@@ -74,6 +74,10 @@ impl<'map> OsuPP<'map> {
     }
 
     /// Convert the map into another mode.
+    ///
+    /// Returns `None` if `self` already replaced it's internal [`Beatmap`]
+    /// with [`OsuDifficultyAttributes`], i.e. if [`OsuPP::attributes`]
+    /// or [`OsuPP::generate_state`] was called.
     #[inline]
     pub fn try_mode(self, mode: GameMode) -> Option<AnyPP<'map>> {
         match mode {
@@ -420,6 +424,33 @@ impl<'map> OsuPP<'map> {
         }
 
         calculator.calculate()
+    }
+
+    /// Try to create [`OsuPP`] through a [`OsuAttributeProvider`].
+    ///
+    /// If you already calculated the attributes for the current map-mod
+    /// combination, the [`Beatmap`] is no longer necessary to calculate
+    /// performance attributes so this method can be used instead of
+    /// [`OsuPP::new`].
+    ///
+    /// Returns `None` only if the [`OsuAttributeProvider`] did not contain
+    /// attributes for catch e.g. if it's [`DifficultyAttributes::Taiko`].
+    #[inline]
+    pub fn try_from_attributes(attributes: impl OsuAttributeProvider) -> Option<Self> {
+        attributes.attributes().map(|attrs| Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            mods: 0,
+            acc: None,
+            combo: None,
+
+            n300: None,
+            n100: None,
+            n50: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
+            hitresult_priority: None,
+        })
     }
 }
 
@@ -774,7 +805,6 @@ impl OsuAttributeProvider for OsuPerformanceAttributes {
 impl OsuAttributeProvider for DifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<OsuDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Osu(attributes) = self {
             Some(attributes)
         } else {
@@ -786,7 +816,6 @@ impl OsuAttributeProvider for DifficultyAttributes {
 impl OsuAttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<OsuDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Osu(attributes) = self {
             Some(attributes.difficulty)
         } else {

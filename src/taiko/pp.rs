@@ -321,7 +321,13 @@ impl<'map> TaikoPP<'map> {
         calculator.calculate()
     }
 
-    /// TODO: docs
+    /// Try to create [`TaikoPP`] through [`OsuPP`].
+    ///
+    /// Returns `None` if [`OsuPP`] already replaced its internal [`Beatmap`]
+    /// with [`OsuDifficultyAttributes`], i.e. if [`OsuPP::attributes`]
+    /// or [`OsuPP::generate_state`] was called.
+    ///
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
     #[inline]
     pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
         let OsuPP {
@@ -356,6 +362,35 @@ impl<'map> TaikoPP<'map> {
             n300,
             n100,
             n_misses,
+        })
+    }
+
+    /// Try to create [`TaikoPP`] through a [`TaikoAttributeProvider`].
+    ///
+    /// If you already calculated the attributes for the current map-mod
+    /// combination, the [`Beatmap`] is no longer necessary to calculate
+    /// performance attributes so this method can be used instead of
+    /// [`TaikoPP::new`].
+    ///
+    /// Returns `None` only if the [`TaikoAttributeProvider`] did not contain
+    /// attributes for catch e.g. if it's [`DifficultyAttributes::Mania`].
+    #[inline]
+    pub fn try_from_attributes(
+        attributes: impl TaikoAttributeProvider,
+        is_convert: bool,
+    ) -> Option<Self> {
+        attributes.attributes().map(|attrs| Self {
+            is_convert,
+            map_or_attrs: MapOrElse::Else(attrs),
+            mods: 0,
+            combo: None,
+            acc: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
+            n300: None,
+            n100: None,
+            hitresult_priority: None,
         })
     }
 }
@@ -511,7 +546,6 @@ impl TaikoAttributeProvider for TaikoPerformanceAttributes {
 impl TaikoAttributeProvider for DifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<TaikoDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
             Some(attributes)
         } else {
@@ -523,7 +557,6 @@ impl TaikoAttributeProvider for DifficultyAttributes {
 impl TaikoAttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<TaikoDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
             Some(attributes.difficulty)
         } else {
