@@ -200,7 +200,7 @@ impl<'map> TaikoPP<'map> {
     pub fn generate_state(&mut self) -> TaikoScoreState {
         let attrs = match self.map_or_attrs {
             MapOrElse::Map(ref map) => {
-                let attrs = self.generate_attributes(&map);
+                let attrs = self.generate_attributes(map);
 
                 self.map_or_attrs.else_or_insert(attrs)
             }
@@ -308,7 +308,7 @@ impl<'map> TaikoPP<'map> {
     fn generate_attributes(&self, map: &Beatmap) -> TaikoDifficultyAttributes {
         let is_convert = self
             .is_convert_overwrite
-            .unwrap_or_else(|| match self.map_or_attrs {
+            .unwrap_or(match self.map_or_attrs {
                 MapOrElse::Map(ref map) => matches!(map, Cow::Owned(_)),
                 MapOrElse::Else(ref attrs) => attrs.is_convert,
             });

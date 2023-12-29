@@ -6,10 +6,7 @@ pub(crate) enum MapOrElse<M, E> {
     Else(E),
 }
 
-impl<M, E> MapOrElse<M, E>
-where
-    M: AsRef<Beatmap>,
-{
+impl<M, E> MapOrElse<M, E> {
     /// Return a mutable reference to `Else`.
     ///
     /// If `self` is of variant `Map`, store `other` in `self`, and return a
