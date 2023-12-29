@@ -2,8 +2,9 @@ use super::{
     OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState, PERFORMANCE_BASE_MULTIPLIER,
 };
 use crate::{
-    AnyPP, Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuStars,
-    PerformanceAttributes,
+    util::{MapOrElse, MapRef},
+    AnyPP, Beatmap, CatchPP, DifficultyAttributes, GameMode, HitResultPriority, ManiaPP, Mods,
+    OsuStars, PerformanceAttributes, TaikoPP,
 };
 
 /// Performance calculator on osu!standard maps.
@@ -38,8 +39,7 @@ use crate::{
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct OsuPP<'map> {
-    pub(crate) map: &'map Beatmap,
-    pub(crate) attributes: Option<OsuDifficultyAttributes>,
+    pub(crate) map_or_attrs: MapOrElse<MapRef<'map>, OsuDifficultyAttributes>,
     pub(crate) mods: u32,
     pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<usize>,
@@ -58,8 +58,7 @@ impl<'map> OsuPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map,
-            attributes: None,
+            map_or_attrs: MapOrElse::from(map),
             mods: 0,
             acc: None,
             combo: None,
@@ -76,12 +75,12 @@ impl<'map> OsuPP<'map> {
 
     /// Convert the map into another mode.
     #[inline]
-    pub fn mode(self, mode: GameMode) -> AnyPP<'map> {
+    pub fn try_mode(self, mode: GameMode) -> Option<AnyPP<'map>> {
         match mode {
-            GameMode::Osu => AnyPP::Osu(self),
-            GameMode::Taiko => AnyPP::Taiko(self.into()),
-            GameMode::Catch => AnyPP::Catch(self.into()),
-            GameMode::Mania => AnyPP::Mania(self.into()),
+            GameMode::Osu => Some(AnyPP::Osu(self)),
+            GameMode::Taiko => TaikoPP::try_from_osu(self).map(AnyPP::Taiko),
+            GameMode::Catch => CatchPP::try_from_osu(self).map(AnyPP::Catch),
+            GameMode::Mania => ManiaPP::try_from_osu(self).map(AnyPP::Mania),
         }
     }
 
@@ -90,8 +89,8 @@ impl<'map> OsuPP<'map> {
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
     pub fn attributes(mut self, attributes: impl OsuAttributeProvider) -> Self {
-        if let Some(attributes) = attributes.attributes() {
-            self.attributes = Some(attributes);
+        if let Some(attrs) = attributes.attributes() {
+            self.map_or_attrs = MapOrElse::Else(attrs);
         }
 
         self
@@ -210,12 +209,17 @@ impl<'map> OsuPP<'map> {
 
     /// Create the [`OsuScoreState`] that will be used for performance calculation.
     pub fn generate_state(&mut self) -> OsuScoreState {
-        let max_combo = match self.attributes {
-            Some(ref attrs) => attrs.max_combo,
-            None => self.attributes.insert(self.generate_attributes()).max_combo,
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => {
+                let attrs = self.generate_attributes(map.as_ref());
+
+                self.map_or_attrs.else_or_insert(attrs)
+            }
+            MapOrElse::Else(ref attrs) => attrs,
         };
 
-        let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
+        let max_combo = attrs.max_combo;
+        let n_objects = self.passed_objects.unwrap_or(attrs.n_objects());
         let priority = self.hitresult_priority.unwrap_or_default();
 
         let n_misses = self.n_misses.map_or(0, |n| n.min(n_objects));
@@ -386,10 +390,10 @@ impl<'map> OsuPP<'map> {
     pub fn calculate(mut self) -> OsuPerformanceAttributes {
         let state = self.generate_state();
 
-        let attrs = self
-            .attributes
-            .take()
-            .unwrap_or_else(|| self.generate_attributes());
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => self.generate_attributes(map.as_ref()),
+            MapOrElse::Else(attrs) => attrs,
+        };
 
         let effective_miss_count = calculate_effective_misses(&attrs, &state);
 
@@ -404,8 +408,8 @@ impl<'map> OsuPP<'map> {
         inner.calculate()
     }
 
-    fn generate_attributes(&self) -> OsuDifficultyAttributes {
-        let mut calculator = OsuStars::new(self.map).mods(self.mods);
+    fn generate_attributes(&self, map: &Beatmap) -> OsuDifficultyAttributes {
+        let mut calculator = OsuStars::new(map).mods(self.mods);
 
         if let Some(passed_objects) = self.passed_objects {
             calculator = calculator.passed_objects(passed_objects);

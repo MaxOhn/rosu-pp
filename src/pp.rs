@@ -86,16 +86,12 @@ impl<'map> AnyPP<'map> {
     }
 
     /// If the map is an osu!standard map, convert it to another mode.
+    // TODO: option necessary?
     #[inline]
-    pub fn mode(self, mode: GameMode) -> Self {
+    pub fn try_mode(self, mode: GameMode) -> Option<Self> {
         match self {
-            AnyPP::Osu(o) => match mode {
-                GameMode::Osu => AnyPP::Osu(o),
-                GameMode::Taiko => AnyPP::Taiko(o.into()),
-                GameMode::Catch => AnyPP::Catch(o.into()),
-                GameMode::Mania => AnyPP::Mania(o.into()),
-            },
-            other => other,
+            AnyPP::Osu(o) => o.try_mode(mode),
+            other => Some(other),
         }
     }
 

@@ -2,7 +2,8 @@ use std::borrow::Cow;
 
 use super::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaScoreState, ManiaStars};
 use crate::{
-    Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP, PerformanceAttributes,
+    util::MapOrElse, Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP,
+    PerformanceAttributes,
 };
 
 /// Performance calculator on osu!mania maps.
@@ -41,9 +42,8 @@ use crate::{
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct ManiaPP<'map> {
-    map: Cow<'map, Beatmap>,
+    map_or_attrs: MapOrElse<Cow<'map, Beatmap>, ManiaDifficultyAttributes>,
     is_convert: bool,
-    attributes: Option<ManiaDifficultyAttributes>,
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
@@ -67,8 +67,7 @@ impl<'map> ManiaPP<'map> {
 
         Self {
             is_convert: matches!(map, Cow::Owned(_)),
-            map,
-            attributes: None,
+            map_or_attrs: MapOrElse::Map(map),
             mods: 0,
             passed_objects: None,
             clock_rate: None,
@@ -89,7 +88,7 @@ impl<'map> ManiaPP<'map> {
     #[inline]
     pub fn attributes(mut self, attrs: impl ManiaAttributeProvider) -> Self {
         if let Some(attrs) = attrs.attributes() {
-            self.attributes = Some(attrs);
+            self.map_or_attrs = MapOrElse::Else(attrs);
         }
 
         self
@@ -227,8 +226,17 @@ impl<'map> ManiaPP<'map> {
     }
 
     /// Create the [`ManiaScoreState`] that will be used for performance calculation.
-    pub fn generate_state(&self) -> ManiaScoreState {
-        let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
+    pub fn generate_state(&mut self) -> ManiaScoreState {
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => {
+                let attrs = self.generate_attributes(&map);
+
+                self.map_or_attrs.else_or_insert(attrs)
+            }
+            MapOrElse::Else(ref attrs) => attrs,
+        };
+
+        let n_objects = attrs.n_objects();
         let priority = self.hitresult_priority.unwrap_or_default();
 
         let n_misses = self.n_misses.map_or(0, |n| n.min(n_objects));
@@ -700,12 +708,13 @@ impl<'map> ManiaPP<'map> {
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(self) -> ManiaPerformanceAttributes {
+    pub fn calculate(mut self) -> ManiaPerformanceAttributes {
         let state = self.generate_state();
 
-        let attrs = self
-            .attributes
-            .unwrap_or_else(|| self.generate_attributes());
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => self.generate_attributes(map),
+            MapOrElse::Else(attrs) => attrs,
+        };
 
         let inner = ManiaPpInner {
             mods: self.mods,
@@ -716,8 +725,8 @@ impl<'map> ManiaPP<'map> {
         inner.calculate()
     }
 
-    fn generate_attributes(&self) -> ManiaDifficultyAttributes {
-        let mut calculator = ManiaStars::new(self.map.as_ref())
+    fn generate_attributes(&self, map: &Beatmap) -> ManiaDifficultyAttributes {
+        let mut calculator = ManiaStars::new(map)
             .mods(self.mods)
             .is_convert(self.is_convert);
 
@@ -730,6 +739,46 @@ impl<'map> ManiaPP<'map> {
         }
 
         calculator.calculate()
+    }
+
+    /// TODO: docs
+    #[inline]
+    pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
+        let OsuPP {
+            map_or_attrs,
+            mods,
+            acc,
+            combo: _,
+            n300,
+            n100,
+            n50,
+            n_misses,
+            passed_objects,
+            clock_rate,
+            hitresult_priority,
+        } = osu;
+
+        let MapOrElse::Map(map) = map_or_attrs else {
+            return None;
+        };
+
+        let map = map.into_inner().convert_mode(GameMode::Mania);
+
+        Some(Self {
+            is_convert: matches!(map, Cow::Owned(_)),
+            map_or_attrs: MapOrElse::Map(map),
+            mods,
+            passed_objects,
+            clock_rate,
+            n320: None,
+            n300,
+            n200: None,
+            n100,
+            n50,
+            n_misses,
+            acc,
+            hitresult_priority,
+        })
     }
 }
 
@@ -793,45 +842,6 @@ impl ManiaPpInner {
         }
 
         custom_accuracy(*n320, *n300, *n200, *n100, *n50, total_hits)
-    }
-}
-
-impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
-    #[inline]
-    fn from(osu: OsuPP<'map>) -> Self {
-        let OsuPP {
-            map,
-            attributes: _,
-            mods,
-            acc,
-            combo: _,
-            n300,
-            n100,
-            n50,
-            n_misses,
-            passed_objects,
-            clock_rate,
-            hitresult_priority,
-        } = osu;
-
-        let map = map.convert_mode(GameMode::Mania);
-
-        Self {
-            is_convert: matches!(map, Cow::Owned(_)),
-            map,
-            attributes: None,
-            mods,
-            passed_objects,
-            clock_rate,
-            n320: None,
-            n300,
-            n200: None,
-            n100,
-            n50,
-            n_misses,
-            acc,
-            hitresult_priority,
-        }
     }
 }
 
