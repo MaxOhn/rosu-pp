@@ -39,7 +39,7 @@ use crate::{
 #[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'map> {
     pub(crate) map_or_attrs: MapOrElse<Cow<'map, Beatmap>, TaikoDifficultyAttributes>,
-    is_convert: bool,
+    is_convert_overwrite: Option<bool>,
     mods: u32,
     combo: Option<usize>,
     acc: Option<f64>,
@@ -59,8 +59,8 @@ impl<'map> TaikoPP<'map> {
         let map = map.convert_mode(GameMode::Taiko);
 
         Self {
-            is_convert: matches!(map, Cow::Owned(_)),
             map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
             mods: 0,
             combo: None,
             acc: None,
@@ -173,7 +173,7 @@ impl<'map> TaikoPP<'map> {
     /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
     pub fn is_convert(mut self, is_convert: bool) -> Self {
-        self.is_convert = is_convert;
+        self.is_convert_overwrite = Some(is_convert);
 
         self
     }
@@ -306,9 +306,14 @@ impl<'map> TaikoPP<'map> {
     }
 
     fn generate_attributes(&self, map: &Beatmap) -> TaikoDifficultyAttributes {
-        let mut calculator = TaikoStars::new(map)
-            .mods(self.mods)
-            .is_convert(self.is_convert);
+        let is_convert = self
+            .is_convert_overwrite
+            .unwrap_or_else(|| match self.map_or_attrs {
+                MapOrElse::Map(ref map) => matches!(map, Cow::Owned(_)),
+                MapOrElse::Else(ref attrs) => attrs.is_convert,
+            });
+
+        let mut calculator = TaikoStars::new(map).mods(self.mods).is_convert(is_convert);
 
         if let Some(passed_objects) = self.passed_objects {
             calculator = calculator.passed_objects(passed_objects);
@@ -351,8 +356,8 @@ impl<'map> TaikoPP<'map> {
         let map = map.into_inner().convert_mode(GameMode::Taiko);
 
         Some(Self {
-            is_convert: matches!(map, Cow::Owned(_)),
             map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
             mods,
             combo,
             acc,
@@ -375,13 +380,10 @@ impl<'map> TaikoPP<'map> {
     /// Returns `None` only if the [`TaikoAttributeProvider`] did not contain
     /// attributes for catch e.g. if it's [`DifficultyAttributes::Mania`].
     #[inline]
-    pub fn try_from_attributes(
-        attributes: impl TaikoAttributeProvider,
-        is_convert: bool,
-    ) -> Option<Self> {
+    pub fn try_from_attributes(attributes: impl TaikoAttributeProvider) -> Option<Self> {
         attributes.attributes().map(|attrs| Self {
-            is_convert,
             map_or_attrs: MapOrElse::Else(attrs),
+            is_convert_overwrite: None,
             mods: 0,
             combo: None,
             acc: None,

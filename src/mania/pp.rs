@@ -43,7 +43,7 @@ use crate::{
 #[allow(clippy::upper_case_acronyms)]
 pub struct ManiaPP<'map> {
     map_or_attrs: MapOrElse<Cow<'map, Beatmap>, ManiaDifficultyAttributes>,
-    is_convert: bool,
+    is_convert_overwrite: Option<bool>,
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
@@ -66,8 +66,8 @@ impl<'map> ManiaPP<'map> {
         let map = map.convert_mode(GameMode::Mania);
 
         Self {
-            is_convert: matches!(map, Cow::Owned(_)),
             map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
             mods: 0,
             passed_objects: None,
             clock_rate: None,
@@ -198,7 +198,7 @@ impl<'map> ManiaPP<'map> {
     /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
     pub fn is_convert(mut self, is_convert: bool) -> Self {
-        self.is_convert = is_convert;
+        self.is_convert_overwrite = Some(is_convert);
 
         self
     }
@@ -726,9 +726,14 @@ impl<'map> ManiaPP<'map> {
     }
 
     fn generate_attributes(&self, map: &Beatmap) -> ManiaDifficultyAttributes {
-        let mut calculator = ManiaStars::new(map)
-            .mods(self.mods)
-            .is_convert(self.is_convert);
+        let is_convert = self
+            .is_convert_overwrite
+            .unwrap_or_else(|| match self.map_or_attrs {
+                MapOrElse::Map(ref map) => matches!(map, Cow::Owned(_)),
+                MapOrElse::Else(ref attrs) => attrs.is_convert,
+            });
+
+        let mut calculator = ManiaStars::new(map).mods(self.mods).is_convert(is_convert);
 
         if let Some(passed_objects) = self.passed_objects {
             calculator = calculator.passed_objects(passed_objects);
@@ -771,8 +776,8 @@ impl<'map> ManiaPP<'map> {
         let map = map.into_inner().convert_mode(GameMode::Mania);
 
         Some(Self {
-            is_convert: matches!(map, Cow::Owned(_)),
             map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
             mods,
             passed_objects,
             clock_rate,
@@ -797,13 +802,10 @@ impl<'map> ManiaPP<'map> {
     /// Returns `None` only if the [`ManiaAttributeProvider`] did not contain
     /// attributes for mania e.g. if it's [`DifficultyAttributes::Taiko`].
     #[inline]
-    pub fn try_from_attributes(
-        attributes: impl ManiaAttributeProvider,
-        is_convert: bool,
-    ) -> Option<Self> {
+    pub fn try_from_attributes(attributes: impl ManiaAttributeProvider) -> Option<Self> {
         attributes.attributes().map(|attrs| Self {
-            is_convert,
             map_or_attrs: MapOrElse::Else(attrs),
+            is_convert_overwrite: None,
             mods: 0,
             passed_objects: None,
             clock_rate: None,
