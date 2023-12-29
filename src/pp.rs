@@ -96,7 +96,10 @@ impl<'map> AnyPP<'map> {
     }
 
     /// If the map is an osu!standard map, convert it to another mode.
-    // TODO: option necessary?
+    ///
+    /// Returns `None` if `self` already replaced it's internal [`Beatmap`]
+    /// with difficulty attributes, i.e. if [`AnyPP::attributes`]
+    /// or [`AnyPP::generate_state`] was called.
     #[inline]
     pub fn try_mode(self, mode: GameMode) -> Option<Self> {
         match self {
