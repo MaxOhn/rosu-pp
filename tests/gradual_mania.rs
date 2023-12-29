@@ -71,7 +71,7 @@ fn gradual_complete_next() {
 
         let next_gradual_owned = gradual_owned.next(state.clone()).unwrap();
 
-        let regular_calc = ManiaPP::new(map)
+        let mut regular_calc = ManiaPP::new(map)
             .mods(mods)
             .passed_objects(i)
             .state(state.clone());

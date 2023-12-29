@@ -162,6 +162,7 @@ struct ManiaGradualDifficultyInner {
     diff_objects: Box<[ManiaDifficultyObject]>,
     curr_combo: usize,
     clock_rate: f64,
+    is_convert: bool,
 }
 
 impl ManiaGradualDifficultyInner {
@@ -202,6 +203,7 @@ impl ManiaGradualDifficultyInner {
                     diff_objects: Box::from([]),
                     curr_combo: 0,
                     clock_rate,
+                    is_convert,
                 }
             }
         };
@@ -226,6 +228,7 @@ impl ManiaGradualDifficultyInner {
             diff_objects: diff_objects.into_boxed_slice(),
             curr_combo,
             clock_rate,
+            is_convert,
         }
     }
 
@@ -249,6 +252,8 @@ impl ManiaGradualDifficultyInner {
             stars: self.strain.clone().difficulty_value() * STAR_SCALING_FACTOR,
             hit_window: self.hit_window,
             max_combo: self.curr_combo,
+            is_convert: self.is_convert,
+            n_objects: self.diff_objects.len() + 1,
         })
     }
 
