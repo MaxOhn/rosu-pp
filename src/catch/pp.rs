@@ -418,20 +418,7 @@ impl<'map> CatchPP<'map> {
     /// attributes for catch e.g. if it's [`DifficultyAttributes::Taiko`].
     #[inline]
     pub fn try_from_attributes(attributes: impl CatchAttributeProvider) -> Option<Self> {
-        attributes.attributes().map(|attrs| Self {
-            map_or_attrs: MapOrElse::Else(attrs),
-            mods: 0,
-            acc: None,
-            combo: None,
-
-            n_fruits: None,
-            n_droplets: None,
-            n_tiny_droplets: None,
-            n_tiny_droplet_misses: None,
-            n_misses: None,
-            passed_objects: None,
-            clock_rate: None,
-        })
+        attributes.attributes().map(Self::from)
     }
 }
 
@@ -527,6 +514,31 @@ fn accuracy(
     let denominator = numerator + n_tiny_droplet_misses + n_misses;
 
     numerator as f64 / denominator as f64
+}
+
+impl From<CatchDifficultyAttributes> for CatchPP<'_> {
+    fn from(attrs: CatchDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            mods: 0,
+            acc: None,
+            combo: None,
+
+            n_fruits: None,
+            n_droplets: None,
+            n_tiny_droplets: None,
+            n_tiny_droplet_misses: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
+        }
+    }
+}
+
+impl From<CatchPerformanceAttributes> for CatchPP<'_> {
+    fn from(attrs: CatchPerformanceAttributes) -> Self {
+        attrs.difficulty.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.

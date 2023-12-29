@@ -306,6 +306,12 @@ impl DifficultyAttributes {
             Self::Mania(attrs) => attrs.max_combo,
         }
     }
+
+    /// Returns a builder for performance calculation.
+    #[inline]
+    pub fn pp(self) -> AnyPP<'static> {
+        AnyPP::from(self)
+    }
 }
 
 impl From<osu::OsuDifficultyAttributes> for DifficultyAttributes {

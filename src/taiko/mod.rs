@@ -326,6 +326,12 @@ impl TaikoDifficultyAttributes {
     pub fn is_convert(&self) -> bool {
         self.is_convert
     }
+
+    /// Returns a builder for performance calculation.
+    #[inline]
+    pub fn pp(self) -> TaikoPP<'static> {
+        TaikoPP::from(self)
+    }
 }
 
 /// The result of a performance calculation on an osu!taiko map.

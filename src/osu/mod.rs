@@ -595,6 +595,12 @@ impl OsuDifficultyAttributes {
     pub fn n_objects(&self) -> usize {
         self.n_circles + self.n_sliders + self.n_spinners
     }
+
+    /// Returns a builder for performance calculation.
+    #[inline]
+    pub fn pp(self) -> OsuPP<'static> {
+        OsuPP::from(self)
+    }
 }
 
 /// The result of a performance calculation on an osu!standard map.

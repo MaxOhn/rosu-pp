@@ -60,7 +60,15 @@ impl<'map> AnyPP<'map> {
         }
     }
 
-    // TODO: from_attributes method
+    /// Create a new performance calculator through previously calculated
+    /// attributes.
+    ///
+    /// Note that the map, mods, and passed object count should be the same
+    /// as when the attributes were calculated.
+    #[inline]
+    pub fn from_attributes(attributes: impl AttributeProvider) -> Self {
+        Self::from(attributes.attributes())
+    }
 
     /// Consume the performance calculator and calculate
     /// performance attributes for the given parameters.
@@ -282,6 +290,25 @@ impl<'map> AnyPP<'map> {
             Self::Catch(f) => f.generate_state().into(),
             Self::Mania(m) => m.generate_state().into(),
         }
+    }
+}
+
+impl From<DifficultyAttributes> for AnyPP<'_> {
+    #[inline]
+    fn from(attrs: DifficultyAttributes) -> Self {
+        match attrs {
+            DifficultyAttributes::Osu(attrs) => Self::Osu(attrs.pp()),
+            DifficultyAttributes::Taiko(attrs) => Self::Taiko(attrs.pp()),
+            DifficultyAttributes::Catch(attrs) => Self::Catch(attrs.pp()),
+            DifficultyAttributes::Mania(attrs) => Self::Mania(attrs.pp()),
+        }
+    }
+}
+
+impl From<PerformanceAttributes> for AnyPP<'_> {
+    #[inline]
+    fn from(attrs: PerformanceAttributes) -> Self {
+        attrs.difficulty_attributes().into()
     }
 }
 

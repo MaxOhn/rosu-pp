@@ -262,6 +262,12 @@ impl ManiaDifficultyAttributes {
     pub fn is_convert(&self) -> bool {
         self.is_convert
     }
+
+    /// Returns a builder for performance calculation.
+    #[inline]
+    pub fn pp(self) -> ManiaPP<'static> {
+        ManiaPP::from(self)
+    }
 }
 
 /// The result of a performance calculation on an osu!mania map.

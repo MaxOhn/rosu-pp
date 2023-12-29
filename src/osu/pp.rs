@@ -437,20 +437,7 @@ impl<'map> OsuPP<'map> {
     /// attributes for catch e.g. if it's [`DifficultyAttributes::Taiko`].
     #[inline]
     pub fn try_from_attributes(attributes: impl OsuAttributeProvider) -> Option<Self> {
-        attributes.attributes().map(|attrs| Self {
-            map_or_attrs: MapOrElse::Else(attrs),
-            mods: 0,
-            acc: None,
-            combo: None,
-
-            n300: None,
-            n100: None,
-            n50: None,
-            n_misses: None,
-            passed_objects: None,
-            clock_rate: None,
-            hitresult_priority: None,
-        })
+        attributes.attributes().map(Self::from)
     }
 }
 
@@ -780,6 +767,33 @@ fn accuracy(n300: usize, n100: usize, n50: usize, n_misses: usize) -> f64 {
     let denominator = 6 * (n300 + n100 + n50 + n_misses);
 
     numerator as f64 / denominator as f64
+}
+
+impl From<OsuDifficultyAttributes> for OsuPP<'_> {
+    #[inline]
+    fn from(attrs: OsuDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            mods: 0,
+            acc: None,
+            combo: None,
+
+            n300: None,
+            n100: None,
+            n50: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
+            hitresult_priority: None,
+        }
+    }
+}
+
+impl From<OsuPerformanceAttributes> for OsuPP<'_> {
+    #[inline]
+    fn from(attrs: OsuPerformanceAttributes) -> Self {
+        attrs.difficulty.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.

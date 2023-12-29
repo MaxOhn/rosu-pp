@@ -803,21 +803,7 @@ impl<'map> ManiaPP<'map> {
     /// attributes for mania e.g. if it's [`DifficultyAttributes::Taiko`].
     #[inline]
     pub fn try_from_attributes(attributes: impl ManiaAttributeProvider) -> Option<Self> {
-        attributes.attributes().map(|attrs| Self {
-            map_or_attrs: MapOrElse::Else(attrs),
-            is_convert_overwrite: None,
-            mods: 0,
-            passed_objects: None,
-            clock_rate: None,
-            n320: None,
-            n300: None,
-            n200: None,
-            n100: None,
-            n50: None,
-            n_misses: None,
-            acc: None,
-            hitresult_priority: None,
-        })
+        attributes.attributes().map(Self::from)
     }
 }
 
@@ -911,6 +897,32 @@ fn accuracy(
     let denominator = 6 * (n320 + n300 + n200 + n100 + n50 + n_misses);
 
     numerator as f64 / denominator as f64
+}
+
+impl From<ManiaDifficultyAttributes> for ManiaPP<'_> {
+    fn from(attrs: ManiaDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            is_convert_overwrite: None,
+            mods: 0,
+            passed_objects: None,
+            clock_rate: None,
+            n320: None,
+            n300: None,
+            n200: None,
+            n100: None,
+            n50: None,
+            n_misses: None,
+            acc: None,
+            hitresult_priority: None,
+        }
+    }
+}
+
+impl From<ManiaPerformanceAttributes> for ManiaPP<'_> {
+    fn from(attrs: ManiaPerformanceAttributes) -> Self {
+        attrs.difficulty.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.

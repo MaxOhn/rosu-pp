@@ -381,19 +381,7 @@ impl<'map> TaikoPP<'map> {
     /// attributes for catch e.g. if it's [`DifficultyAttributes::Mania`].
     #[inline]
     pub fn try_from_attributes(attributes: impl TaikoAttributeProvider) -> Option<Self> {
-        attributes.attributes().map(|attrs| Self {
-            map_or_attrs: MapOrElse::Else(attrs),
-            is_convert_overwrite: None,
-            mods: 0,
-            combo: None,
-            acc: None,
-            n_misses: None,
-            passed_objects: None,
-            clock_rate: None,
-            n300: None,
-            n100: None,
-            hitresult_priority: None,
-        })
+        attributes.attributes().map(Self::from)
     }
 }
 
@@ -523,6 +511,30 @@ fn accuracy(n300: usize, n100: usize, n_misses: usize) -> f64 {
     let denominator = 2 * (n300 + n100 + n_misses);
 
     numerator as f64 / denominator as f64
+}
+
+impl From<TaikoDifficultyAttributes> for TaikoPP<'_> {
+    fn from(attrs: TaikoDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            is_convert_overwrite: None,
+            mods: 0,
+            combo: None,
+            acc: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
+            n300: None,
+            n100: None,
+            hitresult_priority: None,
+        }
+    }
+}
+
+impl From<TaikoPerformanceAttributes> for TaikoPP<'_> {
+    fn from(attrs: TaikoPerformanceAttributes) -> Self {
+        attrs.difficulty.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
