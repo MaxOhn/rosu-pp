@@ -131,12 +131,14 @@ impl<'map> ManiaStars<'map> {
             .clock_rate(clock_rate)
             .hit_windows();
 
+        let n_objects = self.map.hit_objects.len();
         let ManiaResult { strain, max_combo } = calculate_result(self);
 
         ManiaDifficultyAttributes {
             stars: strain.difficulty_value() * STAR_SCALING_FACTOR,
             hit_window,
             max_combo,
+            n_objects,
         }
     }
 
@@ -233,6 +235,8 @@ pub struct ManiaDifficultyAttributes {
     pub stars: f64,
     /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc).
     pub hit_window: f64,
+    /// The amount of hitobjects in the map.
+    pub n_objects: usize,
     /// The maximum achievable combo.
     pub max_combo: usize,
 }
@@ -242,6 +246,12 @@ impl ManiaDifficultyAttributes {
     #[inline]
     pub fn max_combo(&self) -> usize {
         self.max_combo
+    }
+
+    /// Return the amount of hitobjects.
+    #[inline]
+    pub fn n_objects(&self) -> usize {
+        self.n_objects
     }
 }
 
@@ -273,6 +283,12 @@ impl ManiaPerformanceAttributes {
     #[inline]
     pub fn max_combo(&self) -> usize {
         self.difficulty.max_combo
+    }
+
+    /// Return the amount of hitobjects.
+    #[inline]
+    pub fn n_objects(&self) -> usize {
+        self.difficulty.n_objects
     }
 }
 

@@ -64,5 +64,6 @@ impl_mode! {
         stars: 3.441830819988125,
         hit_window: 40.0,
         max_combo: 956,
+        n_objects: 594,
     };
 }

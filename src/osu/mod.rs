@@ -589,6 +589,12 @@ impl OsuDifficultyAttributes {
     pub fn max_combo(&self) -> usize {
         self.max_combo
     }
+
+    /// Return the amount of hitobjects.
+    #[inline]
+    pub fn n_objects(&self) -> usize {
+        self.n_circles + self.n_sliders + self.n_spinners
+    }
 }
 
 /// The result of a performance calculation on an osu!standard map.
@@ -627,6 +633,11 @@ impl OsuPerformanceAttributes {
     #[inline]
     pub fn max_combo(&self) -> usize {
         self.difficulty.max_combo
+    }
+    /// Return the amount of hitobjects.
+    #[inline]
+    pub fn n_objects(&self) -> usize {
+        self.difficulty.n_objects()
     }
 }
 
