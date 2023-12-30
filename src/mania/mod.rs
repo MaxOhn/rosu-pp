@@ -86,9 +86,12 @@ impl<'map> ManiaStars<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    /// If you want to calculate the difficulty after every few objects, instead of
-    /// using [`ManiaStars`] multiple times with different `passed_objects`, you should use
-    /// [`ManiaGradualDifficultyAttributes`](crate::mania::ManiaGradualDifficulty).
+    #[cfg_attr(
+        feature = "gradual",
+        doc = "If you want to calculate the difficulty after every few objects, instead of
+        using [`ManiaStars`] multiple times with different `passed_objects`, you should use
+        [`ManiaGradualDifficultyAttributes`](crate::mania::ManiaGradualDifficulty)."
+    )]
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

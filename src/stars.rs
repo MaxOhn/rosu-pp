@@ -73,9 +73,12 @@ impl<'map> AnyStars<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    /// If you want to calculate the performance after every few objects, instead of
-    /// using [`AnyStars`] multiple times with different `passed_objects`, you should use
-    /// [`GradualDifficultyAttributes`](crate::GradualDifficulty).
+    #[cfg_attr(
+        feature = "gradual",
+        doc = "If you want to calculate the performance after every few objects, instead of
+        using [`AnyStars`] multiple times with different `passed_objects`, you should use
+        [`GradualDifficultyAttributes`](crate::GradualDifficulty)."
+    )]
     #[inline]
     pub fn passed_objects(self, passed_objects: usize) -> Self {
         match self {
