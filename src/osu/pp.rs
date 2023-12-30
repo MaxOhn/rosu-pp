@@ -434,7 +434,7 @@ impl<'map> OsuPP<'map> {
     /// [`OsuPP::new`].
     ///
     /// Returns `None` only if the [`OsuAttributeProvider`] did not contain
-    /// attributes for catch e.g. if it's [`DifficultyAttributes::Taiko`].
+    /// attributes for osu e.g. if it's [`DifficultyAttributes::Taiko`].
     #[inline]
     pub fn try_from_attributes(attributes: impl OsuAttributeProvider) -> Option<Self> {
         attributes.attributes().map(Self::from)

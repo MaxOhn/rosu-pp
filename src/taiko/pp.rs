@@ -378,7 +378,7 @@ impl<'map> TaikoPP<'map> {
     /// [`TaikoPP::new`].
     ///
     /// Returns `None` only if the [`TaikoAttributeProvider`] did not contain
-    /// attributes for catch e.g. if it's [`DifficultyAttributes::Mania`].
+    /// attributes for taiko e.g. if it's [`DifficultyAttributes::Mania`].
     #[inline]
     pub fn try_from_attributes(attributes: impl TaikoAttributeProvider) -> Option<Self> {
         attributes.attributes().map(Self::from)
