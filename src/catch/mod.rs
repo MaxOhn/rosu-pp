@@ -274,6 +274,12 @@ impl CatchDifficultyAttributes {
     pub fn max_combo(&self) -> usize {
         self.n_fruits + self.n_droplets
     }
+
+    /// Returns a builder for performance calculation.
+    #[inline]
+    pub fn pp(self) -> CatchPP<'static> {
+        CatchPP::from(self)
+    }
 }
 
 /// The result of a performance calculation on an osu!catch map.

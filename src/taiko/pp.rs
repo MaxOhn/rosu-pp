@@ -2,7 +2,8 @@ use std::borrow::Cow;
 
 use super::{TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState, TaikoStars};
 use crate::{
-    Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP, PerformanceAttributes,
+    util::MapOrElse, Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP,
+    PerformanceAttributes,
 };
 
 /// Performance calculator on osu!taiko maps.
@@ -37,9 +38,8 @@ use crate::{
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct TaikoPP<'map> {
-    pub(crate) map: Cow<'map, Beatmap>,
-    is_convert: bool,
-    attributes: Option<TaikoDifficultyAttributes>,
+    pub(crate) map_or_attrs: MapOrElse<Cow<'map, Beatmap>, TaikoDifficultyAttributes>,
+    is_convert_overwrite: Option<bool>,
     mods: u32,
     combo: Option<usize>,
     acc: Option<f64>,
@@ -59,9 +59,8 @@ impl<'map> TaikoPP<'map> {
         let map = map.convert_mode(GameMode::Taiko);
 
         Self {
-            is_convert: matches!(map, Cow::Owned(_)),
-            map,
-            attributes: None,
+            map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
             mods: 0,
             combo: None,
             acc: None,
@@ -80,7 +79,7 @@ impl<'map> TaikoPP<'map> {
     #[inline]
     pub fn attributes(mut self, attrs: impl TaikoAttributeProvider) -> Self {
         if let Some(attrs) = attrs.attributes() {
-            self.attributes = Some(attrs);
+            self.map_or_attrs = MapOrElse::Else(attrs);
         }
 
         self
@@ -133,7 +132,7 @@ impl<'map> TaikoPP<'map> {
     /// Specify the amount of misses of the play.
     #[inline]
     pub fn n_misses(mut self, n_misses: usize) -> Self {
-        self.n_misses = Some(n_misses.min(self.map.n_circles as usize));
+        self.n_misses = Some(n_misses);
 
         self
     }
@@ -174,7 +173,7 @@ impl<'map> TaikoPP<'map> {
     /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
     pub fn is_convert(mut self, is_convert: bool) -> Self {
-        self.is_convert = is_convert;
+        self.is_convert_overwrite = Some(is_convert);
 
         self
     }
@@ -199,10 +198,16 @@ impl<'map> TaikoPP<'map> {
 
     /// Create the [`TaikoScoreState`] that will be used for performance calculation.
     pub fn generate_state(&mut self) -> TaikoScoreState {
-        let max_combo = match self.attributes {
-            Some(ref attrs) => attrs.max_combo,
-            None => self.attributes.insert(self.generate_attributes()).max_combo,
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => {
+                let attrs = self.generate_attributes(map);
+
+                self.map_or_attrs.else_or_insert(attrs)
+            }
+            MapOrElse::Else(ref attrs) => attrs,
         };
+
+        let max_combo = attrs.max_combo();
 
         let total_result_count = if let Some(passed_objects) = self.passed_objects {
             max_combo.min(passed_objects)
@@ -286,10 +291,10 @@ impl<'map> TaikoPP<'map> {
     pub fn calculate(mut self) -> TaikoPerformanceAttributes {
         let state = self.generate_state();
 
-        let attrs = self
-            .attributes
-            .take()
-            .unwrap_or_else(|| self.generate_attributes());
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => self.generate_attributes(map),
+            MapOrElse::Else(attrs) => attrs,
+        };
 
         let inner = TaikoPpInner {
             mods: self.mods,
@@ -300,10 +305,15 @@ impl<'map> TaikoPP<'map> {
         inner.calculate()
     }
 
-    fn generate_attributes(&self) -> TaikoDifficultyAttributes {
-        let mut calculator = TaikoStars::new(self.map.as_ref())
-            .mods(self.mods)
-            .is_convert(self.is_convert);
+    fn generate_attributes(&self, map: &Beatmap) -> TaikoDifficultyAttributes {
+        let is_convert = self
+            .is_convert_overwrite
+            .unwrap_or(match self.map_or_attrs {
+                MapOrElse::Map(ref map) => matches!(map, Cow::Owned(_)),
+                MapOrElse::Else(ref attrs) => attrs.is_convert,
+            });
+
+        let mut calculator = TaikoStars::new(map).mods(self.mods).is_convert(is_convert);
 
         if let Some(passed_objects) = self.passed_objects {
             calculator = calculator.passed_objects(passed_objects);
@@ -314,6 +324,64 @@ impl<'map> TaikoPP<'map> {
         }
 
         calculator.calculate()
+    }
+
+    /// Try to create [`TaikoPP`] through [`OsuPP`].
+    ///
+    /// Returns `None` if [`OsuPP`] already replaced its internal [`Beatmap`]
+    /// with [`OsuDifficultyAttributes`], i.e. if [`OsuPP::attributes`]
+    /// or [`OsuPP::generate_state`] was called.
+    ///
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
+    #[inline]
+    pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
+        let OsuPP {
+            map_or_attrs,
+            mods,
+            acc,
+            combo,
+            n300,
+            n100,
+            n50: _,
+            n_misses,
+            passed_objects,
+            clock_rate,
+            hitresult_priority,
+        } = osu;
+
+        let MapOrElse::Map(map) = map_or_attrs else {
+            return None;
+        };
+
+        let map = map.into_inner().convert_mode(GameMode::Taiko);
+
+        Some(Self {
+            map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
+            mods,
+            combo,
+            acc,
+            passed_objects,
+            clock_rate,
+            hitresult_priority,
+            n300,
+            n100,
+            n_misses,
+        })
+    }
+
+    /// Try to create [`TaikoPP`] through a [`TaikoAttributeProvider`].
+    ///
+    /// If you already calculated the attributes for the current map-mod
+    /// combination, the [`Beatmap`] is no longer necessary to calculate
+    /// performance attributes so this method can be used instead of
+    /// [`TaikoPP::new`].
+    ///
+    /// Returns `None` only if the [`TaikoAttributeProvider`] did not contain
+    /// attributes for taiko e.g. if it's [`DifficultyAttributes::Mania`].
+    #[inline]
+    pub fn try_from_attributes(attributes: impl TaikoAttributeProvider) -> Option<Self> {
+        attributes.attributes().map(Self::from)
     }
 }
 
@@ -434,43 +502,6 @@ impl TaikoPpInner {
     }
 }
 
-impl<'map> From<OsuPP<'map>> for TaikoPP<'map> {
-    #[inline]
-    fn from(osu: OsuPP<'map>) -> Self {
-        let OsuPP {
-            map,
-            attributes: _,
-            mods,
-            acc,
-            combo,
-            n300,
-            n100,
-            n50: _,
-            n_misses,
-            passed_objects,
-            clock_rate,
-            hitresult_priority,
-        } = osu;
-
-        let map = map.convert_mode(GameMode::Taiko);
-
-        Self {
-            is_convert: matches!(map, Cow::Owned(_)),
-            map,
-            attributes: None,
-            mods,
-            combo,
-            acc,
-            passed_objects,
-            clock_rate,
-            hitresult_priority,
-            n300,
-            n100,
-            n_misses,
-        }
-    }
-}
-
 fn accuracy(n300: usize, n100: usize, n_misses: usize) -> f64 {
     if n300 + n100 + n_misses == 0 {
         return 0.0;
@@ -480,6 +511,30 @@ fn accuracy(n300: usize, n100: usize, n_misses: usize) -> f64 {
     let denominator = 2 * (n300 + n100 + n_misses);
 
     numerator as f64 / denominator as f64
+}
+
+impl From<TaikoDifficultyAttributes> for TaikoPP<'_> {
+    fn from(attrs: TaikoDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            is_convert_overwrite: None,
+            mods: 0,
+            combo: None,
+            acc: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
+            n300: None,
+            n100: None,
+            hitresult_priority: None,
+        }
+    }
+}
+
+impl From<TaikoPerformanceAttributes> for TaikoPP<'_> {
+    fn from(attrs: TaikoPerformanceAttributes) -> Self {
+        attrs.difficulty.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
@@ -505,7 +560,6 @@ impl TaikoAttributeProvider for TaikoPerformanceAttributes {
 impl TaikoAttributeProvider for DifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<TaikoDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
             Some(attributes)
         } else {
@@ -517,7 +571,6 @@ impl TaikoAttributeProvider for DifficultyAttributes {
 impl TaikoAttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<TaikoDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Taiko(attributes) = self {
             Some(attributes.difficulty)
         } else {

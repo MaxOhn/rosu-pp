@@ -1,5 +1,8 @@
 use super::{CatchDifficultyAttributes, CatchPerformanceAttributes, CatchScoreState, CatchStars};
-use crate::{Beatmap, DifficultyAttributes, Mods, OsuPP, PerformanceAttributes};
+use crate::{
+    util::{MapOrElse, MapRef},
+    Beatmap, DifficultyAttributes, Mods, OsuPP, PerformanceAttributes,
+};
 use std::cmp::Ordering;
 
 /// Performance calculator on osu!catch maps.
@@ -34,8 +37,7 @@ use std::cmp::Ordering;
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct CatchPP<'map> {
-    pub(crate) map: &'map Beatmap,
-    pub(crate) attributes: Option<CatchDifficultyAttributes>,
+    pub(crate) map_or_attrs: MapOrElse<MapRef<'map>, CatchDifficultyAttributes>,
     pub(crate) mods: u32,
     pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<usize>,
@@ -54,8 +56,7 @@ impl<'map> CatchPP<'map> {
     #[inline]
     pub fn new(map: &'map Beatmap) -> Self {
         Self {
-            map,
-            attributes: None,
+            map_or_attrs: MapOrElse::from(map),
             mods: 0,
             acc: None,
             combo: None,
@@ -75,8 +76,8 @@ impl<'map> CatchPP<'map> {
     /// be sure to put them in here so that they don't have to be recalculated.
     #[inline]
     pub fn attributes(mut self, attributes: impl CatchAttributeProvider) -> Self {
-        if let Some(attributes) = attributes.attributes() {
-            self.attributes = Some(attributes);
+        if let Some(attrs) = attributes.attributes() {
+            self.map_or_attrs = MapOrElse::Else(attrs);
         }
 
         self
@@ -195,9 +196,13 @@ impl<'map> CatchPP<'map> {
 
     /// Create the [`CatchScoreState`] that will be used for performance calculation.
     pub fn generate_state(&mut self) -> CatchScoreState {
-        let attrs = match self.attributes {
-            Some(ref attrs) => attrs,
-            None => self.attributes.insert(self.generate_attributes()),
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => {
+                let attrs = self.generate_attributes(map.as_ref());
+
+                self.map_or_attrs.else_or_insert(attrs)
+            }
+            MapOrElse::Else(ref attrs) => attrs,
         };
 
         let n_misses = self
@@ -332,10 +337,10 @@ impl<'map> CatchPP<'map> {
     pub fn calculate(mut self) -> CatchPerformanceAttributes {
         let state = self.generate_state();
 
-        let attrs = self
-            .attributes
-            .take()
-            .unwrap_or_else(|| self.generate_attributes());
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => self.generate_attributes(map.as_ref()),
+            MapOrElse::Else(attrs) => attrs,
+        };
 
         let inner = CatchPPInner {
             attrs,
@@ -346,8 +351,8 @@ impl<'map> CatchPP<'map> {
         inner.calculate()
     }
 
-    fn generate_attributes(&self) -> CatchDifficultyAttributes {
-        let mut calculator = CatchStars::new(self.map).mods(self.mods);
+    fn generate_attributes(&self, map: &Beatmap) -> CatchDifficultyAttributes {
+        let mut calculator = CatchStars::new(map).mods(self.mods);
 
         if let Some(passed_objects) = self.passed_objects {
             calculator = calculator.passed_objects(passed_objects);
@@ -358,6 +363,62 @@ impl<'map> CatchPP<'map> {
         }
 
         calculator.calculate()
+    }
+
+    /// Try to create [`CatchPP`] through [`OsuPP`].
+    ///
+    /// Returns `None` if [`OsuPP`] already replaced its internal [`Beatmap`]
+    /// with [`OsuDifficultyAttributes`], i.e. if [`OsuPP::attributes`]
+    /// or [`OsuPP::generate_state`] was called.
+    ///
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
+    #[inline]
+    pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
+        let OsuPP {
+            map_or_attrs,
+            mods,
+            acc,
+            combo,
+            n300,
+            n100,
+            n50,
+            n_misses,
+            passed_objects,
+            clock_rate,
+            hitresult_priority: _,
+        } = osu;
+
+        let MapOrElse::Map(map) = map_or_attrs else {
+            return None;
+        };
+
+        Some(Self {
+            map_or_attrs: MapOrElse::Map(map),
+            mods,
+            acc,
+            combo,
+            n_fruits: n300,
+            n_droplets: n100,
+            n_tiny_droplets: n50,
+            n_tiny_droplet_misses: None,
+            n_misses,
+            passed_objects,
+            clock_rate,
+        })
+    }
+
+    /// Try to create [`CatchPP`] through a [`CatchAttributeProvider`].
+    ///
+    /// If you already calculated the attributes for the current map-mod
+    /// combination, the [`Beatmap`] is no longer necessary to calculate
+    /// performance attributes so this method can be used instead of
+    /// [`CatchPP::new`].
+    ///
+    /// Returns `None` only if the [`CatchAttributeProvider`] did not contain
+    /// attributes for catch e.g. if it's [`DifficultyAttributes::Taiko`].
+    #[inline]
+    pub fn try_from_attributes(attributes: impl CatchAttributeProvider) -> Option<Self> {
+        attributes.attributes().map(Self::from)
     }
 }
 
@@ -442,41 +503,6 @@ impl CatchPPInner {
     }
 }
 
-impl<'map> From<OsuPP<'map>> for CatchPP<'map> {
-    #[inline]
-    fn from(osu: OsuPP<'map>) -> Self {
-        let OsuPP {
-            map,
-            attributes: _,
-            mods,
-            acc,
-            combo,
-            n300,
-            n100,
-            n50,
-            n_misses,
-            passed_objects,
-            clock_rate,
-            hitresult_priority: _,
-        } = osu;
-
-        Self {
-            map,
-            attributes: None,
-            mods,
-            acc,
-            combo,
-            n_fruits: n300,
-            n_droplets: n100,
-            n_tiny_droplets: n50,
-            n_tiny_droplet_misses: None,
-            n_misses,
-            passed_objects,
-            clock_rate,
-        }
-    }
-}
-
 fn accuracy(
     n_fruits: usize,
     n_droplets: usize,
@@ -488,6 +514,31 @@ fn accuracy(
     let denominator = numerator + n_tiny_droplet_misses + n_misses;
 
     numerator as f64 / denominator as f64
+}
+
+impl From<CatchDifficultyAttributes> for CatchPP<'_> {
+    fn from(attrs: CatchDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            mods: 0,
+            acc: None,
+            combo: None,
+
+            n_fruits: None,
+            n_droplets: None,
+            n_tiny_droplets: None,
+            n_tiny_droplet_misses: None,
+            n_misses: None,
+            passed_objects: None,
+            clock_rate: None,
+        }
+    }
+}
+
+impl From<CatchPerformanceAttributes> for CatchPP<'_> {
+    fn from(attrs: CatchPerformanceAttributes) -> Self {
+        attrs.difficulty.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
@@ -513,7 +564,6 @@ impl CatchAttributeProvider for CatchPerformanceAttributes {
 impl CatchAttributeProvider for DifficultyAttributes {
     #[inline]
     fn attributes(self) -> Option<CatchDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Catch(attributes) = self {
             Some(attributes)
         } else {
@@ -525,7 +575,6 @@ impl CatchAttributeProvider for DifficultyAttributes {
 impl CatchAttributeProvider for PerformanceAttributes {
     #[inline]
     fn attributes(self) -> Option<CatchDifficultyAttributes> {
-        #[allow(irrefutable_let_patterns)]
         if let Self::Catch(attributes) = self {
             Some(attributes.difficulty)
         } else {

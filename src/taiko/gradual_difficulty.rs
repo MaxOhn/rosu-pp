@@ -268,7 +268,6 @@ impl Iterator for TaikoGradualDifficulty {
                     FirstTwoCombos::Both => self.attrs.max_combo = 2,
                 }
             }
-            _ => unreachable!(),
         }
 
         for _ in 0..take {

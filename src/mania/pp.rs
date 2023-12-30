@@ -2,7 +2,8 @@ use std::borrow::Cow;
 
 use super::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaScoreState, ManiaStars};
 use crate::{
-    Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP, PerformanceAttributes,
+    util::MapOrElse, Beatmap, DifficultyAttributes, GameMode, HitResultPriority, Mods, OsuPP,
+    PerformanceAttributes,
 };
 
 /// Performance calculator on osu!mania maps.
@@ -41,9 +42,8 @@ use crate::{
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct ManiaPP<'map> {
-    map: Cow<'map, Beatmap>,
-    is_convert: bool,
-    attributes: Option<ManiaDifficultyAttributes>,
+    map_or_attrs: MapOrElse<Cow<'map, Beatmap>, ManiaDifficultyAttributes>,
+    is_convert_overwrite: Option<bool>,
     mods: u32,
     passed_objects: Option<usize>,
     clock_rate: Option<f64>,
@@ -66,9 +66,8 @@ impl<'map> ManiaPP<'map> {
         let map = map.convert_mode(GameMode::Mania);
 
         Self {
-            is_convert: matches!(map, Cow::Owned(_)),
-            map,
-            attributes: None,
+            map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
             mods: 0,
             passed_objects: None,
             clock_rate: None,
@@ -89,7 +88,7 @@ impl<'map> ManiaPP<'map> {
     #[inline]
     pub fn attributes(mut self, attrs: impl ManiaAttributeProvider) -> Self {
         if let Some(attrs) = attrs.attributes() {
-            self.attributes = Some(attrs);
+            self.map_or_attrs = MapOrElse::Else(attrs);
         }
 
         self
@@ -199,7 +198,7 @@ impl<'map> ManiaPP<'map> {
     /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
     pub fn is_convert(mut self, is_convert: bool) -> Self {
-        self.is_convert = is_convert;
+        self.is_convert_overwrite = Some(is_convert);
 
         self
     }
@@ -227,8 +226,23 @@ impl<'map> ManiaPP<'map> {
     }
 
     /// Create the [`ManiaScoreState`] that will be used for performance calculation.
-    pub fn generate_state(&self) -> ManiaScoreState {
-        let n_objects = self.passed_objects.unwrap_or(self.map.hit_objects.len());
+    pub fn generate_state(&mut self) -> ManiaScoreState {
+        let n_objects = match self.passed_objects {
+            Some(passed) => passed,
+            None => {
+                let attrs = match self.map_or_attrs {
+                    MapOrElse::Map(ref map) => {
+                        let attrs = self.generate_attributes(map);
+
+                        self.map_or_attrs.else_or_insert(attrs)
+                    }
+                    MapOrElse::Else(ref attrs) => attrs,
+                };
+
+                attrs.n_objects
+            }
+        };
+
         let priority = self.hitresult_priority.unwrap_or_default();
 
         let n_misses = self.n_misses.map_or(0, |n| n.min(n_objects));
@@ -700,12 +714,13 @@ impl<'map> ManiaPP<'map> {
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(self) -> ManiaPerformanceAttributes {
+    pub fn calculate(mut self) -> ManiaPerformanceAttributes {
         let state = self.generate_state();
 
-        let attrs = self
-            .attributes
-            .unwrap_or_else(|| self.generate_attributes());
+        let attrs = match self.map_or_attrs {
+            MapOrElse::Map(ref map) => self.generate_attributes(map),
+            MapOrElse::Else(attrs) => attrs,
+        };
 
         let inner = ManiaPpInner {
             mods: self.mods,
@@ -716,10 +731,15 @@ impl<'map> ManiaPP<'map> {
         inner.calculate()
     }
 
-    fn generate_attributes(&self) -> ManiaDifficultyAttributes {
-        let mut calculator = ManiaStars::new(self.map.as_ref())
-            .mods(self.mods)
-            .is_convert(self.is_convert);
+    fn generate_attributes(&self, map: &Beatmap) -> ManiaDifficultyAttributes {
+        let is_convert = self
+            .is_convert_overwrite
+            .unwrap_or(match self.map_or_attrs {
+                MapOrElse::Map(ref map) => matches!(map, Cow::Owned(_)),
+                MapOrElse::Else(ref attrs) => attrs.is_convert,
+            });
+
+        let mut calculator = ManiaStars::new(map).mods(self.mods).is_convert(is_convert);
 
         if let Some(passed_objects) = self.passed_objects {
             calculator = calculator.passed_objects(passed_objects);
@@ -730,6 +750,66 @@ impl<'map> ManiaPP<'map> {
         }
 
         calculator.calculate()
+    }
+
+    /// Try to create [`ManiaPP`] through [`OsuPP`].
+    ///
+    /// Returns `None` if [`OsuPP`] already replaced its internal [`Beatmap`]
+    /// with [`OsuDifficultyAttributes`], i.e. if [`OsuPP::attributes`]
+    /// or [`OsuPP::generate_state`] was called.
+    ///
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
+    #[inline]
+    pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
+        let OsuPP {
+            map_or_attrs,
+            mods,
+            acc,
+            combo: _,
+            n300,
+            n100,
+            n50,
+            n_misses,
+            passed_objects,
+            clock_rate,
+            hitresult_priority,
+        } = osu;
+
+        let MapOrElse::Map(map) = map_or_attrs else {
+            return None;
+        };
+
+        let map = map.into_inner().convert_mode(GameMode::Mania);
+
+        Some(Self {
+            map_or_attrs: MapOrElse::Map(map),
+            is_convert_overwrite: None,
+            mods,
+            passed_objects,
+            clock_rate,
+            n320: None,
+            n300,
+            n200: None,
+            n100,
+            n50,
+            n_misses,
+            acc,
+            hitresult_priority,
+        })
+    }
+
+    /// Try to create [`ManiaPP`] through a [`ManiaAttributeProvider`].
+    ///
+    /// If you already calculated the attributes for the current map-mod
+    /// combination, the [`Beatmap`] is no longer necessary to calculate
+    /// performance attributes so this method can be used instead of
+    /// [`ManiaPP::new`].
+    ///
+    /// Returns `None` only if the [`ManiaAttributeProvider`] did not contain
+    /// attributes for mania e.g. if it's [`DifficultyAttributes::Taiko`].
+    #[inline]
+    pub fn try_from_attributes(attributes: impl ManiaAttributeProvider) -> Option<Self> {
+        attributes.attributes().map(Self::from)
     }
 }
 
@@ -796,45 +876,6 @@ impl ManiaPpInner {
     }
 }
 
-impl<'map> From<OsuPP<'map>> for ManiaPP<'map> {
-    #[inline]
-    fn from(osu: OsuPP<'map>) -> Self {
-        let OsuPP {
-            map,
-            attributes: _,
-            mods,
-            acc,
-            combo: _,
-            n300,
-            n100,
-            n50,
-            n_misses,
-            passed_objects,
-            clock_rate,
-            hitresult_priority,
-        } = osu;
-
-        let map = map.convert_mode(GameMode::Mania);
-
-        Self {
-            is_convert: matches!(map, Cow::Owned(_)),
-            map,
-            attributes: None,
-            mods,
-            passed_objects,
-            clock_rate,
-            n320: None,
-            n300,
-            n200: None,
-            n100,
-            n50,
-            n_misses,
-            acc,
-            hitresult_priority,
-        }
-    }
-}
-
 fn custom_accuracy(
     n320: usize,
     n300: usize,
@@ -862,6 +903,32 @@ fn accuracy(
     let denominator = 6 * (n320 + n300 + n200 + n100 + n50 + n_misses);
 
     numerator as f64 / denominator as f64
+}
+
+impl From<ManiaDifficultyAttributes> for ManiaPP<'_> {
+    fn from(attrs: ManiaDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrElse::Else(attrs),
+            is_convert_overwrite: None,
+            mods: 0,
+            passed_objects: None,
+            clock_rate: None,
+            n320: None,
+            n300: None,
+            n200: None,
+            n100: None,
+            n50: None,
+            n_misses: None,
+            acc: None,
+            hitresult_priority: None,
+        }
+    }
+}
+
+impl From<ManiaPerformanceAttributes> for ManiaPP<'_> {
+    fn from(attrs: ManiaPerformanceAttributes) -> Self {
+        attrs.difficulty.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.

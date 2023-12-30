@@ -60,6 +60,16 @@ impl<'map> AnyPP<'map> {
         }
     }
 
+    /// Create a new performance calculator through previously calculated
+    /// attributes.
+    ///
+    /// Note that the map, mods, and passed object count should be the same
+    /// as when the attributes were calculated.
+    #[inline]
+    pub fn from_attributes(attributes: impl AttributeProvider) -> Self {
+        Self::from(attributes)
+    }
+
     /// Consume the performance calculator and calculate
     /// performance attributes for the given parameters.
     #[inline]
@@ -86,16 +96,15 @@ impl<'map> AnyPP<'map> {
     }
 
     /// If the map is an osu!standard map, convert it to another mode.
+    ///
+    /// Returns `None` if `self` already replaced it's internal [`Beatmap`]
+    /// with difficulty attributes, i.e. if [`AnyPP::attributes`]
+    /// or [`AnyPP::generate_state`] was called.
     #[inline]
-    pub fn mode(self, mode: GameMode) -> Self {
+    pub fn try_mode(self, mode: GameMode) -> Option<Self> {
         match self {
-            AnyPP::Osu(o) => match mode {
-                GameMode::Osu => AnyPP::Osu(o),
-                GameMode::Taiko => AnyPP::Taiko(o.into()),
-                GameMode::Catch => AnyPP::Catch(o.into()),
-                GameMode::Mania => AnyPP::Mania(o.into()),
-            },
-            other => other,
+            AnyPP::Osu(o) => o.try_mode(mode),
+            other => Some(other),
         }
     }
 
@@ -284,6 +293,22 @@ impl<'map> AnyPP<'map> {
             Self::Catch(f) => f.generate_state().into(),
             Self::Mania(m) => m.generate_state().into(),
         }
+    }
+}
+
+impl<A: AttributeProvider> From<A> for AnyPP<'_> {
+    #[inline]
+    fn from(attrs: A) -> Self {
+        fn inner(attrs: DifficultyAttributes) -> AnyPP<'static> {
+            match attrs {
+                DifficultyAttributes::Osu(attrs) => AnyPP::Osu(attrs.pp()),
+                DifficultyAttributes::Taiko(attrs) => AnyPP::Taiko(attrs.pp()),
+                DifficultyAttributes::Catch(attrs) => AnyPP::Catch(attrs.pp()),
+                DifficultyAttributes::Mania(attrs) => AnyPP::Mania(attrs.pp()),
+            }
+        }
+
+        inner(attrs.attributes())
     }
 }
 

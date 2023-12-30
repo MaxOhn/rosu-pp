@@ -131,12 +131,15 @@ impl<'map> ManiaStars<'map> {
             .clock_rate(clock_rate)
             .hit_windows();
 
+        let n_objects = self.map.hit_objects.len();
         let ManiaResult { strain, max_combo } = calculate_result(self);
 
         ManiaDifficultyAttributes {
             stars: strain.difficulty_value() * STAR_SCALING_FACTOR,
             hit_window,
             max_combo,
+            n_objects,
+            is_convert,
         }
     }
 
@@ -227,14 +230,18 @@ struct ManiaResult {
 }
 
 /// The result of a difficulty calculation on an osu!mania map.
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ManiaDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,
     /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc).
     pub hit_window: f64,
+    /// The amount of hitobjects in the map.
+    pub n_objects: usize,
     /// The maximum achievable combo.
     pub max_combo: usize,
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    pub is_convert: bool,
 }
 
 impl ManiaDifficultyAttributes {
@@ -243,10 +250,28 @@ impl ManiaDifficultyAttributes {
     pub fn max_combo(&self) -> usize {
         self.max_combo
     }
+
+    /// Return the amount of hitobjects.
+    #[inline]
+    pub fn n_objects(&self) -> usize {
+        self.n_objects
+    }
+
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(&self) -> bool {
+        self.is_convert
+    }
+
+    /// Returns a builder for performance calculation.
+    #[inline]
+    pub fn pp(self) -> ManiaPP<'static> {
+        ManiaPP::from(self)
+    }
 }
 
 /// The result of a performance calculation on an osu!mania map.
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ManiaPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation.
     pub difficulty: ManiaDifficultyAttributes,
@@ -273,6 +298,18 @@ impl ManiaPerformanceAttributes {
     #[inline]
     pub fn max_combo(&self) -> usize {
         self.difficulty.max_combo
+    }
+
+    /// Return the amount of hitobjects.
+    #[inline]
+    pub fn n_objects(&self) -> usize {
+        self.difficulty.n_objects
+    }
+
+    /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
+    #[inline]
+    pub fn is_convert(&self) -> bool {
+        self.difficulty.is_convert
     }
 }
 
