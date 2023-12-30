@@ -81,9 +81,12 @@ impl<'map> CatchStars<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    /// If you want to calculate the difficulty after every few objects, instead of
-    /// using [`CatchStars`] multiple times with different `passed_objects`, you should use
-    /// [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficulty).
+    #[cfg_attr(
+        feature = "gradual",
+        doc = "If you want to calculate the difficulty after every few objects, instead of
+        using [`CatchStars`] multiple times with different `passed_objects`, you should use
+        [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficulty)."
+    )]
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);

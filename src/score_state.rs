@@ -6,8 +6,6 @@ use crate::{
 /// Aggregation for a score's current state i.e. what is
 /// the maximum combo so far, what are the current
 /// hitresults and what is the current score.
-///
-/// This struct is used for [`GradualPerformance`](crate::GradualPerformance).
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ScoreState {
     /// Maximum combo that the score has had so far.

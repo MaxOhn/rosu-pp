@@ -90,9 +90,12 @@ impl<'map> TaikoStars<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    /// If you want to calculate the difficulty after every few objects, instead of
-    /// using [`TaikoStars`] multiple times with different `passed_objects`, you should use
-    /// [`TaikoGradualDifficultyAttributes`](crate::taiko::TaikoGradualDifficulty).
+    #[cfg_attr(
+        feature = "gradual",
+        doc = "If you want to calculate the difficulty after every few objects, instead of
+        using [`TaikoStars`] multiple times with different `passed_objects`, you should use
+        [`TaikoGradualDifficultyAttributes`](crate::taiko::TaikoGradualDifficulty)."
+    )]
     #[inline]
     pub fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
