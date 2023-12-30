@@ -227,16 +227,22 @@ impl<'map> ManiaPP<'map> {
 
     /// Create the [`ManiaScoreState`] that will be used for performance calculation.
     pub fn generate_state(&mut self) -> ManiaScoreState {
-        let attrs = match self.map_or_attrs {
-            MapOrElse::Map(ref map) => {
-                let attrs = self.generate_attributes(map);
+        let n_objects = match self.passed_objects {
+            Some(passed) => passed,
+            None => {
+                let attrs = match self.map_or_attrs {
+                    MapOrElse::Map(ref map) => {
+                        let attrs = self.generate_attributes(map);
 
-                self.map_or_attrs.else_or_insert(attrs)
+                        self.map_or_attrs.else_or_insert(attrs)
+                    }
+                    MapOrElse::Else(ref attrs) => attrs,
+                };
+
+                attrs.n_objects
             }
-            MapOrElse::Else(ref attrs) => attrs,
         };
 
-        let n_objects = attrs.n_objects();
         let priority = self.hitresult_priority.unwrap_or_default();
 
         let n_misses = self.n_misses.map_or(0, |n| n.min(n_objects));
