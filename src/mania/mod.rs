@@ -230,7 +230,7 @@ struct ManiaResult {
 }
 
 /// The result of a difficulty calculation on an osu!mania map.
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ManiaDifficultyAttributes {
     /// The final star rating.
     pub stars: f64,
@@ -271,7 +271,7 @@ impl ManiaDifficultyAttributes {
 }
 
 /// The result of a performance calculation on an osu!mania map.
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ManiaPerformanceAttributes {
     /// The difficulty attributes that were used for the performance calculation.
     pub difficulty: ManiaDifficultyAttributes,

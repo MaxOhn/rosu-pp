@@ -385,7 +385,7 @@ impl PerformanceAttributes {
             Self::Osu(attrs) => DifficultyAttributes::Osu(attrs.difficulty.clone()),
             Self::Taiko(attrs) => DifficultyAttributes::Taiko(attrs.difficulty.clone()),
             Self::Catch(attrs) => DifficultyAttributes::Catch(attrs.difficulty.clone()),
-            Self::Mania(attrs) => DifficultyAttributes::Mania(attrs.difficulty),
+            Self::Mania(attrs) => DifficultyAttributes::Mania(attrs.difficulty.clone()),
         }
     }
 
