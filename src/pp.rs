@@ -67,7 +67,7 @@ impl<'map> AnyPP<'map> {
     /// as when the attributes were calculated.
     #[inline]
     pub fn from_attributes(attributes: impl AttributeProvider) -> Self {
-        Self::from(attributes.attributes())
+        Self::from(attributes)
     }
 
     /// Consume the performance calculator and calculate
@@ -296,22 +296,19 @@ impl<'map> AnyPP<'map> {
     }
 }
 
-impl From<DifficultyAttributes> for AnyPP<'_> {
+impl<A: AttributeProvider> From<A> for AnyPP<'_> {
     #[inline]
-    fn from(attrs: DifficultyAttributes) -> Self {
-        match attrs {
-            DifficultyAttributes::Osu(attrs) => Self::Osu(attrs.pp()),
-            DifficultyAttributes::Taiko(attrs) => Self::Taiko(attrs.pp()),
-            DifficultyAttributes::Catch(attrs) => Self::Catch(attrs.pp()),
-            DifficultyAttributes::Mania(attrs) => Self::Mania(attrs.pp()),
+    fn from(attrs: A) -> Self {
+        fn inner(attrs: DifficultyAttributes) -> AnyPP<'static> {
+            match attrs {
+                DifficultyAttributes::Osu(attrs) => AnyPP::Osu(attrs.pp()),
+                DifficultyAttributes::Taiko(attrs) => AnyPP::Taiko(attrs.pp()),
+                DifficultyAttributes::Catch(attrs) => AnyPP::Catch(attrs.pp()),
+                DifficultyAttributes::Mania(attrs) => AnyPP::Mania(attrs.pp()),
+            }
         }
-    }
-}
 
-impl From<PerformanceAttributes> for AnyPP<'_> {
-    #[inline]
-    fn from(attrs: PerformanceAttributes) -> Self {
-        attrs.difficulty_attributes().into()
+        inner(attrs.attributes())
     }
 }
 
