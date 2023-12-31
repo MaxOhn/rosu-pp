@@ -37,6 +37,7 @@ use crate::{
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
+#[must_use]
 pub struct TaikoPP<'map> {
     pub(crate) map_or_attrs: MapOrElse<Cow<'map, Beatmap>, TaikoDifficultyAttributes>,
     is_convert_overwrite: Option<bool>,
@@ -89,7 +90,7 @@ impl<'map> TaikoPP<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
-    pub fn mods(mut self, mods: u32) -> Self {
+    pub const fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
@@ -97,7 +98,7 @@ impl<'map> TaikoPP<'map> {
 
     /// Specify the max combo of the play.
     #[inline]
-    pub fn combo(mut self, combo: usize) -> Self {
+    pub const fn combo(mut self, combo: usize) -> Self {
         self.combo = Some(combo);
 
         self
@@ -107,7 +108,7 @@ impl<'map> TaikoPP<'map> {
     ///
     /// Defauls to [`HitResultPriority::BestCase`].
     #[inline]
-    pub fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
+    pub const fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
         self.hitresult_priority = Some(priority);
 
         self
@@ -115,7 +116,7 @@ impl<'map> TaikoPP<'map> {
 
     /// Specify the amount of 300s of a play.
     #[inline]
-    pub fn n300(mut self, n300: usize) -> Self {
+    pub const fn n300(mut self, n300: usize) -> Self {
         self.n300 = Some(n300);
 
         self
@@ -123,7 +124,7 @@ impl<'map> TaikoPP<'map> {
 
     /// Specify the amount of 100s of a play.
     #[inline]
-    pub fn n100(mut self, n100: usize) -> Self {
+    pub const fn n100(mut self, n100: usize) -> Self {
         self.n100 = Some(n100);
 
         self
@@ -131,7 +132,7 @@ impl<'map> TaikoPP<'map> {
 
     /// Specify the amount of misses of the play.
     #[inline]
-    pub fn n_misses(mut self, n_misses: usize) -> Self {
+    pub const fn n_misses(mut self, n_misses: usize) -> Self {
         self.n_misses = Some(n_misses);
 
         self
@@ -155,7 +156,7 @@ impl<'map> TaikoPP<'map> {
         [`TaikoGradualPerformanceAttributes`](crate::taiko::TaikoGradualPerformance)."
     )]
     #[inline]
-    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+    pub const fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
 
         self
@@ -165,7 +166,7 @@ impl<'map> TaikoPP<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     #[inline]
-    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.clock_rate = Some(clock_rate);
 
         self
@@ -175,7 +176,7 @@ impl<'map> TaikoPP<'map> {
     ///
     /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
-    pub fn is_convert(mut self, is_convert: bool) -> Self {
+    pub const fn is_convert(mut self, is_convert: bool) -> Self {
         self.is_convert_overwrite = Some(is_convert);
 
         self
@@ -183,7 +184,8 @@ impl<'map> TaikoPP<'map> {
 
     /// Provide parameters through a [`TaikoScoreState`].
     #[inline]
-    pub fn state(mut self, state: TaikoScoreState) -> Self {
+    #[allow(clippy::needless_pass_by_value)]
+    pub const fn state(mut self, state: TaikoScoreState) -> Self {
         let TaikoScoreState {
             max_combo,
             n300,
@@ -483,11 +485,11 @@ impl TaikoPpInner {
         acc_value
     }
 
-    fn total_hits(&self) -> f64 {
+    const fn total_hits(&self) -> f64 {
         self.state.total_hits() as f64
     }
 
-    fn total_successful_hits(&self) -> usize {
+    const fn total_successful_hits(&self) -> usize {
         self.state.n300 + self.state.n100
     }
 

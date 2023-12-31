@@ -104,7 +104,7 @@ impl BeatmapExt for Beatmap {
         let attrs = self.attributes().mods(mods).build();
         let scaling_factor = ScalingFactor::new(attrs.cs);
         let hr = mods.hr();
-        let time_preempt = (attrs.hit_windows.ar * attrs.clock_rate) as f32 as f64;
+        let time_preempt = f64::from((attrs.hit_windows.ar * attrs.clock_rate) as f32);
         let mut attrs = OsuDifficultyAttributes::default();
 
         crate::osu::create_osu_objects(
@@ -149,7 +149,7 @@ impl BeatmapExt for Beatmap {
             .collect();
 
         let half_catcher_width =
-            (calculate_catch_width(attrs.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
+            f64::from(calculate_catch_width(attrs.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE);
         let mut last_direction = 0;
         let mut last_excess = half_catcher_width;
 

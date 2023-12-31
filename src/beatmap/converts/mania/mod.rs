@@ -25,6 +25,7 @@ mod pattern_type;
 const MAX_NOTES_FOR_DENSITY: usize = 7;
 
 impl Beatmap {
+    #[allow(clippy::too_many_lines)]
     pub(in crate::beatmap) fn convert_to_mania(&self) -> Self {
         let mut map = self.clone_without_hit_objects(false);
 
@@ -52,14 +53,14 @@ impl Beatmap {
             .count();
 
         let percent_slider_or_spinner =
-            (slider_or_spinner_count as f32 / self.hit_objects.len() as f32) as f64;
+            f64::from(slider_or_spinner_count as f32 / self.hit_objects.len() as f32);
 
         let target_columns = if percent_slider_or_spinner < 0.2 {
             7.0
         } else if percent_slider_or_spinner < 0.3 || rounded_cs >= 5.0 {
-            (6 + (rounded_od > 5.0) as u8) as f32
+            f32::from(6 + u8::from(rounded_od > 5.0))
         } else if percent_slider_or_spinner > 0.6 {
-            (4 + (rounded_od > 4.0) as u8) as f32
+            f32::from(4 + u8::from(rounded_od > 4.0))
         } else {
             (rounded_od + 1.0).clamp(4.0, 7.0)
         };
@@ -67,7 +68,7 @@ impl Beatmap {
         map.cs = target_columns;
 
         let mut prev_note_times: LimitedQueue<f64, MAX_NOTES_FOR_DENSITY> = LimitedQueue::new();
-        let mut density = i32::MAX as f64;
+        let mut density = f64::from(i32::MAX);
 
         let mut compute_density = |new_note_time: f64, d: &mut f64| {
             prev_note_times.push(new_note_time);
@@ -129,10 +130,10 @@ impl Beatmap {
                         edge_sounds,
                     );
 
-                    let segment_duration = gen.segment_duration as f64;
+                    let segment_duration = f64::from(gen.segment_duration);
 
                     for i in 0..=repeats as i32 + 1 {
-                        let time = obj.start_time + segment_duration * i as f64;
+                        let time = obj.start_time + segment_duration * f64::from(i);
 
                         last_values.time = time;
                         last_values.pos = obj.pos;

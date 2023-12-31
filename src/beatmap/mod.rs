@@ -89,7 +89,7 @@ impl Beatmap {
             .or_else(|| self.timing_points.last().map(|t| t.time))
             .unwrap_or(0.0);
 
-        /// Maps beat_len to a cumulative duration
+        /// Maps `beat_len` to a cumulative duration
         #[derive(Debug)]
         struct BeatLenDuration {
             last_time: f64,
@@ -221,7 +221,7 @@ impl Beatmap {
             slider_mult: self.slider_mult,
             tick_rate: self.tick_rate,
             hit_objects: Vec::with_capacity(self.hit_objects.len()),
-            sounds: Vec::with_capacity((with_sounds as usize) * self.sounds.len()),
+            sounds: Vec::with_capacity((usize::from(with_sounds)) * self.sounds.len()),
             timing_points: self.timing_points.clone(),
             difficulty_points: self.difficulty_points.clone(),
             effect_points: self.effect_points.clone(),

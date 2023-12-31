@@ -19,12 +19,12 @@ pub(crate) struct ByteHash {
 impl Hasher for ByteHash {
     #[inline]
     fn finish(&self) -> u64 {
-        self.byte as u64
+        u64::from(self.byte)
     }
 
     #[inline]
     fn write(&mut self, _: &[u8]) {
-        unreachable!()
+        unimplemented!()
     }
 
     #[inline]

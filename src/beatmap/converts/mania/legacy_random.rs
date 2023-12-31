@@ -9,7 +9,7 @@ pub(crate) struct Random {
 }
 
 impl Random {
-    pub(crate) fn new(seed: i32) -> Self {
+    pub(crate) const fn new(seed: i32) -> Self {
         Self {
             x: seed as u32,
             y: 842_502_087,
@@ -33,10 +33,10 @@ impl Random {
     }
 
     pub(crate) fn gen_double(&mut self) -> f64 {
-        INT_TO_REAL * self.gen_signed() as f64
+        INT_TO_REAL * f64::from(self.gen_signed())
     }
 
     pub(crate) fn gen_int_range(&mut self, min: i32, max: i32) -> i32 {
-        (min as f64 + self.gen_double() * (max - min) as f64) as i32
+        (f64::from(min) + self.gen_double() * f64::from(max - min)) as i32
     }
 }

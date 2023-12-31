@@ -62,8 +62,8 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let start_time = hit_object.start_time.round_even() as i32;
 
         // * This matches stable's calculation.
-        let end_time = (start_time as f64
-            + curve.dist() * beat_len * span_count as f64 * 0.01 / orig.slider_mult)
+        let end_time = (f64::from(start_time)
+            + curve.dist() * beat_len * f64::from(span_count) * 0.01 / orig.slider_mult)
             .floor() as i32;
 
         let segment_duration = (end_time - start_time) / span_count;
@@ -100,6 +100,8 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         for obj in orig_pattern.hit_objects {
             let col = ManiaObject::column(obj.pos.x, self.total_columns as f32) as u8;
 
+            // Keeping it in-sync with lazer
+            #[allow(clippy::if_not_else)]
             if self.end_time != obj.end_time().round_even() as i32 {
                 intermediate_pattern.add_object(obj, col);
             } else {
@@ -142,7 +144,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
                 self.convert_type &= !PatternType::FORCE_NOT_STACK;
             }
 
-            let note_count = 1 + (self.segment_duration >= 80) as i32;
+            let note_count = 1 + i32::from(self.segment_duration >= 80);
 
             self.generate_random_notes(self.start_time, note_count)
         } else if conversion_diff > 6.5 {
@@ -241,7 +243,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
                 None,
                 None,
                 None,
-                Some(&|c| c != last_column as i32),
+                Some(&|c| c != i32::from(last_column)),
                 &[],
             );
 
@@ -262,7 +264,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         // * - x - -
         // * x - - -
 
-        let mut column = self.get_column(Some(true)) as i32;
+        let mut column = i32::from(self.get_column(Some(true)));
         let mut increasing = self.random.gen_double() > 0.5;
         let mut pattern = Pattern::with_capacity(self.span_count as usize + 1);
 
@@ -299,13 +301,13 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let legacy = (4..=8).contains(&self.total_columns);
         let interval = self
             .random
-            .gen_int_range(1, self.total_columns - (legacy as i32));
+            .gen_int_range(1, self.total_columns - i32::from(legacy));
 
-        let mut next_column = self.get_column(Some(true)) as i32;
+        let mut next_column = i32::from(self.get_column(Some(true)));
         let random_start = self.random_start();
         let not_2k = self.total_columns > 2;
         let mut pattern =
-            Pattern::with_capacity((self.span_count as usize + 1) * (1 + not_2k as usize));
+            Pattern::with_capacity((self.span_count as usize + 1) * (1 + usize::from(not_2k)));
 
         for _ in 0..=self.span_count as usize {
             pattern.add_slider_note(self, next_column as u8, start_time, start_time);
@@ -313,7 +315,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
             next_column += interval;
 
             if next_column >= self.total_columns - random_start {
-                next_column = next_column - self.total_columns - random_start + (legacy as i32);
+                next_column = next_column - self.total_columns - random_start + i32::from(legacy);
             }
 
             next_column += random_start;
@@ -323,7 +325,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
                 pattern.add_slider_note(self, next_column as u8, start_time, start_time);
             }
 
-            next_column = PatternGenerator::get_random_column(self, None, None) as i32;
+            next_column = i32::from(PatternGenerator::get_random_column(self, None, None));
             start_time += self.segment_duration;
         }
 
@@ -476,7 +478,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let ignore_head = !(sample.whistle() || sample.finish() || sample.clap());
 
         let mut row_pattern = Pattern::default();
-        let hold_column = hold_column as i32;
+        let hold_column = i32::from(hold_column);
 
         for _ in 0..=self.span_count as usize {
             if !(ignore_head && start_time == self.start_time) {

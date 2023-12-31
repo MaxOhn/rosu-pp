@@ -16,31 +16,29 @@ pub struct HitObject {
 
 impl HitObject {
     /// The end time of the object.
-    pub(crate) fn end_time(&self) -> f64 {
+    pub(crate) const fn end_time(&self) -> f64 {
         match &self.kind {
-            HitObjectKind::Circle => self.start_time,
-            // incorrect, only called in mania which has no sliders though
-            HitObjectKind::Slider { .. } => self.start_time,
-            HitObjectKind::Spinner { end_time } => *end_time,
-            HitObjectKind::Hold { end_time, .. } => *end_time,
+            // incorrect for sliders, only called in mania which has nono though
+            HitObjectKind::Circle | HitObjectKind::Slider { .. } => self.start_time,
+            HitObjectKind::Spinner { end_time } | HitObjectKind::Hold { end_time, .. } => *end_time,
         }
     }
 
     /// If the object is a circle.
     #[inline]
-    pub fn is_circle(&self) -> bool {
+    pub const fn is_circle(&self) -> bool {
         matches!(self.kind, HitObjectKind::Circle)
     }
 
     /// If the object is a slider.
     #[inline]
-    pub fn is_slider(&self) -> bool {
+    pub const fn is_slider(&self) -> bool {
         matches!(self.kind, HitObjectKind::Slider { .. })
     }
 
     /// If the object is a spinner.
     #[inline]
-    pub fn is_spinner(&self) -> bool {
+    pub const fn is_spinner(&self) -> bool {
         matches!(self.kind, HitObjectKind::Spinner { .. })
     }
 }

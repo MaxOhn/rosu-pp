@@ -80,7 +80,7 @@ impl ColourDifficultyPreprocessor {
 
     fn encode(data: &mut ObjectLists) -> Vec<Rc<RefCell<RepeatingHitPatterns>>> {
         let mono_streaks = Self::encode_mono_streak(data);
-        let alternating_mono_patterns = Self::encode_alternating_mono_pattern(mono_streaks);
+        let alternating_mono_patterns = Self::encode_alternating_mono_pattern(&mono_streaks);
 
         Self::encode_repeating_hit_pattern(alternating_mono_patterns)
     }
@@ -120,7 +120,7 @@ impl ColourDifficultyPreprocessor {
     }
 
     fn encode_alternating_mono_pattern(
-        data: Vec<Rc<RefCell<MonoStreak>>>,
+        data: &[Rc<RefCell<MonoStreak>>],
     ) -> VecDeque<Rc<RefCell<AlternatingMonoPattern>>> {
         let mut mono_patterns = VecDeque::new();
         mono_patterns.push_back(AlternatingMonoPattern::new());

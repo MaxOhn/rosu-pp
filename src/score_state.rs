@@ -46,7 +46,7 @@ impl ScoreState {
 
             if mode != GameMode::Osu {
                 amount += self.n_katu;
-                amount += (mode != GameMode::Catch) as usize * self.n_geki;
+                amount += usize::from(mode != GameMode::Catch) * self.n_geki;
             }
         }
 

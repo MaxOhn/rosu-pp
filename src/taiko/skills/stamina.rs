@@ -27,7 +27,7 @@ impl Stamina {
 impl Skill for Stamina {
     #[inline]
     fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
-        <Self as StrainSkill>::process(self, curr, hit_objects)
+        <Self as StrainSkill>::process(self, curr, hit_objects);
     }
 
     #[inline]

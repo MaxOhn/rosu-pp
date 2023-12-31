@@ -90,15 +90,15 @@ impl Movement {
         let dist_moved = pos - last_player_pos;
         let weighted_strain_time = current.strain_time + 13.0 + (3.0 / current.clock_rate);
 
-        let mut dist_addition = (dist_moved.abs().powf(1.3) / 510.0) as f64;
+        let mut dist_addition = f64::from(dist_moved.abs().powf(1.3) / 510.0);
 
         if dist_moved.abs() > 0.1 {
             if self.last_distance_moved.abs() > 0.1
                 && dist_moved.signum() != self.last_distance_moved.signum()
             {
-                let bonus_factor = (dist_moved.abs().min(50.0) / 50.0) as f64;
+                let bonus_factor = f64::from(dist_moved.abs().min(50.0) / 50.0);
                 let anti_flow_factor =
-                    (self.last_distance_moved.abs().min(70.0) / 70.0).max(0.38) as f64;
+                    f64::from((self.last_distance_moved.abs().min(70.0) / 70.0).max(0.38));
 
                 dist_addition += DIRECTION_CHANGE_BONUS / (self.last_strain_time + 16.0).sqrt()
                     * bonus_factor
@@ -106,14 +106,16 @@ impl Movement {
                     * (1.0 - (weighted_strain_time / 1000.0).powi(3)).max(0.0);
             }
 
-            dist_addition += (12.5 * dist_moved.abs().min(NORMALIZED_HITOBJECT_RADIUS * 2.0)
-                / (NORMALIZED_HITOBJECT_RADIUS * 6.0)) as f64
-                / weighted_strain_time.sqrt();
+            dist_addition += f64::from(
+                12.5 * dist_moved.abs().min(NORMALIZED_HITOBJECT_RADIUS * 2.0)
+                    / (NORMALIZED_HITOBJECT_RADIUS * 6.0),
+            ) / weighted_strain_time.sqrt();
         }
 
         let mut edge_dash_bonus = 0.0;
 
         if current.last.hyper_dist <= 20.0 {
+            #[allow(clippy::if_not_else)]
             if !current.last.hyper_dash {
                 edge_dash_bonus += 5.7;
             } else {
@@ -122,7 +124,7 @@ impl Movement {
 
             dist_addition *= 1.0
                 + edge_dash_bonus
-                    * ((20.0 - current.last.hyper_dist) / 20.0) as f64
+                    * f64::from((20.0 - current.last.hyper_dist) / 20.0)
                     * ((current.strain_time * current.clock_rate).min(265.0) / 265.0).powf(1.5);
         }
 

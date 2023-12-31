@@ -137,21 +137,25 @@ impl BeatmapAttributesBuilder {
         };
 
         let raw_ar = mod_mult(self.ar);
-        let preempt = difficulty_range(raw_ar as f64, 1800.0, 1200.0, 450.0) / clock_rate;
+        let preempt = difficulty_range(f64::from(raw_ar), 1800.0, 1200.0, 450.0) / clock_rate;
 
         // OD
         let hit_window = match self.mode {
             GameMode::Osu | GameMode::Catch => {
                 let raw_od = mod_mult(self.od);
 
-                difficulty_range(raw_od as f64, Self::OSU_MIN, Self::OSU_AVG, Self::OSU_MAX)
-                    / clock_rate
+                difficulty_range(
+                    f64::from(raw_od),
+                    Self::OSU_MIN,
+                    Self::OSU_AVG,
+                    Self::OSU_MAX,
+                ) / clock_rate
             }
             GameMode::Taiko => {
                 let raw_od = mod_mult(self.od);
 
                 let diff_range = difficulty_range(
-                    raw_od as f64,
+                    f64::from(raw_od),
                     Self::TAIKO_MIN,
                     Self::TAIKO_AVG,
                     Self::TAIKO_MAX,
@@ -174,7 +178,7 @@ impl BeatmapAttributesBuilder {
                     value *= 1.4;
                 }
 
-                ((value as f64 * clock_rate).floor() / clock_rate).ceil()
+                ((f64::from(value) * clock_rate).floor() / clock_rate).ceil()
             }
         };
 
@@ -215,14 +219,14 @@ impl BeatmapAttributesBuilder {
         let od = match self.mode {
             GameMode::Osu => (Self::OSU_MIN - od) / 6.0,
             GameMode::Taiko => (Self::TAIKO_MIN - od) / (Self::TAIKO_MIN - Self::TAIKO_AVG) * 5.0,
-            GameMode::Catch | GameMode::Mania => self.od as f64,
+            GameMode::Catch | GameMode::Mania => f64::from(self.od),
         };
 
         BeatmapAttributes {
             ar,
             od,
-            cs: cs as f64,
-            hp: hp as f64,
+            cs: f64::from(cs),
+            hp: f64::from(hp),
             clock_rate,
             hit_windows,
         }
@@ -245,6 +249,7 @@ impl From<&Beatmap> for BeatmapAttributesBuilder {
     }
 }
 
+#[allow(clippy::similar_names)]
 fn difficulty_range(difficulty: f64, min: f64, mid: f64, max: f64) -> f64 {
     if difficulty > 5.0 {
         mid + (max - mid) * (difficulty - 5.0) / 5.0

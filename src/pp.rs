@@ -37,6 +37,7 @@ use crate::{
 /// ```
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug)]
+#[must_use]
 pub enum AnyPP<'map> {
     /// osu!standard performance calculator
     Osu(OsuPP<'map>),
@@ -266,8 +267,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n_katu(self, n_katu: usize) -> Self {
         match self {
-            Self::Osu(_) => self,
-            Self::Taiko(_) => self,
+            Self::Osu(_) | Self::Taiko(_) => self,
             Self::Catch(f) => Self::Catch(f.tiny_droplet_misses(n_katu)),
             Self::Mania(m) => Self::Mania(m.n200(n_katu)),
         }
@@ -280,9 +280,7 @@ impl<'map> AnyPP<'map> {
     #[inline]
     pub fn n_geki(self, n_geki: usize) -> Self {
         match self {
-            Self::Osu(_) => self,
-            Self::Taiko(_) => self,
-            Self::Catch(_) => self,
+            Self::Osu(_) | Self::Taiko(_) | Self::Catch(_) => self,
             Self::Mania(m) => Self::Mania(m.n320(n_geki)),
         }
     }

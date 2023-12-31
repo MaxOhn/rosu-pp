@@ -118,8 +118,9 @@ impl<R> FileReader<R> {
                 if self.buf.len() >= 3 {
                     // truncate one `0` that was left after truncating `\n` when reading the line.
                     // additionally truncate `0\r` if possible.
-                    sub += 1 + 2
-                        * (self.buf.len() >= 4 && self.buf[self.buf.len() - 2] == b'\r') as usize;
+                    sub += 1 + 2 * usize::from(
+                        self.buf.len() >= 4 && self.buf[self.buf.len() - 2] == b'\r',
+                    );
                 }
 
                 self.buf.rotate_left(1);
@@ -159,7 +160,7 @@ impl<R> FileReader<R> {
             .ok_or(ParseError::IncorrectFileHeader)
     }
 
-    /// Returns the bytes inbetween '[' and ']'.
+    /// Returns the bytes inbetween `[` and `]`.
     pub(crate) fn get_section(&self) -> Option<&[u8]> {
         if self.buf[0] == b'[' {
             if let Some(end) = self.buf[1..].iter().position(|&byte| byte == b']') {
@@ -191,9 +192,8 @@ impl<R> FileReader<R> {
     ///
     /// Returns `None` if the second half is invalid UTF-8.
     pub(crate) fn split_colon(&self) -> Option<(&[u8], &str)> {
-        let idx = match self.buf.iter().position(|&byte| byte == b':') {
-            Some(idx) => idx,
-            None => return Some((&self.buf, "")),
+        let Some(idx) = self.buf.iter().position(|&byte| byte == b':') else {
+            return Some((&self.buf, ""));
         };
 
         let back = std::str::from_utf8(&self.buf[idx + 1..]).ok()?;

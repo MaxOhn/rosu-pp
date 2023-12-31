@@ -29,7 +29,7 @@ impl Flashlight {
             curr_section_end: 0.0,
             strain_peaks: CompactVec::new(),
             has_hidden_mod: mods.hd(),
-            scaling_factor: 52.0 / radius as f64,
+            scaling_factor: 52.0 / f64::from(radius),
             time_preempt,
             time_fade_in,
         }
@@ -47,7 +47,7 @@ impl Skill for Flashlight {
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
     ) {
-        <Self as StrainSkill>::process(self, curr, diff_objects)
+        <Self as StrainSkill>::process(self, curr, diff_objects);
     }
 
     #[inline]
@@ -155,8 +155,9 @@ impl FlashlightEvaluator {
             let curr_hit_obj = curr_obj.base;
 
             if !curr_obj.base.is_spinner() {
-                let jump_dist =
-                    (osu_hit_obj.stacked_pos() - curr_hit_obj.stacked_end_pos()).length() as f64;
+                let jump_dist = f64::from(
+                    (osu_hit_obj.stacked_pos() - curr_hit_obj.stacked_end_pos()).length(),
+                );
                 cumulative_strain_time += last_obj.strain_time;
 
                 // * We want to nerf objects that can be easily seen within the Flashlight circle radius.
@@ -210,7 +211,7 @@ impl FlashlightEvaluator {
 
         if let OsuObjectKind::Slider(slider) = &osu_curr.base.kind {
             // * Invert the scaling factor to determine the true travel distance independent of circle size.
-            let pixel_travel_dist = osu_curr.dists.lazy_travel_dist as f64 / scaling_factor;
+            let pixel_travel_dist = f64::from(osu_curr.dists.lazy_travel_dist) / scaling_factor;
 
             // * Reward sliders based on velocity.
             slider_bonus = ((pixel_travel_dist / osu_curr.dists.travel_time - Self::MIN_VELOCITY)

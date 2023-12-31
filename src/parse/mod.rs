@@ -115,9 +115,8 @@ macro_rules! parse_general_body {
                 break;
             }
 
-            let (key, value) = match $reader.split_colon() {
-                Some(tuple) => tuple,
-                None => continue,
+            let Some((key, value)) = $reader.split_colon() else {
+                continue;
             };
 
             if key == b"Mode" {
@@ -162,9 +161,8 @@ macro_rules! parse_difficulty_body {
                 break;
             }
 
-            let (key, value) = match $reader.split_colon() {
-                Some(tuple) => tuple,
-                None => continue,
+            let Some((key, value)) = $reader.split_colon() else {
+                continue;
             };
 
             match key {
@@ -268,9 +266,8 @@ macro_rules! parse_timingpoints_body {
             let line = $reader.get_line()?;
             let mut split = line.split(',');
 
-            let time = match split.next().map(str::trim).and_then(f64::parse_in_range) {
-                Some(time) => time,
-                None => continue,
+            let Some(time) = split.next().map(str::trim).and_then(f64::parse_in_range) else {
+                continue;
             };
 
             // * beatLength is allowed to be NaN to handle an edge case in which
@@ -353,7 +350,7 @@ macro_rules! parse_timingpoints_body {
                 1.0
             };
 
-            if time != pending_diff_points_time {
+            if (time - pending_diff_points_time).abs() >= f64::EPSILON {
                 if let Some(point) = pending_diff_point.take() {
                     $self.difficulty_points.push(point);
                 }
@@ -425,23 +422,20 @@ macro_rules! parse_hitobjects_body {
                 continue 'next_line;
             };
 
-            let time = match split.next().map(str::trim).and_then(f64::parse_in_range) {
-                Some(time) => time,
-                None => continue 'next_line,
+            let Some(time) = split.next().map(str::trim).and_then(f64::parse_in_range) else {
+                continue 'next_line;
             };
 
             if !$self.hit_objects.is_empty() && time < prev_time {
                 unsorted = true;
             }
 
-            let kind = match split.next().map(str::parse::<u8>) {
-                Some(Ok(kind)) => kind,
-                _ => continue 'next_line,
+            let Some(Ok(kind)) = split.next().map(str::parse::<u8>) else {
+                continue 'next_line;
             };
 
-            let mut sound = match split.next().map(str::parse::<u8>) {
-                Some(Ok(sound)) => sound,
-                _ => continue 'next_line,
+            let Some(Ok(mut sound)) = split.next().map(str::parse::<u8>) else {
+                continue 'next_line;
             };
 
             fn has_custom_sound_file(bank_info: Option<&str>) -> Option<bool> {
@@ -502,8 +496,9 @@ macro_rules! parse_hitobjects_body {
                 let mut first = true;
 
                 // SAFETY: `Vec<(usize, usize)>` and `Vec<&str>` have the same size and layout.
-                let point_split: &mut Vec<&str> =
-                    unsafe { std::mem::transmute(&mut point_split_raw) };
+                let point_split = unsafe {
+                    &mut *((&mut point_split_raw as *mut Vec<(usize, usize)>).cast::<Vec<&str>>())
+                };
 
                 point_split.clear();
                 point_split.extend(control_point_iter);
@@ -765,9 +760,9 @@ mod slider_parsing {
     ) -> ConvertStatus {
         let mut path_kind = PathType::from_str(points[0]);
 
-        let read_offset = first as usize;
+        let read_offset = usize::from(first);
         let readable_points = points.len() - 1;
-        let end_point_len = end_point.is_some() as usize;
+        let end_point_len = usize::from(end_point.is_some());
 
         vertices.clear();
         vertices.reserve(read_offset + readable_points + end_point_len);
@@ -862,7 +857,7 @@ mod slider_parsing {
     pub(super) fn read_point(value: &str, start_pos: Pos2) -> Option<PathControlPoint> {
         let mut v = value
             .split(':')
-            .flat_map(|s| f64::parse_in_custom_range(s, MAX_COORDINATE_VALUE as f64))
+            .filter_map(|s| f64::parse_in_custom_range(s, f64::from(MAX_COORDINATE_VALUE)))
             .map(|n| n as i32 as f32);
 
         v.next()
@@ -1056,7 +1051,7 @@ enum Section {
 }
 
 impl Section {
-    fn from_bytes(bytes: &[u8]) -> Self {
+    const fn from_bytes(bytes: &[u8]) -> Self {
         match bytes {
             b"General" => Self::General,
             b"Difficulty" => Self::Difficulty,

@@ -62,7 +62,7 @@ impl<'map> CatchGradualDifficulty<'map> {
         Self { map, inner }
     }
 
-    pub(crate) fn idx(&self) -> usize {
+    pub(crate) const fn idx(&self) -> usize {
         self.inner.idx
     }
 }
@@ -96,7 +96,7 @@ impl CatchOwnedGradualDifficulty {
     }
 
     #[allow(unused)]
-    pub(crate) fn idx(&self) -> usize {
+    pub(crate) const fn idx(&self) -> usize {
         self.inner.idx
     }
 }
@@ -181,7 +181,7 @@ impl CatchGradualDifficultyInner {
         let hit_objects = CatchObjectIter::new(mods, attributes);
 
         let half_catcher_width =
-            (calculate_catch_width(map_attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
+            f64::from(calculate_catch_width(map_attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE);
         let last_direction = 0;
         let last_excess = half_catcher_width;
 

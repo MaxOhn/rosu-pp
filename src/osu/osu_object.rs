@@ -55,7 +55,7 @@ impl OsuSlider {
     /// The amount of repeat points.
     pub fn repeat_count(&self) -> usize {
         self.nested_objects.iter().fold(0, |count, nested| {
-            count + matches!(nested.kind, NestedObjectKind::Repeat) as usize
+            count + usize::from(matches!(nested.kind, NestedObjectKind::Repeat))
         })
     }
 
@@ -120,6 +120,7 @@ pub(crate) struct ObjectParameters<'a> {
 }
 
 impl OsuObject {
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn new(h: &HitObject, params: &mut ObjectParameters<'_>) -> Self {
         let ObjectParameters {
             map,
@@ -195,6 +196,7 @@ impl OsuObject {
 
                 ticks.clear();
 
+                #[allow(clippy::if_not_else)]
                 let mut nested_objects = if tick_dist != 0.0 {
                     ticks.reserve((len / tick_dist) as usize);
                     let mut nested_objects =
@@ -221,7 +223,7 @@ impl OsuObject {
 
                     // Other spans
                     for span_idx in 1..=*repeats {
-                        let progress = (span_idx % 2 == 1) as u8 as f64;
+                        let progress = f64::from(u8::from(span_idx % 2 == 1));
                         let span_idx_f64 = span_idx as f64;
 
                         // Repeat point
@@ -269,7 +271,7 @@ impl OsuObject {
                 let final_span_end_time = (h.start_time + total_duration / 2.0)
                     .max(final_span_start_time + span_duration - LEGACY_LAST_TICK_OFFSET);
 
-                let progress = (*repeats % 2 == 0) as u8 as f64;
+                let progress = f64::from(u8::from(*repeats % 2 == 0));
                 let end_pos = curve.position_at(progress);
 
                 // * we need to use the LegacyLastTick here for compatibility reasons (difficulty).
@@ -347,7 +349,7 @@ impl OsuObject {
     }
 
     /// Endtime of the object.
-    pub fn end_time(&self) -> f64 {
+    pub const fn end_time(&self) -> f64 {
         match &self.kind {
             OsuObjectKind::Circle => self.start_time,
             OsuObjectKind::Slider(slider) => slider.end_time,
@@ -445,7 +447,7 @@ impl OsuObject {
     }
 
     /// Applies stack offset, flips playfield for HR,
-    /// and adjusts slider tails and lazy_end_positions.
+    /// and adjusts slider tails and lazy end positions.
     pub(crate) fn post_process(&mut self, hr: bool, scaling_factor: &ScalingFactor) {
         self.stack_offset = scaling_factor.stack_offset(self.stack_height);
         let pos = self.pos();
@@ -501,7 +503,7 @@ impl OsuObject {
         }
 
         if hr {
-            self.pos.y = PLAYFIELD_BASE_SIZE.y - pos.y
+            self.pos.y = PLAYFIELD_BASE_SIZE.y - pos.y;
         }
     }
 }

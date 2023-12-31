@@ -38,7 +38,7 @@ impl<'map, E> From<&'map Beatmap> for MapOrElse<MapRef<'map>, E> {
 pub(crate) struct MapRef<'map>(&'map Beatmap);
 
 impl<'map> MapRef<'map> {
-    pub(crate) fn into_inner(self) -> &'map Beatmap {
+    pub(crate) const fn into_inner(self) -> &'map Beatmap {
         self.0
     }
 }

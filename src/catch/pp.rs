@@ -36,6 +36,7 @@ use std::cmp::Ordering;
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
+#[must_use]
 pub struct CatchPP<'map> {
     pub(crate) map_or_attrs: MapOrElse<MapRef<'map>, CatchDifficultyAttributes>,
     pub(crate) mods: u32,
@@ -87,7 +88,7 @@ impl<'map> CatchPP<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
-    pub fn mods(mut self, mods: u32) -> Self {
+    pub const fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
@@ -95,7 +96,7 @@ impl<'map> CatchPP<'map> {
 
     /// Specify the max combo of the play.
     #[inline]
-    pub fn combo(mut self, combo: usize) -> Self {
+    pub const fn combo(mut self, combo: usize) -> Self {
         self.combo = Some(combo);
 
         self
@@ -103,7 +104,7 @@ impl<'map> CatchPP<'map> {
 
     /// Specify the amount of fruits of a play i.e. n300.
     #[inline]
-    pub fn fruits(mut self, n_fruits: usize) -> Self {
+    pub const fn fruits(mut self, n_fruits: usize) -> Self {
         self.n_fruits = Some(n_fruits);
 
         self
@@ -111,7 +112,7 @@ impl<'map> CatchPP<'map> {
 
     /// Specify the amount of droplets of a play i.e. n100.
     #[inline]
-    pub fn droplets(mut self, n_droplets: usize) -> Self {
+    pub const fn droplets(mut self, n_droplets: usize) -> Self {
         self.n_droplets = Some(n_droplets);
 
         self
@@ -119,15 +120,15 @@ impl<'map> CatchPP<'map> {
 
     /// Specify the amount of tiny droplets of a play i.e. n50.
     #[inline]
-    pub fn tiny_droplets(mut self, n_tiny_droplets: usize) -> Self {
+    pub const fn tiny_droplets(mut self, n_tiny_droplets: usize) -> Self {
         self.n_tiny_droplets = Some(n_tiny_droplets);
 
         self
     }
 
-    /// Specify the amount of tiny droplet misses of a play i.e. n_katu.
+    /// Specify the amount of tiny droplet misses of a play i.e. `n_katu`.
     #[inline]
-    pub fn tiny_droplet_misses(mut self, n_tiny_droplet_misses: usize) -> Self {
+    pub const fn tiny_droplet_misses(mut self, n_tiny_droplet_misses: usize) -> Self {
         self.n_tiny_droplet_misses = Some(n_tiny_droplet_misses);
 
         self
@@ -135,7 +136,7 @@ impl<'map> CatchPP<'map> {
 
     /// Specify the amount of fruit / droplet misses of the play.
     #[inline]
-    pub fn misses(mut self, n_misses: usize) -> Self {
+    pub const fn misses(mut self, n_misses: usize) -> Self {
         self.n_misses = Some(n_misses);
 
         self
@@ -150,7 +151,7 @@ impl<'map> CatchPP<'map> {
         [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformance)."
     )]
     #[inline]
-    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+    pub const fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
 
         self
@@ -160,7 +161,7 @@ impl<'map> CatchPP<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     #[inline]
-    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.clock_rate = Some(clock_rate);
 
         self
@@ -168,7 +169,8 @@ impl<'map> CatchPP<'map> {
 
     /// Provide parameters through an [`CatchScoreState`].
     #[inline]
-    pub fn state(mut self, state: CatchScoreState) -> Self {
+    #[allow(clippy::needless_pass_by_value)]
+    pub const fn state(mut self, state: CatchScoreState) -> Self {
         let CatchScoreState {
             max_combo,
             n_fruits,
@@ -198,6 +200,7 @@ impl<'map> CatchPP<'map> {
     }
 
     /// Create the [`CatchScoreState`] that will be used for performance calculation.
+    #[allow(clippy::too_many_lines)]
     pub fn generate_state(&mut self) -> CatchScoreState {
         let attrs = match self.map_or_attrs {
             MapOrElse::Map(ref map) => {
@@ -297,6 +300,7 @@ impl<'map> CatchPP<'map> {
             }
         };
 
+        #[allow(clippy::single_match_else)]
         match (self.n_tiny_droplets, self.n_tiny_droplet_misses) {
             (Some(n_tiny_droplets), Some(n_tiny_droplet_misses)) => match self.acc {
                 Some(acc) => {
@@ -376,7 +380,7 @@ impl<'map> CatchPP<'map> {
     ///
     /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
     #[inline]
-    pub fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
+    pub const fn try_from_osu(osu: OsuPP<'map>) -> Option<Self> {
         let OsuPP {
             map_or_attrs,
             mods,
@@ -449,7 +453,7 @@ impl CatchPPInner {
         // Longer maps are worth more
         let len_bonus = 0.95
             + 0.3 * (combo_hits as f64 / 2500.0).min(1.0)
-            + (combo_hits > 2500) as u8 as f64 * (combo_hits as f64 / 2500.0).log10() * 0.475;
+            + f64::from(u8::from(combo_hits > 2500)) * (combo_hits as f64 / 2500.0).log10() * 0.475;
 
         pp *= len_bonus;
 
@@ -467,7 +471,7 @@ impl CatchPPInner {
         let ar = attributes.ar;
         let mut ar_factor = 1.0;
         if ar > 9.0 {
-            ar_factor += 0.1 * (ar - 9.0) + (ar > 10.0) as u8 as f64 * 0.1 * (ar - 10.0);
+            ar_factor += 0.1 * (ar - 9.0) + f64::from(u8::from(ar > 10.0)) * 0.1 * (ar - 10.0);
         } else if ar < 8.0 {
             ar_factor += 0.025 * (8.0 - ar);
         }
@@ -501,7 +505,7 @@ impl CatchPPInner {
         }
     }
 
-    fn combo_hits(&self) -> usize {
+    const fn combo_hits(&self) -> usize {
         self.state.n_fruits + self.state.n_droplets + self.state.n_misses
     }
 }

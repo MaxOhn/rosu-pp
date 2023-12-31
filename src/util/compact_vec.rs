@@ -17,7 +17,7 @@ impl CompactVec {
     }
 
     pub(crate) fn push(&mut self, num: f64) {
-        self.push_n(num, 1)
+        self.push_n(num, 1);
     }
 
     pub(crate) fn push_n(&mut self, num: f64, n: usize) {
@@ -28,7 +28,7 @@ impl CompactVec {
         {
             last.count += n;
         } else if n > 0 {
-            self.inner.push(Entry::new(num, n))
+            self.inner.push(Entry::new(num, n));
         }
 
         self.len += n;
@@ -38,7 +38,7 @@ impl CompactVec {
     where
         F: FnMut(f64) -> bool,
     {
-        self.inner.retain(|entry| f(entry.value))
+        self.inner.retain(|entry| f(entry.value));
     }
 
     pub(crate) fn iter(&self) -> Iter<'_> {
@@ -69,7 +69,7 @@ struct Entry {
 }
 
 impl Entry {
-    fn new(value: f64, count: usize) -> Self {
+    const fn new(value: f64, count: usize) -> Self {
         Self { value, count }
     }
 }

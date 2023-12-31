@@ -30,7 +30,7 @@ impl<'h> OsuDifficultyObject<'h> {
         let delta_time = (base.start_time - last.start_time) / clock_rate;
 
         // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
-        let strain_time = delta_time.max(Self::MIN_DELTA_TIME as f64);
+        let strain_time = delta_time.max(f64::from(Self::MIN_DELTA_TIME));
 
         Self {
             start_time,
@@ -94,6 +94,7 @@ impl Distances {
     ///
     /// By taking in [`Pin<&mut OsuObject>`](Pin), we imply that the argument will be
     /// modified but it won't be moved.
+    #[allow(clippy::similar_names)]
     pub(crate) fn new(
         base: &mut Pin<&mut OsuObject>,
         last: &OsuObject,
@@ -113,11 +114,11 @@ impl Distances {
 
             Self {
                 // * Bonus for repeat sliders until a better per nested object strain system can be achieved.
-                travel_dist: (lazy_travel_dist
-                    * (1.0 + repeat_count as f64 / 2.5).powf(1.0 / 2.5) as f32)
-                    as f64,
+                travel_dist: f64::from(
+                    lazy_travel_dist * (1.0 + repeat_count as f64 / 2.5).powf(1.0 / 2.5) as f32,
+                ),
                 travel_time: (base.lazy_travel_time() / clock_rate)
-                    .max(OsuDifficultyObject::MIN_DELTA_TIME as f64),
+                    .max(f64::from(OsuDifficultyObject::MIN_DELTA_TIME)),
                 lazy_travel_dist,
                 ..Default::default()
             }
@@ -136,17 +137,17 @@ impl Distances {
 
         let last_cursor_pos = Self::get_end_cursor_pos(last);
 
-        this.lazy_jump_dist = (base.stacked_pos() * scaling_factor
-            - last_cursor_pos * scaling_factor)
-            .length() as f64;
+        this.lazy_jump_dist = f64::from(
+            (base.stacked_pos() * scaling_factor - last_cursor_pos * scaling_factor).length(),
+        );
         this.min_jump_time = strain_time;
         this.min_jump_dist = this.lazy_jump_dist;
 
         if let OsuObjectKind::Slider(slider) = &last.kind {
             let last_travel_time = (last.lazy_travel_time() / clock_rate)
-                .max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
-            this.min_jump_time =
-                (strain_time - last_travel_time).max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
+                .max(f64::from(OsuDifficultyObject::MIN_DELTA_TIME));
+            this.min_jump_time = (strain_time - last_travel_time)
+                .max(f64::from(OsuDifficultyObject::MIN_DELTA_TIME));
 
             // * There are two types of slider-to-object patterns to consider in order
             // * to better approximate the real movement a player will take to jump between the hitobjects.
@@ -176,8 +177,8 @@ impl Distances {
 
             let tail_jump_dist = (stacked_tail_pos - base.stacked_pos()).length() * scaling_factor;
 
-            let diff = (Self::MAXIMUM_SLIDER_RADIUS - Self::ASSUMED_SLIDER_RADIUS) as f64;
-            let min = (tail_jump_dist - Self::MAXIMUM_SLIDER_RADIUS) as f64;
+            let diff = f64::from(Self::MAXIMUM_SLIDER_RADIUS - Self::ASSUMED_SLIDER_RADIUS);
+            let min = f64::from(tail_jump_dist - Self::MAXIMUM_SLIDER_RADIUS);
 
             // "attributes on expressions are experimental see issue #15701 https://github.com/rust-lang/rust/issues/15701"
             // rust pls...
@@ -192,8 +193,8 @@ impl Distances {
             let v1 = last_last_cursor_pos - last.stacked_pos();
             let v2 = base.stacked_pos() - last_cursor_pos;
 
-            let dot = v1.dot(v2) as f64;
-            let det = (v1.x * v2.y - v1.y * v2.x) as f64;
+            let dot = f64::from(v1.dot(v2));
+            let det = f64::from(v1.x * v2.y - v1.y * v2.x);
 
             this.angle = Some(det.atan2(dot).abs());
         }
@@ -208,16 +209,16 @@ impl Distances {
         scaling_factor_: &ScalingFactor,
     ) -> f32 {
         let mut curr_cursor_pos = pos + stack_offset;
-        let scaling_factor = Self::NORMALISED_RADIUS as f64 / scaling_factor_.radius as f64;
+        let scaling_factor = f64::from(Self::NORMALISED_RADIUS) / f64::from(scaling_factor_.radius);
 
         let mut lazy_travel_dist: f32 = 0.0;
 
         for (curr_movement_obj, i) in slider.nested_objects.iter().zip(1..) {
             let mut curr_movement = (curr_movement_obj.pos + stack_offset) - curr_cursor_pos;
-            let mut curr_movement_len = scaling_factor * curr_movement.length() as f64;
+            let mut curr_movement_len = scaling_factor * f64::from(curr_movement.length());
 
             // * Amount of movement required so that the cursor position needs to be updated.
-            let mut required_movement = Self::ASSUMED_SLIDER_RADIUS as f64;
+            let mut required_movement = f64::from(Self::ASSUMED_SLIDER_RADIUS);
 
             if i == slider.nested_objects.len() {
                 // * The end of a slider has special aim rules due
@@ -234,10 +235,10 @@ impl Distances {
                     curr_movement = lazy_movement;
                 }
 
-                curr_movement_len = scaling_factor * curr_movement.length() as f64;
+                curr_movement_len = scaling_factor * f64::from(curr_movement.length());
             } else if let NestedObjectKind::Repeat = curr_movement_obj.kind {
                 // * For a slider repeat, assume a tighter movement threshold to better assess repeat sliders.
-                required_movement = Self::NORMALISED_RADIUS as f64;
+                required_movement = f64::from(Self::NORMALISED_RADIUS);
             }
 
             if curr_movement_len > required_movement {

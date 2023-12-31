@@ -147,7 +147,7 @@ impl<'bufs> Curve<'bufs> {
             }
 
             // * The current vertex ends the segment
-            let segment_vertices = &vertices[start..i + 1];
+            let segment_vertices = &vertices[start..=i];
             let segment_kind = points[start].kind.unwrap_or(PathType::Linear);
 
             Self::calculate_subpath(path, segment_vertices, segment_kind, bezier);
@@ -176,14 +176,16 @@ impl<'bufs> Curve<'bufs> {
         cumulative_len.push(0.0);
 
         let length_iter = path.iter().zip(path.iter().skip(1)).map(|(&curr, &next)| {
-            calculated_len += (next - curr).length() as f64;
+            calculated_len += f64::from((next - curr).length());
 
             calculated_len
         });
 
         cumulative_len.extend(length_iter);
 
-        if let Some(expected_len) = expected_len.filter(|&len| calculated_len != len) {
+        if let Some(expected_len) =
+            expected_len.filter(|&len| (calculated_len - len).abs() >= f64::EPSILON)
+        {
             // * In osu-stable, if the last two control points of a slider are equal, extension is not performed
             let condition_opt = points
                 .len()
@@ -254,7 +256,7 @@ impl<'bufs> Curve<'bufs> {
                     }
                 }
 
-                Self::approximate_bezier(path, sub_points, bufs)
+                Self::approximate_bezier(path, sub_points, bufs);
             }
         }
     }
@@ -290,7 +292,7 @@ impl<'bufs> Curve<'bufs> {
     }
 
     fn approximate_linear(path: &mut Vec<Pos2>, points: &[Pos2]) {
-        path.extend(points)
+        path.extend(points);
     }
 
     fn approximate_circular_arc(path: &mut Vec<Pos2>, a: Pos2, b: Pos2, c: Pos2) -> bool {
@@ -313,7 +315,7 @@ impl<'bufs> Curve<'bufs> {
             if divisor.abs() <= f32::EPSILON {
                 2
             } else {
-                ((pr.theta_range / divisor as f64).ceil() as usize).max(2)
+                ((pr.theta_range / f64::from(divisor)).ceil() as usize).max(2)
             }
         };
 
@@ -509,8 +511,8 @@ impl<'bufs> Curve<'bufs> {
 
         let radius = d_a.length();
 
-        let theta_start = (d_a.y as f64).atan2(d_a.x as f64);
-        let mut theta_end = (d_c.y as f64).atan2(d_c.x as f64);
+        let theta_start = f64::from(d_a.y).atan2(f64::from(d_a.x));
+        let mut theta_end = f64::from(d_c.y).atan2(f64::from(d_c.x));
 
         while theta_end < theta_start {
             theta_end += 2.0 * PI;

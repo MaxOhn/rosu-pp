@@ -125,7 +125,8 @@ pub(crate) trait OsuStrainSkill: StrainSkill + Sized {
 
         // * We are reducing the highest strains first to account for extreme difficulty spikes
         for (i, strain) in peak_iter.enumerate() {
-            let clamped = (i as f32 / Self::REDUCED_SECTION_COUNT as f32).clamp(0.0, 1.0) as f64;
+            let clamped =
+                f64::from((i as f32 / Self::REDUCED_SECTION_COUNT as f32).clamp(0.0, 1.0));
             let scale = (lerp(1.0, 10.0, clamped)).log10();
             *strain *= lerp(Self::REDUCED_STRAIN_BASELINE, 1.0, scale);
         }

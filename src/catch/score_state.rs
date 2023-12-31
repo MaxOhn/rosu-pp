@@ -27,7 +27,7 @@ impl CatchScoreState {
 
     /// Return the total amount of hits by adding everything up.
     #[inline]
-    pub fn total_hits(&self) -> usize {
+    pub const fn total_hits(&self) -> usize {
         self.n_fruits
             + self.n_droplets
             + self.n_tiny_droplets

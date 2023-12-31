@@ -102,7 +102,7 @@ impl Rhythm {
 impl Skill for Rhythm {
     #[inline]
     fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
-        <Self as StrainSkill>::process(self, curr, hit_objects)
+        <Self as StrainSkill>::process(self, curr, hit_objects);
     }
 
     #[inline]
@@ -194,7 +194,7 @@ pub(crate) struct HistoryElement {
 }
 
 impl HistoryElement {
-    fn new(difficulty_object: &TaikoDifficultyObject) -> Self {
+    const fn new(difficulty_object: &TaikoDifficultyObject) -> Self {
         Self {
             idx: difficulty_object.idx,
             rhythm: difficulty_object.rhythm,

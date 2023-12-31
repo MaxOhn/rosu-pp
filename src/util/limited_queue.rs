@@ -51,18 +51,18 @@ impl<T, const N: usize> LimitedQueue<T, N> {
     pub(crate) fn push(&mut self, elem: T) {
         self.end = (self.end + 1) % N;
         self.queue[self.end] = elem;
-        self.len += (self.len < N) as usize;
+        self.len += usize::from(self.len < N);
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
+    pub(crate) const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub(crate) const fn len(&self) -> usize {
         self.len
     }
 
-    pub(crate) fn last(&self) -> Option<&T> {
+    pub(crate) const fn last(&self) -> Option<&T> {
         if self.is_empty() {
             None
         } else {
@@ -74,7 +74,7 @@ impl<T, const N: usize> LimitedQueue<T, N> {
         self.queue
             .iter()
             .cycle()
-            .skip((self.len == N) as usize * (self.end + 1))
+            .skip(usize::from(self.len == N) * (self.end + 1))
             .take(self.len)
     }
 }
@@ -92,7 +92,7 @@ impl<T, const N: usize> Index<usize> for LimitedQueue<T, N> {
             self.len
         );
 
-        let idx = (idx + (self.len == N) as usize * (self.end + 1)) % N;
+        let idx = (idx + usize::from(self.len == N) * (self.end + 1)) % N;
 
         &self.queue[idx]
     }

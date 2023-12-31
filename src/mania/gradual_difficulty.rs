@@ -63,7 +63,7 @@ impl<'map> ManiaGradualDifficulty<'map> {
         Self { map, inner }
     }
 
-    pub(crate) fn idx(&self) -> usize {
+    pub(crate) const fn idx(&self) -> usize {
         self.inner.idx
     }
 }
@@ -123,7 +123,7 @@ impl ManiaOwnedGradualDifficulty {
     }
 
     #[allow(unused)]
-    pub(crate) fn idx(&self) -> usize {
+    pub(crate) const fn idx(&self) -> usize {
         self.inner.idx
     }
 }
@@ -257,7 +257,7 @@ impl ManiaGradualDifficultyInner {
         })
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
+    const fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.len();
 
         (len, Some(len))
@@ -287,7 +287,7 @@ impl ManiaGradualDifficultyInner {
         self.next(hit_objects)
     }
 
-    fn len(&self) -> usize {
+    const fn len(&self) -> usize {
         self.diff_objects.len() + 1 - self.idx
     }
 }

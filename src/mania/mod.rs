@@ -50,6 +50,7 @@ const STAR_SCALING_FACTOR: f64 = 0.018;
 /// println!("Stars: {}", difficulty_attrs.stars);
 /// ```
 #[derive(Clone, Debug)]
+#[must_use]
 pub struct ManiaStars<'map> {
     map: Cow<'map, Beatmap>,
     mods: u32,
@@ -78,7 +79,7 @@ impl<'map> ManiaStars<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
-    pub fn mods(mut self, mods: u32) -> Self {
+    pub const fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
@@ -93,7 +94,7 @@ impl<'map> ManiaStars<'map> {
         [`ManiaGradualDifficultyAttributes`](crate::mania::ManiaGradualDifficulty)."
     )]
     #[inline]
-    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+    pub const fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
 
         self
@@ -103,7 +104,7 @@ impl<'map> ManiaStars<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     #[inline]
-    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.clock_rate = Some(clock_rate);
 
         self
@@ -113,7 +114,7 @@ impl<'map> ManiaStars<'map> {
     ///
     /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
-    pub fn is_convert(mut self, is_convert: bool) -> Self {
+    pub const fn is_convert(mut self, is_convert: bool) -> Self {
         self.is_convert = is_convert;
 
         self
@@ -250,19 +251,19 @@ pub struct ManiaDifficultyAttributes {
 impl ManiaDifficultyAttributes {
     /// Return the maximum combo.
     #[inline]
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         self.max_combo
     }
 
     /// Return the amount of hitobjects.
     #[inline]
-    pub fn n_objects(&self) -> usize {
+    pub const fn n_objects(&self) -> usize {
         self.n_objects
     }
 
     /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
     #[inline]
-    pub fn is_convert(&self) -> bool {
+    pub const fn is_convert(&self) -> bool {
         self.is_convert
     }
 
@@ -287,31 +288,31 @@ pub struct ManiaPerformanceAttributes {
 impl ManiaPerformanceAttributes {
     /// Return the star value.
     #[inline]
-    pub fn stars(&self) -> f64 {
+    pub const fn stars(&self) -> f64 {
         self.difficulty.stars
     }
 
     /// Return the performance point value.
     #[inline]
-    pub fn pp(&self) -> f64 {
+    pub const fn pp(&self) -> f64 {
         self.pp
     }
 
     /// Return the maximum combo of the map.
     #[inline]
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         self.difficulty.max_combo
     }
 
     /// Return the amount of hitobjects.
     #[inline]
-    pub fn n_objects(&self) -> usize {
+    pub const fn n_objects(&self) -> usize {
         self.difficulty.n_objects
     }
 
     /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.
     #[inline]
-    pub fn is_convert(&self) -> bool {
+    pub const fn is_convert(&self) -> bool {
         self.difficulty.is_convert
     }
 }

@@ -58,6 +58,7 @@ const PLAYFIELD_BASE_SIZE: Pos2 = Pos2 { x: 512.0, y: 384.0 };
 /// println!("Stars: {}", difficulty_attrs.stars);
 /// ```
 #[derive(Clone, Debug)]
+#[must_use]
 pub struct OsuStars<'map> {
     pub(crate) map: &'map Beatmap,
     pub(crate) mods: u32,
@@ -68,7 +69,7 @@ pub struct OsuStars<'map> {
 impl<'map> OsuStars<'map> {
     /// Create a new difficulty calculator for osu!standard maps.
     #[inline]
-    pub fn new(map: &'map Beatmap) -> Self {
+    pub const fn new(map: &'map Beatmap) -> Self {
         Self {
             map,
             mods: 0,
@@ -92,7 +93,7 @@ impl<'map> OsuStars<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
-    pub fn mods(mut self, mods: u32) -> Self {
+    pub const fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
@@ -107,7 +108,7 @@ impl<'map> OsuStars<'map> {
         [`OsuGradualDifficulty`]."
     )]
     #[inline]
-    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+    pub const fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
 
         self
@@ -117,7 +118,7 @@ impl<'map> OsuStars<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     #[inline]
-    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.clock_rate = Some(clock_rate);
 
         self
@@ -245,6 +246,7 @@ impl OsuStrains {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     let OsuStars {
         map,
@@ -260,7 +262,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     let scaling_factor = ScalingFactor::new(map_attrs.cs);
     let hr = mods.hr();
     let hit_window = 2.0 * map_attrs.hit_windows.od;
-    let time_preempt = (map_attrs.hit_windows.ar * clock_rate) as f32 as f64;
+    let time_preempt = f64::from((map_attrs.hit_windows.ar * clock_rate) as f32);
 
     // * Preempt time can go below 450ms. Normally, this is achieved via the DT mod
     // * which uniformly speeds up all animations game wide regardless of AR.
@@ -316,7 +318,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         let delta_time = (curr.start_time - last.start_time) / clock_rate;
 
         // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
-        let strain_time = delta_time.max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
+        let strain_time = delta_time.max(f64::from(OsuDifficultyObject::MIN_DELTA_TIME));
 
         let dists = Distances::new(
             &mut curr,
@@ -389,7 +391,7 @@ pub(crate) fn create_osu_objects(
         hit_objects.extend(iter.map(|h| OsuObject::new(h, &mut params)));
     }
 
-    let stack_threshold = time_preempt * map.stack_leniency as f64;
+    let stack_threshold = time_preempt * f64::from(map.stack_leniency);
 
     if map.version >= 6 {
         stacking(&mut hit_objects, stack_threshold);
@@ -443,9 +445,9 @@ fn stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
 
                 if hit_objects[n].is_spinner() {
                     continue;
-                } else if hit_objects[obj_i_idx].start_time - hit_objects[n].end_time()
-                    > stack_threshold
-                {
+                }
+
+                if hit_objects[obj_i_idx].start_time - hit_objects[n].end_time() > stack_threshold {
                     break; // * We are no longer within stacking range of the previous object.
                 }
 
@@ -589,13 +591,13 @@ pub struct OsuDifficultyAttributes {
 impl OsuDifficultyAttributes {
     /// Return the maximum combo.
     #[inline]
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         self.max_combo
     }
 
     /// Return the amount of hitobjects.
     #[inline]
-    pub fn n_objects(&self) -> usize {
+    pub const fn n_objects(&self) -> usize {
         self.n_circles + self.n_sliders + self.n_spinners
     }
 
@@ -628,24 +630,24 @@ pub struct OsuPerformanceAttributes {
 impl OsuPerformanceAttributes {
     /// Return the star value.
     #[inline]
-    pub fn stars(&self) -> f64 {
+    pub const fn stars(&self) -> f64 {
         self.difficulty.stars
     }
 
     /// Return the performance point value.
     #[inline]
-    pub fn pp(&self) -> f64 {
+    pub const fn pp(&self) -> f64 {
         self.pp
     }
 
     /// Return the maximum combo of the map.
     #[inline]
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         self.difficulty.max_combo
     }
     /// Return the amount of hitobjects.
     #[inline]
-    pub fn n_objects(&self) -> usize {
+    pub const fn n_objects(&self) -> usize {
         self.difficulty.n_objects()
     }
 }
