@@ -202,7 +202,7 @@ pub mod parse;
 
 /// Beatmap and contained types
 pub mod beatmap;
-pub use beatmap::{Beatmap, BeatmapExt, GameMode, SortedVec}; // TODO: remove SortedVec on next breaking release
+pub use beatmap::{Beatmap, BeatmapExt, GameMode};
 
 #[cfg(feature = "gradual")]
 mod gradual;
