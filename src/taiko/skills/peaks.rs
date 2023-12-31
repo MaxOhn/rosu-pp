@@ -111,6 +111,7 @@ impl Skill for Peaks {
     }
 }
 
+#[allow(clippy::struct_field_names)]
 pub(crate) struct PeaksDifficultyValues {
     pub(crate) colour_rating: f64,
     pub(crate) rhythm_rating: f64,

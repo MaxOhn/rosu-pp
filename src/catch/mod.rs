@@ -50,6 +50,7 @@ const CATCHER_SIZE: f32 = 106.75;
 /// println!("Stars: {}", difficulty_attrs.stars);
 /// ```
 #[derive(Clone, Debug)]
+#[must_use]
 pub struct CatchStars<'map> {
     map: &'map Beatmap,
     mods: u32,
@@ -60,7 +61,7 @@ pub struct CatchStars<'map> {
 impl<'map> CatchStars<'map> {
     /// Create a new difficulty calculator for osu!catch maps.
     #[inline]
-    pub fn new(map: &'map Beatmap) -> Self {
+    pub const fn new(map: &'map Beatmap) -> Self {
         Self {
             map,
             mods: 0,
@@ -73,7 +74,7 @@ impl<'map> CatchStars<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
-    pub fn mods(mut self, mods: u32) -> Self {
+    pub const fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
@@ -88,7 +89,7 @@ impl<'map> CatchStars<'map> {
         [`CatchGradualDifficultyAttributes`](crate::catch::CatchGradualDifficulty)."
     )]
     #[inline]
-    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+    pub const fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
 
         self
@@ -98,7 +99,7 @@ impl<'map> CatchStars<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     #[inline]
-    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.clock_rate = Some(clock_rate);
 
         self
@@ -147,6 +148,7 @@ impl CatchStrains {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttributes) {
     let CatchStars {
         map,
@@ -183,7 +185,7 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
 
     // Hyper dash business
     let half_catcher_width =
-        (calculate_catch_width(map_attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE) as f64;
+        f64::from(calculate_catch_width(map_attributes.cs as f32) / 2.0 / ALLOWED_CATCH_RANGE);
     let mut last_direction = 0;
     let mut last_excess = half_catcher_width;
 
@@ -192,7 +194,7 @@ fn calculate_movement(params: CatchStars<'_>) -> (Movement, CatchDifficultyAttri
 
     let (mut prev, curr) = match (hit_objects.next(), hit_objects.next()) {
         (Some(prev), Some(curr)) => (prev, curr),
-        (Some(_), None) | (None, None) => return (movement, params.attributes),
+        (_, None) => return (movement, params.attributes),
         (None, Some(_)) => unreachable!(),
     };
 
@@ -274,7 +276,7 @@ pub struct CatchDifficultyAttributes {
 impl CatchDifficultyAttributes {
     /// Return the maximum combo.
     #[inline]
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         self.n_fruits + self.n_droplets
     }
 
@@ -297,19 +299,19 @@ pub struct CatchPerformanceAttributes {
 impl CatchPerformanceAttributes {
     /// Return the star value.
     #[inline]
-    pub fn stars(&self) -> f64 {
+    pub const fn stars(&self) -> f64 {
         self.difficulty.stars
     }
 
     /// Return the performance point value.
     #[inline]
-    pub fn pp(&self) -> f64 {
+    pub const fn pp(&self) -> f64 {
         self.pp
     }
 
     /// Return the maximum combo of the map.
     #[inline]
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         self.difficulty.max_combo()
     }
 }

@@ -15,6 +15,8 @@ pub enum GameMode {
 impl From<u8> for GameMode {
     #[inline]
     fn from(mode: u8) -> Self {
+        // `0` will happen most commonly so it should be the first branch
+        #[allow(clippy::match_same_arms)]
         match mode {
             0 => Self::Osu,
             1 => Self::Taiko,

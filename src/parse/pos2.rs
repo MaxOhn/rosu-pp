@@ -3,6 +3,7 @@ use std::ops;
 
 /// Simple (x, y) coordinate / vector
 #[derive(Clone, Copy, Default, PartialEq)]
+#[must_use]
 pub struct Pos2 {
     /// Position on the x-axis.
     pub x: f32,
@@ -19,7 +20,7 @@ impl Pos2 {
 
     /// Return a position with both coordinates on the given value.
     #[inline]
-    pub fn new(value: f32) -> Self {
+    pub const fn new(value: f32) -> Self {
         Self { x: value, y: value }
     }
 
@@ -32,7 +33,7 @@ impl Pos2 {
     /// Return the position's length.
     #[inline]
     pub fn length(&self) -> f32 {
-        ((self.x * self.x + self.y * self.y) as f64).sqrt() as f32
+        (f64::from(self.x * self.x + self.y * self.y)).sqrt() as f32
     }
 
     /// Return the dot product.

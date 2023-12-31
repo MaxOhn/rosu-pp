@@ -35,7 +35,7 @@ impl Colour {
 impl Skill for Colour {
     #[inline]
     fn process(&mut self, curr: &TaikoDifficultyObject, hit_objects: &ObjectLists) {
-        <Self as StrainSkill>::process(self, curr, hit_objects)
+        <Self as StrainSkill>::process(self, curr, hit_objects);
     }
 
     #[inline]
@@ -100,20 +100,21 @@ impl ColourEvaluator {
         sigmoid * (height / 2.0) + middle
     }
 
-    fn evaluate_diff_of_mono_streak(mono_streak: Rc<RefCell<MonoStreak>>) -> f64 {
+    fn evaluate_diff_of_mono_streak(mono_streak: &Rc<RefCell<MonoStreak>>) -> f64 {
         let mono_streak = mono_streak.borrow();
 
         let parent_eval = mono_streak
             .parent
             .as_ref()
             .and_then(Weak::upgrade)
+            .as_ref()
             .map_or(1.0, Self::evaluate_diff_of_alternating_mono_pattern);
 
         Self::sigmoid(mono_streak.idx as f64, 2.0, 2.0, 0.5, 1.0) * parent_eval * 0.5
     }
 
     fn evaluate_diff_of_alternating_mono_pattern(
-        alternating_mono_pattern: Rc<RefCell<AlternatingMonoPattern>>,
+        alternating_mono_pattern: &Rc<RefCell<AlternatingMonoPattern>>,
     ) -> f64 {
         let alternating_mono_pattern = alternating_mono_pattern.borrow();
 
@@ -121,13 +122,14 @@ impl ColourEvaluator {
             .parent
             .as_ref()
             .and_then(Weak::upgrade)
+            .as_ref()
             .map_or(1.0, Self::evaluate_diff_of_repeating_hit_patterns);
 
         Self::sigmoid(alternating_mono_pattern.idx as f64, 2.0, 2.0, 0.5, 1.0) * parent_eval
     }
 
     fn evaluate_diff_of_repeating_hit_patterns(
-        repeating_hit_patterns: Rc<RefCell<RepeatingHitPatterns>>,
+        repeating_hit_patterns: &Rc<RefCell<RepeatingHitPatterns>>,
     ) -> f64 {
         let repetition_interval = repeating_hit_patterns.borrow().repetition_interval as f64;
 
@@ -140,7 +142,7 @@ impl ColourEvaluator {
 
         // * Difficulty for MonoStreak
         if let Some(mono_streak) = colour.mono_streak.as_ref().and_then(Weak::upgrade) {
-            difficulty += Self::evaluate_diff_of_mono_streak(mono_streak);
+            difficulty += Self::evaluate_diff_of_mono_streak(&mono_streak);
         }
 
         // * Difficulty for AlternatingMonoPattern
@@ -149,12 +151,11 @@ impl ColourEvaluator {
             .as_ref()
             .and_then(Weak::upgrade)
         {
-            difficulty += Self::evaluate_diff_of_alternating_mono_pattern(alternating_mono_pattern);
+            difficulty += Self::evaluate_diff_of_alternating_mono_pattern(&alternating_mono_pattern);
         }
 
         // * Difficulty for RepeatingHitPattern
-        if let Some(repeating_hit_patterns) = colour.repeating_hit_patterns.as_ref().map(Rc::clone)
-        {
+        if let Some(repeating_hit_patterns) = colour.repeating_hit_patterns.as_ref() {
             difficulty += Self::evaluate_diff_of_repeating_hit_patterns(repeating_hit_patterns);
         }
 

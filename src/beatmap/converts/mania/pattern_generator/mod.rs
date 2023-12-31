@@ -15,7 +15,7 @@ trait PatternGenerator {
     // ----------------------------------
 
     fn random_start(&self) -> i32 {
-        (self.total_columns() == 8) as i32
+        i32::from(self.total_columns() == 8)
     }
 
     fn get_column(&self, allow_special: Option<bool>) -> u8 {
@@ -53,7 +53,7 @@ trait PatternGenerator {
         } else if val >= 1.0 - p3 {
             3
         } else {
-            1 + (val >= 1.0 - p2) as i32
+            1 + i32::from(val >= 1.0 - p2)
         }
     }
 
@@ -71,8 +71,8 @@ trait PatternGenerator {
         }
 
         let mut conversion_difficulty = 0.0;
-        conversion_difficulty += (orig.hp + orig.ar.clamp(4.0, 7.0)) as f64 / 1.5;
-        conversion_difficulty += orig.hit_objects.len() as f64 / drain_time as f64 * 9.0;
+        conversion_difficulty += f64::from(orig.hp + orig.ar.clamp(4.0, 7.0)) / 1.5;
+        conversion_difficulty += orig.hit_objects.len() as f64 / f64::from(drain_time) * 9.0;
         conversion_difficulty /= 38.0;
         conversion_difficulty *= 5.0;
         conversion_difficulty /= 1.15;
@@ -115,7 +115,7 @@ trait PatternGenerator {
         };
 
         // * Check for the initial column
-        if is_valid(initial_column as i32) {
+        if is_valid(i32::from(initial_column)) {
             return initial_column;
         }
 
@@ -131,7 +131,7 @@ trait PatternGenerator {
                 PatternGenerator::get_random_column(self, Some(lower), Some(upper))
             };
 
-            !is_valid(initial_column as i32)
+            !is_valid(i32::from(initial_column))
         } {}
 
         initial_column

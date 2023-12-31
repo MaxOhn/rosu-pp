@@ -38,6 +38,7 @@ use crate::{
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
+#[must_use]
 pub struct OsuPP<'map> {
     pub(crate) map_or_attrs: MapOrElse<MapRef<'map>, OsuDifficultyAttributes>,
     pub(crate) mods: u32,
@@ -104,7 +105,7 @@ impl<'map> OsuPP<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
-    pub fn mods(mut self, mods: u32) -> Self {
+    pub const fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
@@ -112,7 +113,7 @@ impl<'map> OsuPP<'map> {
 
     /// Specify the max combo of the play.
     #[inline]
-    pub fn combo(mut self, combo: usize) -> Self {
+    pub const fn combo(mut self, combo: usize) -> Self {
         self.combo = Some(combo);
 
         self
@@ -122,7 +123,7 @@ impl<'map> OsuPP<'map> {
     ///
     /// Defauls to [`HitResultPriority::BestCase`].
     #[inline]
-    pub fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
+    pub const fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
         self.hitresult_priority = Some(priority);
 
         self
@@ -130,7 +131,7 @@ impl<'map> OsuPP<'map> {
 
     /// Specify the amount of 300s of a play.
     #[inline]
-    pub fn n300(mut self, n300: usize) -> Self {
+    pub const fn n300(mut self, n300: usize) -> Self {
         self.n300 = Some(n300);
 
         self
@@ -138,7 +139,7 @@ impl<'map> OsuPP<'map> {
 
     /// Specify the amount of 100s of a play.
     #[inline]
-    pub fn n100(mut self, n100: usize) -> Self {
+    pub const fn n100(mut self, n100: usize) -> Self {
         self.n100 = Some(n100);
 
         self
@@ -146,7 +147,7 @@ impl<'map> OsuPP<'map> {
 
     /// Specify the amount of 50s of a play.
     #[inline]
-    pub fn n50(mut self, n50: usize) -> Self {
+    pub const fn n50(mut self, n50: usize) -> Self {
         self.n50 = Some(n50);
 
         self
@@ -154,7 +155,7 @@ impl<'map> OsuPP<'map> {
 
     /// Specify the amount of misses of a play.
     #[inline]
-    pub fn n_misses(mut self, n_misses: usize) -> Self {
+    pub const fn n_misses(mut self, n_misses: usize) -> Self {
         self.n_misses = Some(n_misses);
 
         self
@@ -169,7 +170,7 @@ impl<'map> OsuPP<'map> {
         [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformance)."
     )]
     #[inline]
-    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+    pub const fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
 
         self
@@ -179,7 +180,7 @@ impl<'map> OsuPP<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     #[inline]
-    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.clock_rate = Some(clock_rate);
 
         self
@@ -187,7 +188,8 @@ impl<'map> OsuPP<'map> {
 
     /// Provide parameters through an [`OsuScoreState`].
     #[inline]
-    pub fn state(mut self, state: OsuScoreState) -> Self {
+    #[allow(clippy::needless_pass_by_value)]
+    pub const fn state(mut self, state: OsuScoreState) -> Self {
         let OsuScoreState {
             max_combo,
             n300,
@@ -215,6 +217,7 @@ impl<'map> OsuPP<'map> {
     }
 
     /// Create the [`OsuScoreState`] that will be used for performance calculation.
+    #[allow(clippy::too_many_lines)]
     pub fn generate_state(&mut self) -> OsuScoreState {
         let attrs = match self.map_or_attrs {
             MapOrElse::Map(ref map) => {
@@ -527,7 +530,7 @@ impl OsuPpInner {
 
         let len_bonus = 0.95
             + 0.4 * (total_hits / 2000.0).min(1.0)
-            + (total_hits > 2000.0) as u8 as f64 * (total_hits / 2000.0).log10() * 0.5;
+            + f64::from(u8::from(total_hits > 2000.0)) * (total_hits / 2000.0).log10() * 0.5;
 
         aim_value *= len_bonus;
 
@@ -594,7 +597,7 @@ impl OsuPpInner {
 
         let len_bonus = 0.95
             + 0.4 * (total_hits / 2000.0).min(1.0)
-            + (total_hits > 2000.0) as u8 as f64 * (total_hits / 2000.0).log10() * 0.5;
+            + f64::from(u8::from(total_hits > 2000.0)) * (total_hits / 2000.0).log10() * 0.5;
 
         speed_value *= len_bonus;
 
@@ -646,7 +649,7 @@ impl OsuPpInner {
 
         // * Scale the speed value with # of 50s to punish doubletapping.
         speed_value *= 0.99_f64.powf(
-            (self.state.n50 as f64 >= total_hits / 500.0) as u8 as f64
+            f64::from(u8::from(self.state.n50 as f64 >= total_hits / 500.0))
                 * (self.state.n50 as f64 - total_hits / 500.0),
         );
 
@@ -718,7 +721,9 @@ impl OsuPpInner {
         // * Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius.
         flashlight_value *= 0.7
             + 0.1 * (total_hits / 200.0).min(1.0)
-            + (total_hits > 200.0) as u8 as f64 * 0.2 * ((total_hits - 200.0) / 200.0).min(1.0);
+            + f64::from(u8::from(total_hits > 200.0))
+                * 0.2
+                * ((total_hits - 200.0) / 200.0).min(1.0);
 
         // * Scale the flashlight value with accuracy _slightly_.
         flashlight_value *= 0.5 + self.acc / 2.0;
@@ -737,7 +742,7 @@ impl OsuPpInner {
         }
     }
 
-    fn total_hits(&self) -> f64 {
+    const fn total_hits(&self) -> f64 {
         self.state.total_hits() as f64
     }
 }

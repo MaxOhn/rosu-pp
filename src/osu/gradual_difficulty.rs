@@ -70,10 +70,13 @@ struct NotClonable;
 impl Debug for OsuGradualDifficulty {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("OsuGradualDifficulty")
+            .field("mods", &self.mods)
             .field("idx", &self.idx)
             .field("attrs", &self.attrs)
             .field("diff_objects", &self.diff_objects)
+            .field("osu_objects", &"...")
             .field("skills", &self.skills)
+            .field("_not_clonable", &"...")
             .finish()
     }
 }
@@ -86,7 +89,7 @@ impl OsuGradualDifficulty {
         let scaling_factor = ScalingFactor::new(map_attrs.cs);
         let hr = mods.hr();
         let hit_window = 2.0 * map_attrs.hit_windows.od;
-        let time_preempt = (map_attrs.hit_windows.ar * clock_rate) as f32 as f64;
+        let time_preempt = f64::from((map_attrs.hit_windows.ar * clock_rate) as f32);
 
         // * Preempt time can go below 450ms. Normally, this is achieved via the DT mod
         // * which uniformly speeds up all animations game wide regardless of AR.
@@ -171,7 +174,7 @@ impl OsuGradualDifficulty {
             let delta_time = (curr.start_time - last.start_time) / clock_rate;
 
             // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
-            let strain_time = delta_time.max(OsuDifficultyObject::MIN_DELTA_TIME as f64);
+            let strain_time = delta_time.max(f64::from(OsuDifficultyObject::MIN_DELTA_TIME));
 
             let dists = Distances::new(
                 &mut curr,
@@ -361,7 +364,7 @@ mod osu_objects {
             }
         }
 
-        pub(super) fn is_empty(&self) -> bool {
+        pub(super) const fn is_empty(&self) -> bool {
             self.objects.is_empty()
         }
 

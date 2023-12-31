@@ -39,7 +39,7 @@ impl Skill for Aim {
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
     ) {
-        <Self as StrainSkill>::process(self, curr, diff_objects)
+        <Self as StrainSkill>::process(self, curr, diff_objects);
     }
 
     #[inline]
@@ -110,13 +110,10 @@ impl AimEvaluator {
     ) -> f64 {
         let osu_curr_obj = curr;
 
-        let (osu_last_last_obj, osu_last_obj) = if let Some(tuple) =
-            previous(diff_objects, curr.idx, 1)
-                .zip(previous(diff_objects, curr.idx, 0))
-                .filter(|(_, last)| !(curr.base.is_spinner() || last.base.is_spinner()))
-        {
-            tuple
-        } else {
+        let Some((osu_last_last_obj, osu_last_obj)) = previous(diff_objects, curr.idx, 1)
+            .zip(previous(diff_objects, curr.idx, 0))
+            .filter(|(_, last)| !(curr.base.is_spinner() || last.base.is_spinner()))
+        else {
             return 0.0;
         };
 
@@ -234,7 +231,7 @@ impl AimEvaluator {
 
         if osu_last_obj.base.is_slider() {
             // * Reward sliders based on velocity.
-            slider_bonus = osu_last_obj.dists.travel_dist / osu_last_obj.dists.travel_time
+            slider_bonus = osu_last_obj.dists.travel_dist / osu_last_obj.dists.travel_time;
         }
 
         // * Add in acute angle bonus or wide angle bonus + velocity change bonus, whichever is larger.

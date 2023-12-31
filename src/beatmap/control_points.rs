@@ -12,8 +12,8 @@ pub struct TimingPoint {
 impl TimingPoint {
     /// Create a new [`TimingPoint`].
     #[inline]
-    pub fn new(time: f64, beat_len: f64) -> Self {
-        Self { time, beat_len }
+    pub const fn new(time: f64, beat_len: f64) -> Self {
+        Self { beat_len, time }
     }
 }
 
@@ -60,7 +60,7 @@ impl DifficultyPoint {
         // * Note: In stable, the division occurs on floats, but with compiler optimisations
         // * turned on actually seems to occur on doubles via some .NET black magic (possibly inlining?).
         let bpm_mult = if beat_len < 0.0 {
-            ((-beat_len) as f32).clamp(10.0, 10_000.0) as f64 / 100.0
+            f64::from(((-beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
         } else {
             1.0
         };
@@ -113,7 +113,7 @@ impl EffectPoint {
 
     /// Create a new [`EffectPoint`].
     #[inline]
-    pub fn new(time: f64, kiai: bool) -> Self {
+    pub const fn new(time: f64, kiai: bool) -> Self {
         Self { time, kiai }
     }
 }

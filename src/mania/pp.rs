@@ -41,6 +41,7 @@ use crate::{
 /// ```
 #[derive(Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
+#[must_use]
 pub struct ManiaPP<'map> {
     map_or_attrs: MapOrElse<Cow<'map, Beatmap>, ManiaDifficultyAttributes>,
     is_convert_overwrite: Option<bool>,
@@ -98,7 +99,7 @@ impl<'map> ManiaPP<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     #[inline]
-    pub fn mods(mut self, mods: u32) -> Self {
+    pub const fn mods(mut self, mods: u32) -> Self {
         self.mods = mods;
 
         self
@@ -113,7 +114,7 @@ impl<'map> ManiaPP<'map> {
         [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformance)."
     )]
     #[inline]
-    pub fn passed_objects(mut self, passed_objects: usize) -> Self {
+    pub const fn passed_objects(mut self, passed_objects: usize) -> Self {
         self.passed_objects = Some(passed_objects);
 
         self
@@ -123,7 +124,7 @@ impl<'map> ManiaPP<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     #[inline]
-    pub fn clock_rate(mut self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.clock_rate = Some(clock_rate);
 
         self
@@ -142,7 +143,7 @@ impl<'map> ManiaPP<'map> {
     ///
     /// Defauls to [`HitResultPriority::BestCase`].
     #[inline]
-    pub fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
+    pub const fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
         self.hitresult_priority = Some(priority);
 
         self
@@ -150,7 +151,7 @@ impl<'map> ManiaPP<'map> {
 
     /// Specify the amount of 320s of a play.
     #[inline]
-    pub fn n320(mut self, n320: usize) -> Self {
+    pub const fn n320(mut self, n320: usize) -> Self {
         self.n320 = Some(n320);
 
         self
@@ -158,7 +159,7 @@ impl<'map> ManiaPP<'map> {
 
     /// Specify the amount of 300s of a play.
     #[inline]
-    pub fn n300(mut self, n300: usize) -> Self {
+    pub const fn n300(mut self, n300: usize) -> Self {
         self.n300 = Some(n300);
 
         self
@@ -166,7 +167,7 @@ impl<'map> ManiaPP<'map> {
 
     /// Specify the amount of 200s of a play.
     #[inline]
-    pub fn n200(mut self, n200: usize) -> Self {
+    pub const fn n200(mut self, n200: usize) -> Self {
         self.n200 = Some(n200);
 
         self
@@ -174,7 +175,7 @@ impl<'map> ManiaPP<'map> {
 
     /// Specify the amount of 100s of a play.
     #[inline]
-    pub fn n100(mut self, n100: usize) -> Self {
+    pub const fn n100(mut self, n100: usize) -> Self {
         self.n100 = Some(n100);
 
         self
@@ -182,7 +183,7 @@ impl<'map> ManiaPP<'map> {
 
     /// Specify the amount of 50s of a play.
     #[inline]
-    pub fn n50(mut self, n50: usize) -> Self {
+    pub const fn n50(mut self, n50: usize) -> Self {
         self.n50 = Some(n50);
 
         self
@@ -190,7 +191,7 @@ impl<'map> ManiaPP<'map> {
 
     /// Specify the amount of misses of a play.
     #[inline]
-    pub fn n_misses(mut self, n_misses: usize) -> Self {
+    pub const fn n_misses(mut self, n_misses: usize) -> Self {
         self.n_misses = Some(n_misses);
 
         self
@@ -200,7 +201,7 @@ impl<'map> ManiaPP<'map> {
     ///
     /// This only needs to be specified if the map was converted manually beforehand.
     #[inline]
-    pub fn is_convert(mut self, is_convert: bool) -> Self {
+    pub const fn is_convert(mut self, is_convert: bool) -> Self {
         self.is_convert_overwrite = Some(is_convert);
 
         self
@@ -208,7 +209,8 @@ impl<'map> ManiaPP<'map> {
 
     /// Provide parameters through an [`ManiaScoreState`].
     #[inline]
-    pub fn state(mut self, state: ManiaScoreState) -> Self {
+    #[allow(clippy::needless_pass_by_value)]
+    pub const fn state(mut self, state: ManiaScoreState) -> Self {
         let ManiaScoreState {
             n320,
             n300,
@@ -229,21 +231,21 @@ impl<'map> ManiaPP<'map> {
     }
 
     /// Create the [`ManiaScoreState`] that will be used for performance calculation.
+    #[allow(clippy::too_many_lines, clippy::similar_names)]
     pub fn generate_state(&mut self) -> ManiaScoreState {
-        let n_objects = match self.passed_objects {
-            Some(passed) => passed,
-            None => {
-                let attrs = match self.map_or_attrs {
-                    MapOrElse::Map(ref map) => {
-                        let attrs = self.generate_attributes(map);
+        let n_objects = if let Some(passed) = self.passed_objects {
+            passed
+        } else {
+            let attrs = match self.map_or_attrs {
+                MapOrElse::Map(ref map) => {
+                    let attrs = self.generate_attributes(map);
 
-                        self.map_or_attrs.else_or_insert(attrs)
-                    }
-                    MapOrElse::Else(ref attrs) => attrs,
-                };
+                    self.map_or_attrs.else_or_insert(attrs)
+                }
+                MapOrElse::Else(ref attrs) => attrs,
+            };
 
-                attrs.n_objects
-            }
+            attrs.n_objects
         };
 
         let priority = self.hitresult_priority.unwrap_or_default();
@@ -274,16 +276,16 @@ impl<'map> ManiaPP<'map> {
 
                 // All but one hitresults given
                 (None, Some(_), Some(_), Some(_), Some(_)) => {
-                    n320 = n_objects.saturating_sub(n300 + n200 + n100 + n50 + n_misses)
+                    n320 = n_objects.saturating_sub(n300 + n200 + n100 + n50 + n_misses);
                 }
                 (Some(_), None, Some(_), Some(_), Some(_)) => {
-                    n300 = n_objects.saturating_sub(n320 + n200 + n100 + n50 + n_misses)
+                    n300 = n_objects.saturating_sub(n320 + n200 + n100 + n50 + n_misses);
                 }
                 (Some(_), Some(_), None, Some(_), Some(_)) => {
-                    n200 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses)
+                    n200 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses);
                 }
                 (Some(_), Some(_), Some(_), None, Some(_)) => {
-                    n100 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses)
+                    n100 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses);
                 }
                 (Some(_), Some(_), Some(_), Some(_), None) => {
                     n50 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
@@ -855,7 +857,7 @@ impl ManiaPpInner {
              * (1.0 + 0.1 * (self.total_hits() / 1500.0).min(1.0))
     }
 
-    fn total_hits(&self) -> f64 {
+    const fn total_hits(&self) -> f64 {
         self.state.total_hits() as f64
     }
 
@@ -1010,7 +1012,11 @@ mod tests {
     ///
     /// Very slow but accurate.
     /// Only slight optimizations have been applied so that it doesn't run unreasonably long.
-    #[allow(clippy::too_many_arguments)]
+    #[allow(
+        clippy::too_many_arguments,
+        clippy::too_many_lines,
+        clippy::similar_names
+    )]
     fn brute_force_best(
         acc: f64,
         n320: Option<usize>,
@@ -1033,11 +1039,11 @@ mod tests {
 
         let n_remaining = N_OBJECTS - n_misses;
 
-        let multiple_given = (n320.is_some() as usize
-            + n300.is_some() as usize
-            + n200.is_some() as usize
-            + n100.is_some() as usize
-            + n50.is_some() as usize)
+        let multiple_given = (usize::from(n320.is_some())
+            + usize::from(n300.is_some())
+            + usize::from(n200.is_some())
+            + usize::from(n100.is_some())
+            + usize::from(n50.is_some()))
             > 1;
 
         let max_left = N_OBJECTS

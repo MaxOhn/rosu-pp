@@ -109,7 +109,7 @@ impl TaikoGradualDifficulty {
         let mut diff_objects = ObjectLists::with_capacity(map.hit_objects.len().saturating_sub(2));
 
         map.taiko_objects()
-            .inspect(|(h, _)| total_hits += h.is_hit as usize)
+            .inspect(|(h, _)| total_hits += usize::from(h.is_hit))
             .skip(2)
             .zip(map.hit_objects.iter().skip(1))
             .zip(map.hit_objects.iter())
@@ -240,10 +240,8 @@ impl Iterator for TaikoGradualDifficulty {
                 self.idx += 1;
 
                 match self.first_combos {
-                    FirstTwoCombos::None => {}
-                    FirstTwoCombos::OnlyFirst => self.attrs.max_combo = 1,
-                    FirstTwoCombos::OnlySecond => {}
-                    FirstTwoCombos::Both => self.attrs.max_combo = 1,
+                    FirstTwoCombos::None | FirstTwoCombos::OnlySecond => {}
+                    FirstTwoCombos::OnlyFirst | FirstTwoCombos::Both => self.attrs.max_combo = 1,
                 }
             }
             (_, 0) => {
@@ -252,8 +250,9 @@ impl Iterator for TaikoGradualDifficulty {
 
                 match self.first_combos {
                     FirstTwoCombos::None => {}
-                    FirstTwoCombos::OnlyFirst => self.attrs.max_combo = 1,
-                    FirstTwoCombos::OnlySecond => self.attrs.max_combo = 1,
+                    FirstTwoCombos::OnlyFirst | FirstTwoCombos::OnlySecond => {
+                        self.attrs.max_combo = 1;
+                    }
                     FirstTwoCombos::Both => self.attrs.max_combo = 2,
                 }
             }
@@ -263,8 +262,9 @@ impl Iterator for TaikoGradualDifficulty {
 
                 match self.first_combos {
                     FirstTwoCombos::None => {}
-                    FirstTwoCombos::OnlyFirst => self.attrs.max_combo = 1,
-                    FirstTwoCombos::OnlySecond => self.attrs.max_combo = 1,
+                    FirstTwoCombos::OnlyFirst | FirstTwoCombos::OnlySecond => {
+                        self.attrs.max_combo = 1;
+                    }
                     FirstTwoCombos::Both => self.attrs.max_combo = 2,
                 }
             }

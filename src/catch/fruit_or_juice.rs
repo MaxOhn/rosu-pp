@@ -121,7 +121,7 @@ impl FruitOrJuice {
                         slider_objects.extend(&params.ticks);
 
                         for span_idx in 1..=*repeats {
-                            let progress = (span_idx % 2 == 1) as u8 as f64;
+                            let progress = f64::from(u8::from(span_idx % 2 == 1));
                             let pos = h.pos + curve.position_at(progress);
                             let time_offset = span_duration * span_idx as f64;
 
@@ -153,11 +153,11 @@ impl FruitOrJuice {
                 }
 
                 // Slider tail
-                let progress = (*repeats % 2 == 0) as u8 as f64;
+                let progress = f64::from(u8::from(*repeats % 2 == 0));
                 let pos = h.pos + curve.position_at(progress);
                 slider_objects.push((pos, h.start_time + total_duration));
 
-                let new_fruits = 2 + (tick_dist > 0.0) as usize * *repeats;
+                let new_fruits = 2 + usize::from(tick_dist > 0.0) * *repeats;
                 params.attributes.n_fruits += new_fruits;
                 params.attributes.n_droplets += slider_objects.len() - new_fruits;
 

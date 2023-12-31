@@ -1,6 +1,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![deny(
+#![warn(
     clippy::all,
+    clippy::pedantic,
+    clippy::missing_const_for_fn,
     nonstandard_style,
     rust_2018_idioms,
     unused,
@@ -8,6 +10,18 @@
     missing_debug_implementations,
     missing_docs,
     rustdoc::broken_intra_doc_links
+)]
+#![allow(
+    clippy::must_use_candidate,
+    clippy::inline_always,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::explicit_iter_loop,
+    clippy::items_after_statements,
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions
 )]
 
 //! A standalone crate to calculate star ratings and performance points for all [osu!](https://osu.ppy.sh/home) gamemodes.
@@ -249,7 +263,7 @@ pub enum Strains {
 impl Strains {
     /// Time in ms inbetween two strains.
     #[inline]
-    pub fn section_len(&self) -> f64 {
+    pub const fn section_len(&self) -> f64 {
         match self {
             Strains::Osu(strains) => strains.section_len,
             Strains::Taiko(strains) => strains.section_len,
@@ -287,7 +301,7 @@ pub enum DifficultyAttributes {
 impl DifficultyAttributes {
     /// The star value.
     #[inline]
-    pub fn stars(&self) -> f64 {
+    pub const fn stars(&self) -> f64 {
         match self {
             Self::Osu(attrs) => attrs.stars,
             Self::Taiko(attrs) => attrs.stars,
@@ -298,7 +312,7 @@ impl DifficultyAttributes {
 
     /// The maximum combo of the map.
     #[inline]
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         match self {
             Self::Osu(attrs) => attrs.max_combo,
             Self::Taiko(attrs) => attrs.max_combo,
@@ -358,7 +372,7 @@ pub enum PerformanceAttributes {
 impl PerformanceAttributes {
     /// The pp value.
     #[inline]
-    pub fn pp(&self) -> f64 {
+    pub const fn pp(&self) -> f64 {
         match self {
             Self::Osu(attrs) => attrs.pp,
             Self::Taiko(attrs) => attrs.pp,
@@ -369,7 +383,7 @@ impl PerformanceAttributes {
 
     /// The star value.
     #[inline]
-    pub fn stars(&self) -> f64 {
+    pub const fn stars(&self) -> f64 {
         match self {
             Self::Osu(attrs) => attrs.stars(),
             Self::Taiko(attrs) => attrs.stars(),
@@ -391,7 +405,7 @@ impl PerformanceAttributes {
 
     #[inline]
     /// The maximum combo of the map.
-    pub fn max_combo(&self) -> usize {
+    pub const fn max_combo(&self) -> usize {
         match self {
             Self::Osu(attrs) => attrs.difficulty.max_combo,
             Self::Taiko(attrs) => attrs.difficulty.max_combo,

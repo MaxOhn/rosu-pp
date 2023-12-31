@@ -56,7 +56,7 @@ impl Skill for Speed {
         curr: &OsuDifficultyObject<'_>,
         diff_objects: &[OsuDifficultyObject<'_>],
     ) {
-        <Self as StrainSkill>::process(self, curr, diff_objects)
+        <Self as StrainSkill>::process(self, curr, diff_objects);
     }
 
     #[inline]
@@ -210,7 +210,7 @@ impl RhythmEvaluator {
         while previous(diff_objects, curr.idx, rhythm_start)
             .filter(|prev| {
                 rhythm_start + 2 < historical_note_count
-                    && curr.start_time - prev.start_time < Self::HISTORY_TIME_MAX as f64
+                    && curr.start_time - prev.start_time < f64::from(Self::HISTORY_TIME_MAX)
             })
             .is_some()
         {
@@ -218,20 +218,17 @@ impl RhythmEvaluator {
         }
 
         for i in (1..=rhythm_start).rev() {
-            let (curr_obj, prev_obj, last_obj) = if let Some(((curr, prev), last)) =
-                previous(diff_objects, curr.idx, i - 1)
-                    .zip(previous(diff_objects, curr.idx, i))
-                    .zip(previous(diff_objects, curr.idx, i + 1))
-            {
-                (curr, prev, last)
-            } else {
+            let Some(((curr_obj, prev_obj), last_obj)) = previous(diff_objects, curr.idx, i - 1)
+                .zip(previous(diff_objects, curr.idx, i))
+                .zip(previous(diff_objects, curr.idx, i + 1))
+            else {
                 break;
             };
 
             // * scales note 0 to 1 from history to now
-            let mut curr_historical_decay = (Self::HISTORY_TIME_MAX as f64
+            let mut curr_historical_decay = (f64::from(Self::HISTORY_TIME_MAX)
                 - (curr.start_time - curr_obj.start_time))
-                / Self::HISTORY_TIME_MAX as f64;
+                / f64::from(Self::HISTORY_TIME_MAX);
 
             // * either we're limited by time or limited by object count.
             curr_historical_decay = curr_historical_decay
@@ -245,7 +242,7 @@ impl RhythmEvaluator {
             let base = (PI / (prev_delta.min(curr_delta) / prev_delta.max(curr_delta))).sin();
             let curr_ratio = 1.0 + 6.0 * (base * base).min(0.5);
 
-            let hit_window = !curr_obj.base.is_spinner() as u64 as f64 * hit_window;
+            let hit_window = u64::from(!curr_obj.base.is_spinner()) as f64 * hit_window;
 
             let mut window_penalty = ((((prev_delta - curr_delta).abs() - hit_window * 0.3)
                 .max(0.0))
@@ -257,6 +254,8 @@ impl RhythmEvaluator {
             let mut effective_ratio = window_penalty * curr_ratio;
 
             if first_delta_switch {
+                // Keep in-sync with lazer
+                #[allow(clippy::if_not_else)]
                 if !(prev_delta > 1.25 * curr_delta || prev_delta * 1.25 < curr_delta) {
                     if island_size < 7 {
                         // * island is still progressing, count size.
@@ -290,9 +289,9 @@ impl RhythmEvaluator {
 
                     rhythm_complexity_sum += (effective_ratio * start_ratio).sqrt()
                         * curr_historical_decay
-                        * ((4 + island_size) as f64).sqrt()
+                        * f64::from(4 + island_size).sqrt()
                         / 2.0
-                        * ((4 + prev_island_size) as f64).sqrt()
+                        * f64::from(4 + prev_island_size).sqrt()
                         / 2.0;
 
                     start_ratio = effective_ratio;

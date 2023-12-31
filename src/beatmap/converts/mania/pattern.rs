@@ -93,15 +93,15 @@ impl Pattern {
         let hit_object = if start_time == end_time {
             HitObject {
                 pos,
-                start_time: start_time as f64,
+                start_time: f64::from(start_time),
                 kind: HitObjectKind::Circle,
             }
         } else {
             HitObject {
                 pos,
-                start_time: start_time as f64,
+                start_time: f64::from(start_time),
                 kind: HitObjectKind::Hold {
-                    end_time: end_time as f64,
+                    end_time: f64::from(end_time),
                 },
             }
         };
@@ -121,15 +121,15 @@ impl Pattern {
         let hit_object = if start_time == end_time {
             HitObject {
                 pos,
-                start_time: start_time as f64,
+                start_time: f64::from(start_time),
                 kind: HitObjectKind::Circle,
             }
         } else {
             HitObject {
                 pos,
-                start_time: start_time as f64,
+                start_time: f64::from(start_time),
                 kind: HitObjectKind::Hold {
-                    end_time: end_time as f64,
+                    end_time: f64::from(end_time),
                 },
             }
         };
@@ -163,5 +163,5 @@ impl Pattern {
 fn column_to_pos(column: u8, total_columns: i32) -> f32 {
     let divisor = 512.0 / total_columns as f32;
 
-    (column as f32 * divisor).ceil()
+    (f32::from(column) * divisor).ceil()
 }

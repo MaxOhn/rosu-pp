@@ -22,7 +22,7 @@ impl TaikoScoreState {
 
     /// Return the total amount of hits by adding everything up.
     #[inline]
-    pub fn total_hits(&self) -> usize {
+    pub const fn total_hits(&self) -> usize {
         self.n300 + self.n100 + self.n_misses
     }
 

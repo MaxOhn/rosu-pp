@@ -21,6 +21,7 @@ use crate::{
 /// println!("Stars: {}", difficulty_attrs.stars());
 /// ```
 #[derive(Clone, Debug)]
+#[must_use]
 pub enum AnyStars<'map> {
     /// osu!standard difficulty calculator
     Osu(OsuStars<'map>),

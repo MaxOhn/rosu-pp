@@ -62,13 +62,13 @@ impl TandemSorter {
     }
 
     #[inline(always)]
-    fn idx_is_marked(idx: usize) -> bool {
+    const fn idx_is_marked(idx: usize) -> bool {
         // Check if first bit is set
         idx.leading_zeros() == 0
     }
 
     #[inline(always)]
-    fn toggle_mark_idx(idx: usize) -> usize {
+    const fn toggle_mark_idx(idx: usize) -> usize {
         // Flip the first bit
         idx ^ !(usize::MAX >> 1)
     }

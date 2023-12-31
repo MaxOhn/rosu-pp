@@ -3,6 +3,7 @@ use crate::{mania::difficulty_object::ManiaDifficultyObject, util::CompactVec};
 use super::{previous, Skill, StrainDecaySkill, StrainSkill};
 
 #[derive(Clone, Debug)]
+#[allow(clippy::struct_field_names)]
 pub(crate) struct Strain {
     start_times: Vec<f64>,
     end_times: Vec<f64>,
@@ -45,7 +46,7 @@ impl Strain {
 impl Skill for Strain {
     #[inline]
     fn process(&mut self, curr: &ManiaDifficultyObject, diff_objects: &[ManiaDifficultyObject]) {
-        <Self as StrainSkill>::process(self, curr, diff_objects)
+        <Self as StrainSkill>::process(self, curr, diff_objects);
     }
 
     #[inline]

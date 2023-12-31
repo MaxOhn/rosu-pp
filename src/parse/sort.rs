@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 const QUICK_SORT_DEPTH_THRESHOLD: usize = 32;
 
-/// Algorithm from https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Mania/MathUtils/LegacySortHelper.cs#L21
+/// Algorithm from <https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Mania/MathUtils/LegacySortHelper.cs#L21>
 pub(crate) fn legacy_sort(keys: &mut [HitObject]) {
     if keys.is_empty() {
         return;

@@ -20,7 +20,7 @@ pub struct CatchObject {
 
 impl CatchObject {
     #[inline]
-    pub(crate) fn new((pos, time): (Pos2, f64)) -> Self {
+    pub(crate) const fn new((pos, time): (Pos2, f64)) -> Self {
         Self {
             pos: pos.x,
             time,
@@ -70,7 +70,7 @@ impl CatchObject {
         let next_x = next.pos;
         let curr_x = self.pos;
 
-        let this_direction = (next_x > curr_x) as i8 * 2 - 1;
+        let this_direction = i8::from(next_x > curr_x) * 2 - 1;
         let time_to_next = next.time - self.time - 1000.0 / 60.0 / 4.0;
 
         let sub = if *last_direction == this_direction {
@@ -79,7 +79,7 @@ impl CatchObject {
             half_catcher_width
         };
 
-        let dist_to_next = (next_x - curr_x).abs() as f64 - sub;
+        let dist_to_next = f64::from((next_x - curr_x).abs()) - sub;
         let hyper_dist = (time_to_next * BASE_SPEED - dist_to_next) as f32;
 
         if hyper_dist < 0.0 {
@@ -87,7 +87,7 @@ impl CatchObject {
             *last_excess = half_catcher_width;
         } else {
             self.hyper_dist = hyper_dist;
-            *last_excess = (hyper_dist as f64).clamp(0.0, half_catcher_width);
+            *last_excess = f64::from(hyper_dist).clamp(0.0, half_catcher_width);
         }
 
         *last_direction = this_direction;

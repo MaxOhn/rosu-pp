@@ -16,7 +16,7 @@ pub struct SortedVec<T> {
 impl<T> SortedVec<T> {
     /// Constructs a new, empty `SortedVec<T>`.
     #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { inner: Vec::new() }
     }
 
@@ -75,7 +75,7 @@ impl<T: Sortable> SortedVec<T> {
 
     /// Push a new value into the sorted list based on [`<T as Sortable>::push`](Sortable::push).
     pub fn push(&mut self, value: T) {
-        <T as Sortable>::push(value, self)
+        <T as Sortable>::push(value, self);
     }
 }
 

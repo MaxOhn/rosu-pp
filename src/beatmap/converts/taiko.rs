@@ -1,6 +1,6 @@
 use crate::{
     curve::{Curve, CurveBuffers},
-    parse::{HitObject, HitObjectKind},
+    parse::{HitObject, HitObjectKind, Pos2},
     util::TandemSorter,
     Beatmap, GameMode,
 };
@@ -13,7 +13,7 @@ impl Beatmap {
         let mut map = self.clone_without_hit_objects(true);
         let mut curve_bufs = CurveBuffers::default();
 
-        map.slider_mult *= LEGACY_TAIKO_VELOCITY_MULTIPLIER as f64;
+        map.slider_mult *= f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER);
 
         for (obj, sound) in self.hit_objects.iter().zip(self.sounds.iter()) {
             match obj.kind {
@@ -38,10 +38,12 @@ impl Beatmap {
                         let edge_sound_count = edge_sounds.len().max(1);
 
                         while j
-                            <= obj.start_time + params.duration as f64 + params.tick_spacing / 8.0
+                            <= obj.start_time
+                                + f64::from(params.duration)
+                                + params.tick_spacing / 8.0
                         {
                             let h = HitObject {
-                                pos: Default::default(),
+                                pos: Pos2::default(),
                                 start_time: j,
                                 kind: HitObjectKind::Circle,
                             };
@@ -107,7 +109,7 @@ impl Beatmap {
 
         // * The true distance, accounting for any repeats. This ends up being the drum roll distance later
         let spans = (*repeats + 1) as f64;
-        let dist = curve.dist() * spans * LEGACY_TAIKO_VELOCITY_MULTIPLIER as f64;
+        let dist = curve.dist() * spans * f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER);
 
         let timing_point = self.timing_point_at(*start_time);
         let difficulty_point = self.difficulty_point_at(*start_time).unwrap_or_default();
@@ -115,13 +117,13 @@ impl Beatmap {
         let mut beat_len = timing_point.beat_len * difficulty_point.bpm_mult;
 
         let slider_scoring_point_dist =
-            OSU_BASE_SCORING_DIST as f64 * self.slider_mult / self.tick_rate;
+            f64::from(OSU_BASE_SCORING_DIST) * self.slider_mult / self.tick_rate;
 
         // * The velocity and duration of the taiko hit object - calculated as the velocity of a drum roll.
         let taiko_vel = slider_scoring_point_dist * self.tick_rate;
         *duration = (dist / taiko_vel * beat_len) as u32;
 
-        let osu_vel = taiko_vel * (1000.0_f32 as f64 / beat_len);
+        let osu_vel = taiko_vel * (f64::from(1000.0_f32) / beat_len);
 
         // * osu-stable always uses the speed-adjusted beatlength to determine the osu! velocity, but only uses it for conversion if beatmap version < 8
         if self.version >= 8 {
@@ -129,7 +131,7 @@ impl Beatmap {
         }
 
         // * If the drum roll is to be split into hit circles, assume the ticks are 1/8 spaced within the duration of one beat
-        *tick_spacing = (beat_len / self.tick_rate).min(*duration as f64 / spans);
+        *tick_spacing = (beat_len / self.tick_rate).min(f64::from(*duration) / spans);
 
         *tick_spacing > 0.0 && dist / osu_vel * 1000.0 < 2.0 * beat_len
     }
@@ -144,7 +146,7 @@ struct SliderParams<'c> {
 }
 
 impl<'c> SliderParams<'c> {
-    fn new(start_time: f64, repeats: usize, curve: &'c Curve<'c>) -> Self {
+    const fn new(start_time: f64, repeats: usize, curve: &'c Curve<'c>) -> Self {
         Self {
             curve,
             repeats,
