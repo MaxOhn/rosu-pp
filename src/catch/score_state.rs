@@ -1,22 +1,21 @@
-/// Aggregation for a score's current state i.e. what was the
-/// maximum combo so far and what are the current hitresults.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+/// Aggregation for a score's current state.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CatchScoreState {
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
     ///
     /// Note that only fruits and droplets are considered for osu!catch combo.
-    pub max_combo: usize,
+    pub max_combo: u32,
     /// Amount of current fruits (300s).
-    pub n_fruits: usize,
+    pub n_fruits: u32,
     /// Amount of current droplets (100s).
-    pub n_droplets: usize,
+    pub n_droplets: u32,
     /// Amount of current tiny droplets (50s).
-    pub n_tiny_droplets: usize,
+    pub n_tiny_droplets: u32,
     /// Amount of current tiny droplet misses (katus).
-    pub n_tiny_droplet_misses: usize,
+    pub n_tiny_droplet_misses: u32,
     /// Amount of current misses (fruits and droplets).
-    pub n_misses: usize,
+    pub n_misses: u32,
 }
 
 impl CatchScoreState {
@@ -26,8 +25,7 @@ impl CatchScoreState {
     }
 
     /// Return the total amount of hits by adding everything up.
-    #[inline]
-    pub const fn total_hits(&self) -> usize {
+    pub const fn total_hits(&self) -> u32 {
         self.n_fruits
             + self.n_droplets
             + self.n_tiny_droplets
@@ -36,7 +34,6 @@ impl CatchScoreState {
     }
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.
-    #[inline]
     pub fn accuracy(&self) -> f64 {
         let total_hits = self.total_hits();
 
@@ -47,6 +44,6 @@ impl CatchScoreState {
         let numerator = self.n_fruits + self.n_droplets + self.n_tiny_droplets;
         let denominator = total_hits;
 
-        numerator as f64 / denominator as f64
+        f64::from(numerator) / f64::from(denominator)
     }
 }

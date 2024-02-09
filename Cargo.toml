@@ -1,40 +1,12 @@
 [package]
 name = "rosu-pp"
-version = "0.10.0"
-authors = ["MaxOhn <ohn.m@hotmail.de>"]
+version = "0.1.0"
 edition = "2021"
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/MaxOhn/rosu-pp"
-documentation = "https://docs.rs/rosu-pp/"
-description = "osu! difficulty and pp calculation for all modes"
-keywords = ["osu", "pp", "stars", "async"]
 
 [features]
 default = []
-async_std = ["async-std"]
-async_tokio = ["tokio"]
-gradual = []
+tracing = ["rosu-map/tracing"]
 
 [dependencies]
-async-std = { version = "1.9", optional = true }
-tokio = { version = "1.2", optional = true, default-features = false, features = ["fs", "io-util"] }
-
-[dev-dependencies]
-proptest = "1.3.1"
-tokio = { version = "1.2", default-features = false, features = ["fs", "rt"] }
-
-[profile.test]
-opt-level = 2
-
-[profile.test.package.proptest]
-opt-level = 3
-
-[profile.test.package.rand_chacha]
-opt-level = 3
-
-[package.metadata.docs.rs]
-# document these features
-features = ["gradual"]
-# defines the configuration attribute `docsrs`
-rustdoc-args = ["--cfg", "docsrs"]
+rosu-map = { path = "../rosu-map" }
+thiserror = { version = "1.0.50" }

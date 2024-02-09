@@ -1,37 +1,39 @@
 use std::cmp::Ordering;
 
-///  Stores the sorted order for an initial list so that multiple
-///  lists can be sorted based on that order.
-pub(crate) struct TandemSorter {
+/// Stores the sorted order for an initial list so that multiple
+/// lists can be sorted based on that order.
+pub struct TandemSorter {
     indices: Box<[usize]>,
+    should_reset: bool,
 }
 
 impl TandemSorter {
     /// Sort indices based on the given slice.
+    ///
     /// Note that this does **not** sort the given slice.
-    pub(crate) fn new<T>(slice: &[T], stable: bool) -> Self
-    where
-        T: PartialOrd,
-    {
-        let mut indices: Box<[usize]> = (0..).take(slice.len()).collect();
-
-        let closure =
-            |&i: &usize, &j: &usize| slice[i].partial_cmp(&slice[j]).unwrap_or(Ordering::Equal);
+    pub fn new<T>(slice: &[T], cmp: fn(&T, &T) -> Ordering, stable: bool) -> Self {
+        let mut indices: Box<[usize]> = (0..slice.len()).collect();
+        let sort_by = |&i: &usize, &j: &usize| cmp(&slice[i], &slice[j]);
 
         if stable {
-            indices.sort_by(closure);
+            indices.sort_by(sort_by);
         } else {
-            indices.sort_unstable_by(closure);
+            indices.sort_unstable_by(sort_by);
         }
 
-        Self { indices }
+        Self {
+            indices,
+            should_reset: false,
+        }
     }
 
     /// Sort the given slice based on the internal ordering.
-    ///
-    /// If you intend to sort another slice afterwards,
-    /// don't forget to call [`Self::toggle_marks`] first.
-    pub(crate) fn sort<T>(&mut self, slice: &mut [T]) {
+    pub fn sort<T>(&mut self, slice: &mut [T]) {
+        if self.should_reset {
+            self.toggle_marks();
+            self.should_reset = false;
+        }
+
         for i in 0..self.indices.len() {
             let i_idx = self.indices[i];
 
@@ -52,22 +54,21 @@ impl TandemSorter {
 
             self.indices[j] = Self::toggle_mark_idx(j_idx);
         }
+
+        self.should_reset = true;
     }
 
-    /// This method must be called inbetween sorting slices.
-    pub(crate) fn toggle_marks(&mut self) {
+    fn toggle_marks(&mut self) {
         for idx in self.indices.iter_mut() {
             *idx = Self::toggle_mark_idx(*idx);
         }
     }
 
-    #[inline(always)]
     const fn idx_is_marked(idx: usize) -> bool {
         // Check if first bit is set
         idx.leading_zeros() == 0
     }
 
-    #[inline(always)]
     const fn toggle_mark_idx(idx: usize) -> usize {
         // Flip the first bit
         idx ^ !(usize::MAX >> 1)
@@ -81,13 +82,12 @@ mod tests {
     #[test]
     fn sort() {
         let mut base = vec![9, 7, 8, 1, 4, 3, 5, 2];
-        let mut sorter = TandemSorter::new(&base, false);
+        let mut other = "hello World".chars().collect::<Vec<_>>();
+        let mut sorter = TandemSorter::new(&base, u8::cmp, false);
 
         sorter.sort(&mut base);
         assert_eq!(base, vec![1, 2, 3, 4, 5, 7, 8, 9]);
 
-        sorter.toggle_marks();
-        let mut other = "hello World".chars().collect::<Vec<_>>();
         sorter.sort(&mut other);
         assert_eq!(other, "lo oWelhrld".chars().collect::<Vec<_>>());
     }

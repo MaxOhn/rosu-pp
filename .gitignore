@@ -3,12 +3,3 @@ Cargo.lock
 output*
 /.idea
 /tests/custom.rs
-/.idea
-
-/pp-gen/.env
-/pp-gen/target
-/pp-gen/output.json
-
-/pp-plot/.env
-/pp-plot/target
-/pp-plot/accuracy_*

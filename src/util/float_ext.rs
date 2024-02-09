@@ -1,33 +1,42 @@
-pub(crate) trait FloatExt: Sized {
+pub trait FloatExt: Sized {
     // Workaround since rust rounds ties away from 0.0
     // while C# rounds them to the nearest even integer.
     // See github
     //   - https://github.com/rust-lang/rust/issues/96710
     //   - https://github.com/rust-lang/rust/pull/82273
     fn round_even(self) -> Self;
+
+    /// `self == other`
+    fn eq(self, other: Self) -> bool;
+
+    /// `self != other`
+    fn not_eq(self, other: Self) -> bool;
 }
 
-impl FloatExt for f32 {
-    #[inline]
-    fn round_even(self) -> Self {
-        if (0.5 - self.fract().abs()).abs() <= f32::EPSILON {
-            2.0 * (self / 2.0).round()
-        } else {
-            self.round()
+macro_rules! impl_float_ext {
+    ( $ty:ty ) => {
+        impl FloatExt for $ty {
+            fn round_even(self) -> Self {
+                if self.fract().abs().eq(0.5) {
+                    2.0 * (self / 2.0).round()
+                } else {
+                    self.round()
+                }
+            }
+
+            fn eq(self, other: Self) -> bool {
+                (self - other).abs() < <$ty>::EPSILON
+            }
+
+            fn not_eq(self, other: Self) -> bool {
+                (self - other).abs() >= <$ty>::EPSILON
+            }
         }
-    }
+    };
 }
 
-impl FloatExt for f64 {
-    #[inline]
-    fn round_even(self) -> Self {
-        if (0.5 - self.fract().abs()).abs() <= f64::EPSILON {
-            2.0 * (self / 2.0).round()
-        } else {
-            self.round()
-        }
-    }
-}
+impl_float_ext!(f32);
+impl_float_ext!(f64);
 
 #[cfg(test)]
 mod tests {

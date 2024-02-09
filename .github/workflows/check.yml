@@ -12,13 +12,6 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        feature:
-          - default,gradual
-          - async_tokio
-          - async_std
-
     steps:
       - name: Checkout project
         uses: actions/checkout@v3
@@ -30,18 +23,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run clippy
-        run: cargo clippy --no-default-features --features ${{ matrix.feature }} --all-targets
+        run: cargo clippy --all-targets
 
   tests:
     name: Tests
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        feature:
-          - default,gradual
-          - async_tokio
-          - async_std
 
     steps:
       - name: Checkout project
@@ -57,7 +43,7 @@ jobs:
         uses: taiki-e/install-action@nextest
 
       - name: Run tests
-        run: cargo nextest run --no-default-features --features ${{ matrix.feature }} --no-fail-fast --failure-output=immediate-final
+        run: cargo nextest run --no-fail-fast --failure-output=immediate-final
 
       - name: Run doctests
         run: cargo test --doc
