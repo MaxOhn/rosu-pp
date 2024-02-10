@@ -73,7 +73,7 @@
 //! | Flag      | Description | Dependencies
 //! | --------- | ----------- | ------------
 //! | `default` | No features |
-//! | `tracing` | Any error encountered during beatmap decoding will be logged through `tracing::error`. If this features is not enabled, errors will be ignored. | [`tracing`]
+//! | `tracing` | Any error encountered during beatmap decoding will be logged through `tracing::error`. If this feature is not enabled, errors will be ignored. | [`tracing`]
 //!
 //! ## Bindings
 //!
