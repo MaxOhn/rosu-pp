@@ -17,8 +17,8 @@
 //! later calculations (with some limitations, see the [example](#usage)).
 //!
 //! Last commits of the ported code:
-//!   - [osu!lazer]: `7342fb7f51b34533a42bffda89c3d6c569cc69ce` (2022-10-11)
-//!   - [osu!tools]: `146d5916937161ef65906aa97f85d367035f3712` (2022-10-08)
+//!   - [osu!lazer] : `7342fb7f51b34533a42bffda89c3d6c569cc69ce` (2022-10-11)
+//!   - [osu!tools] : `146d5916937161ef65906aa97f85d367035f3712` (2022-10-08)
 //!
 //! News posts of the latest gamemode updates:
 //!   - osu: <https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp>
@@ -88,7 +88,7 @@
 //! [rosu-pp-js]: https://github.com/MaxOhn/rosu-pp-js
 //! [rosu-pp-py]: https://github.com/MaxOhn/rosu-pp-py
 
-#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links, rustdoc::missing_crate_level_docs)]
 #![warn(clippy::missing_const_for_fn, clippy::pedantic)]
 #![allow(
     clippy::missing_errors_doc,
