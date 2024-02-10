@@ -275,10 +275,10 @@ impl<A: AttributeProvider> From<A> for Performance<'_> {
     fn from(attrs: A) -> Self {
         fn inner(attrs: DifficultyAttributes) -> Performance<'static> {
             match attrs {
-                DifficultyAttributes::Osu(attrs) => Performance::Osu(attrs.pp()),
-                DifficultyAttributes::Taiko(attrs) => Performance::Taiko(attrs.pp()),
-                DifficultyAttributes::Catch(attrs) => Performance::Catch(attrs.pp()),
-                DifficultyAttributes::Mania(attrs) => Performance::Mania(attrs.pp()),
+                DifficultyAttributes::Osu(attrs) => Performance::Osu(attrs.performance()),
+                DifficultyAttributes::Taiko(attrs) => Performance::Taiko(attrs.performance()),
+                DifficultyAttributes::Catch(attrs) => Performance::Catch(attrs.performance()),
+                DifficultyAttributes::Mania(attrs) => Performance::Mania(attrs.performance()),
             }
         }
 

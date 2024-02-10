@@ -36,7 +36,7 @@ impl ManiaDifficultyAttributes {
     }
 
     /// Returns a builder for performance calculation.
-    pub fn pp<'a>(self) -> ManiaPerformance<'a> {
+    pub fn performance<'a>(self) -> ManiaPerformance<'a> {
         self.into()
     }
 }

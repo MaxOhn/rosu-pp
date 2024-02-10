@@ -33,7 +33,7 @@ impl CatchDifficultyAttributes {
     }
 
     /// Returns a builder for performance calculation.
-    pub fn pp<'a>(self) -> CatchPerformance<'a> {
+    pub fn performance<'a>(self) -> CatchPerformance<'a> {
         self.into()
     }
 }
