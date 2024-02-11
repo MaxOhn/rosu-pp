@@ -1,10 +1,7 @@
 use std::borrow::Cow;
 
 use rosu_map::{
-    section::{
-        general::GameMode,
-        hit_objects::{BorrowedCurve, CurveBuffers},
-    },
+    section::{general::GameMode, hit_objects::CurveBuffers},
     util::Pos,
 };
 
@@ -108,11 +105,7 @@ fn convert(map: &mut Beatmap) {
                 last_values.pattern = new_pattern;
             }
             HitObjectKind::Slider(ref slider) => {
-                let curve = BorrowedCurve::new(
-                    &slider.control_points,
-                    slider.expected_dist,
-                    &mut curve_bufs,
-                );
+                let curve = slider.curve(&mut curve_bufs);
 
                 let mut gen = DistanceObjectPatternGenerator::new(
                     &mut random,
