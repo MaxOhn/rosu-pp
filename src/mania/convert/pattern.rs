@@ -1,3 +1,5 @@
+use std::mem;
+
 use rosu_map::util::Pos;
 
 use crate::model::hit_object::{HitObject, HitObjectKind, HoldNote};
@@ -155,11 +157,11 @@ impl Pattern {
         self.contained_columns.len() as i32
     }
 
-    /// Moves all values of `other` into `self`,
-    /// leaving `other` empty but keeps the capacities.
+    /// Moves all values of `other` into `self`, leaving `other` empty but
+    /// keeps the capacity.
     pub fn append(&mut self, other: &mut Self) {
         self.hit_objects.append(&mut other.hit_objects);
-        self.contained_columns.extend(other.contained_columns);
+        self.contained_columns.append(&mut other.contained_columns);
     }
 }
 
@@ -177,8 +179,8 @@ impl ContainedColumns {
         self.0 |= 1 << column;
     }
 
-    pub fn extend(&mut self, other: Self) {
-        self.0 |= other.0;
+    pub fn append(&mut self, other: &mut Self) {
+        self.0 |= mem::take(&mut other.0);
     }
 
     pub const fn len(self) -> u32 {
