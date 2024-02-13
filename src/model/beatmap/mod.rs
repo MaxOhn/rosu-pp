@@ -185,7 +185,7 @@ macro_rules! define_beat_len_fn {
             let slider_velocity_as_beat_len = -100.0 / slider_velocity;
 
             let bpm_mult = if slider_velocity_as_beat_len < 0.0 {
-                (((-slider_velocity_as_beat_len) as f32).clamp(10.0, $clamp) / 100.0) as f64
+                f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, $clamp)) / 100.0
             } else {
                 1.0
             };
