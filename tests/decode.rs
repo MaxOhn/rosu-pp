@@ -1,4 +1,4 @@
-use rosu_pp::{model::mode::GameMode, Beatmap};
+use rosu_pp::{catch::Catch, mania::Mania, model::mode::GameMode, osu::Osu, taiko::Taiko, Beatmap};
 
 use crate::common::assert_eq_float;
 
@@ -87,4 +87,28 @@ fn mania() {
     assert_eq!(map.effect_points.len(), 0);
     assert_eq_float(map.stack_leniency, 0.7);
     assert_eq!(map.breaks.len(), 0);
+}
+
+#[test]
+fn empty_osu() {
+    let map = Beatmap::from_bytes(&[]).unwrap();
+    let _ = map.unchecked_as_converted::<Osu>();
+}
+
+#[test]
+fn empty_taiko() {
+    let map = Beatmap::from_bytes(&[]).unwrap();
+    let _ = map.unchecked_as_converted::<Taiko>();
+}
+
+#[test]
+fn empty_catch() {
+    let map = Beatmap::from_bytes(&[]).unwrap();
+    let _ = map.unchecked_as_converted::<Catch>();
+}
+
+#[test]
+fn empty_mania() {
+    let map = Beatmap::from_bytes(&[]).unwrap();
+    let _ = map.unchecked_as_converted::<Mania>();
 }
