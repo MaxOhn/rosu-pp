@@ -46,11 +46,15 @@ impl Peaks {
     }
 
     pub fn difficulty_value(self) -> f64 {
-        let mut peaks = Vec::new(); // TODO: default capacity
-
         let color_peaks = self.color.get_curr_strain_peaks();
         let rhythm_peaks = self.rhythm.get_curr_strain_peaks();
         let stamina_peaks = self.stamina.get_curr_strain_peaks();
+
+        let cap = color_peaks
+            .len()
+            .min(rhythm_peaks.len())
+            .min(stamina_peaks.len());
+        let mut peaks = Vec::with_capacity(cap);
 
         let zip = color_peaks
             .iter()

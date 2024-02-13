@@ -29,7 +29,8 @@ impl Speed {
         Self {
             curr_strain: 0.0,
             curr_rhythm: 0.0,
-            object_strains: Vec::new(), // TODO: default capacity
+            // mean=406.72 | median=307
+            object_strains: Vec::with_capacity(256),
             hit_window,
             inner: OsuStrainSkill::default(),
         }

@@ -259,9 +259,12 @@ impl DecodeState for BeatmapState {
             pending_timing_point: None,
             pending_difficulty_point: None,
             pending_effect_point: None,
-            curve_points: Vec::new(), // TODO: check for default size
-            vertices: Vec::new(),     // TODO: check for default size
-            point_split: Vec::new(),  // TODO: check for default size
+            // mean=13.11 | median=8
+            curve_points: Vec::with_capacity(8),
+            // mean=16.27 | median=8
+            vertices: Vec::with_capacity(8),
+            // mean=19.97 | median=8
+            point_split: Vec::with_capacity(8),
         }
     }
 }

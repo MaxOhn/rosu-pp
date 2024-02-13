@@ -92,9 +92,12 @@ impl TaikoDifficultyObjects {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             objects: Vec::with_capacity(capacity),
-            center_hit_objects: Vec::default(), // TODO: default capacity
-            rim_hit_objects: Vec::default(),    // TODO: default capacity
-            note_objects: Vec::default(),       // TODO: default capacity
+            // mean=301.7 | median=215
+            center_hit_objects: Vec::with_capacity(256),
+            // mean=309.21 | median=229
+            rim_hit_objects: Vec::with_capacity(256),
+            // mean=610.91 | median=466
+            note_objects: Vec::with_capacity(256),
         }
     }
 

@@ -23,11 +23,22 @@ pub trait ISkill {
     type DifficultyObjects<'a>: ?Sized;
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct StrainSkill {
     pub curr_section_peak: f64,
     pub curr_section_end: f64,
-    pub strain_peaks: Vec<f64>, // TODO: default capacity
+    pub strain_peaks: Vec<f64>,
+}
+
+impl Default for StrainSkill {
+    fn default() -> Self {
+        Self {
+            curr_section_peak: 0.0,
+            curr_section_end: 0.0,
+            // mean=386.81 | median=279
+            strain_peaks: Vec::with_capacity(256),
+        }
+    }
 }
 
 impl StrainSkill {

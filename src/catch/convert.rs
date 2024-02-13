@@ -46,13 +46,15 @@ pub fn convert_objects(
     hr: bool,
     cs: f32,
 ) -> Vec<PalpableObject> {
-    // TODO: check for better default capacity
-    let mut palpable_objects = Vec::with_capacity(converted.map.hit_objects.len() * 2);
+    // mean=686.54 | median=501
+    let mut palpable_objects = Vec::with_capacity(512);
 
     let mut bufs = JuiceStreamBufs {
         curve: CurveBuffers::default(),
-        nested_objects: Vec::new(), // TODO: default capacity
-        ticks: Vec::new(),          // TODO: default capacity
+        // mean=31.65 | median=16
+        nested_objects: Vec::with_capacity(16),
+        // mean=5.21 | median=4
+        ticks: Vec::new(),
     };
 
     let mut rng = Random::new(RNG_SEED);

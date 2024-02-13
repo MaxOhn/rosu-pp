@@ -77,9 +77,8 @@ fn convert(map: &mut Beatmap) {
     let mut last_values = PrevValues::default();
     let mut curve_bufs = CurveBuffers::default();
 
-    // TODO: find proper default
-    let capacity = map.hit_objects.len() * 2;
-    let mut new_hit_objects = Vec::with_capacity(capacity);
+    // mean=668.7 | median=512
+    let mut new_hit_objects = Vec::with_capacity(512);
 
     for (obj, sound) in map.hit_objects.iter().zip(map.hit_sounds.iter().copied()) {
         match obj.kind {

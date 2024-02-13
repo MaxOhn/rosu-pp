@@ -34,7 +34,8 @@ pub fn convert_objects(
     attrs: &mut OsuDifficultyAttributes,
 ) -> Vec<OsuObject> {
     let mut curve_bufs = CurveBuffers::default();
-    let mut ticks_buf = Vec::new(); // TODO: default capacity
+    // mean=5.16 | median=4
+    let mut ticks_buf = Vec::new();
 
     let mut osu_objects: Vec<_> = converted
         .map
