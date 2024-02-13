@@ -279,7 +279,7 @@ fn initialize_hyper_dash(cs: f32, palpable_objects: &mut [PalpableObject]) {
     let mut last_dir = 0;
     let mut last_excess = half_catcher_width;
 
-    for i in 0..palpable_objects.len() - 1 {
+    for i in 0..palpable_objects.len().saturating_sub(1) {
         let next = &palpable_objects[i + 1];
         let curr = &palpable_objects[i];
 
