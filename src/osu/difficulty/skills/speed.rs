@@ -168,7 +168,7 @@ impl SpeedEvaluator {
         let speed_bonus = if strain_time < Self::MIN_SPEED_BONUS {
             let base = (Self::MIN_SPEED_BONUS - strain_time) / Self::SPEED_BALANCING_FACTOR;
 
-            1.0 + 0.75 * base * base
+            1.0 + 0.75 * (base * base)
         } else {
             1.0
         };
