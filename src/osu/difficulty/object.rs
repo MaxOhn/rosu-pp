@@ -121,11 +121,7 @@ impl<'a> OsuDifficultyObject<'a> {
             self.min_jump_time =
                 (self.strain_time - last_travel_time).max(OsuDifficultyObject::MIN_DELTA_TIME);
 
-            let tail_pos = last_slider
-                .nested_objects
-                .last()
-                .map_or(last_object.pos, |nested| nested.pos);
-
+            let tail_pos = last_slider.tail().map_or(last_object.pos, |tail| tail.pos);
             let stacked_tail_pos = tail_pos + last_object.stack_offset;
 
             let tail_jump_dist =
