@@ -635,7 +635,7 @@ impl OsuPerformanceInner {
 
         aim_value *= self.acc;
         // * It is important to consider accuracy difficulty when scaling with accuracy.
-        aim_value *= 0.98 + self.attrs.od * self.attrs.od / 2500.0;
+        aim_value *= 0.98 + self.attrs.od.powi(2) / 2500.0;
 
         aim_value
     }
@@ -760,7 +760,7 @@ impl OsuPerformanceInner {
             return 0.0;
         }
 
-        let mut flashlight_value = self.attrs.flashlight * self.attrs.flashlight * 25.0;
+        let mut flashlight_value = self.attrs.flashlight.powi(2) * 25.0;
 
         let total_hits = self.total_hits();
 
@@ -783,7 +783,7 @@ impl OsuPerformanceInner {
         // * Scale the flashlight value with accuracy _slightly_.
         flashlight_value *= 0.5 + self.acc / 2.0;
         // * It is important to also consider accuracy difficulty when doing that.
-        flashlight_value *= 0.98 + self.attrs.od * self.attrs.od / 2500.0;
+        flashlight_value *= 0.98 + self.attrs.od.powi(2) / 2500.0;
 
         flashlight_value
     }

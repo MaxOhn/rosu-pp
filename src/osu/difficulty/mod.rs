@@ -67,7 +67,7 @@ pub fn difficulty(
     let base_speed_performance = (5.0 * (speed_rating / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
 
     let base_flashlight_performance = if mods.fl() {
-        (flashlight_rating * flashlight_rating) * 25.0
+        flashlight_rating.powi(2) * 25.0
     } else {
         0.0
     };

@@ -464,7 +464,7 @@ impl TaikoPerformanceInner {
 
         let acc = self.custom_accuracy();
 
-        diff_value * acc * acc
+        diff_value * acc.powi(2)
     }
 
     fn compute_accuracy_value(&self) -> f64 {

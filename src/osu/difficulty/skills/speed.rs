@@ -155,8 +155,7 @@ impl SpeedEvaluator {
             let next_delta_time = osu_next_obj.delta_time.max(1.0);
             let delta_diff = (next_delta_time - curr_delta_time).abs();
             let speed_ratio = curr_delta_time / curr_delta_time.max(delta_diff);
-            let window_ratio_base = (curr_delta_time / hit_window).min(1.0);
-            let window_ratio = window_ratio_base * window_ratio_base;
+            let window_ratio = (curr_delta_time / hit_window).min(1.0).powi(2);
             doubletapness = speed_ratio.powf(1.0 - window_ratio);
         }
 
@@ -168,7 +167,7 @@ impl SpeedEvaluator {
         let speed_bonus = if strain_time < Self::MIN_SPEED_BONUS {
             let base = (Self::MIN_SPEED_BONUS - strain_time) / Self::SPEED_BALANCING_FACTOR;
 
-            1.0 + 0.75 * (base * base)
+            1.0 + 0.75 * base.powi(2)
         } else {
             1.0
         };
@@ -246,7 +245,7 @@ impl RhythmEvaluator {
 
             // * fancy function to calculate rhythmbonuses.
             let base = (PI / (prev_delta.min(curr_delta) / prev_delta.max(curr_delta))).sin();
-            let curr_ratio = 1.0 + 6.0 * (base * base).min(0.5);
+            let curr_ratio = 1.0 + 6.0 * base.powi(2).min(0.5);
 
             let hit_window = u64::from(!curr_obj.base.is_spinner()) as f64 * hit_window;
 
