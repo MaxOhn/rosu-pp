@@ -243,13 +243,11 @@ impl OsuSlider {
                         start_time: start_time + f64::from(e.span_idx + 1) * span_duration,
                         kind: NestedSliderObjectKind::Repeat,
                     },
-                    SliderEventType::LastTick => {
-                        NestedSliderObject {
-                            pos: end_path_pos, // no `h.pos` yet to keep order of float operations
-                            start_time: e.time,
-                            kind: NestedSliderObjectKind::Tail,
-                        }
-                    }
+                    SliderEventType::LastTick => NestedSliderObject {
+                        pos: end_path_pos, // no `h.pos` yet to keep order of float operations
+                        start_time: e.time,
+                        kind: NestedSliderObjectKind::Tail,
+                    },
                     SliderEventType::Head | SliderEventType::Tail => return None,
                 };
 
