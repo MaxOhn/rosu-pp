@@ -1,3 +1,5 @@
+use crate::catch::PLAYFIELD_WIDTH;
+
 pub struct PalpableObject {
     pub x: f32,
     pub x_offset: f32,
@@ -18,6 +20,6 @@ impl PalpableObject {
     }
 
     pub fn effective_x(&self) -> f32 {
-        self.x + self.x_offset
+        (self.x + self.x_offset).clamp(0.0, PLAYFIELD_WIDTH)
     }
 }
