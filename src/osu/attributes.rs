@@ -43,7 +43,7 @@ impl OsuDifficultyAttributes {
     }
 
     /// Returns a builder for performance calculation.
-    pub fn pp<'a>(self) -> OsuPerformance<'a> {
+    pub fn performance<'a>(self) -> OsuPerformance<'a> {
         self.into()
     }
 }

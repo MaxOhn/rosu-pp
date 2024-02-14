@@ -5,6 +5,8 @@ use rosu_map::{
     LATEST_FORMAT_VERSION,
 };
 
+use crate::{Performance, Difficulty};
+
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
     converted::Converted,
@@ -66,6 +68,16 @@ impl Beatmap {
     /// slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, io::Error> {
         rosu_map::from_bytes(bytes)
+    }
+
+    /// Create a new difficulty calculator for this [`Beatmap`].
+    pub fn difficulty(&self) -> Difficulty<'_> {
+        Difficulty::new(self)
+    }
+
+    /// Create a new performance calculator for this [`Beatmap`].
+    pub fn performance(&self) -> Performance<'_> {
+        Performance::new(self)
     }
 
     /// Finds the [`TimingPoint`] that is active at the given time.

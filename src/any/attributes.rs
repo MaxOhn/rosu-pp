@@ -43,7 +43,7 @@ impl DifficultyAttributes {
     }
 
     /// Returns a builder for performance calculation.
-    pub fn pp<'a>(self) -> Performance<'a> {
+    pub fn performance<'a>(self) -> Performance<'a> {
         self.into()
     }
 }

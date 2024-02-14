@@ -1,7 +1,5 @@
 use rosu_map::{
-    section::hit_objects::{
-        BorrowedCurve, CurveBuffers, SliderEvent, SliderEventType, SliderEventsIter,
-    },
+    section::hit_objects::{CurveBuffers, SliderEvent, SliderEventType, SliderEventsIter},
     util::Pos,
 };
 
@@ -183,7 +181,7 @@ impl OsuSlider {
                 |point| (point.slider_velocity, point.generate_ticks),
             );
 
-        let path = BorrowedCurve::new(&slider.control_points, slider.expected_dist, curve_bufs);
+        let path = slider.curve(curve_bufs);
 
         let span_count = slider.span_count() as f64;
 
