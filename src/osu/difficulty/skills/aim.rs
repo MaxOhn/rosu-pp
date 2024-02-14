@@ -188,11 +188,9 @@ impl AimEvaluator {
                     // * The maximum velocity we buff is equal to 125 / strainTime
                         * angle_bonus.min(125.0 / osu_curr_obj.strain_time)
                         // * scale buff from 150 bpm 1/4 to 200 bpm 1/4
-                        * base1
-                        * base1
+                        * (base1 * base1)
                          // * Buff distance exceeding 50 (radius) up to 100 (diameter).
-                        * base2
-                        * base2;
+                        * (base2 * base2);
                 }
 
                 // * Penalize wide angles if they're repeated, reducing the penalty as the lastAngle gets more acute.
