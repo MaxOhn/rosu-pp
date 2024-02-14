@@ -63,8 +63,10 @@ impl OsuObject {
 
             let mut nested_iter = slider.nested_objects.iter_mut();
 
-            for nested in nested_iter.by_ref() {
-                // The tail is adjusted differently than ticks and repeats
+            // Since the tail is handled differently but it's not necessarily
+            // the last object, we first search for it, and then handle the
+            // other nested objects
+            for nested in nested_iter.by_ref().rev() {
                 if let NestedSliderObjectKind::Tail = nested.kind {
                     let mut tail_pos = self.pos; // already reflected at this point
                     tail_pos += Pos::new(nested.pos.x, -nested.pos.y);
@@ -76,8 +78,6 @@ impl OsuObject {
                 reflect_y(&mut nested.pos.y);
             }
 
-            // In case the tail is not the last nested object, process the
-            // remaining objects
             for nested in nested_iter {
                 reflect_y(&mut nested.pos.y);
             }
