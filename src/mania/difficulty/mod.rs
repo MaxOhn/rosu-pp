@@ -4,7 +4,7 @@ use crate::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},
     },
-    util::{float_ext::FloatExt, mods::Mods},
+    util::float_ext::FloatExt,
 };
 
 use super::{attributes::ManiaDifficultyAttributes, convert::ManiaBeatmap};
@@ -21,10 +21,12 @@ pub fn difficulty(
     let n_objects = converted.map.hit_objects.len() as u32;
     let values = DifficultyValues::calculate(difficulty, converted);
 
-    let mods = difficulty.get_mods();
-    let clock_rate = difficulty.get_clock_rate();
-    let hit_window =
-        (f64::from((get_hit_window(converted, mods) * clock_rate) as i32) / clock_rate).ceil();
+    let hit_window = converted
+        .attributes()
+        .mods(difficulty.get_mods())
+        .clock_rate(difficulty.get_clock_rate())
+        .hit_windows()
+        .od;
 
     ManiaDifficultyAttributes {
         stars: values.strain.difficulty_value() * STAR_SCALING_FACTOR,
@@ -33,32 +35,6 @@ pub fn difficulty(
         n_objects,
         is_convert: converted.is_convert,
     }
-}
-
-fn get_hit_window(converted: &ManiaBeatmap<'_>, mods: u32) -> f64 {
-    fn apply_mod_adjustments(mut value: f64, mods: u32) -> f64 {
-        if mods.hr() {
-            value /= 1.4;
-        } else if mods.ez() {
-            value *= 1.4;
-        }
-
-        value
-    }
-
-    let od = f64::from(converted.map.od);
-
-    if !converted.is_convert {
-        let od = ((10.0 - od).max(0.0)).min(10.0);
-
-        return apply_mod_adjustments(34.0 + 3.0 * od, mods);
-    }
-
-    if od.round_even() > 4.0 {
-        return apply_mod_adjustments(34.0, mods);
-    }
-
-    apply_mod_adjustments(47.0, mods)
 }
 
 pub struct DifficultyValues {

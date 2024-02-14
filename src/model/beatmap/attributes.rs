@@ -1,6 +1,6 @@
 use rosu_map::section::general::GameMode;
 
-use crate::util::mods::Mods;
+use crate::util::{float_ext::FloatExt, mods::Mods};
 
 use super::{converted::Converted, Beatmap};
 
@@ -157,7 +157,7 @@ impl BeatmapAttributesBuilder {
             GameMode::Mania => {
                 let mut value = if !self.is_convert {
                     34.0 + 3.0 * (10.0 - self.od).clamp(0.0, 10.0)
-                } else if self.od > 4.0 {
+                } else if self.od.round_even() > 4.0 {
                     34.0
                 } else {
                     47.0
