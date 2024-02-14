@@ -1,6 +1,9 @@
 use std::borrow::Cow;
 
-use rosu_map::{section::general::GameMode, util::Pos};
+use rosu_map::{
+    section::{general::GameMode, hit_objects::CurveBuffers},
+    util::Pos,
+};
 
 use crate::{
     model::{
@@ -114,17 +117,17 @@ fn convert(map: &mut Beatmap) {
 fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<'_>) -> bool {
     let SliderParams {
         slider,
+        bufs,
         duration,
         start_time,
         tick_spacing,
     } = params;
 
+    let curve = slider.curve(bufs);
+
     // * The true distance, accounting for any repeats. This ends up being the drum roll distance later
     let spans = slider.span_count() as f64;
-    let mut dist = slider.expected_dist.unwrap_or(0.0);
-
-    dist *= f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER);
-    dist *= spans;
+    let dist = curve.dist() * spans * f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER);
 
     let timing_beat_len = map
         .timing_point_at(*start_time)
@@ -156,15 +159,17 @@ fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<
 
 struct SliderParams<'c> {
     slider: &'c Slider,
+    bufs: CurveBuffers,
     duration: u32,
     start_time: f64,
     tick_spacing: f64,
 }
 
 impl<'c> SliderParams<'c> {
-    const fn new(start_time: f64, slider: &'c Slider) -> Self {
+    fn new(start_time: f64, slider: &'c Slider) -> Self {
         Self {
             slider,
+            bufs: CurveBuffers::default(),
             start_time,
             duration: 0,
             tick_spacing: 0.0,
