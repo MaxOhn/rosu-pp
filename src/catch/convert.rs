@@ -8,7 +8,7 @@ use crate::{
         hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
         mode::ConvertStatus,
     },
-    util::{float_ext::FloatExt, random::Random},
+    util::{float_ext::FloatExt, random::Random, sort},
 };
 
 use super::{
@@ -75,7 +75,9 @@ pub fn convert_objects(
         palpable_objects.extend(new_objects);
     }
 
-    palpable_objects.sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+    sort::csharp(&mut palpable_objects, |a, b| {
+        a.start_time.total_cmp(&b.start_time)
+    });
 
     initialize_hyper_dash(cs, &mut palpable_objects);
 

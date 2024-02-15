@@ -22,7 +22,7 @@ use crate::{
         },
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
     },
-    util::{float_ext::FloatExt, legacy_sort::legacy_sort, tandem_sort::TandemSorter},
+    util::{float_ext::FloatExt, sort},
 };
 
 use super::{Beatmap, DEFAULT_SLIDER_LENIENCY};
@@ -282,7 +282,7 @@ impl From<BeatmapState> for Beatmap {
             slider_tick_rate,
         } = state.difficulty.into();
 
-        let mut sorter = TandemSorter::new(
+        let mut sorter = sort::TandemSorter::new(
             &state.hit_objects,
             |a, b| a.start_time.total_cmp(&b.start_time),
             true,
@@ -292,7 +292,7 @@ impl From<BeatmapState> for Beatmap {
         sorter.sort(&mut state.hit_sounds);
 
         if state.mode == GameMode::Mania {
-            legacy_sort(&mut state.hit_objects);
+            sort::osu_legacy(&mut state.hit_objects);
         }
 
         Beatmap {

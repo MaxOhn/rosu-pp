@@ -11,9 +11,7 @@ use crate::{
         hit_object::{HitObjectKind, HoldNote, Spinner},
         mode::ConvertStatus,
     },
-    util::{
-        float_ext::FloatExt, legacy_sort::legacy_sort, limited_queue::LimitedQueue, random::Random,
-    },
+    util::{float_ext::FloatExt, limited_queue::LimitedQueue, random::Random, sort},
 };
 
 use self::{
@@ -161,7 +159,7 @@ fn convert(map: &mut Beatmap) {
     map.hit_objects = new_hit_objects;
     map.hit_objects
         .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
-    legacy_sort(&mut map.hit_objects);
+    sort::osu_legacy(&mut map.hit_objects);
 
     map.mode = GameMode::Mania;
 }

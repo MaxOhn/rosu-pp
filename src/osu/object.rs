@@ -3,9 +3,12 @@ use rosu_map::{
     util::Pos,
 };
 
-use crate::model::{
-    control_point::{DifficultyPoint, TimingPoint},
-    hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
+use crate::{
+    model::{
+        control_point::{DifficultyPoint, TimingPoint},
+        hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
+    },
+    util::sort,
 };
 
 use super::{convert::OsuBeatmap, PLAYFIELD_BASE_SIZE};
@@ -255,7 +258,9 @@ impl OsuSlider {
             })
             .collect();
 
-        nested_objects.sort_unstable_by(|a, b| a.start_time.total_cmp(&b.start_time));
+        sort::csharp(&mut nested_objects, |a, b| {
+            a.start_time.total_cmp(&b.start_time)
+        });
 
         let lazy_travel_time = nested_objects
             .last()

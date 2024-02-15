@@ -12,7 +12,7 @@ use crate::{
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
         mode::ConvertStatus,
     },
-    util::{float_ext::FloatExt, tandem_sort::TandemSorter},
+    util::{float_ext::FloatExt, sort::TandemSorter},
 };
 
 use super::Taiko;

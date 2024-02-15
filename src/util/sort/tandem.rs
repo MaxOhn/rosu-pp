@@ -18,6 +18,8 @@ impl TandemSorter {
         if stable {
             indices.sort_by(sort_by);
         } else {
+            // When sorting integers, the order of elements with equal values
+            // does not matter so we can use rust's sort instead of C#'s.
             indices.sort_unstable_by(sort_by);
         }
 
