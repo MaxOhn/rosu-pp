@@ -336,6 +336,8 @@ pub enum ParseBeatmapError {
     Mode(#[from] ParseGameModeError),
     #[error("failed to parse number")]
     Number(#[from] ParseNumberError),
+    #[error("invalid time signature, must be positive integer")]
+    TimeSignature,
     #[error("beat length cannot be NaN in a timing control point")]
     TimingControlPointNaN,
     #[error("unknown hit object type")]
@@ -435,7 +437,12 @@ impl DecodeBeatmap for Beatmap {
             1.0
         };
 
-        let _ = split.next(); // timing signature
+        if let Some(numerator) = split.next() {
+            if i32::parse(numerator)? < 1 {
+                return Err(ParseBeatmapError::TimeSignature);
+            }
+        }
+
         let _ = split.next(); // sample set
         let _ = split.next(); // custom sample bank
         let _ = split.next(); // sample volume
