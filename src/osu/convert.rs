@@ -10,7 +10,7 @@ use crate::model::{
 use super::{
     attributes::OsuDifficultyAttributes,
     difficulty::scaling_factor::ScalingFactor,
-    object::{OsuObject, OsuObjectKind},
+    object::{NestedSliderObjectKind, OsuObject, OsuObjectKind},
     Osu,
 };
 
@@ -214,7 +214,29 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
         }
 
         let mut start_time = hit_objects[i].end_time();
-        let pos2 = hit_objects[i].end_pos();
+
+        let pos2 = {
+            let h = &hit_objects[i];
+
+            match h.kind {
+                OsuObjectKind::Circle | OsuObjectKind::Spinner(_) => h.pos,
+                OsuObjectKind::Slider(ref slider) => {
+                    // We need the path endpos instead of the slider endpos
+                    let repeat_count = slider.repeat_count();
+
+                    let nested = if repeat_count % 2 == 0 {
+                        slider.tail()
+                    } else {
+                        slider
+                            .nested_objects
+                            .iter()
+                            .find(|nested| matches!(nested.kind, NestedSliderObjectKind::Repeat))
+                    };
+
+                    nested.map_or(h.pos, |nested| nested.pos)
+                }
+            }
+        };
 
         let mut slider_stack = 0;
 
