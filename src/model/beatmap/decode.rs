@@ -282,11 +282,9 @@ impl From<BeatmapState> for Beatmap {
             slider_tick_rate,
         } = state.difficulty.into();
 
-        let mut sorter = sort::TandemSorter::new(
-            &state.hit_objects,
-            |a, b| a.start_time.total_cmp(&b.start_time),
-            true,
-        );
+        let mut sorter = sort::TandemSorter::new_stable(&state.hit_objects, |a, b| {
+            a.start_time.total_cmp(&b.start_time)
+        });
 
         sorter.sort(&mut state.hit_objects);
         sorter.sort(&mut state.hit_sounds);

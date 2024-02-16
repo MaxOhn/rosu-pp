@@ -7,27 +7,26 @@ pub struct TandemSorter {
     should_reset: bool,
 }
 
+macro_rules! new_fn {
+    ( $fn:ident: $sort:expr ) => {
+        /// Sort indices based on the given slice.
+        ///
+        /// Note that this does **not** sort the given slice.
+        pub fn $fn<T>(slice: &[T], cmp: fn(&T, &T) -> Ordering) -> Self {
+            let mut indices: Box<[usize]> = (0..slice.len()).collect();
+            $sort(&mut indices, |&i, &j| cmp(&slice[i], &slice[j]));
+
+            Self {
+                indices,
+                should_reset: false,
+            }
+        }
+    };
+}
+
 impl TandemSorter {
-    /// Sort indices based on the given slice.
-    ///
-    /// Note that this does **not** sort the given slice.
-    pub fn new<T>(slice: &[T], cmp: fn(&T, &T) -> Ordering, stable: bool) -> Self {
-        let mut indices: Box<[usize]> = (0..slice.len()).collect();
-        let sort_by = |&i: &usize, &j: &usize| cmp(&slice[i], &slice[j]);
-
-        if stable {
-            indices.sort_by(sort_by);
-        } else {
-            // When sorting integers, the order of elements with equal values
-            // does not matter so we can use rust's sort instead of C#'s.
-            indices.sort_unstable_by(sort_by);
-        }
-
-        Self {
-            indices,
-            should_reset: false,
-        }
-    }
+    new_fn!(new_stable: <[_]>::sort_by);
+    new_fn!(new_unstable: super::csharp);
 
     /// Sort the given slice based on the internal ordering.
     pub fn sort<T>(&mut self, slice: &mut [T]) {
@@ -60,6 +59,35 @@ impl TandemSorter {
         self.should_reset = true;
     }
 
+    /// Unsort the given slice based on the internal ordering.
+    pub fn unsort<T>(mut self, slice: &mut [T]) {
+        if self.should_reset {
+            self.toggle_marks();
+            self.should_reset = false;
+        }
+
+        for i in 0..self.indices.len() {
+            let i_idx = self.indices[i];
+
+            if Self::idx_is_marked(i_idx) {
+                continue;
+            }
+
+            let mut j = i;
+            let mut j_idx = i_idx;
+
+            while j != j_idx {
+                self.indices[j] = Self::toggle_mark_idx(j_idx);
+                self.indices.swap(j, j_idx);
+                slice.swap(j, j_idx);
+                j = self.indices[j];
+                j_idx = self.indices[j];
+            }
+
+            self.indices[j] = Self::toggle_mark_idx(j_idx);
+        }
+    }
+
     fn toggle_marks(&mut self) {
         for idx in self.indices.iter_mut() {
             *idx = Self::toggle_mark_idx(*idx);
@@ -85,12 +113,12 @@ mod tests {
     fn sort() {
         let mut base = vec![9, 7, 8, 1, 4, 3, 5, 2];
         let mut other = "hello World".chars().collect::<Vec<_>>();
-        let mut sorter = TandemSorter::new(&base, u8::cmp, false);
+        let mut sorter = TandemSorter::new_stable(&base, u8::cmp);
 
         sorter.sort(&mut base);
         assert_eq!(base, vec![1, 2, 3, 4, 5, 7, 8, 9]);
 
         sorter.sort(&mut other);
-        assert_eq!(other, "lo oWelhrld".chars().collect::<Vec<_>>());
+        assert_eq!(other.iter().collect::<String>(), "lo oWelhrld");
     }
 }

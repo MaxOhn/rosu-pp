@@ -103,11 +103,9 @@ fn convert(map: &mut Beatmap) {
     // We only convert osu! to taiko so we don't need to remove objects
     // with the same timestamp that would appear only in mania
 
-    let mut sorter = TandemSorter::new(
-        &map.hit_objects,
-        |a, b| a.start_time.total_cmp(&b.start_time),
-        true,
-    );
+    let mut sorter = TandemSorter::new_stable(&map.hit_objects, |a, b| {
+        a.start_time.total_cmp(&b.start_time)
+    });
     sorter.sort(&mut map.hit_objects);
     sorter.sort(&mut map.hit_sounds);
 
