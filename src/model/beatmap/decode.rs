@@ -529,13 +529,13 @@ impl DecodeBeatmap for Beatmap {
 
             let mut len = None;
 
-            let mut repeats = repeat_count.parse_num::<i32>()?;
+            let repeats = repeat_count.parse_num::<i32>()?;
 
             if repeats > 9000 {
                 return Err(ParseBeatmapError::InvalidRepeatCount);
             }
 
-            repeats = cmp::max(0, repeats - 1);
+            let repeats = cmp::max(0, repeats - 1) as usize;
 
             if let Some(next) = split.next() {
                 let new_len = next
@@ -547,14 +547,20 @@ impl DecodeBeatmap for Beatmap {
                 }
             }
 
-            let node_sounds = if let Some(sounds) = split.next().map(|sounds| sounds.split('|')) {
-                sounds.map(|s| s.parse().unwrap_or_default()).collect()
-            } else {
-                Box::default()
-            };
+            let node_sounds_str = split.next();
 
             let _ = split.next(); // node banks
             parse_custom_sound(split.next())?;
+
+            let mut node_sounds = vec![sound; repeats + 2].into_boxed_slice();
+
+            if let Some(sounds) = node_sounds_str {
+                sounds
+                    .split('|')
+                    .map(|s| s.parse().unwrap_or_default())
+                    .zip(node_sounds.iter_mut())
+                    .for_each(|(parsed, sound)| *sound = parsed);
+            }
 
             state.convert_path_str(point_str, pos)?;
             let mut control_points = Vec::with_capacity(state.curve_points.len());
@@ -562,7 +568,7 @@ impl DecodeBeatmap for Beatmap {
 
             let slider = Slider {
                 expected_dist: len,
-                repeats: repeats as usize,
+                repeats,
                 control_points: control_points.into_boxed_slice(),
                 node_sounds,
             };

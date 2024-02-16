@@ -65,14 +65,14 @@ fn convert(map: &mut Beatmap) {
                             kind: HitObjectKind::Circle,
                         };
 
+                        let sound = slider
+                            .node_sounds
+                            .get(i)
+                            .copied()
+                            .unwrap_or(map.hit_sounds[idx]);
+
                         new_objects.push(h);
-                        new_sounds.push(
-                            slider
-                                .node_sounds
-                                .get(i)
-                                .copied()
-                                .unwrap_or(map.hit_sounds[idx]),
-                        );
+                        new_sounds.push(sound);
 
                         if params.tick_spacing.eq(0.0) {
                             break;
