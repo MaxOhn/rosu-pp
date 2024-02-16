@@ -67,9 +67,7 @@ where
     super::swap(keys, mid, hi - 1);
     let mut left = lo;
     let mut right = hi - 1;
-
-    let mut pivot_idx = right;
-    let mut next_left = true;
+    let pivot_idx = right;
 
     while left < right {
         while {
@@ -89,14 +87,6 @@ where
         }
 
         super::swap(keys, left, right);
-
-        if next_left {
-            pivot_idx = left;
-        } else {
-            pivot_idx = right;
-        }
-
-        next_left = !next_left;
     }
 
     super::swap(keys, left, hi - 1);
@@ -109,14 +99,14 @@ where
     F: Fn(&T, &T) -> Ordering,
 {
     for i in lo..hi {
-        let target = &keys[i + 1];
+        let t = &keys[i + 1];
 
-        let smaller_idx = keys[lo..=i]
+        let shift = keys[lo..=i]
             .iter()
-            .rposition(|curr| cmp(target, curr).is_ge());
+            .rev()
+            .take_while(|curr| cmp(t, curr).is_lt())
+            .count();
 
-        if let Some(idx) = smaller_idx {
-            keys[lo + idx + 1..=i + 1].rotate_right(1);
-        }
+        keys[i + 1 - shift..=i + 1].rotate_right(1);
     }
 }
