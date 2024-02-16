@@ -5,7 +5,7 @@ use rosu_map::{
     LATEST_FORMAT_VERSION,
 };
 
-use crate::{Performance, Difficulty};
+use crate::{Difficulty, Performance};
 
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
@@ -183,29 +183,3 @@ impl Default for Beatmap {
         }
     }
 }
-
-macro_rules! define_beat_len_fn {
-    ( $fn_name:ident, $clamp:literal) => {
-        #[allow(unused)]
-        pub(crate) fn $fn_name(map: &Beatmap, beat_len: f64, time: f64) -> f64 {
-            let slider_velocity = map
-                .difficulty_point_at(time)
-                .map_or(DifficultyPoint::DEFAULT_SLIDER_VELOCITY, |point| {
-                    point.slider_velocity
-                });
-
-            let slider_velocity_as_beat_len = -100.0 / slider_velocity;
-
-            let bpm_mult = if slider_velocity_as_beat_len < 0.0 {
-                f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, $clamp)) / 100.0
-            } else {
-                1.0
-            };
-
-            beat_len * bpm_mult
-        }
-    };
-}
-
-define_beat_len_fn!(get_precision_adjusted_beat_len_taiko_mania, 10_000.0);
-define_beat_len_fn!(get_precision_adjusted_beat_len_osu_catch, 1000.0);

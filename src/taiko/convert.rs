@@ -7,8 +7,8 @@ use rosu_map::{
 
 use crate::{
     model::{
-        beatmap::{get_precision_adjusted_beat_len_taiko_mania, Beatmap, Converted},
-        control_point::TimingPoint,
+        beatmap::{Beatmap, Converted},
+        control_point::{DifficultyPoint, TimingPoint},
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
         mode::ConvertStatus,
     },
@@ -36,6 +36,8 @@ pub fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
 }
 
 fn convert(map: &mut Beatmap) {
+    map.slider_multiplier *= f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER);
+
     let mut new_objects = Vec::new();
     let mut new_sounds = Vec::new();
 
@@ -131,12 +133,16 @@ fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<
         .timing_point_at(*start_time)
         .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
 
-    let mut beat_len =
-        get_precision_adjusted_beat_len_taiko_mania(map, timing_beat_len, *start_time);
+    let bpm_multiplier = map
+        .difficulty_point_at(*start_time)
+        .map_or(DifficultyPoint::DEFAULT_BPM_MULTIPLIER, |point| {
+            point.bpm_multiplier
+        });
 
-    let slider_scoring_point_dist = f64::from(OSU_BASE_SCORING_DIST)
-        * (map.slider_multiplier * f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER))
-        / map.slider_tick_rate;
+    let mut beat_len = timing_beat_len * bpm_multiplier;
+
+    let slider_scoring_point_dist =
+        f64::from(OSU_BASE_SCORING_DIST) * map.slider_multiplier / map.slider_tick_rate;
 
     // * The velocity and duration of the taiko hit object - calculated as the velocity of a drum roll.
     let taiko_vel = slider_scoring_point_dist * map.slider_tick_rate;

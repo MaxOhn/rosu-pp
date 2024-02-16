@@ -6,8 +6,8 @@ use crate::{
         object::ManiaObject,
     },
     model::{
-        beatmap::{get_precision_adjusted_beat_len_taiko_mania, Beatmap},
-        control_point::{EffectPoint, TimingPoint},
+        beatmap::Beatmap,
+        control_point::{DifficultyPoint, EffectPoint, TimingPoint},
         hit_object::HitObject,
     },
     util::{float_ext::FloatExt, random::Random},
@@ -40,9 +40,15 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         curve: &BorrowedCurve<'_>,
         node_sounds: &'h [HitSoundType],
     ) -> Self {
-        let beat_len = orig
+        let timing_beat_len = orig
             .timing_point_at(hit_object.start_time)
             .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
+
+        let bpm_multiplier = orig
+            .difficulty_point_at(hit_object.start_time)
+            .map_or(DifficultyPoint::DEFAULT_BPM_MULTIPLIER, |point| {
+                point.bpm_multiplier
+            });
 
         let kiai = orig
             .effect_point_at(hit_object.start_time)
@@ -54,8 +60,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
             PatternType::LOW_PROBABILITY
         };
 
-        let beat_len =
-            get_precision_adjusted_beat_len_taiko_mania(orig, beat_len, hit_object.start_time);
+        let beat_len = timing_beat_len * bpm_multiplier;
 
         let span_count = (repeats + 1) as i32;
         let start_time = hit_object.start_time.round_even() as i32;
