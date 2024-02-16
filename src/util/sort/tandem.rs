@@ -107,18 +107,33 @@ impl TandemSorter {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use super::TandemSorter;
 
-    #[test]
-    fn sort() {
-        let mut base = vec![9, 7, 8, 1, 4, 3, 5, 2];
-        let mut other = "hello World".chars().collect::<Vec<_>>();
-        let mut sorter = TandemSorter::new_stable(&base, u8::cmp);
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10_000))]
 
-        sorter.sort(&mut base);
-        assert_eq!(base, vec![1, 2, 3, 4, 5, 7, 8, 9]);
+        #[test]
+        fn sort(mut actual in prop::collection::vec(0_u8..100, 0..100)) {
+            let mut expected = actual.clone();
+            expected.sort_unstable();
 
-        sorter.sort(&mut other);
-        assert_eq!(other.iter().collect::<String>(), "lo oWelhrld");
+            let mut sorter = TandemSorter::new_unstable(&actual, u8::cmp);
+            sorter.sort(&mut actual);
+
+            assert_eq!(actual, expected);
+        }
+
+        #[test]
+        fn unsort(mut actual in prop::collection::vec(0_u8..100, 0..100)) {
+            let expected = actual.clone();
+
+            let mut sorter = TandemSorter::new_unstable(&actual, u8::cmp);
+            sorter.sort(&mut actual);
+            sorter.unsort(&mut actual);
+
+            assert_eq!(actual, expected);
+        }
     }
 }
