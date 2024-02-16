@@ -78,7 +78,7 @@ impl Peaks {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
-        peaks.sort_by(f64::total_cmp);
+        peaks.sort_by(|a, b| b.total_cmp(a));
 
         for strain in peaks {
             difficulty += strain * weight;
