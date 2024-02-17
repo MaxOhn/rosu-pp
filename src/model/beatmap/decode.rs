@@ -2,7 +2,7 @@ use std::{cmp, slice};
 
 use rosu_map::{
     section::{
-        difficulty::{Difficulty, DifficultyState, ParseDifficultyError},
+        difficulty::{Difficulty, DifficultyKey, ParseDifficultyError},
         events::{BreakPeriod, EventType, ParseEventTypeError},
         general::{GameMode, GeneralKey, ParseGameModeError},
         hit_objects::{
@@ -32,7 +32,8 @@ pub struct BeatmapState {
     version: i32,
     stack_leniency: f32,
     mode: GameMode,
-    difficulty: DifficultyState,
+    has_approach_rate: bool,
+    difficulty: Difficulty,
     breaks: Vec<BreakPeriod>,
     timing_points: Vec<TimingPoint>,
     difficulty_points: Vec<DifficultyPoint>,
@@ -248,7 +249,8 @@ impl DecodeState for BeatmapState {
             version,
             stack_leniency: DEFAULT_SLIDER_LENIENCY,
             mode: GameMode::Osu,
-            difficulty: DifficultyState::create(version),
+            has_approach_rate: false,
+            difficulty: Difficulty::default(),
             breaks: Vec::new(),
             timing_points: Vec::with_capacity(1),
             difficulty_points: Vec::new(),
@@ -280,7 +282,7 @@ impl From<BeatmapState> for Beatmap {
             approach_rate,
             slider_multiplier,
             slider_tick_rate,
-        } = state.difficulty.into();
+        } = state.difficulty;
 
         let mut sorter = sort::TandemSorter::new_stable(&state.hit_objects, |a, b| {
             a.start_time.total_cmp(&b.start_time)
@@ -381,7 +383,31 @@ impl DecodeBeatmap for Beatmap {
     }
 
     fn parse_difficulty(state: &mut Self::State, line: &str) -> Result<(), Self::Error> {
-        Difficulty::parse_difficulty(&mut state.difficulty, line).map_err(ParseBeatmapError::from)
+        let Ok(KeyValue { key, value }) = KeyValue::parse(line.trim_comment()) else {
+            return Ok(());
+        };
+
+        match key {
+            DifficultyKey::HPDrainRate => state.difficulty.hp_drain_rate = value.parse_num()?,
+            DifficultyKey::CircleSize => state.difficulty.circle_size = value.parse_num()?,
+            DifficultyKey::OverallDifficulty => {
+                state.difficulty.overall_difficulty = value.parse_num()?;
+
+                if !state.has_approach_rate {
+                    state.difficulty.approach_rate = state.difficulty.overall_difficulty;
+                }
+            }
+            DifficultyKey::ApproachRate => {
+                state.difficulty.approach_rate = value.parse_num()?;
+                state.has_approach_rate = true;
+            }
+            DifficultyKey::SliderMultiplier => {
+                state.difficulty.slider_multiplier = f64::parse(value)?;
+            }
+            DifficultyKey::SliderTickRate => state.difficulty.slider_tick_rate = f64::parse(value)?,
+        }
+
+        Ok(())
     }
 
     fn parse_events(state: &mut Self::State, line: &str) -> Result<(), Self::Error> {
