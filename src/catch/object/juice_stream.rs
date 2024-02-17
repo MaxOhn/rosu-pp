@@ -134,7 +134,7 @@ impl<'a> JuiceStream<'a> {
         }
     }
 
-    fn clamp_to_playfield(value: f32) -> f32 {
+    pub fn clamp_to_playfield(value: f32) -> f32 {
         value.clamp(0.0, PLAYFIELD_WIDTH)
     }
 }
