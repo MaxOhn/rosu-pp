@@ -208,8 +208,9 @@ impl FlashlightEvaluator {
             let pixel_travel_dist = f64::from(slider.lazy_travel_dist) / self.scaling_factor;
 
             // * Reward sliders based on velocity.
-            slider_bonus =
-                ((pixel_travel_dist / osu_curr.travel_time - Self::MIN_VELOCITY).max(0.0)).sqrt();
+            slider_bonus = ((pixel_travel_dist / osu_curr.travel_time - Self::MIN_VELOCITY)
+                .max(0.0))
+            .powf(0.5);
 
             // * Longer sliders require more memorisation.
             slider_bonus *= pixel_travel_dist;
