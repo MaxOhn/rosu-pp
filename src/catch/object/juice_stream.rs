@@ -50,13 +50,7 @@ impl<'a> JuiceStream<'a> {
         let tick_dist_factor =
             JuiceStream::BASE_SCORING_DIST * slider_multiplier / slider_tick_rate;
 
-        let tick_dist_multiplier = if converted.map.version < 8 {
-            1.0
-        } else {
-            slider_velocity
-        };
-
-        let tick_dist = tick_dist_factor * tick_dist_multiplier;
+        let tick_dist = tick_dist_factor * slider_velocity;
 
         let span_count = slider.span_count() as f64;
         let duration = span_count * path.dist() / velocity;
