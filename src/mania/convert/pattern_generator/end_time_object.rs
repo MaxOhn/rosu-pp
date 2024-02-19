@@ -80,9 +80,6 @@ impl<'h> EndTimeObjectPatternGenerator<'h> {
         &mut self,
         mut initial_column: u8,
         lower: Option<i32>,
-        // upper: Option<i32>,
-        // next_column: Option<&dyn Fn(u8) -> u8>,
-        // validation: Option<&dyn Fn(i32) -> bool>,
         patterns: &[&Pattern],
     ) -> u8 {
         let lower = lower.unwrap_or_else(|| self.inner.random_start());

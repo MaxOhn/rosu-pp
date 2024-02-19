@@ -3,9 +3,9 @@ pub struct BananaShower {
 }
 
 impl BananaShower {
-    pub fn new(start_time: f64, end_time: f64) -> Self {
-        let duration = end_time - start_time;
+    pub fn new(start_time: f64, duration: f64) -> Self {
         let mut spacing = duration;
+        let end_time = start_time + duration;
 
         while spacing > 100.0 {
             spacing /= 2.0;

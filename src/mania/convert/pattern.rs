@@ -72,7 +72,7 @@ impl Pattern {
                 pos,
                 start_time: generator.inner.hit_object.start_time,
                 kind: HitObjectKind::Hold(HoldNote {
-                    end_time: generator.end_time,
+                    duration: generator.end_time - generator.inner.hit_object.start_time,
                 }),
             }
         } else {
@@ -102,11 +102,13 @@ impl Pattern {
                 kind: HitObjectKind::Circle,
             }
         } else {
+            let start_time = f64::from(start_time);
+
             HitObject {
                 pos,
-                start_time: f64::from(start_time),
+                start_time,
                 kind: HitObjectKind::Hold(HoldNote {
-                    end_time: f64::from(end_time),
+                    duration: f64::from(end_time) - start_time,
                 }),
             }
         };
@@ -131,11 +133,13 @@ impl Pattern {
                 kind: HitObjectKind::Circle,
             }
         } else {
+            let start_time = f64::from(start_time);
+
             HitObject {
                 pos,
-                start_time: f64::from(start_time),
+                start_time,
                 kind: HitObjectKind::Hold(HoldNote {
-                    end_time: f64::from(end_time),
+                    duration: f64::from(end_time) - start_time,
                 }),
             }
         };

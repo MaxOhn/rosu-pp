@@ -39,8 +39,8 @@ impl OsuObject {
                 OsuObjectKind::Slider(OsuSlider::new(h, slider, converted, curve_bufs, ticks_buf))
             }
             HitObjectKind::Spinner(spinner) => OsuObjectKind::Spinner(spinner),
-            HitObjectKind::Hold(HoldNote { end_time }) => {
-                OsuObjectKind::Spinner(Spinner { end_time })
+            HitObjectKind::Hold(HoldNote { duration }) => {
+                OsuObjectKind::Spinner(Spinner { duration })
             }
         };
 
@@ -95,11 +95,11 @@ impl OsuObject {
         }
     }
 
-    pub const fn end_time(&self) -> f64 {
+    pub fn end_time(&self) -> f64 {
         match self.kind {
             OsuObjectKind::Circle => self.start_time,
             OsuObjectKind::Slider(ref slider) => slider.end_time,
-            OsuObjectKind::Spinner(ref spinner) => spinner.end_time,
+            OsuObjectKind::Spinner(ref spinner) => self.start_time + spinner.duration,
         }
     }
 

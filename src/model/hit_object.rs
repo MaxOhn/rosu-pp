@@ -35,11 +35,11 @@ impl HitObject {
     /// The end time of the object.
     ///
     /// Note that this will not return the correct value for sliders.
-    pub(crate) const fn end_time(&self) -> f64 {
+    pub(crate) fn end_time(&self) -> f64 {
         match &self.kind {
             HitObjectKind::Circle | HitObjectKind::Slider { .. } => self.start_time,
-            HitObjectKind::Spinner(Spinner { end_time })
-            | HitObjectKind::Hold(HoldNote { end_time }) => *end_time,
+            HitObjectKind::Spinner(Spinner { duration })
+            | HitObjectKind::Hold(HoldNote { duration }) => self.start_time + *duration,
         }
     }
 }
@@ -84,11 +84,11 @@ impl Slider {
 /// A spinner.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Spinner {
-    pub end_time: f64,
+    pub duration: f64,
 }
 
 /// A hold note.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct HoldNote {
-    pub end_time: f64,
+    pub duration: f64,
 }

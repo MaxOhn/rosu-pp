@@ -54,13 +54,13 @@ impl ManiaObject {
                     column,
                 }
             }
-            HitObjectKind::Spinner(Spinner { end_time })
-            | HitObjectKind::Hold(HoldNote { end_time }) => {
-                params.max_combo += ((end_time - h.start_time) / 100.0) as u32;
+            HitObjectKind::Spinner(Spinner { duration })
+            | HitObjectKind::Hold(HoldNote { duration }) => {
+                params.max_combo += (duration / 100.0) as u32;
 
                 Self {
                     start_time: h.start_time,
-                    end_time,
+                    end_time: h.start_time + duration,
                     column,
                 }
             }

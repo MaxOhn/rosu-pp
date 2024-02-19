@@ -107,9 +107,9 @@ fn convert_object<'a>(
 
             ObjectIterState::JuiceStream(stream)
         }
-        HitObjectKind::Spinner(Spinner { end_time })
-        | HitObjectKind::Hold(HoldNote { end_time }) => {
-            ObjectIterState::BananaShower(BananaShower::new(h.start_time, end_time))
+        HitObjectKind::Spinner(Spinner { duration })
+        | HitObjectKind::Hold(HoldNote { duration }) => {
+            ObjectIterState::BananaShower(BananaShower::new(h.start_time, duration))
         }
     };
 

@@ -93,9 +93,8 @@ fn convert(map: &mut Beatmap) {
                     }
                 }
             }
-            // Pathological case; shouldn't realistically happen
-            HitObjectKind::Hold(HoldNote { end_time }) => {
-                map.hit_objects[idx].kind = HitObjectKind::Spinner(Spinner { end_time });
+            HitObjectKind::Hold(HoldNote { duration }) => {
+                map.hit_objects[idx].kind = HitObjectKind::Spinner(Spinner { duration });
             }
         }
 

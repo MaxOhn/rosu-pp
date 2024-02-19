@@ -132,8 +132,10 @@ fn convert(map: &mut Beatmap) {
                     last_values.pattern = new_pattern;
                 }
             }
-            HitObjectKind::Spinner(Spinner { end_time })
-            | HitObjectKind::Hold(HoldNote { end_time }) => {
+            HitObjectKind::Spinner(Spinner { duration })
+            | HitObjectKind::Hold(HoldNote { duration }) => {
+                let end_time = obj.start_time + duration;
+
                 let mut gen = EndTimeObjectPatternGenerator::new(
                     &mut random,
                     obj,

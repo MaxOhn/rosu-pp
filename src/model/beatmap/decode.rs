@@ -615,7 +615,9 @@ impl DecodeBeatmap for Beatmap {
 
             parse_custom_sound(split.next())?;
 
-            HitObjectKind::Spinner(Spinner { end_time })
+            let duration = (end_time - start_time).max(0.0);
+
+            HitObjectKind::Spinner(Spinner { duration })
         } else if hit_object_type.has_flag(HitObjectType::HOLD) {
             let end_time = if let Some(s) = split.next().filter(|s| !s.is_empty()) {
                 let (end_time, bank_info) = s
@@ -629,7 +631,9 @@ impl DecodeBeatmap for Beatmap {
                 start_time
             };
 
-            HitObjectKind::Hold(HoldNote { end_time })
+            let duration = end_time - start_time;
+
+            HitObjectKind::Hold(HoldNote { duration })
         } else {
             return Err(ParseBeatmapError::UnknownHitObjectType);
         };
