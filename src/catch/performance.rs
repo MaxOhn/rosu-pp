@@ -480,11 +480,11 @@ impl CatchPerformanceInner {
         }
 
         // Longer maps are worth more
-        let len_bonus = 0.95
-            + 0.3 * (f64::from(combo_hits) / 2500.0).min(1.0)
-            + f64::from(u8::from(combo_hits > 2500))
-                * (f64::from(combo_hits) / 2500.0).log10()
-                * 0.475;
+        let mut len_bonus = 0.95 + 0.3 * (f64::from(combo_hits) / 2500.0).min(1.0);
+
+        if combo_hits > 2500 {
+            len_bonus += (f64::from(combo_hits) / 2500.0).log10() * 0.475;
+        }
 
         pp *= len_bonus;
 
@@ -493,8 +493,7 @@ impl CatchPerformanceInner {
 
         // Combo scaling
         if self.state.max_combo > 0 {
-            pp *= (f64::from(self.state.max_combo) / f64::from(max_combo))
-                .powf(0.8)
+            pp *= (f64::from(self.state.max_combo).powf(0.8) / f64::from(max_combo).powf(0.8))
                 .min(1.0);
         }
 
