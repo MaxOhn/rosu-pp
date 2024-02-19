@@ -99,12 +99,10 @@ fn convert_object<'a>(
     attrs: &mut CatchDifficultyAttributesBuilder,
     bufs: &'a mut JuiceStreamBufs,
 ) -> ObjectIter<'a> {
-    let mut x = h.pos.x;
-
     let state = match h.kind {
         HitObjectKind::Circle => ObjectIterState::Fruit(Some(Fruit::new(attrs))),
         HitObjectKind::Slider(ref slider) => {
-            x = JuiceStream::clamp_to_playfield(x);
+            let x = JuiceStream::clamp_to_playfield(h.pos.x);
             let stream = JuiceStream::new(x, h.start_time, slider, converted, attrs, bufs);
 
             ObjectIterState::JuiceStream(stream)
@@ -116,7 +114,7 @@ fn convert_object<'a>(
     };
 
     ObjectIter {
-        x,
+        x: h.pos.x,
         start_time: h.start_time,
         state,
     }
