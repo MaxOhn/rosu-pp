@@ -75,14 +75,18 @@ impl DifficultyValues {
         let mut diff_objects = Vec::with_capacity(n_diff_objects);
         diff_objects.extend(diff_objects_iter);
 
-        let mut strain = Skill::new(Strain::new(total_columns as usize), &diff_objects);
+        let mut strain = Strain::new(total_columns as usize);
 
-        for curr in diff_objects.iter() {
-            strain.process(curr);
+        {
+            let mut strain = Skill::new(&mut strain, &diff_objects);
+
+            for curr in diff_objects.iter() {
+                strain.process(curr);
+            }
         }
 
         Self {
-            strain: strain.inner,
+            strain,
             max_combo: params.into_max_combo(),
         }
     }

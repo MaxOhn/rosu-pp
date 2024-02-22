@@ -36,7 +36,18 @@ impl Flashlight {
     }
 
     pub fn difficulty_value(self) -> f64 {
-        self.get_curr_strain_peaks().into_iter().sum::<f64>() * OsuStrainSkill::DIFFICULTY_MULTIPLER
+        Self::static_difficulty_value(self.inner)
+    }
+
+    /// Use [`difficulty_value`] instead whenever possible because
+    /// [`as_difficulty_value`] clones internally.
+    pub fn as_difficulty_value(&self) -> f64 {
+        Self::static_difficulty_value(self.inner.clone())
+    }
+
+    fn static_difficulty_value(skill: StrainSkill) -> f64 {
+        skill.get_curr_strain_peaks().into_iter().sum::<f64>()
+            * OsuStrainSkill::DIFFICULTY_MULTIPLER
     }
 }
 
@@ -53,7 +64,7 @@ impl<'a> Skill<'a, Flashlight> {
         self.inner.curr_strain * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
     }
 
-    const fn curr_section_peak(&self) -> f64 {
+    fn curr_section_peak(&self) -> f64 {
         self.inner.inner.curr_section_peak
     }
 
@@ -61,7 +72,7 @@ impl<'a> Skill<'a, Flashlight> {
         &mut self.inner.inner.curr_section_peak
     }
 
-    const fn curr_section_end(&self) -> f64 {
+    fn curr_section_end(&self) -> f64 {
         self.inner.inner.curr_section_end
     }
 

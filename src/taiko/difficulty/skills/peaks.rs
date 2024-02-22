@@ -89,12 +89,6 @@ impl Peaks {
     }
 }
 
-impl Default for Peaks {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 pub struct PeaksSkill<'a> {
     pub color: Skill<'a, Color>,
     pub rhythm: Skill<'a, Rhythm>,
@@ -102,11 +96,11 @@ pub struct PeaksSkill<'a> {
 }
 
 impl<'a> PeaksSkill<'a> {
-    pub fn new(diff_objects: &'a TaikoDifficultyObjects) -> Self {
+    pub fn new(peaks: &'a mut Peaks, diff_objects: &'a TaikoDifficultyObjects) -> Self {
         Self {
-            color: Skill::new(Color::default(), diff_objects),
-            rhythm: Skill::new(Rhythm::default(), diff_objects),
-            stamina: Skill::new(Stamina::default(), diff_objects),
+            color: Skill::new(&mut peaks.color, diff_objects),
+            rhythm: Skill::new(&mut peaks.rhythm, diff_objects),
+            stamina: Skill::new(&mut peaks.stamina, diff_objects),
         }
     }
 
@@ -114,13 +108,5 @@ impl<'a> PeaksSkill<'a> {
         self.rhythm.process(curr);
         self.color.process(curr);
         self.stamina.process(curr);
-    }
-
-    pub fn into_inner(self) -> Peaks {
-        Peaks {
-            color: self.color.inner,
-            rhythm: self.rhythm.inner,
-            stamina: self.stamina.inner,
-        }
     }
 }

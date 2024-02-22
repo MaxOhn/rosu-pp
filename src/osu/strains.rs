@@ -1,6 +1,9 @@
 use crate::any::ModeDifficulty;
 
-use super::{convert::OsuBeatmap, difficulty::DifficultyValues};
+use super::{
+    convert::OsuBeatmap,
+    difficulty::{skills::OsuSkills, DifficultyValues},
+};
 
 /// The result of calculating the strains on a osu! map.
 ///
@@ -24,10 +27,13 @@ impl OsuStrains {
 
 pub fn strains(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> OsuStrains {
     let DifficultyValues {
-        aim,
-        aim_no_sliders,
-        speed,
-        flashlight,
+        skills:
+            OsuSkills {
+                aim,
+                aim_no_sliders,
+                speed,
+                flashlight,
+            },
         attrs: _,
     } = DifficultyValues::calculate(difficulty, converted);
 

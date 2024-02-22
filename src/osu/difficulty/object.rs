@@ -1,3 +1,5 @@
+use std::pin::Pin;
+
 use rosu_map::util::Pos;
 
 use crate::{
@@ -148,14 +150,20 @@ impl<'a> OsuDifficultyObject<'a> {
         }
     }
 
-    pub fn compute_slider_cursor_pos(h: &mut OsuObject, radius: f64) -> &OsuObject {
+    /// The [`Pin<&mut OsuObject>`](std::pin::Pin) denotes that the object will
+    /// be mutated but not moved.
+    pub fn compute_slider_cursor_pos(
+        mut h: Pin<&mut OsuObject>,
+        radius: f64,
+    ) -> Pin<&mut OsuObject> {
+        let pos = h.pos;
         let stack_offset = h.stack_offset;
 
         let OsuObjectKind::Slider(ref mut slider) = h.kind else {
             return h;
         };
 
-        let mut curr_cursor_pos = h.pos + stack_offset;
+        let mut curr_cursor_pos = pos + stack_offset;
         let scaling_factor = f64::from(OsuDifficultyObject::NORMALIZED_RADIUS) / radius;
 
         for (curr_movement_obj, i) in slider.nested_objects.iter().zip(1..) {

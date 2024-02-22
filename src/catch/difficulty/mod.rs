@@ -57,7 +57,7 @@ impl DifficultyValues {
         let mut attrs = CatchDifficultyAttributesBuilder::new(attrs, take);
 
         let hr = difficulty.get_mods().hr();
-        let movement = Movement::new(clock_rate);
+        let mut movement = Movement::new(clock_rate);
 
         let palpable_objects = convert_objects(converted, &mut attrs, hr, map_attrs.cs as f32);
         let mut palpable_objects_iter = palpable_objects.iter().take(take);
@@ -90,14 +90,16 @@ impl DifficultyValues {
             })
             .collect();
 
-        let mut movement = Skill::new(movement, &diff_objects);
+        {
+            let mut movement = Skill::new(&mut movement, &diff_objects);
 
-        for curr in diff_objects.iter() {
-            movement.process(curr);
+            for curr in diff_objects.iter() {
+                movement.process(curr);
+            }
         }
 
         Self {
-            movement: movement.inner,
+            movement,
             attrs: attrs.into_inner(),
         }
     }

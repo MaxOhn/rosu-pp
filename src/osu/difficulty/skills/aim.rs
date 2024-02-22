@@ -14,6 +14,7 @@ use super::strain::OsuStrainSkill;
 const SKILL_MULTIPLIER: f64 = 23.55;
 const STRAIN_DECAY_BASE: f64 = 0.15;
 
+#[derive(Clone)]
 pub struct Aim {
     with_sliders: bool,
     curr_strain: f64,
@@ -34,7 +35,17 @@ impl Aim {
     }
 
     pub fn difficulty_value(self) -> f64 {
-        self.inner.difficulty_value(
+        Self::static_difficulty_value(self.inner)
+    }
+
+    /// Use [`difficulty_value`] instead whenever possible because
+    /// [`as_difficulty_value`] clones internally.
+    pub fn as_difficulty_value(&self) -> f64 {
+        Self::static_difficulty_value(self.inner.clone())
+    }
+
+    fn static_difficulty_value(skill: OsuStrainSkill) -> f64 {
+        skill.difficulty_value(
             OsuStrainSkill::REDUCED_SECTION_COUNT,
             OsuStrainSkill::REDUCED_STRAIN_BASELINE,
             OsuStrainSkill::DECAY_WEIGHT,
@@ -56,7 +67,7 @@ impl<'a> Skill<'a, Aim> {
         self.inner.curr_strain * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
     }
 
-    const fn curr_section_peak(&self) -> f64 {
+    fn curr_section_peak(&self) -> f64 {
         self.inner.inner.inner.curr_section_peak
     }
 
@@ -64,7 +75,7 @@ impl<'a> Skill<'a, Aim> {
         &mut self.inner.inner.inner.curr_section_peak
     }
 
-    const fn curr_section_end(&self) -> f64 {
+    fn curr_section_end(&self) -> f64 {
         self.inner.inner.inner.curr_section_end
     }
 

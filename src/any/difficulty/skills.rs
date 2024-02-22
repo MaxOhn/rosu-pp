@@ -5,12 +5,12 @@ pub fn strain_decay(ms: f64, strain_decay_base: f64) -> f64 {
 /// Wrapper around a difficulty skill that carries a list of all difficulty
 /// objects.
 pub struct Skill<'a, S: ISkill> {
-    pub inner: S,
+    pub inner: &'a mut S,
     pub diff_objects: &'a S::DifficultyObjects<'a>,
 }
 
 impl<'a, S: ISkill> Skill<'a, S> {
-    pub const fn new(skill: S, diff_objects: &'a S::DifficultyObjects<'a>) -> Self {
+    pub fn new(skill: &'a mut S, diff_objects: &'a S::DifficultyObjects<'a>) -> Self {
         Self {
             inner: skill,
             diff_objects,

@@ -13,7 +13,8 @@ use crate::{
 pub use self::{
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
     convert::OsuBeatmap,
-    performance::OsuPerformance,
+    difficulty::gradual::OsuGradualDifficulty,
+    performance::{gradual::OsuGradualPerformance, OsuPerformance},
     score_state::OsuScoreState,
     strains::OsuStrains,
 };

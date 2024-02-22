@@ -130,17 +130,21 @@ impl DifficultyValues {
 
         ColorDifficultyPreprocessor::process_and_assign(&diff_objects);
 
-        let mut peaks = PeaksSkill::new(&diff_objects);
-
         // The first two hit objects have no difficulty object
         n_diff_objects -= 2;
 
-        for hit_object in diff_objects.iter().take(n_diff_objects) {
-            peaks.process(&hit_object.borrow());
+        let mut peaks = Peaks::new();
+
+        {
+            let mut peaks = PeaksSkill::new(&mut peaks, &diff_objects);
+
+            for hit_object in diff_objects.iter().take(n_diff_objects) {
+                peaks.process(&hit_object.borrow());
+            }
         }
 
         Self {
-            peaks: peaks.into_inner(),
+            peaks,
             max_combo: max_combo as u32,
         }
     }

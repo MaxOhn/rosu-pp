@@ -32,12 +32,12 @@ pub fn convert_objects(
     time_preempt: f64,
     mut take: usize,
     attrs: &mut OsuDifficultyAttributes,
-) -> Vec<OsuObject> {
+) -> Box<[OsuObject]> {
     let mut curve_bufs = CurveBuffers::default();
     // mean=5.16 | median=4
     let mut ticks_buf = Vec::new();
 
-    let mut osu_objects: Vec<_> = converted
+    let mut osu_objects: Box<[_]> = converted
         .map
         .hit_objects
         .iter()

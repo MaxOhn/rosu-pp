@@ -1,6 +1,6 @@
 use crate::any::difficulty::skills::StrainSkill;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct OsuStrainSkill {
     pub inner: StrainSkill,
 }
