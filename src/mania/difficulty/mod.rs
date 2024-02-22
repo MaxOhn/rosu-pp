@@ -19,7 +19,10 @@ pub fn difficulty(
     difficulty: &ModeDifficulty,
     converted: &ManiaBeatmap<'_>,
 ) -> ManiaDifficultyAttributes {
-    let n_objects = converted.map.hit_objects.len() as u32;
+    let n_objects = difficulty
+        .get_passed_objects()
+        .min(converted.map.hit_objects.len()) as u32;
+
     let values = DifficultyValues::calculate(difficulty, converted);
 
     let hit_window = converted
