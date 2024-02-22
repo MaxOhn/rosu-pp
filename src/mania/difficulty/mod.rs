@@ -9,6 +9,7 @@ use crate::{
 
 use super::{attributes::ManiaDifficultyAttributes, convert::ManiaBeatmap};
 
+pub mod gradual;
 mod object;
 mod skills;
 
@@ -49,31 +50,14 @@ impl DifficultyValues {
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(converted.map.as_ref());
 
-        let mut mania_objects = converted
+        let mania_objects = converted
             .map
             .hit_objects
             .iter()
             .map(|h| ManiaObject::new(h, total_columns, &mut params))
             .take(take);
 
-        let Some(first) = mania_objects.next() else {
-            return DifficultyValues {
-                strain: Strain::new(total_columns as usize),
-                max_combo: 0,
-            };
-        };
-
-        let n_diff_objects = mania_objects.len();
-
-        let diff_objects_iter = mania_objects.enumerate().scan(first, |last, (i, base)| {
-            let diff_object = ManiaDifficultyObject::new(&base, last, clock_rate, i);
-            *last = base;
-
-            Some(diff_object)
-        });
-
-        let mut diff_objects = Vec::with_capacity(n_diff_objects);
-        diff_objects.extend(diff_objects_iter);
+        let diff_objects = Self::create_difficulty_objects(clock_rate, mania_objects);
 
         let mut strain = Strain::new(total_columns as usize);
 
@@ -89,5 +73,30 @@ impl DifficultyValues {
             strain,
             max_combo: params.into_max_combo(),
         }
+    }
+
+    pub fn create_difficulty_objects(
+        clock_rate: f64,
+        mut mania_objects: impl ExactSizeIterator<Item = ManiaObject>,
+    ) -> Box<[ManiaDifficultyObject]> {
+        let Some(first) = mania_objects.next() else {
+            return Box::default();
+        };
+
+        let n_diff_objects = mania_objects.len();
+
+        let diff_objects_iter = mania_objects.enumerate().scan(first, |last, (i, base)| {
+            let diff_object = ManiaDifficultyObject::new(&base, last, clock_rate, i);
+            *last = base;
+
+            Some(diff_object)
+        });
+
+        let mut diff_objects = Vec::with_capacity(n_diff_objects);
+        diff_objects.extend(diff_objects_iter);
+
+        debug_assert_eq!(n_diff_objects, diff_objects.len());
+
+        diff_objects.into_boxed_slice()
     }
 }

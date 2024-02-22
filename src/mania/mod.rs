@@ -11,7 +11,8 @@ use crate::{
 pub use self::{
     attributes::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
     convert::ManiaBeatmap,
-    performance::ManiaPerformance,
+    difficulty::gradual::ManiaGradualDifficulty,
+    performance::{gradual::ManiaGradualPerformance, ManiaPerformance},
     score_state::ManiaScoreState,
     strains::ManiaStrains,
 };

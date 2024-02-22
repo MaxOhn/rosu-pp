@@ -14,6 +14,8 @@ use super::{
     Mania,
 };
 
+pub mod gradual;
+
 /// Performance calculator on osu!mania maps.
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]
