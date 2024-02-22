@@ -3,7 +3,7 @@ use crate::{
     ModeDifficulty,
 };
 
-use super::{OsuPerformance, OsuPerformanceAttributes, OsuScoreState};
+use super::{OsuPerformanceAttributes, OsuScoreState};
 
 /// Gradually calculate the performance attributes of an osu!standard map.
 ///
@@ -25,8 +25,7 @@ use super::{OsuPerformance, OsuPerformanceAttributes, OsuScoreState};
 ///
 /// let converted = Beatmap::from_path("./resources/2785319.osu")
 ///     .unwrap()
-///     .unchecked_into_converted::<Osu>()
-///     .unwrap();
+///     .unchecked_into_converted::<Osu>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
 /// let mut gradual_perf = OsuGradualPerformance::new(&difficulty, converted);
@@ -81,27 +80,16 @@ use super::{OsuPerformance, OsuPerformanceAttributes, OsuScoreState};
 /// [`next`]: OsuGradualPerformance::next
 /// [`nth`]: OsuGradualPerformance::nth
 #[derive(Debug)]
-pub struct OsuGradualPerformance<'map> {
+pub struct OsuGradualPerformance {
     difficulty: OsuGradualDifficulty,
-    performance: OsuPerformance<'map>,
 }
 
-impl<'map> OsuGradualPerformance<'map> {
+impl OsuGradualPerformance {
     /// Create a new gradual performance calculator for osu!standard maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: OsuBeatmap<'map>) -> Self {
-        let mods = difficulty.get_mods();
-        let clock_rate = difficulty.get_clock_rate();
-        let difficulty = OsuGradualDifficulty::new(difficulty, &converted);
+    pub fn new(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self {
+        let difficulty = OsuGradualDifficulty::new(difficulty, converted);
 
-        let performance = OsuPerformance::new(converted)
-            .mods(mods)
-            .clock_rate(clock_rate)
-            .passed_objects(0);
-
-        Self {
-            difficulty,
-            performance,
-        }
+        Self { difficulty }
     }
 
     /// Process the next hit object and calculate the performance attributes
@@ -122,13 +110,13 @@ impl<'map> OsuGradualPerformance<'map> {
     /// Note that the count is zero-indexed, so `n=0` will process 1 object,
     /// `n=1` will process 2, and so on.
     pub fn nth(&mut self, state: OsuScoreState, n: usize) -> Option<OsuPerformanceAttributes> {
-        let difficulty = self.difficulty.nth(n)?;
-
         let performance = self
-            .performance
-            .clone()
-            .attributes(difficulty)
+            .difficulty
+            .nth(n)?
+            .performance()
             .state(state)
+            .mods(self.difficulty.mods)
+            .clock_rate(self.difficulty.clock_rate)
             .passed_objects(self.difficulty.idx as u32)
             .calculate();
 
@@ -138,7 +126,10 @@ impl<'map> OsuGradualPerformance<'map> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{osu::Osu, Beatmap};
+    use crate::{
+        osu::{Osu, OsuPerformance},
+        Beatmap,
+    };
 
     use super::*;
 
@@ -149,12 +140,11 @@ mod tests {
             .unchecked_into_converted::<Osu>();
 
         let mods = 88; // HDHRDT
+        let difficulty = ModeDifficulty::new().mods(88);
 
-        let difficulty = ModeDifficulty::new().mods(mods);
-
-        let mut gradual = OsuGradualPerformance::new(&difficulty, converted.as_owned());
-        let mut gradual_2nd = OsuGradualPerformance::new(&difficulty, converted.as_owned());
-        let mut gradual_3rd = OsuGradualPerformance::new(&difficulty, converted.as_owned());
+        let mut gradual = OsuGradualPerformance::new(&difficulty, &converted);
+        let mut gradual_2nd = OsuGradualPerformance::new(&difficulty, &converted);
+        let mut gradual_3rd = OsuGradualPerformance::new(&difficulty, &converted);
 
         let mut state = OsuScoreState::default();
 

@@ -220,7 +220,7 @@ impl DifficultyValues {
     pub fn create_difficulty_objects<'a>(
         difficulty: &ModeDifficulty,
         scaling_factor: &ScalingFactor,
-        osu_objects: impl Iterator<Item = Pin<&'a mut OsuObject>>,
+        osu_objects: impl ExactSizeIterator<Item = Pin<&'a mut OsuObject>>,
     ) -> Vec<OsuDifficultyObject<'a>> {
         let take = difficulty.get_passed_objects();
         let clock_rate = difficulty.get_clock_rate();

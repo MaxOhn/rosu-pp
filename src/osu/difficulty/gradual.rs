@@ -39,8 +39,7 @@ use super::{
 ///
 /// let converted = Beatmap::from_path("./resources/2785319.osu")
 ///     .unwrap()
-///     .unchecked_into_converted::<Osu>()
-///     .unwrap();
+///     .unchecked_into_converted::<Osu>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
 /// let mut iter = OsuGradualDifficulty::new(&difficulty, &converted);
@@ -59,7 +58,8 @@ use super::{
 /// [`OsuGradualPerformance`]: crate::osu::OsuGradualPerformance
 pub struct OsuGradualDifficulty {
     pub(crate) idx: usize,
-    mods: u32,
+    pub(crate) mods: u32,
+    pub(crate) clock_rate: f64,
     attrs: OsuDifficultyAttributes,
     skills: OsuSkills,
     // Lifetimes actually depend on `osu_objects` so this type is
@@ -79,6 +79,7 @@ impl Debug for OsuGradualDifficulty {
         f.debug_struct("OsuGradualDifficulty")
             .field("idx", &self.idx)
             .field("mods", &self.mods)
+            .field("clock_rate", &self.clock_rate)
             .field("attrs", &self.attrs)
             .finish()
     }
@@ -88,6 +89,7 @@ impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
     pub fn new(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self {
         let mods = difficulty.get_mods();
+        let clock_rate = difficulty.get_clock_rate();
 
         let OsuDifficultySetup {
             scaling_factor,
@@ -128,6 +130,7 @@ impl OsuGradualDifficulty {
         Self {
             idx: 0,
             mods,
+            clock_rate,
             attrs,
             skills,
             diff_objects,
