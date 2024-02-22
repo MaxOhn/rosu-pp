@@ -79,7 +79,6 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 ///
 /// [`next`]: OsuGradualPerformance::next
 /// [`nth`]: OsuGradualPerformance::nth
-#[derive(Debug)]
 pub struct OsuGradualPerformance {
     difficulty: OsuGradualDifficulty,
 }

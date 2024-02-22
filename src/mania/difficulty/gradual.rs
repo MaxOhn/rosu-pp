@@ -1,5 +1,3 @@
-use std::fmt::{Debug, Formatter, Result as FmtResult};
-
 use crate::{
     any::difficulty::skills::Skill,
     mania::{object::ObjectParams, ManiaBeatmap},
@@ -52,25 +50,13 @@ use super::{
 /// [`ManiaGradualPerformance`]: crate::mania::ManiaGradualPerformance
 pub struct ManiaGradualDifficulty<'map> {
     pub(crate) idx: usize,
+    pub(crate) mods: u32,
+    pub(crate) clock_rate: f64,
     converted: ManiaBeatmap<'map>,
     strain: Strain,
     diff_objects: Box<[ManiaDifficultyObject]>,
     hit_window: f64,
     curr_combo: u32,
-    pub(crate) mods: u32,
-    pub(crate) clock_rate: f64,
-}
-
-impl Debug for ManiaGradualDifficulty<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("ManiaGradualDifficulty")
-            .field("idx", &self.idx)
-            .field("hit_windows", &self.hit_window)
-            .field("curr_combo", &self.curr_combo)
-            .field("mods", &self.mods)
-            .field("clock_rate", &self.clock_rate)
-            .finish()
-    }
 }
 
 impl<'map> ManiaGradualDifficulty<'map> {
@@ -114,13 +100,13 @@ impl<'map> ManiaGradualDifficulty<'map> {
 
         Self {
             idx: 0,
+            mods,
+            clock_rate,
             converted,
             strain,
             diff_objects,
             hit_window,
             curr_combo,
-            mods,
-            clock_rate,
         }
     }
 }
@@ -129,9 +115,10 @@ impl Iterator for ManiaGradualDifficulty<'_> {
     type Item = ManiaDifficultyAttributes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // The first difficulty object belongs to the second note since each difficulty
-        // object requires the current and the last note. Hence, if we're still on the first
-        // object, we don't have a difficulty object yet and just skip processing.
+        // The first difficulty object belongs to the second note since each
+        // difficulty object requires the current and the last note. Hence, if
+        // we're still on the first object, we don't have a difficulty object
+        // yet and just skip processing.
         if self.idx > 0 {
             let curr = self.diff_objects.get(self.idx - 1)?;
             Skill::new(&mut self.strain, &self.diff_objects).process(curr);

@@ -79,7 +79,7 @@ pub fn convert_objects(
     // sort. After that, we unsort the objects again and then apply a stable
     // sort to have the correct order for generating difficulty objects.
     // Required e.g. due to map /b/102923.
-    let mut sorter = TandemSorter::new_unstable(&mut palpable_objects, |a, b| {
+    let mut sorter = TandemSorter::new_unstable(&palpable_objects, |a, b| {
         a.start_time.total_cmp(&b.start_time)
     });
 

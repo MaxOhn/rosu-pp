@@ -5,6 +5,7 @@ use crate::{
 
 /// Difficulty calculator on maps of a given mode.
 #[derive(Clone, Debug, Default, PartialEq)]
+#[must_use]
 pub struct ModeDifficulty {
     mods: u32,
     passed_objects: Option<u32>,
@@ -20,12 +21,12 @@ impl ModeDifficulty {
     /// Specify mods through their bit values.
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
-    pub fn mods(self, mods: u32) -> Self {
+    pub const fn mods(self, mods: u32) -> Self {
         Self { mods, ..self }
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
-    pub fn passed_objects(self, passed_objects: u32) -> Self {
+    pub const fn passed_objects(self, passed_objects: u32) -> Self {
         Self {
             passed_objects: Some(passed_objects),
             ..self
@@ -36,7 +37,7 @@ impl ModeDifficulty {
     ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
-    pub fn clock_rate(self, clock_rate: f64) -> Self {
+    pub const fn clock_rate(self, clock_rate: f64) -> Self {
         Self {
             clock_rate: Some(clock_rate),
             ..self

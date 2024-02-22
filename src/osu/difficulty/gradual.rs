@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Formatter, Result as FmtResult},
-    mem,
-};
+use std::mem;
 
 use crate::{
     any::difficulty::skills::Skill,
@@ -74,17 +71,6 @@ pub struct OsuGradualDifficulty {
 
 struct NotClonable;
 
-impl Debug for OsuGradualDifficulty {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("OsuGradualDifficulty")
-            .field("idx", &self.idx)
-            .field("mods", &self.mods)
-            .field("clock_rate", &self.clock_rate)
-            .field("attrs", &self.attrs)
-            .finish()
-    }
-}
-
 impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
     pub fn new(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self {
@@ -96,7 +82,7 @@ impl OsuGradualDifficulty {
             map_attrs,
             mut attrs,
             time_preempt,
-        } = OsuDifficultySetup::new(&difficulty, converted);
+        } = OsuDifficultySetup::new(difficulty, converted);
 
         let osu_objects = convert_objects(
             converted,

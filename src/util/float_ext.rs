@@ -2,8 +2,8 @@ pub trait FloatExt: Sized {
     /// Workaround since rust rounds ties away from 0.0
     /// while C# rounds them to the nearest even integer.
     /// See github
-    ///   - https://github.com/rust-lang/rust/issues/96710
-    ///   - https://github.com/rust-lang/rust/pull/82273
+    ///   - <https://github.com/rust-lang/rust/issues/96710>
+    ///   - <https://github.com/rust-lang/rust/pull/82273>
     fn round_even(self) -> Self;
 
     /// `self == other`

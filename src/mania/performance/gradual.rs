@@ -69,7 +69,6 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 ///
 /// [`next`]: ManiaGradualPerformance::next
 /// [`nth`]: ManiaGradualPerformance::nth
-#[derive(Debug)]
 pub struct ManiaGradualPerformance<'map> {
     difficulty: ManiaGradualDifficulty<'map>,
 }

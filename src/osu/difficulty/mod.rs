@@ -244,7 +244,7 @@ impl DifficultyValues {
                     last_last.as_deref(),
                     clock_rate,
                     idx,
-                    &scaling_factor,
+                    scaling_factor,
                 );
 
                 last_last = Some(last);

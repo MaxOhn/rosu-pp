@@ -20,6 +20,7 @@ pub mod skills;
 
 /// Difficulty calculator on maps of any mode.
 #[derive(Clone, Debug, PartialEq)]
+#[must_use]
 pub struct Difficulty<'map> {
     map: Cow<'map, Beatmap>,
     is_convert: bool,

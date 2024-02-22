@@ -53,6 +53,6 @@ where
 
 fn swap<T>(keys: &mut [T], i: usize, j: usize) {
     if i != j {
-        keys.swap(i, j)
+        keys.swap(i, j);
     }
 }
