@@ -256,11 +256,11 @@ impl<'map> TaikoPerformance<'map> {
         let mut calculator = ModeDifficulty::new();
 
         if let Some(passed_objects) = self.passed_objects {
-            calculator.passed_objects(passed_objects);
+            calculator = calculator.passed_objects(passed_objects);
         }
 
         if let Some(clock_rate) = self.clock_rate {
-            calculator.clock_rate(clock_rate);
+            calculator = calculator.clock_rate(clock_rate);
         }
 
         calculator.mods(self.mods).calculate(map)

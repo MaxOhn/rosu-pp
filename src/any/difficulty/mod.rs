@@ -159,27 +159,30 @@ impl Difficulty<'_> {
     /// Specify mods through their bit values.
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
-    pub fn mods(&mut self, mods: u32) -> &mut Self {
-        self.inner.mods(mods);
-
-        self
+    pub fn mods(self, mods: u32) -> Self {
+        Self {
+            inner: self.inner.mods(mods),
+            ..self
+        }
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
-    pub fn passed_objects(&mut self, passed_objects: u32) -> &mut Self {
-        self.inner.passed_objects(passed_objects);
-
-        self
+    pub fn passed_objects(self, passed_objects: u32) -> Self {
+        Self {
+            inner: self.inner.passed_objects(passed_objects),
+            ..self
+        }
     }
 
     /// Adjust the clock rate used in the calculation.
     ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
-    pub fn clock_rate(&mut self, clock_rate: f64) -> &mut Self {
-        self.inner.clock_rate(clock_rate);
-
-        self
+    pub fn clock_rate(self, clock_rate: f64) -> Self {
+        Self {
+            inner: self.inner.clock_rate(clock_rate),
+            ..self
+        }
     }
 
     /// Perform the difficulty calculation.

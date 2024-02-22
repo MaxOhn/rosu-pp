@@ -20,27 +20,27 @@ impl ModeDifficulty {
     /// Specify mods through their bit values.
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
-    pub fn mods(&mut self, mods: u32) -> &mut Self {
-        self.mods = mods;
-
-        self
+    pub fn mods(self, mods: u32) -> Self {
+        Self { mods, ..self }
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
-    pub fn passed_objects(&mut self, passed_objects: u32) -> &mut Self {
-        self.passed_objects = Some(passed_objects);
-
-        self
+    pub fn passed_objects(self, passed_objects: u32) -> Self {
+        Self {
+            passed_objects: Some(passed_objects),
+            ..self
+        }
     }
 
     /// Adjust the clock rate used in the calculation.
     ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
-    pub fn clock_rate(&mut self, clock_rate: f64) -> &mut Self {
-        self.clock_rate = Some(clock_rate);
-
-        self
+    pub fn clock_rate(self, clock_rate: f64) -> Self {
+        Self {
+            clock_rate: Some(clock_rate),
+            ..self
+        }
     }
 
     /// Perform the difficulty calculation for a [`Converted`] beatmap and
