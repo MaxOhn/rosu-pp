@@ -102,10 +102,7 @@ impl DifficultyValues {
             }
         }
 
-        Self {
-            peaks,
-            max_combo: max_combo as u32,
-        }
+        Self { peaks, max_combo }
     }
 
     pub fn eval(

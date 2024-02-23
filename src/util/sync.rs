@@ -76,7 +76,7 @@ mod inner {
     }
 
     impl<T> Ref<'_, T> {
-        pub fn map<U: ?Sized, F>(orig: Ref<'_, T>, f: F) -> RefWrap<'_, T, U, F>
+        pub const fn map<U: ?Sized, F>(orig: Ref<'_, T>, f: F) -> RefWrap<'_, T, U, F>
         where
             F: Copy + FnOnce(&T) -> &U,
         {
@@ -143,7 +143,7 @@ impl<T: fmt::Debug> fmt::Debug for Weak<T> {
 /// std::thread::spawn(move || { let _ = gradual.next(); });
 /// ```
 #[cfg(not(feature = "sync"))]
-fn _share_gradual_taiko() {}
+const fn _share_gradual_taiko() {}
 
 #[cfg(all(test, feature = "sync"))]
 mod tests {
