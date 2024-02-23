@@ -14,6 +14,8 @@ use super::{
     Taiko,
 };
 
+pub mod gradual;
+
 /// Performance calculator on osu!taiko maps.
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]

@@ -20,7 +20,7 @@ const STRAIN_DECAY: f64 = 0.96;
 const RHYTHM_HISTORY_MAX_LEN: usize = 8;
 
 #[allow(clippy::struct_field_names)]
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Rhythm {
     inner: StrainDecaySkill,
     rhythm_history: LimitedQueue<RhythmHistoryElement, RHYTHM_HISTORY_MAX_LEN>,

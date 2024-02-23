@@ -11,6 +11,7 @@ const STAMINA_SKILL_MULTIPLIER: f64 = 0.375 * FINAL_MULTIPLIER;
 
 const FINAL_MULTIPLIER: f64 = 0.0625;
 
+#[derive(Clone)]
 pub struct Peaks {
     pub color: Color,
     pub rhythm: Rhythm,

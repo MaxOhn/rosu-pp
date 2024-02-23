@@ -12,7 +12,7 @@ use crate::{
 const SKILL_MULTIPLIER: f64 = 1.1;
 const STRAIN_DECAY_BASE: f64 = 0.4;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Stamina {
     inner: StrainDecaySkill,
 }

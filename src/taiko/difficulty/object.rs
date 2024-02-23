@@ -105,6 +105,10 @@ impl TaikoDifficultyObjects {
         self.objects.push(hit_object);
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.objects.is_empty()
+    }
+
     pub fn iter(&self) -> Iter<'_, Rc<RefCell<TaikoDifficultyObject>>> {
         self.objects.iter()
     }

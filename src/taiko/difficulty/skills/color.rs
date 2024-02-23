@@ -21,7 +21,7 @@ use crate::{
 const SKILL_MULTIPLIER: f64 = 0.12;
 const STRAIN_DECAY_BASE: f64 = 0.8;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Color {
     inner: StrainDecaySkill,
 }

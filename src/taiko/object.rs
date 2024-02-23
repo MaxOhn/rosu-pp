@@ -22,7 +22,7 @@ impl TaikoObject {
     }
 
     pub const fn is_hit(&self) -> bool {
-        !matches!(self.hit_type, HitType::NonHit)
+        self.hit_type.is_hit()
     }
 }
 
@@ -31,4 +31,10 @@ pub enum HitType {
     Center,
     Rim,
     NonHit,
+}
+
+impl HitType {
+    pub const fn is_hit(self) -> bool {
+        !matches!(self, Self::NonHit)
+    }
 }

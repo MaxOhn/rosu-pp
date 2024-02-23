@@ -11,7 +11,8 @@ use crate::{
 pub use self::{
     attributes::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
     convert::TaikoBeatmap,
-    performance::TaikoPerformance,
+    difficulty::gradual::TaikoGradualDifficulty,
+    performance::{gradual::TaikoGradualPerformance, TaikoPerformance},
     score_state::TaikoScoreState,
     strains::TaikoStrains,
 };
