@@ -1,10 +1,9 @@
-use std::{
-    cell::RefCell,
-    cmp,
-    rc::{Rc, Weak},
-};
+use std::cmp;
 
-use crate::taiko::difficulty::object::TaikoDifficultyObject;
+use crate::{
+    taiko::difficulty::object::TaikoDifficultyObject,
+    util::sync::{RefCount, Weak},
+};
 
 use super::alternating_mono_pattern::AlternatingMonoPattern;
 
@@ -12,18 +11,18 @@ const MAX_REPETITION_INTERVAL: usize = 16;
 
 #[derive(Debug)]
 pub struct RepeatingHitPatterns {
-    pub alternating_mono_patterns: Vec<Rc<RefCell<AlternatingMonoPattern>>>,
-    pub prev: Option<Weak<RefCell<Self>>>,
+    pub alternating_mono_patterns: Vec<RefCount<AlternatingMonoPattern>>,
+    pub prev: Option<Weak<Self>>,
     pub repetition_interval: usize,
 }
 
 impl RepeatingHitPatterns {
-    pub fn new(prev: Option<Weak<RefCell<Self>>>) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
+    pub fn new(prev: Option<Weak<Self>>) -> RefCount<Self> {
+        RefCount::new(Self {
             alternating_mono_patterns: Vec::new(),
             prev,
             repetition_interval: 0,
-        }))
+        })
     }
 
     pub fn find_repetition_interval(&mut self) {
@@ -34,13 +33,13 @@ impl RepeatingHitPatterns {
         let mut interval = 1;
 
         while interval < MAX_REPETITION_INTERVAL {
-            if self.is_repetition_of(&other.borrow()) {
+            if self.is_repetition_of(&other.get()) {
                 self.repetition_interval = cmp::min(interval, MAX_REPETITION_INTERVAL);
 
                 return;
             }
 
-            let Some(next) = other.borrow().prev.as_ref().and_then(Weak::upgrade) else {
+            let Some(next) = other.get().prev.as_ref().and_then(Weak::upgrade) else {
                 break;
             };
 
@@ -60,16 +59,12 @@ impl RepeatingHitPatterns {
             .iter()
             .zip(other.alternating_mono_patterns.iter())
             .take(2)
-            .all(|(self_pat, other_pat)| {
-                self_pat
-                    .borrow()
-                    .has_identical_mono_len(&other_pat.borrow())
-            })
+            .all(|(self_pat, other_pat)| self_pat.get().has_identical_mono_len(&other_pat.get()))
     }
 
-    pub fn first_hit_object(&self) -> Option<Rc<RefCell<TaikoDifficultyObject>>> {
+    pub fn first_hit_object(&self) -> Option<RefCount<TaikoDifficultyObject>> {
         self.alternating_mono_patterns
             .first()
-            .and_then(|mono| mono.borrow().first_hit_object())
+            .and_then(|mono| mono.get().first_hit_object())
     }
 }

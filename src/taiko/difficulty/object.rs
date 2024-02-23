@@ -1,8 +1,9 @@
-use std::{cell::RefCell, rc::Rc, slice::Iter};
+use std::slice::Iter;
 
 use crate::{
     any::difficulty::object::IDifficultyObject,
     taiko::object::{HitType, TaikoObject},
+    util::sync::RefCount,
 };
 
 use super::{color::TaikoDifficultyColor, rhythm::HitObjectRhythm};
@@ -27,7 +28,7 @@ impl TaikoDifficultyObject {
         clock_rate: f64,
         idx: usize,
         objects: &mut TaikoDifficultyObjects,
-    ) -> Rc<RefCell<Self>> {
+    ) -> RefCount<Self> {
         let delta_time = (hit_object.start_time - last_object.start_time) / clock_rate;
         let rhythm = closest_rhythm(delta_time, last_object, last_last_object, clock_rate);
         let color = TaikoDifficultyColor::default();
@@ -47,7 +48,7 @@ impl TaikoDifficultyObject {
             HitType::NonHit => MonoIndex::None,
         };
 
-        let this = Rc::new(RefCell::new(Self {
+        let this = RefCount::new(Self {
             idx,
             delta_time,
             start_time: hit_object.start_time / clock_rate,
@@ -56,16 +57,16 @@ impl TaikoDifficultyObject {
             note_idx,
             rhythm,
             color,
-        }));
+        });
 
         match hit_object.hit_type {
             HitType::Center => {
-                objects.note_objects.push(Rc::clone(&this));
-                objects.center_hit_objects.push(Rc::clone(&this));
+                objects.note_objects.push(RefCount::clone(&this));
+                objects.center_hit_objects.push(RefCount::clone(&this));
             }
             HitType::Rim => {
-                objects.note_objects.push(Rc::clone(&this));
-                objects.rim_hit_objects.push(Rc::clone(&this));
+                objects.note_objects.push(RefCount::clone(&this));
+                objects.rim_hit_objects.push(RefCount::clone(&this));
             }
             HitType::NonHit => {}
         }
@@ -82,10 +83,10 @@ pub enum MonoIndex {
 }
 
 pub struct TaikoDifficultyObjects {
-    pub objects: Vec<Rc<RefCell<TaikoDifficultyObject>>>,
-    pub center_hit_objects: Vec<Rc<RefCell<TaikoDifficultyObject>>>,
-    pub rim_hit_objects: Vec<Rc<RefCell<TaikoDifficultyObject>>>,
-    pub note_objects: Vec<Rc<RefCell<TaikoDifficultyObject>>>,
+    pub objects: Vec<RefCount<TaikoDifficultyObject>>,
+    pub center_hit_objects: Vec<RefCount<TaikoDifficultyObject>>,
+    pub rim_hit_objects: Vec<RefCount<TaikoDifficultyObject>>,
+    pub note_objects: Vec<RefCount<TaikoDifficultyObject>>,
 }
 
 impl TaikoDifficultyObjects {
@@ -101,7 +102,7 @@ impl TaikoDifficultyObjects {
         }
     }
 
-    pub fn push(&mut self, hit_object: Rc<RefCell<TaikoDifficultyObject>>) {
+    pub fn push(&mut self, hit_object: RefCount<TaikoDifficultyObject>) {
         self.objects.push(hit_object);
     }
 
@@ -109,7 +110,7 @@ impl TaikoDifficultyObjects {
         self.objects.is_empty()
     }
 
-    pub fn iter(&self) -> Iter<'_, Rc<RefCell<TaikoDifficultyObject>>> {
+    pub fn iter(&self) -> Iter<'_, RefCount<TaikoDifficultyObject>> {
         self.objects.iter()
     }
 
@@ -117,7 +118,7 @@ impl TaikoDifficultyObjects {
         &self,
         curr: &TaikoDifficultyObject,
         mut backwards_idx: usize,
-    ) -> Option<&Rc<RefCell<TaikoDifficultyObject>>> {
+    ) -> Option<&RefCount<TaikoDifficultyObject>> {
         backwards_idx += 1;
 
         match curr.mono_idx {
@@ -135,7 +136,7 @@ impl TaikoDifficultyObjects {
         &self,
         curr: &TaikoDifficultyObject,
         backwards_idx: usize,
-    ) -> Option<&Rc<RefCell<TaikoDifficultyObject>>> {
+    ) -> Option<&RefCount<TaikoDifficultyObject>> {
         curr.note_idx
             .checked_sub(backwards_idx + 1)
             .and_then(|idx| self.note_objects.get(idx))

@@ -98,7 +98,7 @@ impl DifficultyValues {
             let mut peaks = PeaksSkill::new(&mut peaks, &diff_objects);
 
             for hit_object in diff_objects.iter().take(n_diff_objects) {
-                peaks.process(&hit_object.borrow());
+                peaks.process(&hit_object.get());
             }
         }
 

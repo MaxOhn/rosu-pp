@@ -1,8 +1,4 @@
-use std::{
-    cell::RefCell,
-    f64::consts::E,
-    rc::{Rc, Weak},
-};
+use std::f64::consts::E;
 
 use crate::{
     any::difficulty::{
@@ -16,6 +12,7 @@ use crate::{
         },
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     },
+    util::sync::{RefCount, Weak},
 };
 
 const SKILL_MULTIPLIER: f64 = 0.12;
@@ -65,7 +62,7 @@ impl Skill<'_, Color> {
     fn calculate_initial_strain(&mut self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
         let prev_start_time = curr
             .previous(0, &self.diff_objects.objects)
-            .map_or(0.0, |prev| prev.borrow().start_time);
+            .map_or(0.0, |prev| prev.get().start_time);
 
         self.inner.curr_strain() * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
     }
@@ -113,8 +110,8 @@ impl ColorEvaluator {
         sigmoid * (height / 2.0) + middle
     }
 
-    fn evaluate_diff_of_mono_streak(mono_streak: &Rc<RefCell<MonoStreak>>) -> f64 {
-        let mono_streak = mono_streak.borrow();
+    fn evaluate_diff_of_mono_streak(mono_streak: &RefCount<MonoStreak>) -> f64 {
+        let mono_streak = mono_streak.get();
 
         let parent_eval = mono_streak
             .parent
@@ -127,9 +124,9 @@ impl ColorEvaluator {
     }
 
     fn evaluate_diff_of_alternating_mono_pattern(
-        alternating_mono_pattern: &Rc<RefCell<AlternatingMonoPattern>>,
+        alternating_mono_pattern: &RefCount<AlternatingMonoPattern>,
     ) -> f64 {
-        let alternating_mono_pattern = alternating_mono_pattern.borrow();
+        let alternating_mono_pattern = alternating_mono_pattern.get();
 
         let parent_eval = alternating_mono_pattern
             .parent
@@ -142,9 +139,9 @@ impl ColorEvaluator {
     }
 
     fn evaluate_diff_of_repeating_hit_patterns(
-        repeating_hit_patterns: &Rc<RefCell<RepeatingHitPatterns>>,
+        repeating_hit_patterns: &RefCount<RepeatingHitPatterns>,
     ) -> f64 {
-        let repetition_interval = repeating_hit_patterns.borrow().repetition_interval as f64;
+        let repetition_interval = repeating_hit_patterns.get().repetition_interval as f64;
 
         2.0 * (1.0 - Self::sigmoid(repetition_interval, 2.0, 2.0, 0.5, 1.0))
     }

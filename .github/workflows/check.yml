@@ -42,8 +42,16 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Run tests
-        run: cargo nextest run --no-fail-fast --failure-output=immediate-final
+      - name: Run tests on default features
+        run: cargo nextest run --no-default-features --no-fail-fast --failure-output=immediate-final
+
+      - name: Run tests with sync feature
+        run: >
+          cargo nextest run
+          --features sync
+          --filter-expr 'test(util::sync::tests::share_gradual_taiko)'
+          --filter-expr 'test(taiko::difficulty::gradual::tests::next_and_nth)'
+          --no-fail-fast --failure-output=immediate-final
 
       - name: Run doctests
-        run: cargo test --doc
+        run: cargo test --no-default-features --doc

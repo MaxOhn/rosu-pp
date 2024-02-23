@@ -42,7 +42,7 @@
 //! // Calculate performance attributes
 //! let perf_attrs = map.performance()
 //!     // To speed up the calculation, we can use the previous attributes.
-//!     // **Note** that this should only be done if the map, mode, mods, 
+//!     // **Note** that this should only be done if the map, mode, mods,
 //!     // clock rate, and amount of passed objects stay the same.
 //!     // Otherwise, the final attributes will be incorrect.
 //!     .attributes(diff_attrs)
@@ -73,7 +73,8 @@
 //! | Flag      | Description | Dependencies
 //! | --------- | ----------- | ------------
 //! | `default` | No features |
-//! | `tracing` | Any error encountered during beatmap decoding will be logged through `tracing::error`. If this feature is not enabled, errors will be ignored. | [`tracing`]
+//! | `sync`    | Some gradual calculation types can only be shared across threads if this feature is enabled. This adds a performance penalty so only enable this if really needed. |
+//! | `tracing` | Any error encountered during beatmap decoding will be logged through `tracing::error`. If this feature is **not** enabled, errors will be ignored. | [`tracing`]
 //!
 //! ## Bindings
 //!

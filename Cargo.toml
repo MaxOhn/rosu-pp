@@ -5,6 +5,7 @@ edition = "2021"
 
 [features]
 default = []
+sync = []
 tracing = ["rosu-map/tracing"]
 
 [dependencies]

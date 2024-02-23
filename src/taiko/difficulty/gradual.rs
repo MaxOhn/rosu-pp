@@ -1,8 +1,9 @@
-use std::{cell::RefCell, mem, rc::Rc, slice::Iter};
+use std::{mem, slice::Iter};
 
 use crate::{
     model::{beatmap::HitWindows, hit_object::HitObject},
     taiko::TaikoBeatmap,
+    util::sync::RefCount,
     ModeDifficulty,
 };
 
@@ -52,7 +53,7 @@ pub struct TaikoGradualDifficulty {
     pub(crate) clock_rate: f64,
     attrs: TaikoDifficultyAttributes,
     diff_objects: TaikoDifficultyObjects,
-    diff_objects_iter: Iter<'static, Rc<RefCell<TaikoDifficultyObject>>>,
+    diff_objects_iter: Iter<'static, RefCount<TaikoDifficultyObject>>,
     peaks: Peaks,
     total_hits: usize,
     first_combos: FirstTwoCombos,
@@ -132,8 +133,8 @@ impl TaikoGradualDifficulty {
 }
 
 fn extend_lifetime(
-    iter: Iter<'_, Rc<RefCell<TaikoDifficultyObject>>>,
-) -> Iter<'static, Rc<RefCell<TaikoDifficultyObject>>> {
+    iter: Iter<'_, RefCount<TaikoDifficultyObject>>,
+) -> Iter<'static, RefCount<TaikoDifficultyObject>> {
     // SAFETY: The underlying data will never be moved.
     unsafe { mem::transmute(iter) }
 }
@@ -149,7 +150,7 @@ impl Iterator for TaikoGradualDifficulty {
         if self.idx >= 2 {
             loop {
                 let curr = self.diff_objects_iter.next()?;
-                let borrowed = curr.borrow();
+                let borrowed = curr.get();
                 PeaksSkill::new(&mut self.peaks, &self.diff_objects).process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {
@@ -236,7 +237,7 @@ impl Iterator for TaikoGradualDifficulty {
         for _ in 0..take {
             loop {
                 let curr = self.diff_objects_iter.next()?;
-                let borrowed = curr.borrow();
+                let borrowed = curr.get();
                 peaks.process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {

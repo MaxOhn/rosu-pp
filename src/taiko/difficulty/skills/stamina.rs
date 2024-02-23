@@ -37,7 +37,7 @@ impl Skill<'_, Stamina> {
     fn calculate_initial_strain(&mut self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
         let prev_start_time = curr
             .previous(0, &self.diff_objects.objects)
-            .map_or(0.0, |prev| prev.borrow().start_time);
+            .map_or(0.0, |prev| prev.get().start_time);
 
         self.curr_strain() * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
     }
@@ -118,7 +118,7 @@ impl StaminaEvaluator {
 
         if let Some(key_prev) = key_prev {
             // * Add a base strain to all objects
-            0.5 + Self::speed_bonus(taiko_curr.start_time - key_prev.borrow().start_time)
+            0.5 + Self::speed_bonus(taiko_curr.start_time - key_prev.get().start_time)
         } else {
             // * There is no previous hit object hit by the current key
             0.0
