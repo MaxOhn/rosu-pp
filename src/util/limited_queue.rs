@@ -245,12 +245,12 @@ mod test {
 
             let (head, tail) = queue.as_slices();
 
-            for i in 0..head.len() {
-                assert_eq!(queue.iter().nth(i), Some(&head[i]));
+            for (i, item) in head.iter().enumerate() {
+                assert_eq!(queue.iter().nth(i), Some(item));
             }
 
-            for i in 0..tail.len() {
-                assert_eq!(queue.iter().nth(head.len() + i), Some(&tail[i]));
+            for (i, item) in tail.iter().enumerate() {
+                assert_eq!(queue.iter().nth(head.len() + i), Some(item));
             }
 
             assert_eq!(queue.iter().nth(head.len() + tail.len() + 1), None);
