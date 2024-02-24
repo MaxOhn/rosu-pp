@@ -186,14 +186,14 @@ impl<'map> ManiaPerformance<'map> {
 
         let priority = self.hitresult_priority;
 
-        let n_misses = self.n_misses.map_or(0, |n| n.min(n_objects));
+        let n_misses = self.n_misses.map_or(0, |n| cmp::min(n, n_objects));
         let n_remaining = n_objects - n_misses;
 
-        let mut n320 = self.n320.map_or(0, |n| n.min(n_remaining));
-        let mut n300 = self.n300.map_or(0, |n| n.min(n_remaining));
-        let mut n200 = self.n200.map_or(0, |n| n.min(n_remaining));
-        let mut n100 = self.n100.map_or(0, |n| n.min(n_remaining));
-        let mut n50 = self.n50.map_or(0, |n| n.min(n_remaining));
+        let mut n320 = self.n320.map_or(0, |n| cmp::min(n, n_remaining));
+        let mut n300 = self.n300.map_or(0, |n| cmp::min(n, n_remaining));
+        let mut n200 = self.n200.map_or(0, |n| cmp::min(n, n_remaining));
+        let mut n100 = self.n100.map_or(0, |n| cmp::min(n, n_remaining));
+        let mut n50 = self.n50.map_or(0, |n| cmp::min(n, n_remaining));
 
         if let Some(acc) = self.acc {
             let target_total = acc * f64::from(6 * n_objects);
@@ -380,18 +380,21 @@ impl<'map> ManiaPerformance<'map> {
                     let mut best_dist = f64::INFINITY;
                     let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n_misses);
 
-                    let min_n3x0 = (((target_total - f64::from(2 * (n_remaining + n200))) / 4.0)
-                        .floor() as u32)
-                        .min(n_remaining - n200);
+                    let min_n3x0 = cmp::min(
+                        ((target_total - f64::from(2 * (n_remaining + n200))) / 4.0).floor() as u32,
+                        n_remaining - n200,
+                    );
 
-                    let max_n3x0 = (((target_total - f64::from(n_remaining + 3 * n200)) / 5.0)
-                        .ceil() as u32)
-                        .min(n_remaining - n200);
+                    let max_n3x0 = cmp::min(
+                        ((target_total - f64::from(n_remaining + 3 * n200)) / 5.0).ceil() as u32,
+                        n_remaining - n200,
+                    );
 
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
-                        (Some(_), Some(_)) => {
-                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
-                        }
+                        (Some(_), Some(_)) => (
+                            cmp::min(n_remaining, n320 + n300),
+                            cmp::min(n_remaining, n320 + n300),
+                        ),
                         (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
                         (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
                         (None, None) => (min_n3x0, max_n3x0),
@@ -451,9 +454,10 @@ impl<'map> ManiaPerformance<'map> {
                     );
 
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
-                        (Some(_), Some(_)) => {
-                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
-                        }
+                        (Some(_), Some(_)) => (
+                            cmp::min(n_remaining, n320 + n300),
+                            cmp::min(n_remaining, n320 + n300),
+                        ),
                         (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
                         (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
                         (None, None) => (min_n3x0, max_n3x0),
@@ -513,9 +517,10 @@ impl<'map> ManiaPerformance<'map> {
                     );
 
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
-                        (Some(_), Some(_)) => {
-                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
-                        }
+                        (Some(_), Some(_)) => (
+                            cmp::min(n_remaining, n320 + n300),
+                            cmp::min(n_remaining, n320 + n300),
+                        ),
                         (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
                         (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
                         (None, None) => (min_n3x0, max_n3x0),
@@ -587,9 +592,10 @@ impl<'map> ManiaPerformance<'map> {
                     );
 
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
-                        (Some(_), Some(_)) => {
-                            (n_remaining.min(n320 + n300), n_remaining.min(n320 + n300))
-                        }
+                        (Some(_), Some(_)) => (
+                            cmp::min(n_remaining, n320 + n300),
+                            cmp::min(n_remaining, n320 + n300),
+                        ),
                         (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
                         (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
                         (None, None) => (min_n3x0, max_n3x0),
@@ -930,4 +936,362 @@ fn accuracy(n320: u32, n300: u32, n200: u32, n100: u32, n50: u32, n_misses: u32)
     let denominator = 6 * (n320 + n300 + n200 + n100 + n50 + n_misses);
 
     f64::from(numerator) / f64::from(denominator)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{cmp::Ordering, sync::OnceLock};
+
+    use proptest::prelude::*;
+
+    use crate::Beatmap;
+
+    use super::*;
+
+    static ATTRS: OnceLock<ManiaDifficultyAttributes> = OnceLock::new();
+
+    const N_OBJECTS: u32 = 594;
+
+    fn attrs() -> ManiaDifficultyAttributes {
+        ATTRS
+            .get_or_init(|| {
+                let converted = Beatmap::from_path("./resources/1638954.osu")
+                    .unwrap()
+                    .unchecked_into_converted::<Mania>();
+
+                let attrs = ModeDifficulty::new().calculate(&converted);
+
+                assert_eq!(N_OBJECTS, converted.map.hit_objects.len() as u32);
+
+                attrs
+            })
+            .to_owned()
+    }
+
+    /// Checks most remaining hitresult combinations w.r.t. the given parameters
+    /// and returns the [`ManiaScoreState`] that matches `acc` the best.
+    ///
+    /// Very slow but accurate. Only slight optimizations have been applied so
+    /// that it doesn't run unreasonably long.
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+    fn brute_force_best(
+        acc: f64,
+        n320: Option<u32>,
+        n300: Option<u32>,
+        n200: Option<u32>,
+        n100: Option<u32>,
+        n50: Option<u32>,
+        n_misses: u32,
+        best_case: bool,
+    ) -> ManiaScoreState {
+        let n_misses = cmp::min(n_misses, N_OBJECTS);
+
+        let mut best_state = ManiaScoreState {
+            n_misses,
+            ..Default::default()
+        };
+
+        let mut best_dist = f64::INFINITY;
+        let mut best_custom_acc = 0.0;
+
+        let n_remaining = N_OBJECTS - n_misses;
+
+        let multiple_given = (usize::from(n320.is_some())
+            + usize::from(n300.is_some())
+            + usize::from(n200.is_some())
+            + usize::from(n100.is_some())
+            + usize::from(n50.is_some()))
+            > 1;
+
+        let max_left = N_OBJECTS
+            .saturating_sub(n200.unwrap_or(0) + n100.unwrap_or(0) + n50.unwrap_or(0) + n_misses);
+
+        let min_n3x0 = cmp::min(
+            max_left,
+            (acc * f64::from(3 * N_OBJECTS) - f64::from(2 * n_remaining)).floor() as u32,
+        );
+
+        let max_n3x0 = cmp::min(
+            max_left,
+            ((acc * f64::from(6 * N_OBJECTS) - f64::from(n_remaining)) / 5.0).ceil() as u32,
+        );
+
+        let (min_n3x0, max_n3x0) = match (n320, n300) {
+            (Some(n320), Some(n300)) => (
+                cmp::min(n_remaining, n320 + n300),
+                cmp::min(n_remaining, n320 + n300),
+            ),
+            (Some(n320), None) => (
+                cmp::max(cmp::min(n_remaining, n320), min_n3x0),
+                cmp::max(max_n3x0, cmp::min(n320, n_remaining)),
+            ),
+            (None, Some(n300)) => (
+                cmp::max(cmp::min(n_remaining, n300), min_n3x0),
+                cmp::max(max_n3x0, cmp::min(n300, n_remaining)),
+            ),
+            (None, None) => (min_n3x0, max_n3x0),
+        };
+
+        for new3x0 in min_n3x0..=max_n3x0 {
+            let max_left =
+                n_remaining.saturating_sub(new3x0 + n100.unwrap_or(0) + n50.unwrap_or(0));
+
+            let (min_n200, max_n200) = match (n200, n100, n50) {
+                (Some(n200), ..) if multiple_given => {
+                    (cmp::min(n_remaining, n200), cmp::min(n_remaining, n200))
+                }
+                (Some(n200), ..) => (cmp::min(max_left, n200), cmp::min(max_left, n200)),
+                (None, Some(_), Some(_)) => (max_left, max_left),
+                _ => (0, max_left),
+            };
+
+            for new200 in min_n200..=max_n200 {
+                let max_left = n_remaining.saturating_sub(new3x0 + new200 + n50.unwrap_or(0));
+
+                let (min_n100, max_n100) = match (n100, n50) {
+                    (Some(n100), _) if multiple_given => {
+                        (cmp::min(n_remaining, n100), cmp::min(n_remaining, n100))
+                    }
+                    (Some(n100), _) => (cmp::min(max_left, n100), cmp::min(max_left, n100)),
+                    (None, Some(_)) => (max_left, max_left),
+                    (None, None) => (0, max_left),
+                };
+
+                for new100 in min_n100..=max_n100 {
+                    let max_left = n_remaining.saturating_sub(new3x0 + new200 + new100);
+
+                    let new50 = match n50 {
+                        Some(n50) if multiple_given => cmp::min(n_remaining, n50),
+                        Some(n50) => cmp::min(max_left, n50),
+                        None => max_left,
+                    };
+
+                    let (new320, new300) = match (n320, n300) {
+                        (Some(n320), Some(n300)) => {
+                            (cmp::min(n_remaining, n320), cmp::min(n_remaining, n300))
+                        }
+                        (Some(n320), None) => (
+                            cmp::min(n320, n_remaining),
+                            new3x0 - cmp::min(n320, n_remaining),
+                        ),
+                        (None, Some(n300)) => (
+                            new3x0 - cmp::min(n300, n_remaining),
+                            cmp::min(n300, n_remaining),
+                        ),
+                        (None, None) if best_case => (new3x0, 0),
+                        (None, None) => (0, new3x0),
+                    };
+
+                    let curr_acc = accuracy(new320, new300, new200, new100, new50, n_misses);
+                    let curr_dist = (acc - curr_acc).abs();
+
+                    let curr_custom_acc =
+                        custom_accuracy(new320, new300, new200, new100, new50, N_OBJECTS);
+
+                    match curr_dist.partial_cmp(&best_dist).expect("non-NaN") {
+                        Ordering::Less => {
+                            best_dist = curr_dist;
+                            best_custom_acc = curr_custom_acc;
+                            best_state.n320 = new320;
+                            best_state.n300 = new300;
+                            best_state.n200 = new200;
+                            best_state.n100 = new100;
+                            best_state.n50 = new50;
+                        }
+                        Ordering::Equal if curr_custom_acc < best_custom_acc => {
+                            best_custom_acc = curr_custom_acc;
+                            best_state.n320 = new320;
+                            best_state.n300 = new300;
+                            best_state.n200 = new200;
+                            best_state.n100 = new100;
+                            best_state.n50 = new50;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        if best_state.n320 + best_state.n300 + best_state.n200 + best_state.n100 + best_state.n50
+            < n_remaining
+        {
+            let n_remaining = n_remaining
+                - (best_state.n320
+                    + best_state.n300
+                    + best_state.n200
+                    + best_state.n100
+                    + best_state.n50);
+
+            if best_case {
+                match (n320, n300, n200, n100, n50) {
+                    (None, ..) => best_state.n320 += n_remaining,
+                    (_, None, ..) => best_state.n300 += n_remaining,
+                    (_, _, None, ..) => best_state.n200 += n_remaining,
+                    (.., None, _) => best_state.n100 += n_remaining,
+                    (.., None) => best_state.n50 += n_remaining,
+                    _ => best_state.n320 += n_remaining,
+                }
+            } else {
+                match (n50, n100, n200, n300, n320) {
+                    (None, ..) => best_state.n50 += n_remaining,
+                    (_, None, ..) => best_state.n100 += n_remaining,
+                    (_, _, None, ..) => best_state.n200 += n_remaining,
+                    (.., None, _) => best_state.n300 += n_remaining,
+                    (.., None) => best_state.n320 += n_remaining,
+                    _ => best_state.n50 += n_remaining,
+                }
+            }
+        }
+
+        if best_case {
+            if n320.is_none() && n200.is_none() && n100.is_none() {
+                let n = best_state.n200 / 2;
+                best_state.n320 += n;
+                best_state.n200 -= 2 * n;
+                best_state.n100 += n;
+            }
+
+            if n100.is_none() && n50.is_none() {
+                let n = if n320.is_none() && n300.is_none() {
+                    let n = cmp::min(best_state.n320 + best_state.n300, best_state.n50 / 4);
+
+                    let removed320 = cmp::min(best_state.n320, n);
+                    let removed300 = n - removed320;
+
+                    best_state.n320 -= removed320;
+                    best_state.n300 -= removed300;
+
+                    n
+                } else if n320.is_none() {
+                    let n = cmp::min(best_state.n320, best_state.n50 / 4);
+                    best_state.n320 -= n;
+
+                    n
+                } else if n300.is_none() {
+                    let n = cmp::min(best_state.n300, best_state.n50 / 4);
+                    best_state.n300 -= n;
+
+                    n
+                } else {
+                    0
+                };
+
+                best_state.n100 += 5 * n;
+                best_state.n50 -= 4 * n;
+            }
+        } else if n320.is_none() && n200.is_none() && n100.is_none() {
+            let n = cmp::min(best_state.n320, best_state.n100);
+            best_state.n320 -= n;
+            best_state.n200 += 2 * n;
+            best_state.n100 -= n;
+        }
+
+        best_state
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+
+        #[test]
+        fn mania_hitresults(
+            acc in 0.0..=1.0,
+            n320 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
+            n300 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
+            n200 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
+            n100 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
+            n50 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
+            n_misses in prop::option::weighted(0.15, 0_u32..=N_OBJECTS + 10),
+            best_case in prop::bool::ANY,
+        ) {
+            let priority = if best_case {
+                HitResultPriority::BestCase
+            } else {
+                HitResultPriority::WorstCase
+            };
+
+            let mut state = ManiaPerformance::from(attrs())
+                .accuracy(acc * 100.0)
+                .hitresult_priority(priority);
+
+            if let Some(n320) = n320 {
+                state = state.n320(n320);
+            }
+
+            if let Some(n300) = n300 {
+                state = state.n300(n300);
+            }
+
+            if let Some(n200) = n200 {
+                state = state.n200(n200);
+            }
+
+            if let Some(n100) = n100 {
+                state = state.n100(n100);
+            }
+
+            if let Some(n50) = n50 {
+                state = state.n50(n50);
+            }
+
+            if let Some(n_misses) = n_misses {
+                state = state.n_misses(n_misses);
+            }
+
+            let state = state.generate_state();
+
+            let expected = brute_force_best(
+                acc,
+                n320,
+                n300,
+                n200,
+                n100,
+                n50,
+                n_misses.unwrap_or(0),
+                best_case,
+            );
+
+            assert_eq!(state, expected);
+        }
+    }
+
+    #[test]
+    fn hitresults_n320_n_misses_best() {
+        let state = ManiaPerformance::from(attrs())
+            .n320(500)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_state();
+
+        let expected = ManiaScoreState {
+            n320: 500,
+            n300: 92,
+            n200: 0,
+            n100: 0,
+            n50: 0,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn hitresults_n100_n50_n_misses_worst() {
+        let state = ManiaPerformance::from(attrs())
+            .n100(200)
+            .n50(50)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::WorstCase)
+            .generate_state();
+
+        let expected = ManiaScoreState {
+            n320: 0,
+            n300: 0,
+            n200: 342,
+            n100: 200,
+            n50: 50,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
 }

@@ -190,8 +190,8 @@ impl<'map> TaikoPerformance<'map> {
                     let mut best_dist = f64::MAX;
 
                     let raw_n300 = target_total - f64::from(n_remaining);
-                    let min_n300 = n_remaining.min(raw_n300.floor() as u32);
-                    let max_n300 = n_remaining.min(raw_n300.ceil() as u32);
+                    let min_n300 = cmp::min(n_remaining, raw_n300.floor() as u32);
+                    let max_n300 = cmp::min(n_remaining, raw_n300.ceil() as u32);
 
                     for new300 in min_n300..=max_n300 {
                         let new100 = n_remaining - new300;
@@ -224,9 +224,9 @@ impl<'map> TaikoPerformance<'map> {
 
         let max_possible_combo = max_combo.saturating_sub(n_misses);
 
-        let max_combo = self
-            .combo
-            .map_or(max_possible_combo, |combo| combo.min(max_possible_combo));
+        let max_combo = self.combo.map_or(max_possible_combo, |combo| {
+            cmp::min(combo, max_possible_combo)
+        });
 
         TaikoScoreState {
             max_combo,
@@ -521,4 +521,181 @@ fn accuracy(n300: u32, n100: u32, n_misses: u32) -> f64 {
     let denominator = 2 * (n300 + n100 + n_misses);
 
     f64::from(numerator) / f64::from(denominator)
+}
+
+#[cfg(test)]
+mod test {
+    use std::sync::OnceLock;
+
+    use proptest::prelude::*;
+
+    use crate::Beatmap;
+
+    use super::*;
+
+    static ATTRS: OnceLock<TaikoDifficultyAttributes> = OnceLock::new();
+
+    const MAX_COMBO: u32 = 289;
+
+    fn attrs() -> TaikoDifficultyAttributes {
+        ATTRS
+            .get_or_init(|| {
+                let converted = Beatmap::from_path("./resources/1028484.osu")
+                    .unwrap()
+                    .unchecked_into_converted::<Taiko>();
+
+                let attrs = ModeDifficulty::new().calculate(&converted);
+
+                assert_eq!(MAX_COMBO, attrs.max_combo);
+
+                attrs
+            })
+            .to_owned()
+    }
+
+    /// Checks all remaining hitresult combinations w.r.t. the given parameters
+    /// and returns the [`TaikoScoreState`] that matches `acc` the best.
+    ///
+    /// Very slow but accurate.
+    fn brute_force_best(
+        acc: f64,
+        n300: Option<u32>,
+        n100: Option<u32>,
+        n_misses: u32,
+        best_case: bool,
+    ) -> TaikoScoreState {
+        let n_misses = cmp::min(n_misses, MAX_COMBO);
+
+        let mut best_state = TaikoScoreState {
+            n_misses,
+            ..Default::default()
+        };
+
+        let mut best_dist = f64::INFINITY;
+
+        let n_objects = MAX_COMBO;
+        let n_remaining = n_objects - n_misses;
+
+        let (min_n300, max_n300) = match (n300, n100) {
+            (Some(n300), _) => (cmp::min(n_remaining, n300), cmp::min(n_remaining, n300)),
+            (None, Some(n100)) => (
+                n_remaining.saturating_sub(n100),
+                n_remaining.saturating_sub(n100),
+            ),
+            (None, None) => (0, n_remaining),
+        };
+
+        for new300 in min_n300..=max_n300 {
+            let new100 = match n100 {
+                Some(n100) => cmp::min(n_remaining, n100),
+                None => n_remaining - new300,
+            };
+
+            let curr_acc = accuracy(new300, new100, n_misses);
+            let curr_dist = (acc - curr_acc).abs();
+
+            if curr_dist < best_dist {
+                best_dist = curr_dist;
+                best_state.n300 = new300;
+                best_state.n100 = new100;
+            }
+        }
+
+        if best_state.n300 + best_state.n100 < n_remaining {
+            let remaining = n_remaining - (best_state.n300 + best_state.n100);
+
+            if best_case {
+                best_state.n300 += remaining;
+            } else {
+                best_state.n100 += remaining;
+            }
+        }
+
+        best_state
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        #[test]
+        fn hitresults(
+            acc in 0.0..=1.0,
+            n300 in prop::option::weighted(0.10, 0_u32..=MAX_COMBO + 10),
+            n100 in prop::option::weighted(0.10, 0_u32..=MAX_COMBO + 10),
+            n_misses in prop::option::weighted(0.15, 0_u32..=MAX_COMBO + 10),
+            best_case in prop::bool::ANY,
+        ) {
+            let priority = if best_case {
+                HitResultPriority::BestCase
+            } else {
+                HitResultPriority::WorstCase
+            };
+
+            let mut state = TaikoPerformance::from(attrs())
+                .accuracy(acc * 100.0)
+                .hitresult_priority(priority);
+
+            if let Some(n300) = n300 {
+                state = state.n300(n300);
+            }
+
+            if let Some(n100) = n100 {
+                state = state.n100(n100);
+            }
+
+            if let Some(n_misses) = n_misses {
+                state = state.n_misses(n_misses);
+            }
+
+            let state = state.generate_state();
+
+            let mut expected = brute_force_best(
+                acc,
+                n300,
+                n100,
+                n_misses.unwrap_or(0),
+                best_case,
+            );
+            expected.max_combo = MAX_COMBO.saturating_sub(n_misses.unwrap_or(0));
+
+            assert_eq!(state, expected);
+        }
+    }
+
+    #[test]
+    fn hitresults_n300_n_misses_best() {
+        let state = TaikoPerformance::from(attrs())
+            .combo(100)
+            .n300(150)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_state();
+
+        let expected = TaikoScoreState {
+            max_combo: 100,
+            n300: 150,
+            n100: 137,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn hitresults_n_misses_best() {
+        let state = TaikoPerformance::from(attrs())
+            .combo(100)
+            .n_misses(2)
+            .hitresult_priority(HitResultPriority::BestCase)
+            .generate_state();
+
+        let expected = TaikoScoreState {
+            max_combo: 100,
+            n300: 287,
+            n100: 0,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
 }

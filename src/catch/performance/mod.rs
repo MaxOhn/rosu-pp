@@ -554,3 +554,219 @@ fn accuracy(
 
     f64::from(numerator) / f64::from(denominator)
 }
+
+#[cfg(test)]
+mod test {
+    use std::sync::OnceLock;
+
+    use proptest::prelude::*;
+
+    use crate::Beatmap;
+
+    use super::*;
+
+    static ATTRS: OnceLock<CatchDifficultyAttributes> = OnceLock::new();
+
+    const N_FRUITS: u32 = 728;
+    const N_DROPLETS: u32 = 2;
+    const N_TINY_DROPLETS: u32 = 291;
+
+    fn attrs() -> CatchDifficultyAttributes {
+        ATTRS
+            .get_or_init(|| {
+                let converted = Beatmap::from_path("./resources/2118524.osu")
+                    .unwrap()
+                    .unchecked_into_converted::<Catch>();
+
+                let attrs = ModeDifficulty::new().calculate(&converted);
+
+                assert_eq!(N_FRUITS, attrs.n_fruits);
+                assert_eq!(N_DROPLETS, attrs.n_droplets);
+                assert_eq!(N_TINY_DROPLETS, attrs.n_tiny_droplets);
+
+                attrs
+            })
+            .to_owned()
+    }
+
+    /// Checks all remaining hitresult combinations w.r.t. the given parameters
+    /// and returns the [`CatchScoreState`] that matches `acc` the best.
+    ///
+    /// Very slow but accurate.
+    fn brute_force_best(
+        acc: f64,
+        n_fruits: Option<u32>,
+        n_droplets: Option<u32>,
+        n_tiny_droplets: Option<u32>,
+        n_tiny_droplet_misses: Option<u32>,
+        n_misses: u32,
+    ) -> CatchScoreState {
+        let n_misses = cmp::min(n_misses, N_FRUITS + N_DROPLETS);
+
+        let mut best_state = CatchScoreState {
+            max_combo: N_FRUITS + N_DROPLETS - n_misses,
+            n_misses,
+            ..Default::default()
+        };
+
+        let mut best_dist = f64::INFINITY;
+
+        let (new_fruits, new_droplets) = match (n_fruits, n_droplets) {
+            (Some(mut n_fruits), Some(mut n_droplets)) => {
+                let n_remaining =
+                    (N_FRUITS + N_DROPLETS).saturating_sub(n_fruits + n_droplets + n_misses);
+
+                let new_droplets = cmp::min(n_remaining, N_DROPLETS.saturating_sub(n_droplets));
+                n_droplets += new_droplets;
+                n_fruits += n_remaining - new_droplets;
+
+                n_fruits = cmp::min(
+                    n_fruits,
+                    (N_FRUITS + N_DROPLETS).saturating_sub(n_droplets + n_misses),
+                );
+                n_droplets = cmp::min(n_droplets, N_FRUITS + N_DROPLETS - n_fruits - n_misses);
+
+                (n_fruits, n_droplets)
+            }
+            (Some(mut n_fruits), None) => {
+                let n_droplets = N_DROPLETS
+                    .saturating_sub(n_misses.saturating_sub(N_FRUITS.saturating_sub(n_fruits)));
+                n_fruits = N_FRUITS + N_DROPLETS - n_misses - n_droplets;
+
+                (n_fruits, n_droplets)
+            }
+            (None, Some(mut n_droplets)) => {
+                let n_fruits = N_FRUITS
+                    .saturating_sub(n_misses.saturating_sub(N_DROPLETS.saturating_sub(n_droplets)));
+                n_droplets = N_FRUITS + N_DROPLETS - n_misses - n_fruits;
+
+                (n_fruits, n_droplets)
+            }
+            (None, None) => {
+                let n_droplets = N_DROPLETS.saturating_sub(n_misses);
+                let n_fruits = N_FRUITS - (n_misses - (N_DROPLETS.saturating_sub(n_droplets)));
+
+                (n_fruits, n_droplets)
+            }
+        };
+
+        best_state.n_fruits = new_fruits;
+        best_state.n_droplets = new_droplets;
+
+        let (min_tiny_droplets, max_tiny_droplets) = match (n_tiny_droplets, n_tiny_droplet_misses)
+        {
+            (Some(n_tiny_droplets), Some(n_tiny_droplet_misses)) => {
+                match (n_tiny_droplets + n_tiny_droplet_misses).cmp(&N_TINY_DROPLETS) {
+                    Ordering::Equal => (
+                        cmp::min(N_TINY_DROPLETS, n_tiny_droplets),
+                        cmp::min(N_TINY_DROPLETS, n_tiny_droplets),
+                    ),
+                    Ordering::Less | Ordering::Greater => (0, N_TINY_DROPLETS),
+                }
+            }
+            (Some(n_tiny_droplets), None) => (
+                cmp::min(N_TINY_DROPLETS, n_tiny_droplets),
+                cmp::min(N_TINY_DROPLETS, n_tiny_droplets),
+            ),
+            (None, Some(n_tiny_droplet_misses)) => (
+                N_TINY_DROPLETS.saturating_sub(n_tiny_droplet_misses),
+                N_TINY_DROPLETS.saturating_sub(n_tiny_droplet_misses),
+            ),
+            (None, None) => (0, N_TINY_DROPLETS),
+        };
+
+        for new_tiny_droplets in min_tiny_droplets..=max_tiny_droplets {
+            let new_tiny_droplet_misses = N_TINY_DROPLETS - new_tiny_droplets;
+
+            let curr_acc = accuracy(
+                new_fruits,
+                new_droplets,
+                new_tiny_droplets,
+                new_tiny_droplet_misses,
+                n_misses,
+            );
+
+            let curr_dist = (acc - curr_acc).abs();
+
+            if curr_dist < best_dist {
+                best_dist = curr_dist;
+                best_state.n_tiny_droplets = new_tiny_droplets;
+                best_state.n_tiny_droplet_misses = new_tiny_droplet_misses;
+            }
+        }
+
+        best_state
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        #[test]
+        fn hitresults(
+            acc in 0.0..=1.0,
+            n_fruits in prop::option::weighted(0.10, 0_u32..=N_FRUITS + 10),
+            n_droplets in prop::option::weighted(0.10, 0_u32..=N_DROPLETS + 10),
+            n_tiny_droplets in prop::option::weighted(0.10, 0_u32..=N_TINY_DROPLETS + 10),
+            n_tiny_droplet_misses in prop::option::weighted(0.10, 0_u32..=N_TINY_DROPLETS + 10),
+            n_misses in prop::option::weighted(0.15, 0_u32..=N_FRUITS + N_DROPLETS + 10),
+        ) {
+            let mut state = CatchPerformance::from(attrs())
+                .accuracy(acc * 100.0);
+
+            if let Some(n_fruits) = n_fruits {
+                state = state.fruits(n_fruits);
+            }
+
+            if let Some(n_droplets) = n_droplets {
+                state = state.droplets(n_droplets);
+            }
+
+            if let Some(n_tiny_droplets) = n_tiny_droplets {
+                state = state.tiny_droplets(n_tiny_droplets);
+            }
+
+            if let Some(n_tiny_droplet_misses) = n_tiny_droplet_misses {
+                state = state.tiny_droplet_misses(n_tiny_droplet_misses);
+            }
+
+            if let Some(n_misses) = n_misses {
+                state = state.misses(n_misses);
+            }
+
+            let state = state.generate_state();
+
+            let expected = brute_force_best(
+                acc,
+                n_fruits,
+                n_droplets,
+                n_tiny_droplets,
+                n_tiny_droplet_misses,
+                n_misses.unwrap_or(0),
+            );
+
+            assert_eq!(state, expected);
+        }
+    }
+
+    #[test]
+    fn fruits_missing_objects() {
+        let state = CatchPerformance::from(attrs())
+            .fruits(N_FRUITS - 10)
+            .droplets(N_DROPLETS - 1)
+            .tiny_droplets(N_TINY_DROPLETS - 50)
+            .tiny_droplet_misses(20)
+            .misses(2)
+            .generate_state();
+
+        let expected = CatchScoreState {
+            max_combo: N_FRUITS + N_DROPLETS - 2,
+            n_fruits: N_FRUITS - 2,
+            n_droplets: N_DROPLETS,
+            n_tiny_droplets: N_TINY_DROPLETS - 20,
+            n_tiny_droplet_misses: 20,
+            n_misses: 2,
+        };
+
+        assert_eq!(state, expected);
+    }
+}
