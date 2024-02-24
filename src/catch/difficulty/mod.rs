@@ -3,16 +3,19 @@ use crate::{
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
+    model::beatmap::BeatmapAttributes,
     util::mods::Mods,
 };
 
 use self::skills::movement::Movement;
 
 use super::{
-    attributes::{CatchDifficultyAttributes, CatchDifficultyAttributesBuilder},
+    attributes::{CatchDifficultyAttributes, ObjectCountBuilder},
     convert::CatchBeatmap,
+    object::palpable::PalpableObject,
 };
 
+pub mod gradual;
 mod object;
 mod skills;
 
@@ -27,9 +30,35 @@ pub fn difficulty(
         mut attrs,
     } = DifficultyValues::calculate(difficulty, converted);
 
-    attrs.stars = movement.difficulty_value().sqrt() * STAR_SCALING_FACTOR;
+    DifficultyValues::eval(&mut attrs, movement.difficulty_value());
 
     attrs
+}
+
+pub struct CatchDifficultySetup {
+    map_attrs: BeatmapAttributes,
+    attrs: CatchDifficultyAttributes,
+}
+
+impl CatchDifficultySetup {
+    pub fn new(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self {
+        let mods = difficulty.get_mods();
+        let clock_rate = difficulty.get_clock_rate();
+
+        let map_attrs = converted
+            .attributes()
+            .mods(mods)
+            .clock_rate(clock_rate)
+            .build();
+
+        let attrs = CatchDifficultyAttributes {
+            ar: map_attrs.ar,
+            is_convert: converted.is_convert,
+            ..Default::default()
+        };
+
+        Self { map_attrs, attrs }
+    }
 }
 
 pub struct DifficultyValues {
@@ -40,33 +69,51 @@ pub struct DifficultyValues {
 impl DifficultyValues {
     pub fn calculate(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
+        let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
 
-        let map_attrs = converted
-            .attributes()
-            .mods(difficulty.get_mods())
-            .clock_rate(clock_rate)
-            .build();
+        let CatchDifficultySetup {
+            map_attrs,
+            mut attrs,
+        } = CatchDifficultySetup::new(difficulty, converted);
 
-        let attrs = CatchDifficultyAttributes {
-            ar: map_attrs.ar,
-            is_convert: converted.is_convert,
-            ..Default::default()
-        };
+        let hr = mods.hr();
+        let mut count = ObjectCountBuilder::new_regular(take);
 
-        let mut attrs = CatchDifficultyAttributesBuilder::new(attrs, take);
+        let palpable_objects = convert_objects(converted, &mut count, hr, map_attrs.cs as f32);
 
-        let hr = difficulty.get_mods().hr();
+        let diff_objects = Self::create_difficulty_objects(
+            &map_attrs,
+            clock_rate,
+            palpable_objects.iter().take(take),
+        );
+
         let mut movement = Movement::new(clock_rate);
 
-        let palpable_objects = convert_objects(converted, &mut attrs, hr, map_attrs.cs as f32);
-        let mut palpable_objects_iter = palpable_objects.iter().take(take);
+        {
+            let mut movement = Skill::new(&mut movement, &diff_objects);
 
-        let Some(mut last_object) = palpable_objects_iter.next() else {
-            return Self {
-                movement,
-                attrs: attrs.into_inner(),
-            };
+            for curr in diff_objects.iter() {
+                movement.process(curr);
+            }
+        }
+
+        attrs.set_object_count(&count.into_regular());
+
+        Self { movement, attrs }
+    }
+
+    pub fn eval(attrs: &mut CatchDifficultyAttributes, movement_difficulty_value: f64) {
+        attrs.stars = movement_difficulty_value.sqrt() * STAR_SCALING_FACTOR;
+    }
+
+    pub fn create_difficulty_objects<'a>(
+        map_attrs: &BeatmapAttributes,
+        clock_rate: f64,
+        mut palpable_objects: impl ExactSizeIterator<Item = &'a PalpableObject>,
+    ) -> Box<[CatchDifficultyObject]> {
+        let Some(mut last_object) = palpable_objects.next() else {
+            return Box::default();
         };
 
         let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs as f32) * 0.5;
@@ -74,7 +121,7 @@ impl DifficultyValues {
         let scaling_factor =
             CatchDifficultyObject::NORMALIZED_HITOBJECT_RADIUS / half_catcher_width;
 
-        let diff_objects: Vec<_> = palpable_objects_iter
+        palpable_objects
             .enumerate()
             .map(|(i, hit_object)| {
                 let diff_object = CatchDifficultyObject::new(
@@ -88,19 +135,6 @@ impl DifficultyValues {
 
                 diff_object
             })
-            .collect();
-
-        {
-            let mut movement = Skill::new(&mut movement, &diff_objects);
-
-            for curr in diff_objects.iter() {
-                movement.process(curr);
-            }
-        }
-
-        Self {
-            movement,
-            attrs: attrs.into_inner(),
-        }
+            .collect()
     }
 }

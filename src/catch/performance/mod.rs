@@ -14,6 +14,8 @@ use super::{
     Catch,
 };
 
+pub mod gradual;
+
 /// Performance calculator on osu!catch maps.
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]

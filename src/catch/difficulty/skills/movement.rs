@@ -112,7 +112,17 @@ impl Movement {
     }
 
     pub fn difficulty_value(self) -> f64 {
-        self.inner.difficulty_value(DECAY_WEIGHT)
+        Self::static_difficulty_value(self.inner)
+    }
+
+    /// Use [`difficulty_value`] instead whenever possible because
+    /// [`as_difficulty_value`] clones internally.
+    pub fn as_difficulty_value(&self) -> f64 {
+        Self::static_difficulty_value(self.inner.clone())
+    }
+
+    fn static_difficulty_value(skill: StrainDecaySkill) -> f64 {
+        skill.difficulty_value(DECAY_WEIGHT)
     }
 }
 

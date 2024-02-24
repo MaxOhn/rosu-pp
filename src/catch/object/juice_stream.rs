@@ -5,7 +5,7 @@ use rosu_map::section::hit_objects::{
 };
 
 use crate::{
-    catch::{attributes::CatchDifficultyAttributesBuilder, convert::CatchBeatmap, PLAYFIELD_WIDTH},
+    catch::{attributes::ObjectCountBuilder, convert::CatchBeatmap, PLAYFIELD_WIDTH},
     model::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::Slider,
@@ -25,7 +25,7 @@ impl<'a> JuiceStream<'a> {
         start_time: f64,
         slider: &'a Slider,
         converted: &CatchBeatmap<'_>,
-        attrs: &mut CatchDifficultyAttributesBuilder,
+        count: &mut ObjectCountBuilder,
         bufs: &'a mut JuiceStreamBufs,
     ) -> Self {
         let slider_multiplier = converted.map.slider_multiplier;
@@ -69,7 +69,8 @@ impl<'a> JuiceStream<'a> {
         let mut last_event_time = None;
 
         for e in events {
-            if let Some(last_event_time) = last_event_time.filter(|_| attrs.take_more()) {
+            if let Some(last_event_time) = last_event_time {
+                let mut tiny_droplets = 0;
                 let since_last_tick = e.time - last_event_time;
 
                 if since_last_tick > 80.0 {
@@ -82,7 +83,7 @@ impl<'a> JuiceStream<'a> {
                     let mut t = time_between_tiny;
 
                     while t < since_last_tick {
-                        attrs.inc_tiny_droplets();
+                        tiny_droplets += 1;
 
                         let nested = NestedJuiceStreamObject {
                             pos: 0.0,        // not important
@@ -95,18 +96,20 @@ impl<'a> JuiceStream<'a> {
                         t += time_between_tiny;
                     }
                 }
+
+                count.record_tiny_droplets(tiny_droplets);
             }
 
             last_event_time = Some(e.time);
 
             let kind = match e.kind {
                 SliderEventType::Tick => {
-                    attrs.inc_droplets();
+                    count.record_droplet();
 
                     NestedJuiceStreamObjectKind::Droplet
                 }
                 SliderEventType::Head | SliderEventType::Repeat | SliderEventType::Tail => {
-                    attrs.inc_fruits();
+                    count.record_fruit();
 
                     NestedJuiceStreamObjectKind::Fruit
                 }

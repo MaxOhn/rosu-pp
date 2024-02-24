@@ -11,7 +11,8 @@ use crate::{
 pub use self::{
     attributes::{CatchDifficultyAttributes, CatchPerformanceAttributes},
     convert::CatchBeatmap,
-    performance::CatchPerformance,
+    difficulty::gradual::CatchGradualDifficulty,
+    performance::{gradual::CatchGradualPerformance, CatchPerformance},
     score_state::CatchScoreState,
     strains::CatchStrains,
 };

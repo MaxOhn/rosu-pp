@@ -1,3 +1,5 @@
+use std::mem;
+
 use crate::catch::performance::CatchPerformance;
 
 /// The result of a difficulty calculation on an osu!catch map.
@@ -36,6 +38,22 @@ impl CatchDifficultyAttributes {
     pub fn performance<'a>(self) -> CatchPerformance<'a> {
         self.into()
     }
+
+    pub(crate) fn set_object_count(&mut self, count: &ObjectCount) {
+        self.n_fruits = count.fruits;
+        self.n_droplets = count.droplets;
+        self.n_tiny_droplets = count.tiny_droplets;
+    }
+
+    pub(crate) fn add_object_count(&mut self, count: GradualObjectCount) {
+        if count.fruit {
+            self.n_fruits += 1;
+        } else {
+            self.n_droplets += 1;
+        }
+
+        self.n_tiny_droplets += count.tiny_droplets;
+    }
 }
 
 /// The result of a performance calculation on an osu!catch map.
@@ -71,43 +89,96 @@ impl CatchPerformanceAttributes {
     }
 }
 
-pub struct CatchDifficultyAttributesBuilder {
-    inner: CatchDifficultyAttributes,
-    take: usize,
+#[derive(Clone, Default)]
+pub struct ObjectCount {
+    fruits: u32,
+    droplets: u32,
+    tiny_droplets: u32,
 }
 
-impl CatchDifficultyAttributesBuilder {
-    pub const fn new(attrs: CatchDifficultyAttributes, take: usize) -> Self {
-        Self { inner: attrs, take }
+#[derive(Copy, Clone, Default)]
+pub struct GradualObjectCount {
+    fruit: bool,
+    tiny_droplets: u32,
+}
+
+pub enum ObjectCountBuilder {
+    Regular {
+        count: ObjectCount,
+        take: usize,
+    },
+    Gradual {
+        count: GradualObjectCount,
+        all: Vec<GradualObjectCount>,
+    },
+}
+
+impl ObjectCountBuilder {
+    pub fn new_regular(take: usize) -> Self {
+        Self::Regular {
+            count: ObjectCount::default(),
+            take,
+        }
     }
 
-    pub const fn into_inner(self) -> CatchDifficultyAttributes {
-        self.inner
+    pub fn new_gradual() -> Self {
+        Self::Gradual {
+            count: GradualObjectCount::default(),
+            all: Vec::with_capacity(512),
+        }
     }
 
-    pub const fn take_more(&self) -> bool {
-        self.take > 0
+    pub fn into_regular(self) -> ObjectCount {
+        if let Self::Regular { count, .. } = self {
+            count
+        } else {
+            unreachable!()
+        }
     }
 
-    pub fn inc_fruits(&mut self) {
-        Self::inc_value(&mut self.inner.n_fruits, &mut self.take);
+    pub fn into_gradual(self) -> Vec<GradualObjectCount> {
+        if let Self::Gradual { all, .. } = self {
+            all
+        } else {
+            unreachable!()
+        }
     }
 
-    pub fn inc_droplets(&mut self) {
-        Self::inc_value(&mut self.inner.n_droplets, &mut self.take);
+    pub fn record_fruit(&mut self) {
+        match self {
+            Self::Regular { count, take } => {
+                if *take > 0 {
+                    *take -= 1;
+                    count.fruits += 1;
+                }
+            }
+            Self::Gradual { count, all } => {
+                count.fruit = true;
+                all.push(mem::take(count));
+            }
+        }
     }
 
-    /// Should only be used if [`take_more`] returns `true`.
-    ///
-    /// [`take_more`]: Self::take_more
-    pub fn inc_tiny_droplets(&mut self) {
-        self.inner.n_tiny_droplets += 1;
+    pub fn record_droplet(&mut self) {
+        match self {
+            Self::Regular { count, take } => {
+                if *take > 0 {
+                    *take -= 1;
+                    count.droplets += 1;
+                }
+            }
+            Self::Gradual { count, all } => all.push(mem::take(count)),
+        }
     }
 
-    fn inc_value(value: &mut u32, take: &mut usize) {
-        if *take > 0 {
-            *value += 1;
-            *take -= 1;
+    pub fn record_tiny_droplets(&mut self, n: u32) {
+        match self {
+            Self::Regular { count, take } => {
+                if *take > 0 {
+                    count.tiny_droplets += n;
+                }
+            }
+            Self::Gradual { count, .. } => count.tiny_droplets += n,
         }
     }
 }

@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    attributes::CatchDifficultyAttributesBuilder,
+    attributes::ObjectCountBuilder,
     catcher::Catcher,
     object::{
         banana_shower::BananaShower,
@@ -42,7 +42,7 @@ pub fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
 
 pub fn convert_objects(
     converted: &CatchBeatmap<'_>,
-    attrs: &mut CatchDifficultyAttributesBuilder,
+    count: &mut ObjectCountBuilder,
     hr: bool,
     cs: f32,
 ) -> Vec<PalpableObject> {
@@ -62,7 +62,7 @@ pub fn convert_objects(
     let mut last_start_time = 0.0;
 
     for h in converted.map.hit_objects.iter() {
-        let mut new_objects = convert_object(h, converted, attrs, &mut bufs);
+        let mut new_objects = convert_object(h, converted, count, &mut bufs);
 
         apply_pos_offset(
             &mut new_objects,
@@ -96,14 +96,14 @@ pub fn convert_objects(
 fn convert_object<'a>(
     h: &'a HitObject,
     converted: &CatchBeatmap<'_>,
-    attrs: &mut CatchDifficultyAttributesBuilder,
+    count: &mut ObjectCountBuilder,
     bufs: &'a mut JuiceStreamBufs,
 ) -> ObjectIter<'a> {
     let state = match h.kind {
-        HitObjectKind::Circle => ObjectIterState::Fruit(Some(Fruit::new(attrs))),
+        HitObjectKind::Circle => ObjectIterState::Fruit(Some(Fruit::new(count))),
         HitObjectKind::Slider(ref slider) => {
             let x = JuiceStream::clamp_to_playfield(h.pos.x);
-            let stream = JuiceStream::new(x, h.start_time, slider, converted, attrs, bufs);
+            let stream = JuiceStream::new(x, h.start_time, slider, converted, count, bufs);
 
             ObjectIterState::JuiceStream(stream)
         }
