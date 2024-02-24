@@ -116,24 +116,18 @@ mod tests {
 
         #[test]
         fn sort(mut actual in prop::collection::vec(0_u8..100, 0..100)) {
-            let mut expected = actual.clone();
-            expected.sort_unstable();
+            let mut expected_sorted = actual.clone();
+            expected_sorted.sort_unstable();
+
+            let expected_unsorted = actual.clone();
 
             let mut sorter = TandemSorter::new_unstable(&actual, u8::cmp);
+
             sorter.sort(&mut actual);
+            assert_eq!(actual, expected_sorted);
 
-            assert_eq!(actual, expected);
-        }
-
-        #[test]
-        fn unsort(mut actual in prop::collection::vec(0_u8..100, 0..100)) {
-            let expected = actual.clone();
-
-            let mut sorter = TandemSorter::new_unstable(&actual, u8::cmp);
-            sorter.sort(&mut actual);
             sorter.unsort(&mut actual);
-
-            assert_eq!(actual, expected);
+            assert_eq!(actual, expected_unsorted);
         }
     }
 }
