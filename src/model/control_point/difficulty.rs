@@ -1,3 +1,5 @@
+use crate::util::float_ext::FloatExt;
+
 /// Difficulty-related info about this control point.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DifficultyPoint {
@@ -27,7 +29,7 @@ impl DifficultyPoint {
 
     pub fn is_redundant(&self, existing: &Self) -> bool {
         self.generate_ticks == existing.generate_ticks
-            && (self.slider_velocity - existing.slider_velocity).abs() < f64::EPSILON
+            && self.slider_velocity.eq(existing.slider_velocity)
     }
 }
 
