@@ -123,12 +123,11 @@ impl<'map> Performance<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    #[cfg_attr(
-        feature = "gradual",
-        doc = "If you want to calculate the performance after every few objects, instead of
-        using [`AnyPP`] multiple times with different `passed_objects`, you should use
-        [`GradualPerformanceAttributes`](crate::GradualPerformance)."
-    )]
+    /// If you want to calculate the performance after every few objects,
+    /// instead of using [`Performance`] multiple times with different
+    /// `passed_objects`, you should use [`GradualPerformance`].
+    ///
+    /// [`GradualPerformance`]: crate::GradualPerformance
     pub fn passed_objects(self, passed_objects: u32) -> Self {
         match self {
             Self::Osu(o) => Self::Osu(o.passed_objects(passed_objects)),

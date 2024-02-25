@@ -159,12 +159,11 @@ impl<'map> OsuPerformance<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    #[cfg_attr(
-        feature = "gradual",
-        doc = "If you want to calculate the performance after every few objects, instead of
-        using [`OsuPP`] multiple times with different `passed_objects`, you should use
-        [`OsuGradualPerformanceAttributes`](crate::osu::OsuGradualPerformance)."
-    )]
+    /// If you want to calculate the performance after every few objects,
+    /// instead of using [`OsuPerformance`] multiple times with different
+    /// `passed_objects`, you should use [`OsuGradualPerformance`].
+    ///
+    /// [`OsuGradualPerformance`]: crate::osu::OsuGradualPerformance
     pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
         self.passed_objects = Some(passed_objects);
 

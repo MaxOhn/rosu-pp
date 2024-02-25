@@ -104,12 +104,11 @@ impl<'map> CatchPerformance<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    #[cfg_attr(
-        feature = "gradual",
-        doc = "If you want to calculate the performance after every few objects, instead of
-        using [`CatchPP`] multiple times with different `passed_objects`, you should use
-        [`CatchGradualPerformanceAttributes`](crate::catch::CatchGradualPerformance)."
-    )]
+    /// If you want to calculate the performance after every few objects,
+    /// instead of using [`CatchPerformance`] multiple times with different
+    /// `passed_objects`, you should use [`CatchGradualPerformance`].
+    ///
+    /// [`CatchGradualPerformance`]: crate::catch::CatchGradualPerformance
     pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
         self.passed_objects = Some(passed_objects);
 

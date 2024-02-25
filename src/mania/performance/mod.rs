@@ -64,12 +64,11 @@ impl<'map> ManiaPerformance<'map> {
 
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
-    #[cfg_attr(
-        feature = "gradual",
-        doc = "If you want to calculate the performance after every few objects, instead of
-        using [`ManiaPP`] multiple times with different `passed_objects`, you should use
-        [`ManiaGradualPerformanceAttributes`](crate::mania::ManiaGradualPerformance)."
-    )]
+    /// If you want to calculate the performance after every few objects,
+    /// instead of using [`ManiaPerformance`] multiple times with different
+    /// `passed_objects`, you should use [`ManiaGradualPerformance`].
+    ///
+    /// [`ManiaGradualPerformance`]: crate::mania::ManiaGradualPerformance
     pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
         self.passed_objects = Some(passed_objects);
 
