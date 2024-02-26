@@ -172,12 +172,12 @@ impl<'map> Performance<'map> {
     }
 
     /// Specify the amount of misses of a play.
-    pub fn n_misses(self, n_misses: u32) -> Self {
+    pub fn misses(self, n_misses: u32) -> Self {
         match self {
-            Self::Osu(o) => Self::Osu(o.n_misses(n_misses)),
-            Self::Taiko(t) => Self::Taiko(t.n_misses(n_misses)),
+            Self::Osu(o) => Self::Osu(o.misses(n_misses)),
+            Self::Taiko(t) => Self::Taiko(t.misses(n_misses)),
             Self::Catch(f) => Self::Catch(f.misses(n_misses)),
-            Self::Mania(m) => Self::Mania(m.n_misses(n_misses)),
+            Self::Mania(m) => Self::Mania(m.misses(n_misses)),
         }
     }
 

@@ -28,7 +28,7 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 ///     .unchecked_into_converted::<Osu>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
-/// let mut gradual_perf = OsuGradualPerformance::new(&difficulty, converted);
+/// let mut gradual_perf = OsuGradualPerformance::new(&difficulty, &converted);
 /// let mut state = OsuScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hits are 300s and there are no sliders for additional combo
@@ -42,7 +42,7 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 ///
 /// // Then comes a miss. Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.n_misses += 1;
+/// state.misses += 1;
 /// let performance = gradual_perf.next(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 ///
@@ -67,7 +67,7 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 /// state.n300 = ...
 /// state.n100 = ...
 /// state.n50 = ...
-/// state.n_misses = ...
+/// state.misses = ...
 /// # */
 /// let final_performance = gradual_perf.nth(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -150,7 +150,7 @@ mod tests {
         let hit_objects_len = converted.map.hit_objects.len();
 
         for i in 1.. {
-            state.n_misses += 1;
+            state.misses += 1;
 
             let Some(next_gradual) = gradual.next(state) else {
                 assert_eq!(i, hit_objects_len + 1);

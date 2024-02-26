@@ -30,7 +30,7 @@ pub struct ManiaPerformance<'map> {
     pub(crate) n200: Option<u32>,
     pub(crate) n100: Option<u32>,
     pub(crate) n50: Option<u32>,
-    pub(crate) n_misses: Option<u32>,
+    pub(crate) misses: Option<u32>,
 
     acc: Option<f64>,
     hitresult_priority: HitResultPriority,
@@ -137,8 +137,8 @@ impl<'map> ManiaPerformance<'map> {
     }
 
     /// Specify the amount of misses of a play.
-    pub const fn n_misses(mut self, n_misses: u32) -> Self {
-        self.n_misses = Some(n_misses);
+    pub const fn misses(mut self, n_misses: u32) -> Self {
+        self.misses = Some(n_misses);
 
         self
     }
@@ -152,7 +152,7 @@ impl<'map> ManiaPerformance<'map> {
             n200,
             n100,
             n50,
-            n_misses,
+            misses,
         } = state;
 
         self.n320 = Some(n320);
@@ -160,7 +160,7 @@ impl<'map> ManiaPerformance<'map> {
         self.n200 = Some(n200);
         self.n100 = Some(n100);
         self.n50 = Some(n50);
-        self.n_misses = Some(n_misses);
+        self.misses = Some(misses);
 
         self
     }
@@ -185,8 +185,8 @@ impl<'map> ManiaPerformance<'map> {
 
         let priority = self.hitresult_priority;
 
-        let n_misses = self.n_misses.map_or(0, |n| cmp::min(n, n_objects));
-        let n_remaining = n_objects - n_misses;
+        let misses = self.misses.map_or(0, |n| cmp::min(n, n_objects));
+        let n_remaining = n_objects - misses;
 
         let mut n320 = self.n320.map_or(0, |n| cmp::min(n, n_remaining));
         let mut n300 = self.n300.map_or(0, |n| cmp::min(n, n_remaining));
@@ -201,7 +201,7 @@ impl<'map> ManiaPerformance<'map> {
                 // All hitresults given
                 (Some(_), Some(_), Some(_), Some(_), Some(_)) => {
                     let remaining =
-                        n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
+                        n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + misses);
 
                     match priority {
                         HitResultPriority::BestCase => n320 += remaining,
@@ -211,25 +211,25 @@ impl<'map> ManiaPerformance<'map> {
 
                 // All but one hitresults given
                 (None, Some(_), Some(_), Some(_), Some(_)) => {
-                    n320 = n_objects.saturating_sub(n300 + n200 + n100 + n50 + n_misses);
+                    n320 = n_objects.saturating_sub(n300 + n200 + n100 + n50 + misses);
                 }
                 (Some(_), None, Some(_), Some(_), Some(_)) => {
-                    n300 = n_objects.saturating_sub(n320 + n200 + n100 + n50 + n_misses);
+                    n300 = n_objects.saturating_sub(n320 + n200 + n100 + n50 + misses);
                 }
                 (Some(_), Some(_), None, Some(_), Some(_)) => {
-                    n200 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses);
+                    n200 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + misses);
                 }
                 (Some(_), Some(_), Some(_), None, Some(_)) => {
-                    n100 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses);
+                    n100 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + misses);
                 }
                 (Some(_), Some(_), Some(_), Some(_), None) => {
-                    n50 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
+                    n50 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + misses);
                 }
 
                 // n200, n100, and n50 given
                 (None, None, Some(_), Some(_), Some(_)) => {
                     let n_remaining =
-                        n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
+                        n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + misses);
 
                     match priority {
                         HitResultPriority::BestCase => n320 = n_remaining,
@@ -240,7 +240,7 @@ impl<'map> ManiaPerformance<'map> {
                 // n100 and n50 given
                 (.., None, Some(_), Some(_)) => {
                     let mut best_dist = f64::INFINITY;
-                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + n_misses);
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n100 + n50 + misses);
 
                     let raw_n3x0 = (target_total - f64::from(4 * n_remaining)
                         + f64::from(2 * n100 + 3 * n50))
@@ -264,7 +264,7 @@ impl<'map> ManiaPerformance<'map> {
                     for new3x0 in min_n3x0..=max_n3x0 {
                         let new200 = n_remaining.saturating_sub(new3x0 + n100 + n50);
                         let curr_dist =
-                            (acc - accuracy(new3x0, 0, new200, n100, n50, n_misses)).abs();
+                            (acc - accuracy(new3x0, 0, new200, n100, n50, misses)).abs();
 
                         if curr_dist < best_dist {
                             best_dist = curr_dist;
@@ -287,7 +287,7 @@ impl<'map> ManiaPerformance<'map> {
                 // n200 and n50 given
                 (.., Some(_), None, Some(_)) => {
                     let mut best_dist = f64::INFINITY;
-                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + n_misses);
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n50 + misses);
 
                     let raw_n3x0 = (target_total - f64::from(2 * (n_remaining + n200) - n50)) / 4.0;
                     let min_n3x0 = cmp::min(
@@ -309,7 +309,7 @@ impl<'map> ManiaPerformance<'map> {
                     for new3x0 in min_n3x0..=max_n3x0 {
                         let new100 = n_remaining.saturating_sub(new3x0 + n200 + n50);
                         let curr_dist =
-                            (acc - accuracy(new3x0, 0, n200, new100, n50, n_misses)).abs();
+                            (acc - accuracy(new3x0, 0, n200, new100, n50, misses)).abs();
 
                         if curr_dist < best_dist {
                             best_dist = curr_dist;
@@ -332,7 +332,7 @@ impl<'map> ManiaPerformance<'map> {
                 // n200 and n100 given
                 (.., Some(_), Some(_), None) => {
                     let mut best_dist = f64::INFINITY;
-                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + misses);
 
                     let raw_n3x0 = (target_total - f64::from(n_remaining + 3 * n200 + n100)) / 5.0;
                     let min_n3x0 = cmp::min(
@@ -354,7 +354,7 @@ impl<'map> ManiaPerformance<'map> {
                     for new3x0 in min_n3x0..=max_n3x0 {
                         let new50 = n_remaining.saturating_sub(new3x0 + n200 + n100);
                         let curr_dist =
-                            (acc - accuracy(new3x0, 0, n200, n100, new50, n_misses)).abs();
+                            (acc - accuracy(new3x0, 0, n200, n100, new50, misses)).abs();
 
                         if curr_dist < best_dist {
                             best_dist = curr_dist;
@@ -377,7 +377,7 @@ impl<'map> ManiaPerformance<'map> {
                 // n200 given
                 (.., Some(_), None, None) => {
                     let mut best_dist = f64::INFINITY;
-                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n_misses);
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + misses);
 
                     let min_n3x0 = cmp::min(
                         ((target_total - f64::from(2 * (n_remaining + n200))) / 4.0).floor() as u32,
@@ -414,7 +414,7 @@ impl<'map> ManiaPerformance<'map> {
                         for new100 in min_n100..=max_n100 {
                             let new50 = n_remaining.saturating_sub(new3x0 + n200 + new100);
                             let curr_dist =
-                                (acc - accuracy(new3x0, 0, n200, new100, new50, n_misses)).abs();
+                                (acc - accuracy(new3x0, 0, n200, new100, new50, misses)).abs();
 
                             if curr_dist < best_dist {
                                 best_dist = curr_dist;
@@ -439,7 +439,7 @@ impl<'map> ManiaPerformance<'map> {
                 // n100 given
                 (.., None, Some(_), None) => {
                     let mut best_dist = f64::INFINITY;
-                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n100 + n_misses);
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n100 + misses);
 
                     let min_n3x0 = cmp::min(
                         (acc * f64::from(3 * n_remaining) - f64::from(2 * n_remaining - n100))
@@ -477,7 +477,7 @@ impl<'map> ManiaPerformance<'map> {
                         for new200 in min_n200..=max_n200 {
                             let new50 = n_remaining.saturating_sub(new3x0 + new200 + n100);
                             let curr_dist =
-                                (acc - accuracy(new3x0, 0, new200, n100, new50, n_misses)).abs();
+                                (acc - accuracy(new3x0, 0, new200, n100, new50, misses)).abs();
 
                             if curr_dist < best_dist {
                                 best_dist = curr_dist;
@@ -502,7 +502,7 @@ impl<'map> ManiaPerformance<'map> {
                 // n50 given
                 (.., None, None, Some(_)) => {
                     let mut best_dist = f64::INFINITY;
-                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n50 + n_misses);
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n50 + misses);
 
                     let min_n3x0 = cmp::min(
                         ((target_total - f64::from(4 * n_remaining - 3 * n50)) / 2.0).floor()
@@ -541,7 +541,7 @@ impl<'map> ManiaPerformance<'map> {
                         for new200 in min_n200..=max_n200 {
                             let new100 = n_remaining.saturating_sub(new3x0 + new200 + n50);
                             let curr_dist =
-                                (acc - accuracy(new3x0, 0, new200, new100, n50, n_misses)).abs();
+                                (acc - accuracy(new3x0, 0, new200, new100, n50, misses)).abs();
 
                             if curr_dist < best_dist {
                                 best_dist = curr_dist;
@@ -576,7 +576,7 @@ impl<'map> ManiaPerformance<'map> {
                 // Neither n200, n100, nor n50 given
                 (.., None, None, None) => {
                     let mut best_dist = f64::INFINITY;
-                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n_misses);
+                    let mut n3x0 = n_objects.saturating_sub(n320 + n300 + n200 + n100 + misses);
 
                     let min_n3x0 = cmp::min(
                         ((target_total - f64::from(4 * n_remaining)) / 5.0).floor() as u32,
@@ -623,7 +623,7 @@ impl<'map> ManiaPerformance<'map> {
 
                             for new100 in min_n100..=max_n100 {
                                 let new50 = n_remaining - new3x0 - new200 - new100;
-                                let curr_acc = accuracy(new3x0, 0, new200, new100, new50, n_misses);
+                                let curr_acc = accuracy(new3x0, 0, new200, new100, new50, misses);
                                 let curr_dist = (acc - curr_acc).abs();
 
                                 if curr_dist < best_dist {
@@ -659,7 +659,7 @@ impl<'map> ManiaPerformance<'map> {
                 }
             }
         } else {
-            let remaining = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + n_misses);
+            let remaining = n_objects.saturating_sub(n320 + n300 + n200 + n100 + n50 + misses);
 
             match priority {
                 HitResultPriority::BestCase => {
@@ -691,7 +691,7 @@ impl<'map> ManiaPerformance<'map> {
             n200,
             n100,
             n50,
-            n_misses,
+            misses,
         }
     }
 
@@ -793,7 +793,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             n300,
             n100,
             n50,
-            n_misses,
+            misses,
             passed_objects,
             clock_rate,
             hitresult_priority,
@@ -809,7 +809,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             n200: None,
             n100,
             n50,
-            n_misses,
+            misses,
             acc,
             hitresult_priority,
         })
@@ -828,7 +828,7 @@ impl<'map> From<ManiaBeatmap<'map>> for ManiaPerformance<'map> {
             n200: None,
             n100: None,
             n50: None,
-            n_misses: None,
+            misses: None,
             acc: None,
             hitresult_priority: HitResultPriority::default(),
         }
@@ -847,7 +847,7 @@ impl From<ManiaDifficultyAttributes> for ManiaPerformance<'_> {
             n200: None,
             n100: None,
             n50: None,
-            n_misses: None,
+            misses: None,
             acc: None,
             hitresult_priority: HitResultPriority::default(),
         }
@@ -910,7 +910,7 @@ impl ManiaPerformanceInner {
             n200,
             n100,
             n50,
-            n_misses: _,
+            misses: _,
         } = &self.state;
 
         let total_hits = self.state.total_hits();
@@ -930,9 +930,9 @@ fn custom_accuracy(n320: u32, n300: u32, n200: u32, n100: u32, n50: u32, total_h
     f64::from(numerator) / f64::from(denominator)
 }
 
-fn accuracy(n320: u32, n300: u32, n200: u32, n100: u32, n50: u32, n_misses: u32) -> f64 {
+fn accuracy(n320: u32, n300: u32, n200: u32, n100: u32, n50: u32, misses: u32) -> f64 {
     let numerator = 6 * (n320 + n300) + 4 * n200 + 2 * n100 + n50;
-    let denominator = 6 * (n320 + n300 + n200 + n100 + n50 + n_misses);
+    let denominator = 6 * (n320 + n300 + n200 + n100 + n50 + misses);
 
     f64::from(numerator) / f64::from(denominator)
 }
@@ -980,20 +980,20 @@ mod tests {
         n200: Option<u32>,
         n100: Option<u32>,
         n50: Option<u32>,
-        n_misses: u32,
+        misses: u32,
         best_case: bool,
     ) -> ManiaScoreState {
-        let n_misses = cmp::min(n_misses, N_OBJECTS);
+        let misses = cmp::min(misses, N_OBJECTS);
 
         let mut best_state = ManiaScoreState {
-            n_misses,
+            misses,
             ..Default::default()
         };
 
         let mut best_dist = f64::INFINITY;
         let mut best_custom_acc = 0.0;
 
-        let n_remaining = N_OBJECTS - n_misses;
+        let n_remaining = N_OBJECTS - misses;
 
         let multiple_given = (usize::from(n320.is_some())
             + usize::from(n300.is_some())
@@ -1003,7 +1003,7 @@ mod tests {
             > 1;
 
         let max_left = N_OBJECTS
-            .saturating_sub(n200.unwrap_or(0) + n100.unwrap_or(0) + n50.unwrap_or(0) + n_misses);
+            .saturating_sub(n200.unwrap_or(0) + n100.unwrap_or(0) + n50.unwrap_or(0) + misses);
 
         let min_n3x0 = cmp::min(
             max_left,
@@ -1081,7 +1081,7 @@ mod tests {
                         (None, None) => (0, new3x0),
                     };
 
-                    let curr_acc = accuracy(new320, new300, new200, new100, new50, n_misses);
+                    let curr_acc = accuracy(new320, new300, new200, new100, new50, misses);
                     let curr_dist = (acc - curr_acc).abs();
 
                     let curr_custom_acc =
@@ -1232,8 +1232,8 @@ mod tests {
                 state = state.n50(n50);
             }
 
-            if let Some(n_misses) = n_misses {
-                state = state.n_misses(n_misses);
+            if let Some(misses) = n_misses {
+                state = state.misses(misses);
             }
 
             let state = state.generate_state();
@@ -1254,10 +1254,10 @@ mod tests {
     }
 
     #[test]
-    fn hitresults_n320_n_misses_best() {
+    fn hitresults_n320_misses_best() {
         let state = ManiaPerformance::from(attrs())
             .n320(500)
-            .n_misses(2)
+            .misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
             .generate_state();
 
@@ -1267,18 +1267,18 @@ mod tests {
             n200: 0,
             n100: 0,
             n50: 0,
-            n_misses: 2,
+            misses: 2,
         };
 
         assert_eq!(state, expected);
     }
 
     #[test]
-    fn hitresults_n100_n50_n_misses_worst() {
+    fn hitresults_n100_n50_misses_worst() {
         let state = ManiaPerformance::from(attrs())
             .n100(200)
             .n50(50)
-            .n_misses(2)
+            .misses(2)
             .hitresult_priority(HitResultPriority::WorstCase)
             .generate_state();
 
@@ -1288,7 +1288,7 @@ mod tests {
             n200: 342,
             n100: 200,
             n50: 50,
-            n_misses: 2,
+            misses: 2,
         };
 
         assert_eq!(state, expected);

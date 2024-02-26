@@ -101,6 +101,11 @@ impl PerformanceAttributes {
             Self::Mania(attrs) => attrs.difficulty.max_combo,
         }
     }
+
+    /// Returns a builder for performance calculation.
+    pub fn performance<'a>(self) -> Performance<'a> {
+        self.into()
+    }
 }
 
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.

@@ -23,25 +23,25 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 /// use rosu_pp::{Beatmap, ModeDifficulty};
 /// use rosu_pp::mania::{Mania, ManiaGradualPerformance, ManiaScoreState};
 ///
-/// let converted = Beatmap::from_path()
+/// let converted = Beatmap::from_path("./resources/1638954.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Mania>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
-/// let mut gradual_perf = ManiaGradualPerformance::new(&difficulty, converted);
+/// let mut gradual_perf = ManiaGradualPerformance::new(&difficulty, &converted);
 /// let mut state = ManiaScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 320s
 /// for _ in 0..10 {
 ///     state.n320 += 1;
 ///
-///     let performance = gradual_perf.next(score).unwrap();
+///     let performance = gradual_perf.next(state.clone()).unwrap();
 ///     println!("PP: {}", performance.pp);
 /// }
 ///
 /// // Then comes a miss.
-/// state.n_misses += 1;
-/// let performance = gradual_perf.next(score).unwrap();
+/// state.misses += 1;
+/// let performance = gradual_perf.next(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 ///
 /// // The next 10 objects will be a mixture of 320s and 100s.
@@ -49,7 +49,7 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 /// state.n320 += 3;
 /// state.n100 += 7;
 /// // The `nth` method takes a zero-based value.
-/// let performance = gradual_perf.nth(score, 9).unwrap();
+/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
 /// println!("PP: {}", performance.pp);
 ///
 /// // Skip to the end
@@ -57,7 +57,7 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 /// state.max_combo = ...
 /// state.n300 = ...
 /// state.n100 = ...
-/// state.n_misses = ...
+/// state.misses = ...
 /// # */
 /// let final_performance = gradual_perf.nth(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -140,7 +140,7 @@ mod tests {
         let hit_objects_len = converted.map.hit_objects.len();
 
         for i in 1.. {
-            state.n_misses += 1;
+            state.misses += 1;
 
             let Some(next_gradual) = gradual.next(state.clone()) else {
                 assert_eq!(i, hit_objects_len + 1);

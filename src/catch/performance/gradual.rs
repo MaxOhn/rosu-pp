@@ -24,7 +24,7 @@ use crate::{
 /// use rosu_pp::{Beatmap, ModeDifficulty};
 /// use rosu_pp::catch::{Catch, CatchGradualPerformance, CatchScoreState};
 ///
-/// let converted = Beatmap::from_path()
+/// let converted = Beatmap::from_path("./resources/2118524.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Catch>();
 ///
@@ -44,7 +44,7 @@ use crate::{
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.n_misses += 1;
+/// state.misses += 1;
 /// let performance = gradual_perf.next(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 ///
@@ -72,7 +72,7 @@ use crate::{
 /// state.n_droplets = ...
 /// state.n_tiny_droplets = ...
 /// state.n_tiny_droplet_misses = ...
-/// state.n_misses = ...
+/// state.misses = ...
 /// # */
 /// let final_performance = gradual_perf.last(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -153,7 +153,7 @@ mod tests {
         let mut state = CatchScoreState::default();
 
         for i in 1.. {
-            state.n_misses += 1;
+            state.misses += 1;
 
             let Some(next_gradual) = gradual.next(state.clone()) else {
                 assert_eq!(i, 731);

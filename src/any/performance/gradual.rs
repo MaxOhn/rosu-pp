@@ -31,7 +31,7 @@ use crate::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, GradualPerformance, ModeDifficulty, ScoreState};
+/// use rosu_pp::{Beatmap, GradualPerformance, ModeDifficulty, any::ScoreState};
 ///
 /// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
@@ -50,7 +50,7 @@ use crate::{
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.n_misses += 1;
+/// state.misses += 1;
 ///
 /// let performance = gradual_perf.next(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp());

@@ -33,7 +33,7 @@ use super::{
 /// use rosu_pp::{Beatmap, ModeDifficulty};
 /// use rosu_pp::catch::{Catch, CatchGradualDifficulty};
 ///
-/// let map = Beatmap::from_path();
+/// let converted = Beatmap::from_path("./resources/2118524.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Catch>();
 ///

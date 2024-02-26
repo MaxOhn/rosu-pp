@@ -12,7 +12,7 @@ pub struct ManiaScoreState {
     /// Amount of current 50s.
     pub n50: u32,
     /// Amount of current misses.
-    pub n_misses: u32,
+    pub misses: u32,
 }
 
 impl ManiaScoreState {
@@ -23,7 +23,7 @@ impl ManiaScoreState {
 
     /// Return the total amount of hits by adding everything up.
     pub const fn total_hits(&self) -> u32 {
-        self.n320 + self.n300 + self.n200 + self.n100 + self.n50 + self.n_misses
+        self.n320 + self.n300 + self.n200 + self.n100 + self.n50 + self.misses
     }
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.

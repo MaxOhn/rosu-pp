@@ -9,7 +9,7 @@ pub struct TaikoScoreState {
     /// Amount of current 100s.
     pub n100: u32,
     /// Amount of current misses.
-    pub n_misses: u32,
+    pub misses: u32,
 }
 
 impl TaikoScoreState {
@@ -20,7 +20,7 @@ impl TaikoScoreState {
 
     /// Return the total amount of hits by adding everything up.
     pub const fn total_hits(&self) -> u32 {
-        self.n300 + self.n100 + self.n_misses
+        self.n300 + self.n100 + self.misses
     }
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.

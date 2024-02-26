@@ -23,7 +23,7 @@ use super::TaikoPerformanceAttributes;
 /// use rosu_pp::{Beatmap, ModeDifficulty};
 /// use rosu_pp::taiko::{Taiko, TaikoGradualPerformance, TaikoScoreState};
 ///
-/// let map = Beatmap::from_path("./resources/1028484.osu")
+/// let converted = Beatmap::from_path("./resources/1028484.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Taiko>();
 ///
@@ -43,7 +43,7 @@ use super::TaikoPerformanceAttributes;
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.n_misses += 1;
+/// state.misses += 1;
 /// let performance = gradual_perf.next(state.clone()).unwrap();
 /// println!("PP: {}", performance.pp);
 ///
@@ -66,7 +66,7 @@ use super::TaikoPerformanceAttributes;
 /// state.max_combo = ...
 /// state.n300 = ...
 /// state.n100 = ...
-/// state.n_misses = ...
+/// state.misses = ...
 /// # */
 /// let final_performance = gradual_perf.nth(state.clone(), usize::MAX).unwrap();
 /// println!("PP: {}", performance.pp);
@@ -153,7 +153,7 @@ mod tests {
             .count();
 
         for i in 1.. {
-            state.n_misses += 1;
+            state.misses += 1;
 
             let Some(next_gradual) = gradual.next(state) else {
                 assert_eq!(i, n_hits + 1);

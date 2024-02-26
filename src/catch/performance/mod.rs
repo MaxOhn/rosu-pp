@@ -25,11 +25,11 @@ pub struct CatchPerformance<'map> {
     pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<u32>,
 
-    pub(crate) n_fruits: Option<u32>,
-    pub(crate) n_droplets: Option<u32>,
-    pub(crate) n_tiny_droplets: Option<u32>,
-    pub(crate) n_tiny_droplet_misses: Option<u32>,
-    pub(crate) n_misses: Option<u32>,
+    pub(crate) fruits: Option<u32>,
+    pub(crate) droplets: Option<u32>,
+    pub(crate) tiny_droplets: Option<u32>,
+    pub(crate) tiny_droplet_misses: Option<u32>,
+    pub(crate) misses: Option<u32>,
     pub(crate) passed_objects: Option<u32>,
     pub(crate) clock_rate: Option<f64>,
 }
@@ -69,35 +69,35 @@ impl<'map> CatchPerformance<'map> {
 
     /// Specify the amount of fruits of a play i.e. n300.
     pub const fn fruits(mut self, n_fruits: u32) -> Self {
-        self.n_fruits = Some(n_fruits);
+        self.fruits = Some(n_fruits);
 
         self
     }
 
     /// Specify the amount of droplets of a play i.e. n100.
     pub const fn droplets(mut self, n_droplets: u32) -> Self {
-        self.n_droplets = Some(n_droplets);
+        self.droplets = Some(n_droplets);
 
         self
     }
 
     /// Specify the amount of tiny droplets of a play i.e. n50.
     pub const fn tiny_droplets(mut self, n_tiny_droplets: u32) -> Self {
-        self.n_tiny_droplets = Some(n_tiny_droplets);
+        self.tiny_droplets = Some(n_tiny_droplets);
 
         self
     }
 
     /// Specify the amount of tiny droplet misses of a play i.e. `n_katu`.
     pub const fn tiny_droplet_misses(mut self, n_tiny_droplet_misses: u32) -> Self {
-        self.n_tiny_droplet_misses = Some(n_tiny_droplet_misses);
+        self.tiny_droplet_misses = Some(n_tiny_droplet_misses);
 
         self
     }
 
     /// Specify the amount of fruit / droplet misses of the play.
     pub const fn misses(mut self, n_misses: u32) -> Self {
-        self.n_misses = Some(n_misses);
+        self.misses = Some(n_misses);
 
         self
     }
@@ -133,15 +133,15 @@ impl<'map> CatchPerformance<'map> {
             n_droplets,
             n_tiny_droplets,
             n_tiny_droplet_misses,
-            n_misses,
+            misses,
         } = state;
 
         self.combo = Some(max_combo);
-        self.n_fruits = Some(n_fruits);
-        self.n_droplets = Some(n_droplets);
-        self.n_tiny_droplets = Some(n_tiny_droplets);
-        self.n_tiny_droplet_misses = Some(n_tiny_droplet_misses);
-        self.n_misses = Some(n_misses);
+        self.fruits = Some(n_fruits);
+        self.droplets = Some(n_droplets);
+        self.tiny_droplets = Some(n_tiny_droplets);
+        self.tiny_droplet_misses = Some(n_tiny_droplet_misses);
+        self.misses = Some(misses);
 
         self
     }
@@ -166,58 +166,57 @@ impl<'map> CatchPerformance<'map> {
             MapOrAttrs::Attrs(ref attrs) => attrs,
         };
 
-        let n_misses = self
-            .n_misses
+        let misses = self
+            .misses
             .map_or(0, |n| n.min(attrs.n_fruits + attrs.n_droplets));
 
-        let max_combo = self.combo.unwrap_or_else(|| attrs.max_combo() - n_misses);
+        let max_combo = self.combo.unwrap_or_else(|| attrs.max_combo() - misses);
 
         let mut best_state = CatchScoreState {
             max_combo,
-            n_misses,
+            misses,
             ..Default::default()
         };
 
         let mut best_dist = f64::INFINITY;
 
-        let (n_fruits, n_droplets) = match (self.n_fruits, self.n_droplets) {
+        let (n_fruits, n_droplets) = match (self.fruits, self.droplets) {
             (Some(mut n_fruits), Some(mut n_droplets)) => {
                 let n_remaining = (attrs.n_fruits + attrs.n_droplets)
-                    .saturating_sub(n_fruits + n_droplets + n_misses);
+                    .saturating_sub(n_fruits + n_droplets + misses);
 
                 let new_droplets = n_remaining.min(attrs.n_droplets.saturating_sub(n_droplets));
                 n_droplets += new_droplets;
                 n_fruits += n_remaining - new_droplets;
 
                 n_fruits = n_fruits
-                    .min((attrs.n_fruits + attrs.n_droplets).saturating_sub(n_droplets + n_misses));
-                n_droplets =
-                    n_droplets.min(attrs.n_fruits + attrs.n_droplets - n_fruits - n_misses);
+                    .min((attrs.n_fruits + attrs.n_droplets).saturating_sub(n_droplets + misses));
+                n_droplets = n_droplets.min(attrs.n_fruits + attrs.n_droplets - n_fruits - misses);
 
                 (n_fruits, n_droplets)
             }
             (Some(mut n_fruits), None) => {
-                let n_droplets = attrs.n_droplets.saturating_sub(
-                    n_misses.saturating_sub(attrs.n_fruits.saturating_sub(n_fruits)),
-                );
+                let n_droplets = attrs
+                    .n_droplets
+                    .saturating_sub(misses.saturating_sub(attrs.n_fruits.saturating_sub(n_fruits)));
 
-                n_fruits = attrs.n_fruits + attrs.n_droplets - n_misses - n_droplets;
+                n_fruits = attrs.n_fruits + attrs.n_droplets - misses - n_droplets;
 
                 (n_fruits, n_droplets)
             }
             (None, Some(mut n_droplets)) => {
                 let n_fruits = attrs.n_fruits.saturating_sub(
-                    n_misses.saturating_sub(attrs.n_droplets.saturating_sub(n_droplets)),
+                    misses.saturating_sub(attrs.n_droplets.saturating_sub(n_droplets)),
                 );
 
-                n_droplets = attrs.n_fruits + attrs.n_droplets - n_misses - n_fruits;
+                n_droplets = attrs.n_fruits + attrs.n_droplets - misses - n_fruits;
 
                 (n_fruits, n_droplets)
             }
             (None, None) => {
-                let n_droplets = attrs.n_droplets.saturating_sub(n_misses);
+                let n_droplets = attrs.n_droplets.saturating_sub(misses);
                 let n_fruits =
-                    attrs.n_fruits - (n_misses - (attrs.n_droplets.saturating_sub(n_droplets)));
+                    attrs.n_fruits - (misses - (attrs.n_droplets.saturating_sub(n_droplets)));
 
                 (n_fruits, n_droplets)
             }
@@ -243,7 +242,7 @@ impl<'map> CatchPerformance<'map> {
                     n_droplets,
                     n_tiny_droplets,
                     n_tiny_droplet_misses,
-                    n_misses,
+                    misses,
                 );
                 let curr_dist = (acc - curr_acc).abs();
 
@@ -256,7 +255,7 @@ impl<'map> CatchPerformance<'map> {
         };
 
         #[allow(clippy::single_match_else)]
-        match (self.n_tiny_droplets, self.n_tiny_droplet_misses) {
+        match (self.tiny_droplets, self.tiny_droplet_misses) {
             (Some(n_tiny_droplets), Some(n_tiny_droplet_misses)) => match self.acc {
                 Some(acc) => {
                     match (n_tiny_droplets + n_tiny_droplet_misses).cmp(&attrs.n_tiny_droplets) {
@@ -393,7 +392,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
             n300,
             n100,
             n50,
-            n_misses,
+            misses,
             passed_objects,
             clock_rate,
             hitresult_priority: _,
@@ -404,11 +403,11 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
             mods,
             acc,
             combo,
-            n_fruits: n300,
-            n_droplets: n100,
-            n_tiny_droplets: n50,
-            n_tiny_droplet_misses: None,
-            n_misses,
+            fruits: n300,
+            droplets: n100,
+            tiny_droplets: n50,
+            tiny_droplet_misses: None,
+            misses,
             passed_objects,
             clock_rate,
         })
@@ -423,11 +422,11 @@ impl<'map> From<CatchBeatmap<'map>> for CatchPerformance<'map> {
             acc: None,
             combo: None,
 
-            n_fruits: None,
-            n_droplets: None,
-            n_tiny_droplets: None,
-            n_tiny_droplet_misses: None,
-            n_misses: None,
+            fruits: None,
+            droplets: None,
+            tiny_droplets: None,
+            tiny_droplet_misses: None,
+            misses: None,
             passed_objects: None,
             clock_rate: None,
         }
@@ -442,11 +441,11 @@ impl From<CatchDifficultyAttributes> for CatchPerformance<'_> {
             acc: None,
             combo: None,
 
-            n_fruits: None,
-            n_droplets: None,
-            n_tiny_droplets: None,
-            n_tiny_droplet_misses: None,
-            n_misses: None,
+            fruits: None,
+            droplets: None,
+            tiny_droplets: None,
+            tiny_droplet_misses: None,
+            misses: None,
             passed_objects: None,
             clock_rate: None,
         }
@@ -490,7 +489,7 @@ impl CatchPerformanceInner {
         pp *= len_bonus;
 
         // Penalize misses exponentially
-        pp *= 0.97_f64.powf(f64::from(self.state.n_misses));
+        pp *= 0.97_f64.powf(f64::from(self.state.misses));
 
         // Combo scaling
         if self.state.max_combo > 0 {
@@ -537,7 +536,7 @@ impl CatchPerformanceInner {
     }
 
     const fn combo_hits(&self) -> u32 {
-        self.state.n_fruits + self.state.n_droplets + self.state.n_misses
+        self.state.n_fruits + self.state.n_droplets + self.state.misses
     }
 }
 
@@ -546,10 +545,10 @@ fn accuracy(
     n_droplets: u32,
     n_tiny_droplets: u32,
     n_tiny_droplet_misses: u32,
-    n_misses: u32,
+    misses: u32,
 ) -> f64 {
     let numerator = n_fruits + n_droplets + n_tiny_droplets;
-    let denominator = numerator + n_tiny_droplet_misses + n_misses;
+    let denominator = numerator + n_tiny_droplet_misses + misses;
 
     f64::from(numerator) / f64::from(denominator)
 }
@@ -598,13 +597,13 @@ mod test {
         n_droplets: Option<u32>,
         n_tiny_droplets: Option<u32>,
         n_tiny_droplet_misses: Option<u32>,
-        n_misses: u32,
+        misses: u32,
     ) -> CatchScoreState {
-        let n_misses = cmp::min(n_misses, N_FRUITS + N_DROPLETS);
+        let misses = cmp::min(misses, N_FRUITS + N_DROPLETS);
 
         let mut best_state = CatchScoreState {
-            max_combo: N_FRUITS + N_DROPLETS - n_misses,
-            n_misses,
+            max_combo: N_FRUITS + N_DROPLETS - misses,
+            misses,
             ..Default::default()
         };
 
@@ -613,7 +612,7 @@ mod test {
         let (new_fruits, new_droplets) = match (n_fruits, n_droplets) {
             (Some(mut n_fruits), Some(mut n_droplets)) => {
                 let n_remaining =
-                    (N_FRUITS + N_DROPLETS).saturating_sub(n_fruits + n_droplets + n_misses);
+                    (N_FRUITS + N_DROPLETS).saturating_sub(n_fruits + n_droplets + misses);
 
                 let new_droplets = cmp::min(n_remaining, N_DROPLETS.saturating_sub(n_droplets));
                 n_droplets += new_droplets;
@@ -621,29 +620,29 @@ mod test {
 
                 n_fruits = cmp::min(
                     n_fruits,
-                    (N_FRUITS + N_DROPLETS).saturating_sub(n_droplets + n_misses),
+                    (N_FRUITS + N_DROPLETS).saturating_sub(n_droplets + misses),
                 );
-                n_droplets = cmp::min(n_droplets, N_FRUITS + N_DROPLETS - n_fruits - n_misses);
+                n_droplets = cmp::min(n_droplets, N_FRUITS + N_DROPLETS - n_fruits - misses);
 
                 (n_fruits, n_droplets)
             }
             (Some(mut n_fruits), None) => {
                 let n_droplets = N_DROPLETS
-                    .saturating_sub(n_misses.saturating_sub(N_FRUITS.saturating_sub(n_fruits)));
-                n_fruits = N_FRUITS + N_DROPLETS - n_misses - n_droplets;
+                    .saturating_sub(misses.saturating_sub(N_FRUITS.saturating_sub(n_fruits)));
+                n_fruits = N_FRUITS + N_DROPLETS - misses - n_droplets;
 
                 (n_fruits, n_droplets)
             }
             (None, Some(mut n_droplets)) => {
                 let n_fruits = N_FRUITS
-                    .saturating_sub(n_misses.saturating_sub(N_DROPLETS.saturating_sub(n_droplets)));
-                n_droplets = N_FRUITS + N_DROPLETS - n_misses - n_fruits;
+                    .saturating_sub(misses.saturating_sub(N_DROPLETS.saturating_sub(n_droplets)));
+                n_droplets = N_FRUITS + N_DROPLETS - misses - n_fruits;
 
                 (n_fruits, n_droplets)
             }
             (None, None) => {
-                let n_droplets = N_DROPLETS.saturating_sub(n_misses);
-                let n_fruits = N_FRUITS - (n_misses - (N_DROPLETS.saturating_sub(n_droplets)));
+                let n_droplets = N_DROPLETS.saturating_sub(misses);
+                let n_fruits = N_FRUITS - (misses - (N_DROPLETS.saturating_sub(n_droplets)));
 
                 (n_fruits, n_droplets)
             }
@@ -682,7 +681,7 @@ mod test {
                 new_droplets,
                 new_tiny_droplets,
                 new_tiny_droplet_misses,
-                n_misses,
+                misses,
             );
 
             let curr_dist = (acc - curr_acc).abs();
@@ -728,8 +727,8 @@ mod test {
                 state = state.tiny_droplet_misses(n_tiny_droplet_misses);
             }
 
-            if let Some(n_misses) = n_misses {
-                state = state.misses(n_misses);
+            if let Some(misses) = n_misses {
+                state = state.misses(misses);
             }
 
             let state = state.generate_state();
@@ -763,7 +762,7 @@ mod test {
             n_droplets: N_DROPLETS,
             n_tiny_droplets: N_TINY_DROPLETS - 20,
             n_tiny_droplet_misses: 20,
-            n_misses: 2,
+            misses: 2,
         };
 
         assert_eq!(state, expected);

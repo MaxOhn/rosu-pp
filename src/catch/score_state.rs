@@ -15,7 +15,7 @@ pub struct CatchScoreState {
     /// Amount of current tiny droplet misses (katus).
     pub n_tiny_droplet_misses: u32,
     /// Amount of current misses (fruits and droplets).
-    pub n_misses: u32,
+    pub misses: u32,
 }
 
 impl CatchScoreState {
@@ -30,7 +30,7 @@ impl CatchScoreState {
             + self.n_droplets
             + self.n_tiny_droplets
             + self.n_tiny_droplet_misses
-            + self.n_misses
+            + self.misses
     }
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.

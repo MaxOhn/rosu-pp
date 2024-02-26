@@ -27,7 +27,7 @@ pub struct ScoreState {
     /// Amount of current 50s (tiny droplets for osu!catch).
     pub n50: u32,
     /// Amount of current misses (fruits + droplets for osu!catch).
-    pub n_misses: u32,
+    pub misses: u32,
 }
 
 impl ScoreState {
@@ -39,7 +39,7 @@ impl ScoreState {
     /// Return the total amount of hits by adding everything up based on the
     /// mode.
     pub fn total_hits(&self, mode: GameMode) -> u32 {
-        let mut amount = self.n300 + self.n100 + self.n_misses;
+        let mut amount = self.n300 + self.n100 + self.misses;
 
         if mode != GameMode::Taiko {
             amount += self.n50;
@@ -61,7 +61,7 @@ impl From<ScoreState> for OsuScoreState {
             n300: state.n300,
             n100: state.n100,
             n50: state.n50,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
@@ -72,7 +72,7 @@ impl From<ScoreState> for TaikoScoreState {
             max_combo: state.max_combo,
             n300: state.n300,
             n100: state.n100,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
@@ -85,7 +85,7 @@ impl From<ScoreState> for CatchScoreState {
             n_droplets: state.n100,
             n_tiny_droplets: state.n50,
             n_tiny_droplet_misses: state.n_katu,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
@@ -98,7 +98,7 @@ impl From<ScoreState> for ManiaScoreState {
             n200: state.n_katu,
             n100: state.n100,
             n50: state.n50,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
@@ -112,7 +112,7 @@ impl From<OsuScoreState> for ScoreState {
             n300: state.n300,
             n100: state.n100,
             n50: state.n50,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
@@ -126,7 +126,7 @@ impl From<TaikoScoreState> for ScoreState {
             n300: state.n300,
             n100: state.n100,
             n50: 0,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
@@ -140,7 +140,7 @@ impl From<CatchScoreState> for ScoreState {
             n300: state.n_fruits,
             n100: state.n_droplets,
             n50: state.n_tiny_droplets,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
@@ -154,7 +154,7 @@ impl From<ManiaScoreState> for ScoreState {
             n300: state.n300,
             n100: state.n100,
             n50: state.n50,
-            n_misses: state.n_misses,
+            misses: state.misses,
         }
     }
 }
