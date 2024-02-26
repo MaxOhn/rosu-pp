@@ -117,6 +117,7 @@ macro_rules! test_cases {
 
 #[test]
 fn basic_osu() {
+    #[cfg(target_os = "windows")]
     test_cases! {
         Osu: OSU {
             NM => {
@@ -207,6 +208,101 @@ fn basic_osu() {
                 n_sliders: 293,
                 n_spinners: 1,
                 stars: 7.17258038247615,
+                max_combo: 909,
+            };
+        }
+    };
+    #[cfg(target_os = "linux")]
+    test_cases! {
+        Osu: OSU {
+            NM => {
+                aim: 2.8693628443424104,
+                speed: 2.533869745015772,
+                flashlight: 2.288770487900865,
+                slider_factor: 0.9803052946037858,
+                speed_note_count: 210.36373973116545,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_spinners: 1,
+                stars: 5.669858729379631,
+                max_combo: 909,
+            };
+            HD => {
+                aim: 2.8693628443424104,
+                speed: 2.533869745015772,
+                flashlight: 2.606877929965889,
+                slider_factor: 0.9803052946037858,
+                speed_note_count: 210.36373973116545,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_spinners: 1,
+                stars: 5.669858729379631,
+                max_combo: 909,
+            };
+            HR => {
+                aim: 3.2385394176190507,
+                speed: 2.7009854505234308,
+                flashlight: 2.8549217213059936,
+                slider_factor: 0.9690667605258665,
+                speed_note_count: 184.01205359079387,
+                ar: 10.0,
+                od: 10.0,
+                hp: 7.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_spinners: 1,
+                stars: 6.263576582906263,
+                max_combo: 909,
+            };
+            DT => {
+                aim: 4.041442573946681,
+                speed: 3.6784866216272474,
+                flashlight: 3.319522943625448,
+                slider_factor: 0.9776943279272041,
+                speed_note_count: 214.80421464205617,
+                ar: 10.53333346048991,
+                od: 10.311111238267687,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_spinners: 1,
+                stars: 8.085307648397626,
+                max_combo: 909,
+            };
+            FL => {
+                aim: 2.8693628443424104,
+                speed: 2.533869745015772,
+                flashlight: 2.288770487900865,
+                slider_factor: 0.9803052946037858,
+                speed_note_count: 210.36373973116545,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_spinners: 1,
+                stars: 6.866778075388425,
+                max_combo: 909,
+            };
+            HD FL => {
+                aim: 2.8693628443424104,
+                speed: 2.533869745015772,
+                flashlight: 2.606877929965889,
+                slider_factor: 0.9803052946037858,
+                speed_note_count: 210.36373973116545,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_spinners: 1,
+                stars: 7.172580382476152,
                 max_combo: 909,
             };
         }
