@@ -288,25 +288,25 @@ impl<A: AttributeProvider> From<A> for Performance<'_> {
 }
 
 macro_rules! impl_from_converted {
-    ( $mode:ident: $performance:ident ) => {
+    ( $mode:ident ) => {
         impl<'a> From<Converted<'a, $mode>> for Performance<'a> {
             fn from(converted: Converted<'a, $mode>) -> Self {
-                Self::$mode($performance::new(converted))
+                Self::$mode(converted.into())
             }
         }
 
         impl<'a, 'b: 'a> From<&'b Converted<'a, $mode>> for Performance<'a> {
             fn from(converted: &'b Converted<'a, $mode>) -> Self {
-                Self::$mode($performance::new(converted.as_owned()))
+                Self::$mode(converted.as_owned().into())
             }
         }
     };
 }
 
-impl_from_converted!(Osu: OsuPerformance);
-impl_from_converted!(Taiko: TaikoPerformance);
-impl_from_converted!(Catch: CatchPerformance);
-impl_from_converted!(Mania: ManiaPerformance);
+impl_from_converted!(Osu);
+impl_from_converted!(Taiko);
+impl_from_converted!(Catch);
+impl_from_converted!(Mania);
 
 /// While generating remaining hitresults, decide how they should be distributed.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]

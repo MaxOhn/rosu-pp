@@ -8,7 +8,7 @@ use crate::{
     mania::{ManiaBeatmap, ManiaGradualPerformance},
     osu::{OsuBeatmap, OsuGradualPerformance},
     taiko::{TaikoBeatmap, TaikoGradualPerformance},
-    Beatmap, Converted, ModeDifficulty,
+    Beatmap, ModeDifficulty,
 };
 
 /// Gradually calculate the performance attributes on maps of any mode.
@@ -97,10 +97,10 @@ pub enum GradualPerformance {
 }
 
 macro_rules! from_converted {
-    ( $fn:ident, $mode:ident, $converted:ident, $gradual:ident ) => {
+    ( $fn:ident, $mode:ident, $converted:ident ) => {
         #[doc = concat!("Create a [`GradualPerformance`] for a [`", stringify!($converted), "`]")]
         pub fn $fn(difficulty: &ModeDifficulty, converted: &$converted<'_>) -> Self {
-            Self::$mode($gradual::new(difficulty, converted))
+            Self::$mode(difficulty.gradual_performance(converted))
         }
     };
 }
@@ -111,29 +111,25 @@ impl GradualPerformance {
         let map = Cow::Borrowed(map);
 
         match map.mode {
-            GameMode::Osu => Self::Osu(OsuGradualPerformance::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
-            GameMode::Taiko => Self::Taiko(TaikoGradualPerformance::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
-            GameMode::Catch => Self::Catch(CatchGradualPerformance::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
-            GameMode::Mania => Self::Mania(ManiaGradualPerformance::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
+            GameMode::Osu => {
+                Self::Osu(difficulty.gradual_performance(&OsuBeatmap::new(map, false)))
+            }
+            GameMode::Taiko => {
+                Self::Taiko(difficulty.gradual_performance(&TaikoBeatmap::new(map, false)))
+            }
+            GameMode::Catch => {
+                Self::Catch(difficulty.gradual_performance(&CatchBeatmap::new(map, false)))
+            }
+            GameMode::Mania => {
+                Self::Mania(difficulty.gradual_performance(&ManiaBeatmap::new(map, false)))
+            }
         }
     }
 
-    from_converted!(from_osu_map, Osu, OsuBeatmap, OsuGradualPerformance);
-    from_converted!(from_taiko_map, Taiko, TaikoBeatmap, TaikoGradualPerformance);
-    from_converted!(from_catch_map, Catch, CatchBeatmap, CatchGradualPerformance);
-    from_converted!(from_mania_map, Mania, ManiaBeatmap, ManiaGradualPerformance);
+    from_converted!(from_osu_map, Osu, OsuBeatmap);
+    from_converted!(from_taiko_map, Taiko, TaikoBeatmap);
+    from_converted!(from_catch_map, Catch, CatchBeatmap);
+    from_converted!(from_mania_map, Mania, ManiaBeatmap);
 
     /// Process the next hit object and calculate the performance attributes
     /// for the resulting score state.

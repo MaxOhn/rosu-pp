@@ -22,6 +22,15 @@ pub trait IGameMode: Sized {
     /// The resulting type of a strain calculation.
     type Strains;
 
+    /// The type of a performance calculator.
+    type Performance<'map>;
+
+    /// The type of a gradual difficulty calculator.
+    type GradualDifficulty;
+
+    /// The type of a gradual performance calculator.
+    type GradualPerformance;
+
     /// Attempt to convert a beatmap.
     ///
     /// In case [`ConvertStatus::Incompatible`] is returned, the map should
@@ -38,6 +47,21 @@ pub trait IGameMode: Sized {
     /// Perform a difficulty calculation for a [`Converted`] beatmap without
     /// processing the final skill values.
     fn strains(difficulty: &ModeDifficulty, map: &Converted<'_, Self>) -> Self::Strains;
+
+    /// Create a performance calculator for a [`Converted`] beatmap.
+    fn performance(map: Converted<'_, Self>) -> Self::Performance<'_>;
+
+    /// Create a gradual difficulty calculator for a [`Converted`] beatmap.
+    fn gradual_difficulty(
+        difficulty: &ModeDifficulty,
+        map: &Converted<'_, Self>,
+    ) -> Self::GradualDifficulty;
+
+    /// Create a gradual performance calculator for a [`Converted`] beatmap.
+    fn gradual_performance(
+        difficulty: &ModeDifficulty,
+        map: &Converted<'_, Self>,
+    ) -> Self::GradualPerformance;
 }
 
 /// The status of a conversion through [`IGameMode::try_convert`].

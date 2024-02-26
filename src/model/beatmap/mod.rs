@@ -5,7 +5,7 @@ use rosu_map::{
     LATEST_FORMAT_VERSION,
 };
 
-use crate::{Difficulty, Performance};
+use crate::{Difficulty, GradualDifficulty, GradualPerformance, ModeDifficulty, Performance};
 
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
@@ -70,14 +70,24 @@ impl Beatmap {
         rosu_map::from_bytes(bytes)
     }
 
-    /// Create a new difficulty calculator for this [`Beatmap`].
+    /// Create a difficulty calculator for this [`Beatmap`].
     pub fn difficulty(&self) -> Difficulty<'_> {
         Difficulty::new(self)
     }
 
-    /// Create a new performance calculator for this [`Beatmap`].
+    /// Create a performance calculator for this [`Beatmap`].
     pub fn performance(&self) -> Performance<'_> {
         Performance::new(self)
+    }
+
+    /// Create a gradual difficulty calculator for this [`Beatmap`].
+    pub fn gradual_difficulty(&self, difficulty: &ModeDifficulty) -> GradualDifficulty {
+        GradualDifficulty::new(difficulty, self)
+    }
+
+    /// Create a gradual performance calculator for this [`Beatmap`].
+    pub fn gradual_performance(&self, difficulty: &ModeDifficulty) -> GradualPerformance {
+        GradualPerformance::new(difficulty, self)
     }
 
     /// Finds the [`TimingPoint`] that is active at the given time.

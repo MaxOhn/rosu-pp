@@ -33,6 +33,9 @@ pub struct Mania;
 impl IGameMode for Mania {
     type DifficultyAttributes = ManiaDifficultyAttributes;
     type Strains = ManiaStrains;
+    type Performance<'map> = ManiaPerformance<'map>;
+    type GradualDifficulty = ManiaGradualDifficulty;
+    type GradualPerformance = ManiaGradualPerformance;
 
     fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
         convert::try_convert(map)
@@ -47,5 +50,23 @@ impl IGameMode for Mania {
 
     fn strains(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
+    }
+
+    fn performance(map: ManiaBeatmap<'_>) -> Self::Performance<'_> {
+        ManiaPerformance::new(map)
+    }
+
+    fn gradual_difficulty(
+        difficulty: &ModeDifficulty,
+        map: &ManiaBeatmap<'_>,
+    ) -> Self::GradualDifficulty {
+        ManiaGradualDifficulty::new(difficulty, map)
+    }
+
+    fn gradual_performance(
+        difficulty: &ModeDifficulty,
+        map: &ManiaBeatmap<'_>,
+    ) -> Self::GradualPerformance {
+        ManiaGradualPerformance::new(difficulty, map)
     }
 }

@@ -56,6 +56,19 @@ impl ModeDifficulty {
         M::strains(self, map)
     }
 
+    /// Create a gradual difficulty calculator for a [`Converted`] beatmap.
+    pub fn gradual_difficulty<M: IGameMode>(&self, map: &Converted<'_, M>) -> M::GradualDifficulty {
+        M::gradual_difficulty(self, map)
+    }
+
+    /// Create a gradual performance calculator for a [`Converted`] beatmap.
+    pub fn gradual_performance<M: IGameMode>(
+        &self,
+        map: &Converted<'_, M>,
+    ) -> M::GradualPerformance {
+        M::gradual_performance(self, map)
+    }
+
     pub(crate) const fn get_mods(&self) -> u32 {
         self.mods
     }

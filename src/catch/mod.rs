@@ -36,6 +36,9 @@ pub struct Catch;
 impl IGameMode for Catch {
     type DifficultyAttributes = CatchDifficultyAttributes;
     type Strains = CatchStrains;
+    type Performance<'map> = CatchPerformance<'map>;
+    type GradualDifficulty = CatchGradualDifficulty;
+    type GradualPerformance = CatchGradualPerformance;
 
     fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
         convert::try_convert(map)
@@ -50,5 +53,23 @@ impl IGameMode for Catch {
 
     fn strains(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
+    }
+
+    fn performance(map: CatchBeatmap<'_>) -> Self::Performance<'_> {
+        CatchPerformance::new(map)
+    }
+
+    fn gradual_difficulty(
+        difficulty: &ModeDifficulty,
+        map: &CatchBeatmap<'_>,
+    ) -> Self::GradualDifficulty {
+        CatchGradualDifficulty::new(difficulty, map)
+    }
+
+    fn gradual_performance(
+        difficulty: &ModeDifficulty,
+        map: &CatchBeatmap<'_>,
+    ) -> Self::GradualPerformance {
+        CatchGradualPerformance::new(difficulty, map)
     }
 }

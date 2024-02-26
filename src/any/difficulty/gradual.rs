@@ -8,7 +8,7 @@ use crate::{
     mania::{ManiaBeatmap, ManiaGradualDifficulty},
     osu::{OsuBeatmap, OsuGradualDifficulty},
     taiko::{TaikoBeatmap, TaikoGradualDifficulty},
-    Beatmap, Converted, ModeDifficulty,
+    Beatmap, ModeDifficulty,
 };
 
 /// Gradually calculate the difficulty attributes on maps of any mode.
@@ -48,10 +48,10 @@ pub enum GradualDifficulty {
 }
 
 macro_rules! from_converted {
-    ( $fn:ident, $mode:ident, $converted:ident, $gradual:ident ) => {
+    ( $fn:ident, $mode:ident, $converted:ident ) => {
         #[doc = concat!("Create a [`GradualDifficulty`] for a [`", stringify!($converted), "`]")]
         pub fn $fn(difficulty: &ModeDifficulty, converted: &$converted<'_>) -> Self {
-            Self::$mode($gradual::new(difficulty, converted))
+            Self::$mode(difficulty.gradual_difficulty(converted))
         }
     };
 }
@@ -62,29 +62,23 @@ impl GradualDifficulty {
         let map = Cow::Borrowed(map);
 
         match map.mode {
-            GameMode::Osu => Self::Osu(OsuGradualDifficulty::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
-            GameMode::Taiko => Self::Taiko(TaikoGradualDifficulty::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
-            GameMode::Catch => Self::Catch(CatchGradualDifficulty::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
-            GameMode::Mania => Self::Mania(ManiaGradualDifficulty::new(
-                difficulty,
-                &Converted::new(map, false),
-            )),
+            GameMode::Osu => Self::Osu(difficulty.gradual_difficulty(&OsuBeatmap::new(map, false))),
+            GameMode::Taiko => {
+                Self::Taiko(difficulty.gradual_difficulty(&TaikoBeatmap::new(map, false)))
+            }
+            GameMode::Catch => {
+                Self::Catch(difficulty.gradual_difficulty(&CatchBeatmap::new(map, false)))
+            }
+            GameMode::Mania => {
+                Self::Mania(difficulty.gradual_difficulty(&ManiaBeatmap::new(map, false)))
+            }
         }
     }
 
-    from_converted!(from_osu_map, Osu, OsuBeatmap, OsuGradualDifficulty);
-    from_converted!(from_taiko_map, Taiko, TaikoBeatmap, TaikoGradualDifficulty);
-    from_converted!(from_catch_map, Catch, CatchBeatmap, CatchGradualDifficulty);
-    from_converted!(from_mania_map, Mania, ManiaBeatmap, ManiaGradualDifficulty);
+    from_converted!(from_osu_map, Osu, OsuBeatmap);
+    from_converted!(from_taiko_map, Taiko, TaikoBeatmap);
+    from_converted!(from_catch_map, Catch, CatchBeatmap);
+    from_converted!(from_mania_map, Mania, ManiaBeatmap);
 }
 
 impl Iterator for GradualDifficulty {

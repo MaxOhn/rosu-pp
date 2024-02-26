@@ -5,7 +5,10 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::model::mode::{ConvertStatus, IGameMode};
+use crate::{
+    model::mode::{ConvertStatus, IGameMode},
+    ModeDifficulty,
+};
 
 use super::{attributes::BeatmapAttributesBuilder, Beatmap};
 
@@ -43,6 +46,24 @@ impl<'a, M> Converted<'a, M> {
     }
 }
 
+impl<M> Converted<'_, M> {
+    /// Sum up the duration of all breaks (in milliseconds).
+    pub fn total_break_time(&self) -> f64 {
+        self.map.total_break_time()
+    }
+
+    /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
+    /// attributes.
+    pub fn attributes(&self) -> BeatmapAttributesBuilder {
+        self.into()
+    }
+
+    /// The beats per minute of the map.
+    pub fn bpm(&self) -> f64 {
+        self.map.bpm()
+    }
+}
+
 impl<M: IGameMode> Converted<'_, M> {
     /// Attempt to convert a [`Beatmap`] to the specified mode.
     ///
@@ -72,20 +93,14 @@ impl<M: IGameMode> Converted<'_, M> {
         Self::try_from_owned(map).unwrap_or_else(|_| panic!("{}", INCOMPATIBLE_MODES))
     }
 
-    /// Sum up the duration of all breaks (in milliseconds).
-    pub fn total_break_time(&self) -> f64 {
-        self.map.total_break_time()
+    /// Create a gradual difficulty calculator for the map.
+    pub fn gradual_difficulty(&self, difficulty: &ModeDifficulty) -> M::GradualDifficulty {
+        difficulty.gradual_difficulty(self)
     }
 
-    /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
-    /// attributes.
-    pub fn attributes(&self) -> BeatmapAttributesBuilder {
-        self.into()
-    }
-
-    /// The beats per minute of the map.
-    pub fn bpm(&self) -> f64 {
-        self.map.bpm()
+    /// Create a gradual performance calculator for the map.
+    pub fn gradual_performance(&self, difficulty: &ModeDifficulty) -> M::GradualPerformance {
+        difficulty.gradual_performance(self)
     }
 }
 
@@ -93,11 +108,16 @@ impl<'a, M: IGameMode> Converted<'a, M> {
     /// Borrow the contained [`Beatmap`] to cheaply create a new owned
     /// [`Converted`].
     ///
-    /// This is the same as `.clone()` except cheap but its lifetime might be
+    /// This is the same as `.clone()` except cheap - but its lifetime might be
     /// shorter.
     #[must_use]
     pub fn as_owned(&'a self) -> Self {
         Self::new(Cow::Borrowed(self.map.as_ref()), self.is_convert)
+    }
+
+    /// Create a performance calculator for the map.
+    pub fn performance(self) -> M::Performance<'a> {
+        M::performance(self)
     }
 
     /// Attempt to convert a [`&Beatmap`] to the specified mode.

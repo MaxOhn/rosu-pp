@@ -37,6 +37,9 @@ pub struct Osu;
 impl IGameMode for Osu {
     type DifficultyAttributes = OsuDifficultyAttributes;
     type Strains = OsuStrains;
+    type Performance<'map> = OsuPerformance<'map>;
+    type GradualDifficulty = OsuGradualDifficulty;
+    type GradualPerformance = OsuGradualPerformance;
 
     fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
         convert::try_convert(map)
@@ -51,5 +54,23 @@ impl IGameMode for Osu {
 
     fn strains(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
+    }
+
+    fn performance(map: OsuBeatmap<'_>) -> Self::Performance<'_> {
+        OsuPerformance::new(map)
+    }
+
+    fn gradual_difficulty(
+        difficulty: &ModeDifficulty,
+        map: &OsuBeatmap<'_>,
+    ) -> Self::GradualDifficulty {
+        OsuGradualDifficulty::new(difficulty, map)
+    }
+
+    fn gradual_performance(
+        difficulty: &ModeDifficulty,
+        map: &OsuBeatmap<'_>,
+    ) -> Self::GradualPerformance {
+        OsuGradualPerformance::new(difficulty, map)
     }
 }

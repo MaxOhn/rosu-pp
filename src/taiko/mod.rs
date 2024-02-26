@@ -33,6 +33,9 @@ pub struct Taiko;
 impl IGameMode for Taiko {
     type DifficultyAttributes = TaikoDifficultyAttributes;
     type Strains = TaikoStrains;
+    type Performance<'map> = TaikoPerformance<'map>;
+    type GradualDifficulty = TaikoGradualDifficulty;
+    type GradualPerformance = TaikoGradualPerformance;
 
     fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
         convert::try_convert(map)
@@ -47,5 +50,23 @@ impl IGameMode for Taiko {
 
     fn strains(difficulty: &ModeDifficulty, converted: &TaikoBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
+    }
+
+    fn performance(map: TaikoBeatmap<'_>) -> Self::Performance<'_> {
+        TaikoPerformance::new(map)
+    }
+
+    fn gradual_difficulty(
+        difficulty: &ModeDifficulty,
+        map: &TaikoBeatmap<'_>,
+    ) -> Self::GradualDifficulty {
+        TaikoGradualDifficulty::new(difficulty, map)
+    }
+
+    fn gradual_performance(
+        difficulty: &ModeDifficulty,
+        map: &TaikoBeatmap<'_>,
+    ) -> Self::GradualPerformance {
+        TaikoGradualPerformance::new(difficulty, map)
     }
 }
