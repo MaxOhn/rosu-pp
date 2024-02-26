@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, cmp};
 
 use rosu_map::{
     section::{general::GameMode, hit_objects::CurveBuffers},
@@ -54,7 +54,7 @@ fn convert(map: &mut Beatmap) {
                     let mut i = 0;
                     let mut j = obj.start_time;
 
-                    let edge_sound_count = slider.node_sounds.len().max(1);
+                    let edge_sound_count = cmp::max(slider.node_sounds.len(), 1);
 
                     while j
                         <= obj.start_time + f64::from(params.duration) + params.tick_spacing / 8.0

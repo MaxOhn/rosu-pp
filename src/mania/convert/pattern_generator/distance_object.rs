@@ -1,3 +1,5 @@
+use std::cmp;
+
 use rosu_map::section::hit_objects::{hit_samples::HitSoundType, BorrowedCurve};
 
 use crate::{
@@ -188,7 +190,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
             self.inner.total_columns - random_start - self.prev_pattern.column_with_objs();
         let mut next_column = self.inner.get_random_column(None, None);
 
-        for _ in 0..usable_columns.min(note_count) {
+        for _ in 0..cmp::min(usable_columns, note_count) {
             // * Find available column
             next_column =
                 self.find_available_column(next_column, None, &[&pattern, self.prev_pattern]);
@@ -384,7 +386,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         // * □ ■ - -
         // * ■ - - -
 
-        let column_repeat = self.span_count.min(self.inner.total_columns) as usize;
+        let column_repeat = cmp::min(self.span_count, self.inner.total_columns) as usize;
 
         // * Due to integer rounding, this is not guaranteed to be the same as EndTime (the class-level variable).
         let end_time = start_time + self.segment_duration * self.span_count;
@@ -457,7 +459,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
             0
         };
 
-        note_count = note_count.min(self.inner.total_columns - 1);
+        note_count = cmp::min(note_count, self.inner.total_columns - 1);
 
         let sample = self.sample_info_list_at(start_time);
         let ignore_head =

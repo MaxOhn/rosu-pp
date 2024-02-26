@@ -168,7 +168,7 @@ impl<'map> CatchPerformance<'map> {
 
         let misses = self
             .misses
-            .map_or(0, |n| n.min(attrs.n_fruits + attrs.n_droplets));
+            .map_or(0, |n| cmp::min(n, attrs.n_fruits + attrs.n_droplets));
 
         let max_combo = self.combo.unwrap_or_else(|| attrs.max_combo() - misses);
 
@@ -185,13 +185,19 @@ impl<'map> CatchPerformance<'map> {
                 let n_remaining = (attrs.n_fruits + attrs.n_droplets)
                     .saturating_sub(n_fruits + n_droplets + misses);
 
-                let new_droplets = n_remaining.min(attrs.n_droplets.saturating_sub(n_droplets));
+                let new_droplets =
+                    cmp::min(n_remaining, attrs.n_droplets.saturating_sub(n_droplets));
                 n_droplets += new_droplets;
                 n_fruits += n_remaining - new_droplets;
 
-                n_fruits = n_fruits
-                    .min((attrs.n_fruits + attrs.n_droplets).saturating_sub(n_droplets + misses));
-                n_droplets = n_droplets.min(attrs.n_fruits + attrs.n_droplets - n_fruits - misses);
+                n_fruits = cmp::min(
+                    n_fruits,
+                    (attrs.n_fruits + attrs.n_droplets).saturating_sub(n_droplets + misses),
+                );
+                n_droplets = cmp::min(
+                    n_droplets,
+                    attrs.n_fruits + attrs.n_droplets - n_fruits - misses,
+                );
 
                 (n_fruits, n_droplets)
             }
@@ -276,14 +282,15 @@ impl<'map> CatchPerformance<'map> {
                 }
             },
             (Some(n_tiny_droplets), None) => {
-                best_state.n_tiny_droplets = attrs.n_tiny_droplets.min(n_tiny_droplets);
+                best_state.n_tiny_droplets = cmp::min(attrs.n_tiny_droplets, n_tiny_droplets);
                 best_state.n_tiny_droplet_misses =
                     attrs.n_tiny_droplets.saturating_sub(n_tiny_droplets);
             }
             (None, Some(n_tiny_droplet_misses)) => {
                 best_state.n_tiny_droplets =
                     attrs.n_tiny_droplets.saturating_sub(n_tiny_droplet_misses);
-                best_state.n_tiny_droplet_misses = attrs.n_tiny_droplets.min(n_tiny_droplet_misses);
+                best_state.n_tiny_droplet_misses =
+                    cmp::min(attrs.n_tiny_droplets, n_tiny_droplet_misses);
             }
             (None, None) => match self.acc {
                 Some(acc) => find_best_tiny_droplets(acc),

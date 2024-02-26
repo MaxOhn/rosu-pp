@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::{cmp, f64::consts::PI};
 
 use crate::{
     any::difficulty::{
@@ -217,7 +217,7 @@ impl RhythmEvaluator {
 
         let mut first_delta_switch = false;
 
-        let historical_note_count = curr.idx.min(32);
+        let historical_note_count = cmp::min(curr.idx, 32);
 
         let mut rhythm_start = 0;
 

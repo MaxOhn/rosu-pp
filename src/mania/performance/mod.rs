@@ -256,8 +256,8 @@ impl<'map> ManiaPerformance<'map> {
 
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
                         (Some(_), Some(_)) => (n320 + n300, n320 + n300),
-                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
-                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (Some(_), None) => (cmp::max(min_n3x0, n320), cmp::max(max_n3x0, n320)),
+                        (None, Some(_)) => (cmp::max(min_n3x0, n300), cmp::max(max_n3x0, n300)),
                         (None, None) => (min_n3x0, max_n3x0),
                     };
 
@@ -301,8 +301,8 @@ impl<'map> ManiaPerformance<'map> {
 
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
                         (Some(_), Some(_)) => (n320 + n300, n320 + n300),
-                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
-                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (Some(_), None) => (cmp::max(min_n3x0, n320), cmp::max(max_n3x0, n320)),
+                        (None, Some(_)) => (cmp::max(min_n3x0, n300), cmp::max(max_n3x0, n300)),
                         (None, None) => (min_n3x0, max_n3x0),
                     };
 
@@ -346,8 +346,8 @@ impl<'map> ManiaPerformance<'map> {
 
                     let (min_n3x0, max_n3x0) = match (self.n320, self.n300) {
                         (Some(_), Some(_)) => (n320 + n300, n320 + n300),
-                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
-                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (Some(_), None) => (cmp::max(min_n3x0, n320), cmp::max(max_n3x0, n320)),
+                        (None, Some(_)) => (cmp::max(min_n3x0, n300), cmp::max(max_n3x0, n300)),
                         (None, None) => (min_n3x0, max_n3x0),
                     };
 
@@ -394,8 +394,8 @@ impl<'map> ManiaPerformance<'map> {
                             cmp::min(n_remaining, n320 + n300),
                             cmp::min(n_remaining, n320 + n300),
                         ),
-                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
-                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (Some(_), None) => (cmp::max(min_n3x0, n320), cmp::max(max_n3x0, n320)),
+                        (None, Some(_)) => (cmp::max(min_n3x0, n300), cmp::max(max_n3x0, n300)),
                         (None, None) => (min_n3x0, max_n3x0),
                     };
 
@@ -457,8 +457,8 @@ impl<'map> ManiaPerformance<'map> {
                             cmp::min(n_remaining, n320 + n300),
                             cmp::min(n_remaining, n320 + n300),
                         ),
-                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
-                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (Some(_), None) => (cmp::max(min_n3x0, n320), cmp::max(max_n3x0, n320)),
+                        (None, Some(_)) => (cmp::max(min_n3x0, n300), cmp::max(max_n3x0, n300)),
                         (None, None) => (min_n3x0, max_n3x0),
                     };
 
@@ -520,8 +520,8 @@ impl<'map> ManiaPerformance<'map> {
                             cmp::min(n_remaining, n320 + n300),
                             cmp::min(n_remaining, n320 + n300),
                         ),
-                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
-                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (Some(_), None) => (cmp::max(min_n3x0, n320), cmp::max(max_n3x0, n320)),
+                        (None, Some(_)) => (cmp::max(min_n3x0, n300), cmp::max(max_n3x0, n300)),
                         (None, None) => (min_n3x0, max_n3x0),
                     };
 
@@ -595,8 +595,8 @@ impl<'map> ManiaPerformance<'map> {
                             cmp::min(n_remaining, n320 + n300),
                             cmp::min(n_remaining, n320 + n300),
                         ),
-                        (Some(_), None) => (min_n3x0.max(n320), max_n3x0.max(n320)),
-                        (None, Some(_)) => (min_n3x0.max(n300), max_n3x0.max(n300)),
+                        (Some(_), None) => (cmp::max(min_n3x0, n320), cmp::max(max_n3x0, n320)),
+                        (None, Some(_)) => (cmp::max(min_n3x0, n300), cmp::max(max_n3x0, n300)),
                         (None, None) => (min_n3x0, max_n3x0),
                     };
 

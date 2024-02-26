@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     any::difficulty::{
         object::IDifficultyObject,
@@ -36,7 +38,7 @@ impl Rhythm {
             .push(RhythmHistoryElement::new(hit_object));
 
         for most_recent_patterns_to_compare in
-            2..=(RHYTHM_HISTORY_MAX_LEN / 2).min(self.rhythm_history.len())
+            2..=cmp::min(RHYTHM_HISTORY_MAX_LEN / 2, self.rhythm_history.len())
         {
             for start in (0..self.rhythm_history.len() - most_recent_patterns_to_compare).rev() {
                 if !self.same_pattern(start, most_recent_patterns_to_compare) {

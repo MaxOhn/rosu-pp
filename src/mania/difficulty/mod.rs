@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     any::difficulty::{mode::ModeDifficulty, skills::Skill},
     mania::{
@@ -19,9 +21,10 @@ pub fn difficulty(
     difficulty: &ModeDifficulty,
     converted: &ManiaBeatmap<'_>,
 ) -> ManiaDifficultyAttributes {
-    let n_objects = difficulty
-        .get_passed_objects()
-        .min(converted.map.hit_objects.len()) as u32;
+    let n_objects = cmp::min(
+        difficulty.get_passed_objects(),
+        converted.map.hit_objects.len(),
+    ) as u32;
 
     let values = DifficultyValues::calculate(difficulty, converted);
 

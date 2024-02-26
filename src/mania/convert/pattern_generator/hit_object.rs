@@ -1,3 +1,5 @@
+use std::cmp;
+
 use rosu_map::section::hit_objects::hit_samples::HitSoundType;
 
 use crate::{
@@ -239,10 +241,12 @@ impl<'h> HitObjectPatternGenerator<'h> {
         let allow_stacking = !self.convert_type.contains(PatternType::FORCE_NOT_STACK);
 
         if !allow_stacking {
-            note_count = (self.inner.total_columns
-                - self.inner.random_start()
-                - self.prev_pattern.column_with_objs())
-            .min(note_count);
+            note_count = cmp::min(
+                self.inner.total_columns
+                    - self.inner.random_start()
+                    - self.prev_pattern.column_with_objs(),
+                note_count,
+            );
         }
 
         let mut next_column = self.inner.get_column(Some(true));

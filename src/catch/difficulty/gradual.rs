@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     any::difficulty::skills::Skill,
     catch::{
@@ -131,7 +133,7 @@ impl Iterator for CatchGradualDifficulty {
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         let skip_iter = self.diff_objects.iter().skip(self.idx.saturating_sub(1));
 
-        let mut take = n.min(self.len().saturating_sub(1));
+        let mut take = cmp::min(n, self.len().saturating_sub(1));
 
         // The first palpable object has no difficulty object
         if self.idx == 0 && take > 0 {

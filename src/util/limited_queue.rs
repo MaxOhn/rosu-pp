@@ -157,6 +157,8 @@ impl<T, const N: usize> Index<usize> for LimitedQueue<T, N> {
 
 #[cfg(test)]
 mod test {
+    use std::cmp;
+
     use super::LimitedQueue;
 
     #[test]
@@ -185,7 +187,7 @@ mod test {
 
         for i in 1..=5 {
             queue.push(i as u8);
-            assert_eq!(i.min(4), queue.len());
+            assert_eq!(cmp::min(i, 4), queue.len());
         }
 
         assert_eq!(queue.last(), Some(&5));

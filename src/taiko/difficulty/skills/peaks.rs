@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     any::difficulty::skills::Skill,
     taiko::difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
@@ -51,10 +53,10 @@ impl Peaks {
         let rhythm_peaks = self.rhythm.get_curr_strain_peaks();
         let stamina_peaks = self.stamina.get_curr_strain_peaks();
 
-        let cap = color_peaks
-            .len()
-            .min(rhythm_peaks.len())
-            .min(stamina_peaks.len());
+        let cap = cmp::min(
+            cmp::min(color_peaks.len(), rhythm_peaks.len()),
+            stamina_peaks.len(),
+        );
         let mut peaks = Vec::with_capacity(cap);
 
         let zip = color_peaks

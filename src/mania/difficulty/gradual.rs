@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     any::difficulty::skills::Skill,
     mania::{object::ObjectParams, ManiaBeatmap},
@@ -159,7 +161,7 @@ impl Iterator for ManiaGradualDifficulty {
             .zip(self.objects_is_circle.iter().skip(1))
             .skip(self.idx.saturating_sub(1));
 
-        let mut take = n.min(self.len().saturating_sub(1));
+        let mut take = cmp::min(n, self.len().saturating_sub(1));
 
         // The first note has no difficulty object
         if self.idx == 0 && take > 0 {

@@ -1,4 +1,4 @@
-use std::{mem, slice::Iter};
+use std::{cmp, mem, slice::Iter};
 
 use crate::{
     model::{beatmap::HitWindows, hit_object::HitObject},
@@ -192,7 +192,7 @@ impl Iterator for TaikoGradualDifficulty {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        let mut take = n.min(self.len().saturating_sub(1));
+        let mut take = cmp::min(n, self.len().saturating_sub(1));
 
         // The first two notes have no difficulty object but might add to combo
         match (take, self.idx) {

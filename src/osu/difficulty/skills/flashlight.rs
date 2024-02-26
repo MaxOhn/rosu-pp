@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     any::difficulty::{
         object::IDifficultyObject,
@@ -155,7 +157,7 @@ impl FlashlightEvaluator {
         let mut angle_repeat_count = 0.0;
 
         // * This is iterating backwards in time from the current object.
-        for i in 0..curr.idx.min(10) {
+        for i in 0..cmp::min(curr.idx, 10) {
             let Some(curr_obj) = curr.previous(i, diff_objects) else {
                 break;
             };

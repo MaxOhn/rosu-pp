@@ -1,4 +1,4 @@
-use std::mem;
+use std::{cmp, mem};
 
 use crate::{
     any::difficulty::skills::Skill,
@@ -201,7 +201,7 @@ impl Iterator for OsuGradualDifficulty {
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         let skip_iter = self.diff_objects.iter().skip(self.idx.saturating_sub(1));
 
-        let mut take = n.min(self.len().saturating_sub(1));
+        let mut take = cmp::min(n, self.len().saturating_sub(1));
 
         // The first note has no difficulty object
         if self.idx == 0 && take > 0 {
