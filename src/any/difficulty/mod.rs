@@ -14,6 +14,7 @@ use self::mode::ModeDifficulty;
 
 use super::attributes::DifficultyAttributes;
 
+pub mod gradual;
 pub mod mode;
 pub mod object;
 pub mod skills;

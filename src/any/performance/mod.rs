@@ -16,6 +16,8 @@ use super::{
     score_state::ScoreState,
 };
 
+pub mod gradual;
+
 /// Performance calculator on maps of any mode.
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]
@@ -285,7 +287,7 @@ impl<A: AttributeProvider> From<A> for Performance<'_> {
     }
 }
 
-macro_rules! impl_from_mode {
+macro_rules! impl_from_converted {
     ( $mode:ident: $performance:ident ) => {
         impl<'a> From<Converted<'a, $mode>> for Performance<'a> {
             fn from(converted: Converted<'a, $mode>) -> Self {
@@ -301,10 +303,10 @@ macro_rules! impl_from_mode {
     };
 }
 
-impl_from_mode!(Osu: OsuPerformance);
-impl_from_mode!(Taiko: TaikoPerformance);
-impl_from_mode!(Catch: CatchPerformance);
-impl_from_mode!(Mania: ManiaPerformance);
+impl_from_converted!(Osu: OsuPerformance);
+impl_from_converted!(Taiko: TaikoPerformance);
+impl_from_converted!(Catch: CatchPerformance);
+impl_from_converted!(Mania: ManiaPerformance);
 
 /// While generating remaining hitresults, decide how they should be distributed.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]

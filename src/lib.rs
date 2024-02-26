@@ -107,7 +107,7 @@
 
 #[doc(inline)]
 pub use self::{
-    any::{Difficulty, ModeDifficulty, Performance},
+    any::{Difficulty, GradualDifficulty, GradualPerformance, ModeDifficulty, Performance},
     model::beatmap::{Beatmap, Converted},
 };
 
