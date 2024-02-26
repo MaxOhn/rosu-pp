@@ -541,7 +541,7 @@ impl OsuPerformanceInner {
             let (n100_mult, n50_mult) = if self.attrs.od > 0.0 {
                 (
                     1.0 - (self.attrs.od / 13.33).powf(1.8),
-                    1.0 - (self.attrs.od / 13.33).powi(5),
+                    1.0 - (self.attrs.od / 13.33).powf(5.0),
                 )
             } else {
                 (1.0, 1.0)
@@ -580,7 +580,7 @@ impl OsuPerformanceInner {
     }
 
     fn compute_aim_value(&self) -> f64 {
-        let mut aim_value = (5.0 * (self.attrs.aim / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
+        let mut aim_value = (5.0 * (self.attrs.aim / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0;
 
         let total_hits = self.total_hits();
 
@@ -628,7 +628,7 @@ impl OsuPerformanceInner {
             ))
             .clamp(0.0, estimate_diff_sliders);
             let slider_nerf_factor = (1.0 - self.attrs.slider_factor)
-                * (1.0 - estimate_slider_ends_dropped / estimate_diff_sliders).powi(3)
+                * (1.0 - estimate_slider_ends_dropped / estimate_diff_sliders).powf(3.0)
                 + self.attrs.slider_factor;
 
             aim_value *= slider_nerf_factor;
@@ -636,7 +636,7 @@ impl OsuPerformanceInner {
 
         aim_value *= self.acc;
         // * It is important to consider accuracy difficulty when scaling with accuracy.
-        aim_value *= 0.98 + self.attrs.od.powi(2) / 2500.0;
+        aim_value *= 0.98 + self.attrs.od.powf(2.0) / 2500.0;
 
         aim_value
     }
@@ -647,7 +647,7 @@ impl OsuPerformanceInner {
         }
 
         let mut speed_value =
-            (5.0 * (self.attrs.speed / 0.0675).max(1.0) - 4.0).powi(3) / 100_000.0;
+            (5.0 * (self.attrs.speed / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0;
 
         let total_hits = self.total_hits();
 
@@ -737,7 +737,8 @@ impl OsuPerformanceInner {
 
         // * Lots of arbitrary values from testing.
         // * Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution.
-        let mut acc_value = 1.52163_f64.powf(self.attrs.od) * better_acc_percentage.powi(24) * 2.83;
+        let mut acc_value =
+            1.52163_f64.powf(self.attrs.od) * better_acc_percentage.powf(24.0) * 2.83;
 
         // * Bonus for many hitcircles - it's harder to keep good accuracy up for longer.
         acc_value *= (f64::from(amount_hit_objects_with_acc) / 1000.0)
@@ -761,7 +762,7 @@ impl OsuPerformanceInner {
             return 0.0;
         }
 
-        let mut flashlight_value = self.attrs.flashlight.powi(2) * 25.0;
+        let mut flashlight_value = self.attrs.flashlight.powf(2.0) * 25.0;
 
         let total_hits = self.total_hits();
 
@@ -784,7 +785,7 @@ impl OsuPerformanceInner {
         // * Scale the flashlight value with accuracy _slightly_.
         flashlight_value *= 0.5 + self.acc / 2.0;
         // * It is important to also consider accuracy difficulty when doing that.
-        flashlight_value *= 0.98 + self.attrs.od.powi(2) / 2500.0;
+        flashlight_value *= 0.98 + self.attrs.od.powf(2.0) / 2500.0;
 
         flashlight_value
     }

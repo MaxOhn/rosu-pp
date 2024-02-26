@@ -472,7 +472,7 @@ impl CatchPerformanceInner {
         let max_combo = attributes.max_combo();
 
         // Relying heavily on aim
-        let mut pp = (5.0 * (stars / 0.0049).max(1.0) - 4.0).powi(2) / 100_000.0;
+        let mut pp = (5.0 * (stars / 0.0049).max(1.0) - 4.0).powf(2.0) / 100_000.0;
 
         let mut combo_hits = self.combo_hits();
 
@@ -490,7 +490,7 @@ impl CatchPerformanceInner {
         pp *= len_bonus;
 
         // Penalize misses exponentially
-        pp *= 0.97_f64.powi(self.state.n_misses as i32);
+        pp *= 0.97_f64.powf(f64::from(self.state.n_misses));
 
         // Combo scaling
         if self.state.max_combo > 0 {

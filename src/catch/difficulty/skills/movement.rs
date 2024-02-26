@@ -78,7 +78,7 @@ impl Movement {
                 dist_addition += DIRECTION_CHANGE_BONUS / (self.last_strain_time + 16.0).sqrt()
                     * bonus_factor
                     * anti_flow_factor
-                    * (1.0 - (weighted_strain_time / 1000.0).powi(3)).max(0.0);
+                    * (1.0 - (weighted_strain_time / 1000.0).powf(3.0)).max(0.0);
             }
 
             dist_addition += 12.5

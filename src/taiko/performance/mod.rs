@@ -465,7 +465,7 @@ impl TaikoPerformanceInner {
 
         let acc = self.custom_accuracy();
 
-        diff_value * acc.powi(2)
+        diff_value * acc.powf(2.0)
     }
 
     fn compute_accuracy_value(&self) -> f64 {
@@ -474,7 +474,7 @@ impl TaikoPerformanceInner {
         }
 
         let mut acc_value = (60.0 / self.attrs.hit_window).powf(1.1)
-            * self.custom_accuracy().powi(8)
+            * self.custom_accuracy().powf(8.0)
             * self.attrs.stars.powf(0.4)
             * 27.0;
 

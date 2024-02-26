@@ -201,7 +201,7 @@ impl FlashlightEvaluator {
             last_obj = curr_obj;
         }
 
-        result = (small_dist_nerf * result).powi(2);
+        result = (small_dist_nerf * result).powf(2.0);
 
         // * Additional bonus for Hidden due to there being no approach circles.
         if hidden {
