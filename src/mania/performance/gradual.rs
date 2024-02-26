@@ -69,13 +69,13 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 ///
 /// [`next`]: ManiaGradualPerformance::next
 /// [`nth`]: ManiaGradualPerformance::nth
-pub struct ManiaGradualPerformance<'map> {
-    difficulty: ManiaGradualDifficulty<'map>,
+pub struct ManiaGradualPerformance {
+    difficulty: ManiaGradualDifficulty,
 }
 
-impl<'map> ManiaGradualPerformance<'map> {
+impl ManiaGradualPerformance {
     /// Create a new gradual performance calculator for osu!mania maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: ManiaBeatmap<'map>) -> Self {
+    pub fn new(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let difficulty = ManiaGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -131,9 +131,9 @@ mod tests {
         let mods = 88; // HDHRDT
         let difficulty = ModeDifficulty::new().mods(88);
 
-        let mut gradual = ManiaGradualPerformance::new(&difficulty, converted.as_owned());
-        let mut gradual_2nd = ManiaGradualPerformance::new(&difficulty, converted.as_owned());
-        let mut gradual_3rd = ManiaGradualPerformance::new(&difficulty, converted.as_owned());
+        let mut gradual = ManiaGradualPerformance::new(&difficulty, &converted);
+        let mut gradual_2nd = ManiaGradualPerformance::new(&difficulty, &converted);
+        let mut gradual_3rd = ManiaGradualPerformance::new(&difficulty, &converted);
 
         let mut state = ManiaScoreState::default();
 
