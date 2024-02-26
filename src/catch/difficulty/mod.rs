@@ -1,5 +1,5 @@
 use crate::{
-    any::difficulty::{skills::Skill, ModeDifficulty},
+    any::difficulty::{mode::ModeDifficulty, skills::Skill},
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },

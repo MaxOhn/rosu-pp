@@ -1,7 +1,7 @@
 use std::{cmp, pin::Pin};
 
 use crate::{
-    any::difficulty::{skills::Skill, ModeDifficulty},
+    any::difficulty::{mode::ModeDifficulty, skills::Skill},
     model::beatmap::BeatmapAttributes,
     osu::{
         convert::convert_objects,

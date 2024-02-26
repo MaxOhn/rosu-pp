@@ -10,11 +10,11 @@ use crate::{
     taiko::{Taiko, TaikoBeatmap},
 };
 
-pub use self::mode::ModeDifficulty;
+use self::mode::ModeDifficulty;
 
 use super::attributes::DifficultyAttributes;
 
-mod mode;
+pub mod mode;
 pub mod object;
 pub mod skills;
 

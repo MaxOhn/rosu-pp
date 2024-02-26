@@ -2,7 +2,7 @@ pub use self::{
     attributes::{
         AttributeProvider, DifficultyAttributes, ModeAttributeProvider, PerformanceAttributes,
     },
-    difficulty::{Difficulty, ModeDifficulty},
+    difficulty::{mode::ModeDifficulty, Difficulty},
     performance::{HitResultPriority, Performance},
     score_state::ScoreState,
 };

@@ -1,5 +1,5 @@
 use crate::{
-    any::difficulty::{skills::Skill, ModeDifficulty},
+    any::difficulty::{mode::ModeDifficulty, skills::Skill},
     mania::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},

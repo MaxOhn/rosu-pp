@@ -1,5 +1,5 @@
 use crate::{
-    any::difficulty::ModeDifficulty,
+    any::difficulty::mode::ModeDifficulty,
     taiko::{
         difficulty::{
             color::preprocessor::ColorDifficultyPreprocessor,
