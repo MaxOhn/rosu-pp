@@ -168,7 +168,7 @@ impl<'map> ManiaPerformance<'map> {
             MapOrAttrs::Map(ref map) => {
                 let attrs = self.generate_attributes(map);
 
-                self.map_or_attrs.attrs_or_insert(attrs)
+                self.map_or_attrs.insert_attrs(attrs)
             }
             MapOrAttrs::Attrs(ref attrs) => attrs,
         };

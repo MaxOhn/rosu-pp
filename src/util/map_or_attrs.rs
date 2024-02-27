@@ -12,21 +12,18 @@ impl<'map, M: IGameMode> MapOrAttrs<'map, M> {
     ///
     /// If `self` is of variant `Map`, store `attrs` in `self`, and return a
     /// mutable reference to it.
-    pub fn attrs_or_insert(
-        &mut self,
-        attrs: M::DifficultyAttributes,
-    ) -> &mut M::DifficultyAttributes {
+    pub fn insert_attrs(&mut self, attrs: M::DifficultyAttributes) -> &mut M::DifficultyAttributes {
         match self {
             MapOrAttrs::Map(_) => {
                 *self = Self::Attrs(attrs);
 
-                let Self::Attrs(ref mut other) = self else {
+                let Self::Attrs(ref mut attrs) = self else {
                     unreachable!()
                 };
 
-                other
+                attrs
             }
-            MapOrAttrs::Attrs(ref mut other) => other,
+            MapOrAttrs::Attrs(ref mut attrs) => attrs,
         }
     }
 }
