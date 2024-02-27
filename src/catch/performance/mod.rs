@@ -21,17 +21,14 @@ pub mod gradual;
 #[must_use]
 pub struct CatchPerformance<'map> {
     pub(crate) map_or_attrs: MapOrAttrs<'map, Catch>,
-    pub(crate) mods: u32,
+    pub(crate) difficulty: ModeDifficulty,
     pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<u32>,
-
     pub(crate) fruits: Option<u32>,
     pub(crate) droplets: Option<u32>,
     pub(crate) tiny_droplets: Option<u32>,
     pub(crate) tiny_droplet_misses: Option<u32>,
     pub(crate) misses: Option<u32>,
-    pub(crate) passed_objects: Option<u32>,
-    pub(crate) clock_rate: Option<f64>,
 }
 
 impl<'map> CatchPerformance<'map> {
@@ -55,7 +52,7 @@ impl<'map> CatchPerformance<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     pub const fn mods(mut self, mods: u32) -> Self {
-        self.mods = mods;
+        self.difficulty = self.difficulty.mods(mods);
 
         self
     }
@@ -110,7 +107,7 @@ impl<'map> CatchPerformance<'map> {
     ///
     /// [`CatchGradualPerformance`]: crate::catch::CatchGradualPerformance
     pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
-        self.passed_objects = Some(passed_objects);
+        self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
     }
@@ -119,7 +116,7 @@ impl<'map> CatchPerformance<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
-        self.clock_rate = Some(clock_rate);
+        self.difficulty = self.difficulty.clock_rate(clock_rate);
 
         self
     }
@@ -312,7 +309,7 @@ impl<'map> CatchPerformance<'map> {
 
         let inner = CatchPerformanceInner {
             attrs,
-            mods: self.mods,
+            mods: self.difficulty.get_mods(),
             state,
         };
 
@@ -320,17 +317,7 @@ impl<'map> CatchPerformance<'map> {
     }
 
     fn generate_attributes(&self, map: &CatchBeatmap<'_>) -> CatchDifficultyAttributes {
-        let mut calculator = ModeDifficulty::new();
-
-        if let Some(passed_objects) = self.passed_objects {
-            calculator = calculator.passed_objects(passed_objects);
-        }
-
-        if let Some(clock_rate) = self.clock_rate {
-            calculator = calculator.clock_rate(clock_rate);
-        }
-
-        calculator.mods(self.mods).calculate(map)
+        self.difficulty.calculate(map)
     }
 
     /// Try to create [`CatchPerformance`] through a [`ModeAttributeProvider`].
@@ -393,21 +380,19 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
 
         let OsuPerformance {
             map_or_attrs: _,
-            mods,
+            difficulty,
             acc,
             combo,
             n300,
             n100,
             n50,
             misses,
-            passed_objects,
-            clock_rate,
             hitresult_priority: _,
         } = osu;
 
         Ok(Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            mods,
+            difficulty,
             acc,
             combo,
             fruits: n300,
@@ -415,8 +400,6 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
             tiny_droplets: n50,
             tiny_droplet_misses: None,
             misses,
-            passed_objects,
-            clock_rate,
         })
     }
 }
@@ -425,17 +408,14 @@ impl<'map> From<CatchBeatmap<'map>> for CatchPerformance<'map> {
     fn from(map: CatchBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            mods: 0,
+            difficulty: ModeDifficulty::new(),
             acc: None,
             combo: None,
-
             fruits: None,
             droplets: None,
             tiny_droplets: None,
             tiny_droplet_misses: None,
             misses: None,
-            passed_objects: None,
-            clock_rate: None,
         }
     }
 }
@@ -444,17 +424,14 @@ impl From<CatchDifficultyAttributes> for CatchPerformance<'_> {
     fn from(attrs: CatchDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            mods: 0,
+            difficulty: ModeDifficulty::new(),
             acc: None,
             combo: None,
-
             fruits: None,
             droplets: None,
             tiny_droplets: None,
             tiny_droplet_misses: None,
             misses: None,
-            passed_objects: None,
-            clock_rate: None,
         }
     }
 }

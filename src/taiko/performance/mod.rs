@@ -21,13 +21,10 @@ pub mod gradual;
 #[must_use]
 pub struct TaikoPerformance<'map> {
     pub(crate) map_or_attrs: MapOrAttrs<'map, Taiko>,
-    mods: u32,
+    difficulty: ModeDifficulty,
     combo: Option<u32>,
     acc: Option<f64>,
-    passed_objects: Option<u32>,
-    clock_rate: Option<f64>,
     hitresult_priority: HitResultPriority,
-
     pub(crate) n300: Option<u32>,
     pub(crate) n100: Option<u32>,
     pub(crate) misses: Option<u32>,
@@ -54,7 +51,7 @@ impl<'map> TaikoPerformance<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     pub const fn mods(mut self, mods: u32) -> Self {
-        self.mods = mods;
+        self.difficulty = self.difficulty.mods(mods);
 
         self
     }
@@ -112,7 +109,7 @@ impl<'map> TaikoPerformance<'map> {
     ///
     /// [`TaikoGradualPerformance`]: crate::taiko::TaikoGradualPerformance
     pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
-        self.passed_objects = Some(passed_objects);
+        self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
     }
@@ -121,7 +118,7 @@ impl<'map> TaikoPerformance<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
-        self.clock_rate = Some(clock_rate);
+        self.difficulty = self.difficulty.clock_rate(clock_rate);
 
         self
     }
@@ -157,11 +154,7 @@ impl<'map> TaikoPerformance<'map> {
 
         let max_combo = attrs.max_combo();
 
-        let total_result_count = if let Some(passed_objects) = self.passed_objects {
-            cmp::min(max_combo, passed_objects)
-        } else {
-            max_combo
-        };
+        let total_result_count = cmp::min(self.difficulty.get_passed_objects() as u32, max_combo);
 
         let priority = self.hitresult_priority;
 
@@ -245,7 +238,7 @@ impl<'map> TaikoPerformance<'map> {
         };
 
         let inner = TaikoPerformanceInner {
-            mods: self.mods,
+            mods: self.difficulty.get_mods(),
             state,
             attrs,
         };
@@ -254,17 +247,7 @@ impl<'map> TaikoPerformance<'map> {
     }
 
     fn generate_attributes(&self, map: &TaikoBeatmap<'_>) -> TaikoDifficultyAttributes {
-        let mut calculator = ModeDifficulty::new();
-
-        if let Some(passed_objects) = self.passed_objects {
-            calculator = calculator.passed_objects(passed_objects);
-        }
-
-        if let Some(clock_rate) = self.clock_rate {
-            calculator = calculator.clock_rate(clock_rate);
-        }
-
-        calculator.mods(self.mods).calculate(map)
+        self.difficulty.calculate(map)
     }
 
     /// Try to create [`TaikoPerformance`] through a [`ModeAttributeProvider`].
@@ -328,25 +311,21 @@ impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
 
         let OsuPerformance {
             map_or_attrs: _,
-            mods,
+            difficulty,
             acc,
             combo,
             n300,
             n100,
             n50: _,
             misses,
-            passed_objects,
-            clock_rate,
             hitresult_priority,
         } = osu;
 
         Ok(Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            mods,
+            difficulty,
             combo,
             acc,
-            passed_objects,
-            clock_rate,
             hitresult_priority,
             n300,
             n100,
@@ -359,12 +338,10 @@ impl<'map> From<TaikoBeatmap<'map>> for TaikoPerformance<'map> {
     fn from(map: TaikoBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            mods: 0,
+            difficulty: ModeDifficulty::new(),
             combo: None,
             acc: None,
             misses: None,
-            passed_objects: None,
-            clock_rate: None,
             n300: None,
             n100: None,
             hitresult_priority: HitResultPriority::default(),
@@ -376,12 +353,10 @@ impl From<TaikoDifficultyAttributes> for TaikoPerformance<'_> {
     fn from(attrs: TaikoDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            mods: 0,
+            difficulty: ModeDifficulty::new(),
             combo: None,
             acc: None,
             misses: None,
-            passed_objects: None,
-            clock_rate: None,
             n300: None,
             n100: None,
             hitresult_priority: HitResultPriority::default(),

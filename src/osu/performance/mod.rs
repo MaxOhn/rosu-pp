@@ -25,16 +25,13 @@ pub mod gradual;
 #[must_use]
 pub struct OsuPerformance<'map> {
     pub(crate) map_or_attrs: MapOrAttrs<'map, Osu>,
-    pub(crate) mods: u32,
+    pub(crate) difficulty: ModeDifficulty,
     pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<u32>,
-
     pub(crate) n300: Option<u32>,
     pub(crate) n100: Option<u32>,
     pub(crate) n50: Option<u32>,
     pub(crate) misses: Option<u32>,
-    pub(crate) passed_objects: Option<u32>,
-    pub(crate) clock_rate: Option<f64>,
     pub(crate) hitresult_priority: HitResultPriority,
 }
 
@@ -108,7 +105,7 @@ impl<'map> OsuPerformance<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     pub const fn mods(mut self, mods: u32) -> Self {
-        self.mods = mods;
+        self.difficulty = self.difficulty.mods(mods);
 
         self
     }
@@ -165,7 +162,7 @@ impl<'map> OsuPerformance<'map> {
     ///
     /// [`OsuGradualPerformance`]: crate::osu::OsuGradualPerformance
     pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
-        self.passed_objects = Some(passed_objects);
+        self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
     }
@@ -174,7 +171,7 @@ impl<'map> OsuPerformance<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
-        self.clock_rate = Some(clock_rate);
+        self.difficulty = self.difficulty.clock_rate(clock_rate);
 
         self
     }
@@ -220,7 +217,10 @@ impl<'map> OsuPerformance<'map> {
         };
 
         let max_combo = attrs.max_combo;
-        let n_objects = self.passed_objects.unwrap_or(attrs.n_objects());
+        let n_objects = cmp::min(
+            self.difficulty.get_passed_objects() as u32,
+            attrs.n_objects(),
+        );
         let priority = self.hitresult_priority;
 
         let misses = self.misses.map_or(0, |n| cmp::min(n, n_objects));
@@ -401,7 +401,7 @@ impl<'map> OsuPerformance<'map> {
 
         let inner = OsuPerformanceInner {
             attrs,
-            mods: self.mods,
+            mods: self.difficulty.get_mods(),
             acc: state.accuracy(),
             state,
             effective_miss_count,
@@ -411,17 +411,7 @@ impl<'map> OsuPerformance<'map> {
     }
 
     fn generate_attributes(&self, map: &OsuBeatmap<'_>) -> OsuDifficultyAttributes {
-        let mut calculator = ModeDifficulty::new();
-
-        if let Some(passed_objects) = self.passed_objects {
-            calculator = calculator.passed_objects(passed_objects);
-        }
-
-        if let Some(clock_rate) = self.clock_rate {
-            calculator = calculator.clock_rate(clock_rate);
-        }
-
-        calculator.mods(self.mods).calculate(map)
+        self.difficulty.calculate(map)
     }
 
     /// Try to create [`OsuPerformance`] through a [`ModeAttributeProvider`].
@@ -461,16 +451,13 @@ impl<'map> From<OsuBeatmap<'map>> for OsuPerformance<'map> {
     fn from(map: OsuBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            mods: 0,
+            difficulty: ModeDifficulty::new(),
             acc: None,
             combo: None,
-
             n300: None,
             n100: None,
             n50: None,
             misses: None,
-            passed_objects: None,
-            clock_rate: None,
             hitresult_priority: HitResultPriority::default(),
         }
     }
@@ -480,16 +467,13 @@ impl From<OsuDifficultyAttributes> for OsuPerformance<'_> {
     fn from(attrs: OsuDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            mods: 0,
+            difficulty: ModeDifficulty::new(),
             acc: None,
             combo: None,
-
             n300: None,
             n100: None,
             n50: None,
             misses: None,
-            passed_objects: None,
-            clock_rate: None,
             hitresult_priority: HitResultPriority::default(),
         }
     }

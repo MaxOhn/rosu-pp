@@ -21,17 +21,13 @@ pub mod gradual;
 #[must_use]
 pub struct ManiaPerformance<'map> {
     map_or_attrs: MapOrAttrs<'map, Mania>,
-    mods: u32,
-    passed_objects: Option<u32>,
-    clock_rate: Option<f64>,
-
+    difficulty: ModeDifficulty,
     pub(crate) n320: Option<u32>,
     pub(crate) n300: Option<u32>,
     pub(crate) n200: Option<u32>,
     pub(crate) n100: Option<u32>,
     pub(crate) n50: Option<u32>,
     pub(crate) misses: Option<u32>,
-
     acc: Option<f64>,
     hitresult_priority: HitResultPriority,
 }
@@ -57,7 +53,7 @@ impl<'map> ManiaPerformance<'map> {
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     pub const fn mods(mut self, mods: u32) -> Self {
-        self.mods = mods;
+        self.difficulty = self.difficulty.mods(mods);
 
         self
     }
@@ -70,7 +66,7 @@ impl<'map> ManiaPerformance<'map> {
     ///
     /// [`ManiaGradualPerformance`]: crate::mania::ManiaGradualPerformance
     pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
-        self.passed_objects = Some(passed_objects);
+        self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
     }
@@ -79,7 +75,7 @@ impl<'map> ManiaPerformance<'map> {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
-        self.clock_rate = Some(clock_rate);
+        self.difficulty = self.difficulty.clock_rate(clock_rate);
 
         self
     }
@@ -168,20 +164,16 @@ impl<'map> ManiaPerformance<'map> {
     /// Create the [`ManiaScoreState`] that will be used for performance calculation.
     #[allow(clippy::too_many_lines, clippy::similar_names)]
     pub fn generate_state(&mut self) -> ManiaScoreState {
-        let n_objects = if let Some(passed) = self.passed_objects {
-            passed
-        } else {
-            let attrs = match self.map_or_attrs {
-                MapOrAttrs::Map(ref map) => {
-                    let attrs = self.generate_attributes(map);
+        let attrs = match self.map_or_attrs {
+            MapOrAttrs::Map(ref map) => {
+                let attrs = self.generate_attributes(map);
 
-                    self.map_or_attrs.attrs_or_insert(attrs)
-                }
-                MapOrAttrs::Attrs(ref attrs) => attrs,
-            };
-
-            attrs.n_objects
+                self.map_or_attrs.attrs_or_insert(attrs)
+            }
+            MapOrAttrs::Attrs(ref attrs) => attrs,
         };
+
+        let n_objects = cmp::min(self.difficulty.get_passed_objects() as u32, attrs.n_objects);
 
         let priority = self.hitresult_priority;
 
@@ -705,7 +697,7 @@ impl<'map> ManiaPerformance<'map> {
         };
 
         let inner = ManiaPerformanceInner {
-            mods: self.mods,
+            mods: self.difficulty.get_mods(),
             attrs,
             state,
         };
@@ -714,17 +706,7 @@ impl<'map> ManiaPerformance<'map> {
     }
 
     fn generate_attributes(&self, map: &ManiaBeatmap<'_>) -> ManiaDifficultyAttributes {
-        let mut calculator = ModeDifficulty::new();
-
-        if let Some(passed_objects) = self.passed_objects {
-            calculator = calculator.passed_objects(passed_objects);
-        }
-
-        if let Some(clock_rate) = self.clock_rate {
-            calculator = calculator.clock_rate(clock_rate);
-        }
-
-        calculator.mods(self.mods).calculate(map)
+        self.difficulty.calculate(map)
     }
 
     /// Try to create [`ManiaPerformance`] through a [`ModeAttributeProvider`].
@@ -787,23 +769,19 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
 
         let OsuPerformance {
             map_or_attrs: _,
-            mods,
+            difficulty,
             acc,
             combo: _,
             n300,
             n100,
             n50,
             misses,
-            passed_objects,
-            clock_rate,
             hitresult_priority,
         } = osu;
 
         Ok(Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            mods,
-            passed_objects,
-            clock_rate,
+            difficulty,
             n320: None,
             n300,
             n200: None,
@@ -820,9 +798,7 @@ impl<'map> From<ManiaBeatmap<'map>> for ManiaPerformance<'map> {
     fn from(map: ManiaBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            mods: 0,
-            passed_objects: None,
-            clock_rate: None,
+            difficulty: ModeDifficulty::new(),
             n320: None,
             n300: None,
             n200: None,
@@ -839,9 +815,7 @@ impl From<ManiaDifficultyAttributes> for ManiaPerformance<'_> {
     fn from(attrs: ManiaDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            mods: 0,
-            passed_objects: None,
-            clock_rate: None,
+            difficulty: ModeDifficulty::new(),
             n320: None,
             n300: None,
             n200: None,
