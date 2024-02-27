@@ -54,7 +54,40 @@
 //!
 //! ## Gradual calculation
 //!
-//! TODO
+//! Gradually calculating attributes provides an efficient way to process each hitobject
+//! separately and calculate the attributes only up to that point.
+//!
+//! For difficulty attributes, there is [`GradualDifficulty`] which implements [`Iterator`]
+//! and for performance attributes there is [`GradualPerformance`] which requires the current
+//! score state.
+//!
+//! ```
+//! use rosu_pp::{Beatmap, GradualPerformance, ModeDifficulty};
+//!
+//! let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
+//! let difficulty = ModeDifficulty::new().mods(16 + 64).clock_rate(1.2); // HRDT on 1.2x
+//!
+//! let mut gradual = GradualPerformance::new(&difficulty, &map);
+//! let mut state = ScoreState::new(); // empty state, everything is on 0.
+//!
+//! // The first 10 hitresults are 300s
+//! for _ in 0..10 {
+//!     state.n300 += 1;
+//!     state.max_combo += 1;
+//!     let attrs = gradual.next(state.clone()).unwrap();
+//!     println!("PP: {}", attrs.pp());
+//! }
+//!
+//! // Fast-forward to the end
+//! # /*
+//! state.max_combo = ...
+//! state.n300 = ...
+//! state.n_katu = ...
+//! ...
+//! # */
+//! let attrs = gradual.last(state).unwrap();
+//! println!("PP: {}", attrs.pp());
+//! ```
 //!
 //! ## Accuracy
 //!
