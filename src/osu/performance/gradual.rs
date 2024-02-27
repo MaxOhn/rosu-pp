@@ -28,7 +28,7 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 ///     .unchecked_into_converted::<Osu>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
-/// let mut gradual_perf = OsuGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = OsuGradualPerformance::new(&difficulty, &converted);
 /// let mut state = OsuScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hits are 300s and there are no sliders for additional combo
@@ -36,15 +36,15 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 ///     state.n300 += 1;
 ///     state.max_combo += 1;
 ///
-///     let performance = gradual_perf.next(state.clone()).unwrap();
-///     println!("PP: {}", performance.pp);
+///     let attrs = gradual.next(state.clone()).unwrap();
+///     println!("PP: {}", attrs.pp);
 /// }
 ///
 /// // Then comes a miss. Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
 /// state.misses += 1;
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // The next 10 objects will be a mixture of 300s, 100s, and 50s.
 /// // Notice how all 10 objects will be processed in one go.
@@ -52,14 +52,14 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 /// state.n100 += 7;
 /// state.n50 += 1;
 /// // The `nth` method takes a zero-based value.
-/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.nth(state.clone(), 9).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Skip to the end
 /// # /*
@@ -69,12 +69,12 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 /// state.n50 = ...
 /// state.misses = ...
 /// # */
-/// let final_performance = gradual_perf.nth(state.clone(), usize::MAX).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.last(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Once the final performance has been calculated, attempting to process
 /// // further objects will return `None`.
-/// assert!(gradual_perf.next(state).is_none());
+/// assert!(gradual.next(state).is_none());
 /// ```
 ///
 /// [`next`]: OsuGradualPerformance::next

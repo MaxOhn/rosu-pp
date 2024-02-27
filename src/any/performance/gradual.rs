@@ -35,7 +35,7 @@ use crate::{
 ///
 /// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
-/// let mut gradual_perf = GradualPerformance::new(&difficulty, &map);
+/// let mut gradual = GradualPerformance::new(&difficulty, &map);
 /// let mut state = ScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s
@@ -43,8 +43,8 @@ use crate::{
 ///     state.n300 += 1;
 ///     state.max_combo += 1;
 ///
-///     let performance = gradual_perf.next(state.clone()).unwrap();
-///     println!("PP: {}", performance.pp());
+///     let attrs = gradual.next(state.clone()).unwrap();
+///     println!("PP: {}", attrs.pp());
 /// }
 ///
 /// // Then comes a miss.
@@ -52,8 +52,8 @@ use crate::{
 /// // the next few objects because the combo is reset.
 /// state.misses += 1;
 ///
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp());
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp());
 ///
 /// // The next 10 objects will be a mixture of 300s, 100s, and 50s.
 /// // Notice how all 10 objects will be processed in one go.
@@ -62,15 +62,15 @@ use crate::{
 /// state.n50 += 1;
 ///
 /// // The `nth` method takes a zero-based value.
-/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
-/// println!("PP: {}", performance.pp());
+/// let attrs = gradual.nth(state.clone(), 9).unwrap();
+/// println!("PP: {}", attrs.pp());
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
 ///
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp());
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp());
 ///
 /// // Skip to the end
 /// # /*
@@ -78,12 +78,12 @@ use crate::{
 /// state.n300 = ...
 /// ...
 /// # */
-/// let final_performance = gradual_perf.last(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp());
+/// let attrs = gradual.last(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp());
 ///
 /// // Once the final performance has been calculated, attempting to process
 /// // further objects will return `None`.
-/// assert!(gradual_perf.next(state).is_none());
+/// assert!(gradual.next(state).is_none());
 /// ```
 ///
 /// [`next`]: GradualPerformance::next

@@ -28,29 +28,29 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 ///     .unchecked_into_converted::<Mania>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
-/// let mut gradual_perf = ManiaGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = ManiaGradualPerformance::new(&difficulty, &converted);
 /// let mut state = ManiaScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 320s
 /// for _ in 0..10 {
 ///     state.n320 += 1;
 ///
-///     let performance = gradual_perf.next(state.clone()).unwrap();
-///     println!("PP: {}", performance.pp);
+///     let attrs = gradual.next(state.clone()).unwrap();
+///     println!("PP: {}", attrs.pp);
 /// }
 ///
 /// // Then comes a miss.
 /// state.misses += 1;
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // The next 10 objects will be a mixture of 320s and 100s.
 /// // Notice how all 10 objects will be processed in one go.
 /// state.n320 += 3;
 /// state.n100 += 7;
 /// // The `nth` method takes a zero-based value.
-/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.nth(state.clone(), 9).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Skip to the end
 /// # /*
@@ -59,12 +59,12 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 /// state.n100 = ...
 /// state.misses = ...
 /// # */
-/// let final_performance = gradual_perf.nth(state.clone(), usize::MAX).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.last(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Once the final performance was calculated,
 /// // attempting to process further objects will return `None`.
-/// assert!(gradual_perf.next(state).is_none());
+/// assert!(gradual.next(state).is_none());
 /// ```
 ///
 /// [`next`]: ManiaGradualPerformance::next

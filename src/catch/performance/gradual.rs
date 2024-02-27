@@ -29,7 +29,7 @@ use crate::{
 ///     .unchecked_into_converted::<Catch>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
-/// let mut gradual_perf = CatchGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = CatchGradualPerformance::new(&difficulty, &converted);
 /// let mut state = CatchScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are only fruits
@@ -37,16 +37,16 @@ use crate::{
 ///     state.n_fruits += 1;
 ///     state.max_combo += 1;
 ///
-///     let performance = gradual_perf.next(state.clone()).unwrap();
-///     println!("PP: {}", performance.pp);
+///     let attrs = gradual.next(state.clone()).unwrap();
+///     println!("PP: {}", attrs.pp);
 /// }
 ///
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
 /// state.misses += 1;
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // The next 10 objects will be a mixture of fruits and droplets.
 /// // Notice how tiny droplets from sliders do not count as hit objects
@@ -56,14 +56,14 @@ use crate::{
 /// state.n_droplets += 6;
 /// state.n_tiny_droplets += 12;
 /// // The `nth` method takes a zero-based value.
-/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.nth(state.clone(), 9).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Now comes another fruit. Note that the max combo gets incremented again.
 /// state.n_fruits += 1;
 /// state.max_combo += 1;
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Skip to the end
 /// # /*
@@ -74,12 +74,12 @@ use crate::{
 /// state.n_tiny_droplet_misses = ...
 /// state.misses = ...
 /// # */
-/// let final_performance = gradual_perf.last(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.last(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
-/// // Once the final performance has been calculated,
-/// // attempting to process further objects will return `None`.
-/// assert!(gradual_perf.next(state).is_none());
+/// // Once the final performance has been calculated, attempting to process
+/// // further objects will return `None`.
+/// assert!(gradual.next(state).is_none());
 /// ```
 ///
 /// [`next`]: CatchGradualPerformance::next

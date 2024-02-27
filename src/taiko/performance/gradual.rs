@@ -28,7 +28,7 @@ use super::TaikoPerformanceAttributes;
 ///     .unchecked_into_converted::<Taiko>();
 ///
 /// let difficulty = ModeDifficulty::new().mods(64); // DT
-/// let mut gradual_perf = TaikoGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = TaikoGradualPerformance::new(&difficulty, &converted);
 /// let mut state = TaikoScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s
@@ -36,30 +36,30 @@ use super::TaikoPerformanceAttributes;
 ///     state.n300 += 1;
 ///     state.max_combo += 1;
 ///
-///     let performance = gradual_perf.next(state.clone()).unwrap();
-///     println!("PP: {}", performance.pp);
+///     let attrs = gradual.next(state.clone()).unwrap();
+///     println!("PP: {}", attrs.pp);
 /// }
 ///
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
 /// state.misses += 1;
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // The next 10 objects will be a mixture of 300s and 100s.
 /// // Notice how all 10 objects will be processed in one go.
 /// state.n300 += 3;
 /// state.n100 += 7;
 /// // The `nth` method takes a zero-based value.
-/// let performance = gradual_perf.nth(state.clone(), 9).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.nth(state.clone(), 9).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
 /// state.n300 += 1;
 /// state.max_combo += 1;
-/// let performance = gradual_perf.next(state.clone()).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.next(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
 /// // Skip to the end
 /// # /*
@@ -68,12 +68,12 @@ use super::TaikoPerformanceAttributes;
 /// state.n100 = ...
 /// state.misses = ...
 /// # */
-/// let final_performance = gradual_perf.nth(state.clone(), usize::MAX).unwrap();
-/// println!("PP: {}", performance.pp);
+/// let attrs = gradual.last(state.clone()).unwrap();
+/// println!("PP: {}", attrs.pp);
 ///
-/// // Once the final performance was calculated,
-/// // attempting to process further objects will return `None`.
-/// assert!(gradual_perf.next(state).is_none());
+/// // Once the final performance has been calculated, attempting to process
+/// // further objects will return `None`.
+/// assert!(gradual.next(state).is_none());
 /// ```
 ///
 /// [`next`]: TaikoGradualPerformance::next
