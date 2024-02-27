@@ -89,6 +89,9 @@ use crate::{
 /// [`next`]: GradualPerformance::next
 /// [`nth`]: GradualPerformance::nth
 /// [`GradualDifficulty`]: crate::GradualDifficulty
+// 504 vs 184 bytes is an acceptable difference and the Osu variant (424 bytes)
+// is likely the most used one anyway.
+#[allow(clippy::large_enum_variant)]
 pub enum GradualPerformance {
     Osu(OsuGradualPerformance),
     Taiko(TaikoGradualPerformance),
