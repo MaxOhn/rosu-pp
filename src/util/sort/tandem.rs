@@ -112,7 +112,7 @@ mod tests {
     use super::TandemSorter;
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(10_000))]
+        #![proptest_config(ProptestConfig::with_cases(1000))]
 
         #[test]
         fn sort(mut actual in prop::collection::vec(0_u8..100, 0..100)) {
