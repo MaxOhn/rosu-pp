@@ -1,7 +1,14 @@
 [package]
 name = "rosu-pp"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+authors = ["MaxOhn <ohn.m@hotmail.de>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/MaxOhn/rosu-pp"
+documentation = "https://docs.rs/rosu-pp/"
+description = "Difficulty and performance calculation for osu!"
+keywords = ["osu", "pp", "stars", "performance", "osu!"]
 
 [features]
 default = []
@@ -9,7 +16,7 @@ sync = []
 tracing = ["rosu-map/tracing"]
 
 [dependencies]
-rosu-map = { path = "../rosu-map" }
+rosu-map = { version = "0.1.0" }
 thiserror = { version = "1.0.50" }
 
 [dev-dependencies]
