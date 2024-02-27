@@ -22,12 +22,12 @@ pub mod gradual;
 pub struct ManiaPerformance<'map> {
     map_or_attrs: MapOrAttrs<'map, Mania>,
     difficulty: ModeDifficulty,
-    pub(crate) n320: Option<u32>,
-    pub(crate) n300: Option<u32>,
-    pub(crate) n200: Option<u32>,
-    pub(crate) n100: Option<u32>,
-    pub(crate) n50: Option<u32>,
-    pub(crate) misses: Option<u32>,
+    n320: Option<u32>,
+    n300: Option<u32>,
+    n200: Option<u32>,
+    n100: Option<u32>,
+    n50: Option<u32>,
+    misses: Option<u32>,
     acc: Option<f64>,
     hitresult_priority: HitResultPriority,
 }

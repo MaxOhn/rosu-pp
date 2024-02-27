@@ -20,15 +20,15 @@ pub mod gradual;
 #[derive(Clone, Debug, PartialEq)]
 #[must_use]
 pub struct CatchPerformance<'map> {
-    pub(crate) map_or_attrs: MapOrAttrs<'map, Catch>,
-    pub(crate) difficulty: ModeDifficulty,
-    pub(crate) acc: Option<f64>,
-    pub(crate) combo: Option<u32>,
-    pub(crate) fruits: Option<u32>,
-    pub(crate) droplets: Option<u32>,
-    pub(crate) tiny_droplets: Option<u32>,
-    pub(crate) tiny_droplet_misses: Option<u32>,
-    pub(crate) misses: Option<u32>,
+    map_or_attrs: MapOrAttrs<'map, Catch>,
+    difficulty: ModeDifficulty,
+    acc: Option<f64>,
+    combo: Option<u32>,
+    fruits: Option<u32>,
+    droplets: Option<u32>,
+    tiny_droplets: Option<u32>,
+    tiny_droplet_misses: Option<u32>,
+    misses: Option<u32>,
 }
 
 impl<'map> CatchPerformance<'map> {

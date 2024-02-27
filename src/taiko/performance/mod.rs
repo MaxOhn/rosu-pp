@@ -25,9 +25,9 @@ pub struct TaikoPerformance<'map> {
     combo: Option<u32>,
     acc: Option<f64>,
     hitresult_priority: HitResultPriority,
-    pub(crate) n300: Option<u32>,
-    pub(crate) n100: Option<u32>,
-    pub(crate) misses: Option<u32>,
+    n300: Option<u32>,
+    n100: Option<u32>,
+    misses: Option<u32>,
 }
 
 impl<'map> TaikoPerformance<'map> {
