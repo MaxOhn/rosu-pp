@@ -68,7 +68,7 @@ and for performance attributes there is [`GradualPerformance`] which requires th
 score state.
 
 ```rust
-use rosu_pp::{Beatmap, GradualPerformance, ModeDifficulty};
+use rosu_pp::{Beatmap, GradualPerformance, ModeDifficulty, any::ScoreState};
 
 let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
 let difficulty = ModeDifficulty::new().mods(16 + 64).clock_rate(1.2); // HRDT on 1.2x
