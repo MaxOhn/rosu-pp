@@ -33,13 +33,13 @@ impl ModeDifficulty {
         }
     }
 
-    /// Adjust the clock rate used in the calculation.
+    /// Adjust the clock rate used in the calculation between 0.01 and 100.0.
     ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
-    pub const fn clock_rate(self, clock_rate: f64) -> Self {
+    pub fn clock_rate(self, clock_rate: f64) -> Self {
         Self {
-            clock_rate: Some(clock_rate),
+            clock_rate: Some(clock_rate.clamp(0.01, 100.0)),
             ..self
         }
     }

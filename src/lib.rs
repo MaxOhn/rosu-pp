@@ -182,5 +182,3 @@ pub mod mania;
 pub mod model;
 
 mod util;
-
-// TODO: fix very low custom clock rates
