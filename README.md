@@ -6,21 +6,9 @@
 
 Library to calculate difficulty and performance attributes for all [osu!] gamemodes.
 
-### Description
-
 A large part of `rosu-pp` is a port of [osu!lazer]'s difficulty and performance calculation
-with emphasis on a precise translation to Rust for the most accurate results.
-
-Another important factor is the calculation speed. Optimizations and an accurate translation
-unfortunately don't always go hand-in-hand. Nonetheless, performance improvements are still
-snuck in wherever possible, providing a significantly faster runtime than the native C# code.
-
-TODO: values to compare
-
-Additionally, `rosu-pp` allows previous values to be re-used so that they don't need to be
-calculated again. For example, a beatmap needs to be decoded only once and can then be used
-for any amount of attribute calculations. Similarly, previous attributes can be re-used for
-later calculations (with some limitations, see the [example](#usage)).
+with emphasis on a precise translation to Rust for the most [accurate results](#accuracy)
+while also providing a significant [boost in performance](#speed).
 
 Last commits of the ported code:
   - [osu!lazer] : `7342fb7f51b34533a42bffda89c3d6c569cc69ce` (2022-10-11)
@@ -74,6 +62,36 @@ println!("Stars: {stars} | PP: {pp}/{max_pp}");
 
 TODO
 
+### Accuracy
+
+`rosu-pp` was tested against all current beatmaps on multiple mod combinations and delivered
+values that matched osu!lazer perfectly down to the last decimal place.
+
+However, there is one small caveat: the values are only this precise on debug mode.
+On release mode, Rust's compiler performs optimizations that produce the tiniest discrepancies
+due to floating point inaccuracies which can cascade into larger differences in the end.
+With this in mind, `rosu-pp` is still as accurate as can be without targeting the
+.NET compiler itself. Realistically, the inaccuracies in release mode are negligibly small.
+
+### Speed
+
+An important factor for `rosu-pp` is the calculation speed. Optimizations and an accurate translation
+unfortunately don't always go hand-in-hand. Nonetheless, performance improvements are still
+snuck in wherever possible, providing a significantly faster runtime than the native C# code.
+
+Results of a rudimentary [benchmark] of osu!lazer and rosu-pp:
+```txt
+osu!lazer:
+Decoding maps:            Median: 378.10ms | Mean: 381.47ms
+Calculating difficulties: Median: 588.89ms | Mean: 597.11ms
+Calculating performances: Median: 315.90µs | Mean: 310.60µs
+
+rosu-pp:
+Decoding maps:            Median: 46.94ms | Mean: 47.21ms
+Calculating difficulties: Median: 72.90ms | Mean: 73.13ms
+Calculating performances: Median: 44.13µs | Mean: 45.53µs
+```
+
 ### Features
 
 | Flag      | Description | Dependencies
@@ -94,5 +112,6 @@ Using `rosu-pp` from other languages than Rust:
 [`tracing`]: https://docs.rs/tracing
 [rosu-pp-js]: https://github.com/MaxOhn/rosu-pp-js
 [rosu-pp-py]: https://github.com/MaxOhn/rosu-pp-py
+[benchmark]: https://gist.github.com/MaxOhn/625af10011f6d7e13a171b08ccf959ff
 
 <!-- cargo-rdme end -->
