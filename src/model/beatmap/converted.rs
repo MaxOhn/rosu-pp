@@ -70,17 +70,11 @@ impl<M: IGameMode> Converted<'_, M> {
     /// If the conversion is incompatible the [`Beatmap`] will be returned
     /// unchanged as `Err`.
     #[allow(clippy::result_large_err)]
-    pub fn try_from_owned(map: Beatmap) -> Result<Self, Beatmap> {
-        let mut map = Cow::Owned(map);
-
+    pub fn try_from_owned(mut map: Beatmap) -> Result<Self, Beatmap> {
         match M::try_convert(&mut map) {
-            ConvertStatus::Noop => Ok(Self::new(map, false)),
-            ConvertStatus::Done => Ok(Self::new(map, true)),
-            ConvertStatus::Incompatible => {
-                let Cow::Owned(map) = map else { unreachable!() };
-
-                Err(map)
-            }
+            ConvertStatus::Noop => Ok(Self::new(Cow::Owned(map), false)),
+            ConvertStatus::Conversion => Ok(Self::new(Cow::Owned(map), true)),
+            ConvertStatus::Incompatible => Err(map),
         }
     }
 
@@ -126,11 +120,15 @@ impl<'a, M: IGameMode> Converted<'a, M> {
     ///
     /// [`&Beatmap`]: Beatmap
     pub fn try_from_ref(map: &'a Beatmap) -> Option<Self> {
-        let mut map = Cow::Borrowed(map);
+        let mut map = match M::check_convert(map) {
+            ConvertStatus::Noop => return Some(Self::new(Cow::Borrowed(map), false)),
+            ConvertStatus::Conversion => map.to_owned(),
+            ConvertStatus::Incompatible => return None,
+        };
 
         match M::try_convert(&mut map) {
-            ConvertStatus::Noop => Some(Self::new(map, false)),
-            ConvertStatus::Done => Some(Self::new(map, true)),
+            ConvertStatus::Conversion => Some(Self::new(Cow::Owned(map), true)),
+            ConvertStatus::Noop => Some(Self::new(Cow::Owned(map), false)),
             ConvertStatus::Incompatible => None,
         }
     }
@@ -156,6 +154,18 @@ impl<'a, M: IGameMode> Converted<'a, M> {
             Cow::Borrowed(map) => Converted::<N>::try_from_ref(map).ok_or(self),
             Cow::Owned(map) => Converted::<N>::try_from_owned(map)
                 .map_err(|map| Self::new(Cow::Owned(map), self.is_convert)),
+        }
+    }
+
+    /// Convert a [`Converted`] from mode `M` to mode `N`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the conversion is incompatible.
+    pub fn unchecked_convert<N: IGameMode>(self) -> Converted<'a, N> {
+        match self.map {
+            Cow::Borrowed(map) => Converted::<N>::unchecked_from_ref(map),
+            Cow::Owned(map) => Converted::<N>::unchecked_from_owned(map),
         }
     }
 }
