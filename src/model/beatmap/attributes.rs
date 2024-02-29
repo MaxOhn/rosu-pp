@@ -53,8 +53,8 @@ impl BeatmapAttributesBuilder {
     const TAIKO_MAX: f64 = 20.0;
 
     /// Create a new [`BeatmapAttributesBuilder`].
-    pub fn new(map: &Beatmap) -> Self {
-        map.into()
+    pub const fn new(map: &Beatmap) -> Self {
+        Self::new_internal(map, false)
     }
 
     const fn new_internal(map: &Beatmap, is_convert: bool) -> Self {
@@ -108,6 +108,17 @@ impl BeatmapAttributesBuilder {
     /// Specify a custom clock rate.
     pub fn clock_rate(&mut self, clock_rate: f64) -> &mut Self {
         self.clock_rate = Some(clock_rate);
+
+        self
+    }
+
+    /// Specify a [`GameMode`] and whether it's a converted map.
+    ///
+    /// This should only be used if the [`BeatmapAttributesBuilder`] was
+    /// **not** created through a [`Beatmap`] or [`Converted`].
+    pub fn mode(&mut self, mode: GameMode, is_convert: bool) -> &mut Self {
+        self.mode = mode;
+        self.is_convert = is_convert;
 
         self
     }
@@ -226,7 +237,7 @@ impl BeatmapAttributesBuilder {
 
 impl From<&Beatmap> for BeatmapAttributesBuilder {
     fn from(map: &Beatmap) -> Self {
-        Self::new_internal(map, false)
+        Self::new(map)
     }
 }
 
