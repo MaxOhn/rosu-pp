@@ -86,4 +86,15 @@ impl OsuPerformanceAttributes {
     pub const fn n_objects(&self) -> u32 {
         self.difficulty.n_objects()
     }
+
+    /// Returns a builder for performance calculation.
+    pub const fn performance<'a>(self) -> OsuPerformance<'a> {
+        OsuPerformance::from_osu_attributes(self.difficulty)
+    }
+}
+
+impl From<OsuPerformanceAttributes> for OsuDifficultyAttributes {
+    fn from(attributes: OsuPerformanceAttributes) -> Self {
+        attributes.difficulty
+    }
 }

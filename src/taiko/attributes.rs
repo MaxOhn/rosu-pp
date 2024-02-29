@@ -79,6 +79,11 @@ impl TaikoPerformanceAttributes {
     pub const fn is_convert(&self) -> bool {
         self.difficulty.is_convert
     }
+
+    /// Returns a builder for performance calculation.
+    pub const fn performance<'a>(self) -> TaikoPerformance<'a> {
+        TaikoPerformance::from_taiko_attributes(self.difficulty)
+    }
 }
 
 impl From<TaikoPerformanceAttributes> for TaikoDifficultyAttributes {

@@ -87,6 +87,17 @@ impl CatchPerformanceAttributes {
     pub const fn is_convert(&self) -> bool {
         self.difficulty.is_convert
     }
+
+    /// Returns a builder for performance calculation.
+    pub const fn performance<'a>(self) -> CatchPerformance<'a> {
+        CatchPerformance::from_catch_attributes(self.difficulty)
+    }
+}
+
+impl From<CatchPerformanceAttributes> for CatchDifficultyAttributes {
+    fn from(attributes: CatchPerformanceAttributes) -> Self {
+        attributes.difficulty
+    }
 }
 
 #[derive(Clone, Default)]
