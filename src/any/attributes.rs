@@ -108,6 +108,12 @@ impl PerformanceAttributes {
     }
 }
 
+impl From<PerformanceAttributes> for DifficultyAttributes {
+    fn from(attrs: PerformanceAttributes) -> Self {
+        attrs.difficulty_attributes()
+    }
+}
+
 /// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
 pub trait AttributeProvider {
     /// Provide the actual difficulty attributes.
