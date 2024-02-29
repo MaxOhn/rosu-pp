@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp};
+use std::cmp;
 
 use rosu_map::{
     section::{general::GameMode, hit_objects::CurveBuffers},
@@ -23,12 +23,20 @@ pub type TaikoBeatmap<'a> = Converted<'a, Taiko>;
 const LEGACY_TAIKO_VELOCITY_MULTIPLIER: f32 = 1.4;
 const OSU_BASE_SCORING_DIST: f32 = 100.0;
 
-pub fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
+pub fn check_convert(map: &Beatmap) -> ConvertStatus {
+    match map.mode {
+        GameMode::Osu => ConvertStatus::Conversion,
+        GameMode::Taiko => ConvertStatus::Noop,
+        GameMode::Catch | GameMode::Mania => ConvertStatus::Incompatible,
+    }
+}
+
+pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
     match map.mode {
         GameMode::Osu => {
-            convert(map.to_mut());
+            convert(map);
 
-            ConvertStatus::Done
+            ConvertStatus::Conversion
         }
         GameMode::Taiko => ConvertStatus::Noop,
         GameMode::Catch | GameMode::Mania => ConvertStatus::Incompatible,

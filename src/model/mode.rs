@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 pub use rosu_map::section::general::GameMode;
 
 use crate::any::ModeDifficulty;
@@ -31,11 +29,14 @@ pub trait IGameMode: Sized {
     /// The type of a gradual performance calculator.
     type GradualPerformance;
 
+    /// Check whether the map's mode can be converted to the current type.
+    fn check_convert(map: &Beatmap) -> ConvertStatus;
+
     /// Attempt to convert a beatmap.
     ///
-    /// In case [`ConvertStatus::Incompatible`] is returned, the map should
-    /// **not** be modified.
-    fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus;
+    /// In case [`ConvertStatus::Incompatible`] is returned, the map is not
+    /// modified.
+    fn try_convert(map: &mut Beatmap) -> ConvertStatus;
 
     /// Perform a difficulty calculation for a [`Converted`] beatmap and
     /// process the final skill values.
@@ -67,10 +68,10 @@ pub trait IGameMode: Sized {
 /// The status of a conversion through [`IGameMode::try_convert`].
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ConvertStatus {
-    /// Conversion was not necessary.
+    /// Conversion not necessary.
     Noop,
-    /// Conversion was successful.
-    Done,
-    /// Conversion was not possible.
+    /// Conversion possible.
+    Conversion,
+    /// Conversion not possible.
     Incompatible,
 }

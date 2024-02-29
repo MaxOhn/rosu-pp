@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use rosu_map::section::{general::GameMode, hit_objects::CurveBuffers};
 
 use crate::model::{
@@ -17,12 +15,16 @@ use super::{
 /// A [`Beatmap`] for [`Osu`] calculations.
 pub type OsuBeatmap<'a> = Converted<'a, Osu>;
 
-pub fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
+pub fn check_convert(map: &Beatmap) -> ConvertStatus {
     if map.mode == GameMode::Osu {
         ConvertStatus::Noop
     } else {
         ConvertStatus::Incompatible
     }
+}
+
+pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
+    check_convert(map)
 }
 
 pub fn convert_objects(

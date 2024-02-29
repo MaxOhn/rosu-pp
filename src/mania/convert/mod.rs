@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use rosu_map::{
     section::{general::GameMode, hit_objects::CurveBuffers},
     util::Pos,
@@ -34,12 +32,20 @@ pub type ManiaBeatmap<'a> = Converted<'a, Mania>;
 
 const MAX_NOTES_FOR_DENSITY: usize = 7;
 
-pub fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
+pub fn check_convert(map: &Beatmap) -> ConvertStatus {
+    match map.mode {
+        GameMode::Osu => ConvertStatus::Conversion,
+        GameMode::Mania => ConvertStatus::Noop,
+        GameMode::Taiko | GameMode::Catch => ConvertStatus::Incompatible,
+    }
+}
+
+pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
     match map.mode {
         GameMode::Osu => {
-            convert(map.to_mut());
+            convert(map);
 
-            ConvertStatus::Done
+            ConvertStatus::Conversion
         }
         GameMode::Mania => ConvertStatus::Noop,
         GameMode::Taiko | GameMode::Catch => ConvertStatus::Incompatible,

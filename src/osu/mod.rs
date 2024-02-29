@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use rosu_map::util::Pos;
 
 use crate::{
@@ -41,7 +39,11 @@ impl IGameMode for Osu {
     type GradualDifficulty = OsuGradualDifficulty;
     type GradualPerformance = OsuGradualPerformance;
 
-    fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
+    fn check_convert(map: &Beatmap) -> ConvertStatus {
+        convert::check_convert(map)
+    }
+
+    fn try_convert(map: &mut Beatmap) -> ConvertStatus {
         convert::try_convert(map)
     }
 

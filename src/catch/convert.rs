@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use rosu_map::section::{general::GameMode, hit_objects::CurveBuffers};
 
 use crate::{
@@ -28,12 +26,20 @@ const RNG_SEED: i32 = 1337;
 /// A [`Beatmap`] for [`Catch`] calculations.
 pub type CatchBeatmap<'a> = Converted<'a, Catch>;
 
-pub fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
+pub fn check_convert(map: &Beatmap) -> ConvertStatus {
+    match map.mode {
+        GameMode::Osu => ConvertStatus::Conversion,
+        GameMode::Catch => ConvertStatus::Noop,
+        GameMode::Taiko | GameMode::Mania => ConvertStatus::Incompatible,
+    }
+}
+
+pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
     match map.mode {
         GameMode::Osu => {
-            map.to_mut().mode = GameMode::Catch;
+            map.mode = GameMode::Catch;
 
-            ConvertStatus::Done
+            ConvertStatus::Conversion
         }
         GameMode::Catch => ConvertStatus::Noop,
         GameMode::Taiko | GameMode::Mania => ConvertStatus::Incompatible,

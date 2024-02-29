@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use crate::{
     any::ModeDifficulty,
     model::{
@@ -37,7 +35,11 @@ impl IGameMode for Taiko {
     type GradualDifficulty = TaikoGradualDifficulty;
     type GradualPerformance = TaikoGradualPerformance;
 
-    fn try_convert(map: &mut Cow<'_, Beatmap>) -> ConvertStatus {
+    fn check_convert(map: &Beatmap) -> ConvertStatus {
+        convert::check_convert(map)
+    }
+
+    fn try_convert(map: &mut Beatmap) -> ConvertStatus {
         convert::try_convert(map)
     }
 
