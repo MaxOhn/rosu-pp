@@ -33,8 +33,32 @@ pub struct CatchPerformance<'map> {
 
 impl<'map> CatchPerformance<'map> {
     /// Create a new performance calculator for osu!catch maps.
-    pub fn new(map: CatchBeatmap<'map>) -> Self {
-        map.into()
+    pub const fn new(map: CatchBeatmap<'map>) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Map(map),
+            difficulty: ModeDifficulty::new(),
+            acc: None,
+            combo: None,
+            fruits: None,
+            droplets: None,
+            tiny_droplets: None,
+            tiny_droplet_misses: None,
+            misses: None,
+        }
+    }
+
+    pub(crate) const fn from_catch_attributes(attrs: CatchDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Attrs(attrs),
+            difficulty: ModeDifficulty::new(),
+            acc: None,
+            combo: None,
+            fruits: None,
+            droplets: None,
+            tiny_droplets: None,
+            tiny_droplet_misses: None,
+            misses: None,
+        }
     }
 
     /// Provide the result of a previous difficulty or performance calculation.
@@ -406,39 +430,19 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
 
 impl<'map> From<CatchBeatmap<'map>> for CatchPerformance<'map> {
     fn from(map: CatchBeatmap<'map>) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
-            acc: None,
-            combo: None,
-            fruits: None,
-            droplets: None,
-            tiny_droplets: None,
-            tiny_droplet_misses: None,
-            misses: None,
-        }
+        Self::new(map)
     }
 }
 
 impl From<CatchDifficultyAttributes> for CatchPerformance<'_> {
     fn from(attrs: CatchDifficultyAttributes) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
-            acc: None,
-            combo: None,
-            fruits: None,
-            droplets: None,
-            tiny_droplets: None,
-            tiny_droplet_misses: None,
-            misses: None,
-        }
+        Self::from_catch_attributes(attrs)
     }
 }
 
 impl From<CatchPerformanceAttributes> for CatchPerformance<'_> {
     fn from(attrs: CatchPerformanceAttributes) -> Self {
-        attrs.difficulty.into()
+        Self::from_catch_attributes(attrs.difficulty)
     }
 }
 

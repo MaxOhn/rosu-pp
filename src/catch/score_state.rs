@@ -1,5 +1,5 @@
 /// Aggregation for a score's current state.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CatchScoreState {
     /// Maximum combo that the score has had so far.
     /// **Not** the maximum possible combo of the map so far.
@@ -20,8 +20,15 @@ pub struct CatchScoreState {
 
 impl CatchScoreState {
     /// Create a new empty score state.
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            max_combo: 0,
+            n_fruits: 0,
+            n_droplets: 0,
+            n_tiny_droplets: 0,
+            n_tiny_droplet_misses: 0,
+            misses: 0,
+        }
     }
 
     /// Return the total amount of hits by adding everything up.
@@ -45,5 +52,11 @@ impl CatchScoreState {
         let denominator = total_hits;
 
         f64::from(numerator) / f64::from(denominator)
+    }
+}
+
+impl Default for CatchScoreState {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -37,8 +37,32 @@ pub struct OsuPerformance<'map> {
 
 impl<'map> OsuPerformance<'map> {
     /// Create a new performance calculator for osu!standard maps.
-    pub fn new(map: OsuBeatmap<'map>) -> Self {
-        map.into()
+    pub const fn new(map: OsuBeatmap<'map>) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Map(map),
+            difficulty: ModeDifficulty::new(),
+            acc: None,
+            combo: None,
+            n300: None,
+            n100: None,
+            n50: None,
+            misses: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
+    }
+
+    pub(crate) const fn from_osu_attributes(attrs: OsuDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Attrs(attrs),
+            difficulty: ModeDifficulty::new(),
+            acc: None,
+            combo: None,
+            n300: None,
+            n100: None,
+            n50: None,
+            misses: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
     }
 
     /// Attempt to convert the map to the specified mode.
@@ -449,39 +473,19 @@ impl<'map> OsuPerformance<'map> {
 
 impl<'map> From<OsuBeatmap<'map>> for OsuPerformance<'map> {
     fn from(map: OsuBeatmap<'map>) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
-            acc: None,
-            combo: None,
-            n300: None,
-            n100: None,
-            n50: None,
-            misses: None,
-            hitresult_priority: HitResultPriority::default(),
-        }
+        Self::new(map)
     }
 }
 
 impl From<OsuDifficultyAttributes> for OsuPerformance<'_> {
     fn from(attrs: OsuDifficultyAttributes) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
-            acc: None,
-            combo: None,
-            n300: None,
-            n100: None,
-            n50: None,
-            misses: None,
-            hitresult_priority: HitResultPriority::default(),
-        }
+        Self::from_osu_attributes(attrs)
     }
 }
 
 impl From<OsuPerformanceAttributes> for OsuPerformance<'_> {
     fn from(attrs: OsuPerformanceAttributes) -> Self {
-        attrs.difficulty.into()
+        Self::from_osu_attributes(attrs.difficulty)
     }
 }
 

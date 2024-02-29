@@ -26,7 +26,7 @@ const RNG_SEED: i32 = 1337;
 /// A [`Beatmap`] for [`Catch`] calculations.
 pub type CatchBeatmap<'a> = Converted<'a, Catch>;
 
-pub fn check_convert(map: &Beatmap) -> ConvertStatus {
+pub const fn check_convert(map: &Beatmap) -> ConvertStatus {
     match map.mode {
         GameMode::Osu => ConvertStatus::Conversion,
         GameMode::Catch => ConvertStatus::Noop,

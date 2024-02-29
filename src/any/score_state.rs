@@ -5,7 +5,7 @@ use crate::{
 };
 
 /// Aggregation for a score's current state.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ScoreState {
     /// Maximum combo that the score has had so far. **Not** the maximum
     /// possible combo of the map so far.
@@ -32,8 +32,16 @@ pub struct ScoreState {
 
 impl ScoreState {
     /// Create a new empty score state.
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            max_combo: 0,
+            n_geki: 0,
+            n_katu: 0,
+            n300: 0,
+            n100: 0,
+            n50: 0,
+            misses: 0,
+        }
     }
 
     /// Return the total amount of hits by adding everything up based on the
@@ -156,5 +164,11 @@ impl From<ManiaScoreState> for ScoreState {
             n50: state.n50,
             misses: state.misses,
         }
+    }
+}
+
+impl Default for ScoreState {
+    fn default() -> Self {
+        Self::new()
     }
 }

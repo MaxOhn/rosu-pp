@@ -30,11 +30,11 @@ pub struct Difficulty<'map> {
 
 impl<'map> Difficulty<'map> {
     /// Create a new difficulty calculator for the given beatmap.
-    pub fn new(map: &'map Beatmap) -> Self {
+    pub const fn new(map: &'map Beatmap) -> Self {
         Self::new_with_is_convert(Cow::Borrowed(map), false)
     }
 
-    fn new_with_is_convert(map: Cow<'map, Beatmap>, is_convert: bool) -> Self {
+    const fn new_with_is_convert(map: Cow<'map, Beatmap>, is_convert: bool) -> Self {
         Self {
             map,
             is_convert,

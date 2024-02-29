@@ -32,8 +32,30 @@ pub struct TaikoPerformance<'map> {
 
 impl<'map> TaikoPerformance<'map> {
     /// Create a new performance calculator for osu!taiko maps.
-    pub fn new(map: TaikoBeatmap<'map>) -> Self {
-        map.into()
+    pub const fn new(map: TaikoBeatmap<'map>) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Map(map),
+            difficulty: ModeDifficulty::new(),
+            combo: None,
+            acc: None,
+            misses: None,
+            n300: None,
+            n100: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
+    }
+
+    pub(crate) const fn from_taiko_attributes(attrs: TaikoDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Attrs(attrs),
+            difficulty: ModeDifficulty::new(),
+            combo: None,
+            acc: None,
+            misses: None,
+            n300: None,
+            n100: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
     }
 
     /// Provide the result of a previous difficulty or performance calculation.
@@ -336,37 +358,19 @@ impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
 
 impl<'map> From<TaikoBeatmap<'map>> for TaikoPerformance<'map> {
     fn from(map: TaikoBeatmap<'map>) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
-            combo: None,
-            acc: None,
-            misses: None,
-            n300: None,
-            n100: None,
-            hitresult_priority: HitResultPriority::default(),
-        }
+        Self::new(map)
     }
 }
 
 impl From<TaikoDifficultyAttributes> for TaikoPerformance<'_> {
     fn from(attrs: TaikoDifficultyAttributes) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
-            combo: None,
-            acc: None,
-            misses: None,
-            n300: None,
-            n100: None,
-            hitresult_priority: HitResultPriority::default(),
-        }
+        Self::from_taiko_attributes(attrs)
     }
 }
 
 impl From<TaikoPerformanceAttributes> for TaikoPerformance<'_> {
     fn from(attrs: TaikoPerformanceAttributes) -> Self {
-        attrs.difficulty.into()
+        Self::from_taiko_attributes(attrs.difficulty)
     }
 }
 

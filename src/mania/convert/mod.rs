@@ -32,7 +32,7 @@ pub type ManiaBeatmap<'a> = Converted<'a, Mania>;
 
 const MAX_NOTES_FOR_DENSITY: usize = 7;
 
-pub fn check_convert(map: &Beatmap) -> ConvertStatus {
+pub const fn check_convert(map: &Beatmap) -> ConvertStatus {
     match map.mode {
         GameMode::Osu => ConvertStatus::Conversion,
         GameMode::Mania => ConvertStatus::Noop,

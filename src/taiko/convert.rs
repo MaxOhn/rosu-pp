@@ -23,7 +23,7 @@ pub type TaikoBeatmap<'a> = Converted<'a, Taiko>;
 const LEGACY_TAIKO_VELOCITY_MULTIPLIER: f32 = 1.4;
 const OSU_BASE_SCORING_DIST: f32 = 100.0;
 
-pub fn check_convert(map: &Beatmap) -> ConvertStatus {
+pub const fn check_convert(map: &Beatmap) -> ConvertStatus {
     match map.mode {
         GameMode::Osu => ConvertStatus::Conversion,
         GameMode::Taiko => ConvertStatus::Noop,

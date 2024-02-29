@@ -30,10 +30,11 @@ pub enum Performance<'map> {
 
 impl<'map> Performance<'map> {
     /// Create a new performance calculator for maps of any mode.
-    pub fn new(map: &'map Beatmap) -> Self {
+    pub const fn new(map: &'map Beatmap) -> Self {
+        let mode = map.mode;
         let map = Cow::Borrowed(map);
 
-        match map.mode {
+        match mode {
             GameMode::Osu => Self::Osu(OsuPerformance::new(Converted::new(map, false))),
             GameMode::Taiko => Self::Taiko(TaikoPerformance::new(Converted::new(map, false))),
             GameMode::Catch => Self::Catch(CatchPerformance::new(Converted::new(map, false))),
@@ -274,7 +275,7 @@ impl<'map> Performance<'map> {
 
 impl<A: AttributeProvider> From<A> for Performance<'_> {
     fn from(attrs: A) -> Self {
-        fn inner(attrs: DifficultyAttributes) -> Performance<'static> {
+        const fn inner(attrs: DifficultyAttributes) -> Performance<'static> {
             match attrs {
                 DifficultyAttributes::Osu(attrs) => Performance::Osu(attrs.performance()),
                 DifficultyAttributes::Taiko(attrs) => Performance::Taiko(attrs.performance()),
@@ -309,11 +310,20 @@ impl_from_converted!(Catch);
 impl_from_converted!(Mania);
 
 /// While generating remaining hitresults, decide how they should be distributed.
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum HitResultPriority {
     /// Prioritize good hitresults over bad ones
-    #[default]
     BestCase,
     /// Prioritize bad hitresults over good ones
     WorstCase,
+}
+
+impl HitResultPriority {
+    pub(crate) const DEFAULT: Self = Self::BestCase;
+}
+
+impl Default for HitResultPriority {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
 }

@@ -71,12 +71,12 @@ impl Beatmap {
     }
 
     /// Create a difficulty calculator for this [`Beatmap`].
-    pub fn difficulty(&self) -> Difficulty<'_> {
+    pub const fn difficulty(&self) -> Difficulty<'_> {
         Difficulty::new(self)
     }
 
     /// Create a performance calculator for this [`Beatmap`].
-    pub fn performance(&self) -> Performance<'_> {
+    pub const fn performance(&self) -> Performance<'_> {
         Performance::new(self)
     }
 
@@ -150,8 +150,8 @@ impl Beatmap {
 
     /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
     /// attributes.
-    pub fn attributes(&self) -> BeatmapAttributesBuilder {
-        self.into()
+    pub const fn attributes(&self) -> BeatmapAttributesBuilder {
+        BeatmapAttributesBuilder::new(self)
     }
 
     /// The beats per minute of the map.

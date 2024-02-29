@@ -34,8 +34,34 @@ pub struct ManiaPerformance<'map> {
 
 impl<'map> ManiaPerformance<'map> {
     /// Create a new performance calculator for osu!mania maps.
-    pub fn new(map: ManiaBeatmap<'map>) -> Self {
-        map.into()
+    pub const fn new(map: ManiaBeatmap<'map>) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Map(map),
+            difficulty: ModeDifficulty::new(),
+            n320: None,
+            n300: None,
+            n200: None,
+            n100: None,
+            n50: None,
+            misses: None,
+            acc: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
+    }
+
+    pub(crate) const fn from_mania_attributes(attrs: ManiaDifficultyAttributes) -> Self {
+        Self {
+            map_or_attrs: MapOrAttrs::Attrs(attrs),
+            difficulty: ModeDifficulty::new(),
+            n320: None,
+            n300: None,
+            n200: None,
+            n100: None,
+            n50: None,
+            misses: None,
+            acc: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
     }
 
     /// Provide the result of a previous difficulty or performance calculation.
@@ -796,41 +822,19 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
 
 impl<'map> From<ManiaBeatmap<'map>> for ManiaPerformance<'map> {
     fn from(map: ManiaBeatmap<'map>) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
-            n320: None,
-            n300: None,
-            n200: None,
-            n100: None,
-            n50: None,
-            misses: None,
-            acc: None,
-            hitresult_priority: HitResultPriority::default(),
-        }
+        Self::new(map)
     }
 }
 
 impl From<ManiaDifficultyAttributes> for ManiaPerformance<'_> {
     fn from(attrs: ManiaDifficultyAttributes) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
-            n320: None,
-            n300: None,
-            n200: None,
-            n100: None,
-            n50: None,
-            misses: None,
-            acc: None,
-            hitresult_priority: HitResultPriority::default(),
-        }
+        Self::from_mania_attributes(attrs)
     }
 }
 
 impl From<ManiaPerformanceAttributes> for ManiaPerformance<'_> {
     fn from(attrs: ManiaPerformanceAttributes) -> Self {
-        attrs.difficulty.into()
+        Self::from_mania_attributes(attrs.difficulty)
     }
 }
 

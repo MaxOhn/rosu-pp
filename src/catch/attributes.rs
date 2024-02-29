@@ -35,8 +35,8 @@ impl CatchDifficultyAttributes {
     }
 
     /// Returns a builder for performance calculation.
-    pub fn performance<'a>(self) -> CatchPerformance<'a> {
-        self.into()
+    pub const fn performance<'a>(self) -> CatchPerformance<'a> {
+        CatchPerformance::from_catch_attributes(self)
     }
 
     pub(crate) fn set_object_count(&mut self, count: &ObjectCount) {

@@ -14,8 +14,12 @@ pub struct ModeDifficulty {
 
 impl ModeDifficulty {
     /// Create a new difficulty calculator.
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            mods: 0,
+            passed_objects: None,
+            clock_rate: None,
+        }
     }
 
     /// Specify mods through their bit values.

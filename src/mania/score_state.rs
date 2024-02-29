@@ -1,5 +1,5 @@
 /// Aggregation for a score's current state.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManiaScoreState {
     /// Amount of current 320s.
     pub n320: u32,
@@ -17,8 +17,15 @@ pub struct ManiaScoreState {
 
 impl ManiaScoreState {
     /// Create a new empty score state.
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn new() -> Self {
+        Self {
+            n320: 0,
+            n300: 0,
+            n200: 0,
+            n100: 0,
+            n50: 0,
+            misses: 0,
+        }
     }
 
     /// Return the total amount of hits by adding everything up.
@@ -38,5 +45,11 @@ impl ManiaScoreState {
         let denominator = 6 * total_hits;
 
         f64::from(numerator) / f64::from(denominator)
+    }
+}
+
+impl Default for ManiaScoreState {
+    fn default() -> Self {
+        Self::new()
     }
 }

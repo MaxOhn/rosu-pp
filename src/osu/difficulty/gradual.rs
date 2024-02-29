@@ -245,7 +245,7 @@ mod osu_objects {
     }
 
     impl OsuObjects {
-        pub(super) fn new(objects: Box<[OsuObject]>) -> Self {
+        pub(super) const fn new(objects: Box<[OsuObject]>) -> Self {
             Self { objects }
         }
 
