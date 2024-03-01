@@ -12,7 +12,7 @@ use crate::{
 
 use self::mode::ModeDifficulty;
 
-use super::attributes::DifficultyAttributes;
+use super::{attributes::DifficultyAttributes, Strains};
 
 pub mod gradual;
 pub mod mode;
@@ -191,25 +191,45 @@ impl Difficulty<'_> {
     ///
     /// The returned attributes depend on the map's mode.
     pub fn calculate(&self) -> DifficultyAttributes {
+        let is_convert = self.is_convert;
         let map = Cow::Borrowed(self.map.as_ref());
 
         match self.map.mode {
-            GameMode::Osu => DifficultyAttributes::Osu(
-                self.inner
-                    .calculate(&Converted::<Osu>::new(map, self.is_convert)),
-            ),
+            GameMode::Osu => {
+                DifficultyAttributes::Osu(self.inner.calculate(&OsuBeatmap::new(map, is_convert)))
+            }
             GameMode::Taiko => DifficultyAttributes::Taiko(
-                self.inner
-                    .calculate(&Converted::<Taiko>::new(map, self.is_convert)),
+                self.inner.calculate(&TaikoBeatmap::new(map, is_convert)),
             ),
             GameMode::Catch => DifficultyAttributes::Catch(
-                self.inner
-                    .calculate(&Converted::<Catch>::new(map, self.is_convert)),
+                self.inner.calculate(&CatchBeatmap::new(map, is_convert)),
             ),
             GameMode::Mania => DifficultyAttributes::Mania(
-                self.inner
-                    .calculate(&Converted::<Mania>::new(map, self.is_convert)),
+                self.inner.calculate(&ManiaBeatmap::new(map, is_convert)),
             ),
+        }
+    }
+
+    /// Perform the difficulty calculation but instead of evaluating the skill
+    /// strains, return them as is.
+    ///
+    /// Suitable to plot the difficulty of a map over time.
+    pub fn strains(&self) -> Strains {
+        let map = Cow::Borrowed(self.map.as_ref());
+
+        match self.map.mode {
+            GameMode::Osu => {
+                Strains::Osu(self.inner.strains(&OsuBeatmap::new(map, self.is_convert)))
+            }
+            GameMode::Taiko => {
+                Strains::Taiko(self.inner.strains(&TaikoBeatmap::new(map, self.is_convert)))
+            }
+            GameMode::Catch => {
+                Strains::Catch(self.inner.strains(&CatchBeatmap::new(map, self.is_convert)))
+            }
+            GameMode::Mania => {
+                Strains::Mania(self.inner.strains(&ManiaBeatmap::new(map, self.is_convert)))
+            }
         }
     }
 }
