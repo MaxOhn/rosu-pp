@@ -66,7 +66,7 @@ impl ManiaGradualDifficulty {
         let mods = difficulty.get_mods();
         let total_columns = converted.cs.round_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(&converted);
+        let mut params = ObjectParams::new(converted);
 
         let HitWindows { od: hit_window, .. } = converted
             .attributes()

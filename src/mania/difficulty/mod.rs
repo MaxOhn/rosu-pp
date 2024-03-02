@@ -51,7 +51,7 @@ impl DifficultyValues {
         let take = difficulty.get_passed_objects();
         let total_columns = converted.cs.round_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(&converted);
+        let mut params = ObjectParams::new(converted);
 
         let mania_objects = converted
             .hit_objects
