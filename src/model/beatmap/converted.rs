@@ -175,16 +175,18 @@ impl<M> Debug for Converted<'_, M> {
 
         impl<T> Debug for GenericFormatter<T> {
             fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-                let full_type_name = any::type_name::<T>();
-
-                // Strip fully qualified syntax
-                if let Some(position) = full_type_name.rfind("::") {
-                    if let Some(type_name) = full_type_name.get(position + 2..) {
-                        f.write_str(type_name)?;
+                fn fmt_stripped(full_type_name: &str, f: &mut Formatter<'_>) -> FmtResult {
+                    // Strip fully qualified syntax
+                    if let Some(position) = full_type_name.rfind("::") {
+                        if let Some(type_name) = full_type_name.get(position + 2..) {
+                            f.write_str(type_name)?;
+                        }
                     }
+
+                    Ok(())
                 }
 
-                Ok(())
+                fmt_stripped(any::type_name::<T>(), f)
             }
         }
 
