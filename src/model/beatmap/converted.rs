@@ -3,6 +3,7 @@ use std::{
     borrow::Cow,
     fmt::{Debug, Formatter, Result as FmtResult},
     marker::PhantomData,
+    ops::Deref,
 };
 
 use crate::{
@@ -10,7 +11,7 @@ use crate::{
     ModeDifficulty,
 };
 
-use super::{attributes::BeatmapAttributesBuilder, Beatmap};
+use super::Beatmap;
 
 const INCOMPATIBLE_MODES: &str = "the gamemodes were incompatible";
 
@@ -29,7 +30,7 @@ const INCOMPATIBLE_MODES: &str = "the gamemodes were incompatible";
 ///
 /// All other conversions are incompatible.
 pub struct Converted<'a, M> {
-    pub(crate) map: Cow<'a, Beatmap>,
+    map: Cow<'a, Beatmap>,
     mode: PhantomData<M>,
 }
 
@@ -42,23 +43,10 @@ impl<'a, M> Converted<'a, M> {
             mode: PhantomData,
         }
     }
-}
 
-impl<M> Converted<'_, M> {
-    /// Sum up the duration of all breaks (in milliseconds).
-    pub fn total_break_time(&self) -> f64 {
-        self.map.total_break_time()
-    }
-
-    /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
-    /// attributes.
-    pub fn attributes(&self) -> BeatmapAttributesBuilder {
-        self.into()
-    }
-
-    /// The beats per minute of the map.
-    pub fn bpm(&self) -> f64 {
-        self.map.bpm()
+    /// Returns the internal [`Beatmap`].
+    pub fn into_inner(self) -> Cow<'a, Beatmap> {
+        self.map
     }
 }
 
@@ -210,5 +198,13 @@ impl<M> Debug for Converted<'_, M> {
 impl<M> PartialEq for Converted<'_, M> {
     fn eq(&self, other: &Self) -> bool {
         self.map == other.map
+    }
+}
+
+impl<M> Deref for Converted<'_, M> {
+    type Target = Beatmap;
+
+    fn deref(&self) -> &Self::Target {
+        self.map.as_ref()
     }
 }

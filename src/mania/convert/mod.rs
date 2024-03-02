@@ -225,7 +225,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Mania>();
 
-        let map = converted.map;
+        let map = &converted;
         assert!(map.is_convert);
 
         assert_eq!(map.mode, GameMode::Mania);

@@ -21,10 +21,7 @@ pub fn difficulty(
     difficulty: &ModeDifficulty,
     converted: &ManiaBeatmap<'_>,
 ) -> ManiaDifficultyAttributes {
-    let n_objects = cmp::min(
-        difficulty.get_passed_objects(),
-        converted.map.hit_objects.len(),
-    ) as u32;
+    let n_objects = cmp::min(difficulty.get_passed_objects(), converted.hit_objects.len()) as u32;
 
     let values = DifficultyValues::calculate(difficulty, converted);
 
@@ -40,7 +37,7 @@ pub fn difficulty(
         hit_window,
         max_combo: values.max_combo,
         n_objects,
-        is_convert: converted.map.is_convert,
+        is_convert: converted.is_convert,
     }
 }
 
@@ -52,12 +49,11 @@ pub struct DifficultyValues {
 impl DifficultyValues {
     pub fn calculate(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
-        let total_columns = converted.map.cs.round_even().max(1.0);
+        let total_columns = converted.cs.round_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(converted.map.as_ref());
+        let mut params = ObjectParams::new(&converted);
 
         let mania_objects = converted
-            .map
             .hit_objects
             .iter()
             .map(|h| ManiaObject::new(h, total_columns, &mut params))

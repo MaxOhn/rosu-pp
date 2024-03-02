@@ -89,7 +89,7 @@ impl OsuGradualDifficulty {
             &scaling_factor,
             mods.hr(),
             time_preempt,
-            converted.map.hit_objects.len(),
+            converted.hit_objects.len(),
             &mut attrs,
         );
 
@@ -290,7 +290,7 @@ mod tests {
         let mut gradual_2nd = OsuGradualDifficulty::new(&difficulty, &converted);
         let mut gradual_3rd = OsuGradualDifficulty::new(&difficulty, &converted);
 
-        let hit_objects_len = converted.map.hit_objects.len();
+        let hit_objects_len = converted.hit_objects.len();
 
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {

@@ -239,7 +239,7 @@ impl From<&Beatmap> for BeatmapAttributesBuilder {
 
 impl<M> From<&Converted<'_, M>> for BeatmapAttributesBuilder {
     fn from(converted: &Converted<'_, M>) -> Self {
-        Self::new(converted.map.as_ref())
+        Self::new(&converted)
     }
 }
 

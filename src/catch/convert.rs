@@ -68,7 +68,7 @@ pub fn convert_objects(
     let mut last_pos = None;
     let mut last_start_time = 0.0;
 
-    for h in converted.map.hit_objects.iter() {
+    for h in converted.hit_objects.iter() {
         let mut new_objects = convert_object(h, converted, count, &mut bufs);
 
         apply_pos_offset(

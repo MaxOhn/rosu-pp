@@ -167,22 +167,20 @@ impl OsuSlider {
         ticks_buf: &mut Vec<SliderEvent>,
     ) -> Self {
         let start_time = h.start_time;
-        let slider_multiplier = converted.map.slider_multiplier;
-        let slider_tick_rate = converted.map.slider_tick_rate;
+        let slider_multiplier = converted.slider_multiplier;
+        let slider_tick_rate = converted.slider_tick_rate;
 
         let beat_len = converted
-            .map
             .timing_point_at(start_time)
             .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
 
-        let (slider_velocity, generate_ticks) =
-            converted.map.difficulty_point_at(start_time).map_or(
-                (
-                    DifficultyPoint::DEFAULT_SLIDER_VELOCITY,
-                    DifficultyPoint::DEFAULT_GENERATE_TICKS,
-                ),
-                |point| (point.slider_velocity, point.generate_ticks),
-            );
+        let (slider_velocity, generate_ticks) = converted.difficulty_point_at(start_time).map_or(
+            (
+                DifficultyPoint::DEFAULT_SLIDER_VELOCITY,
+                DifficultyPoint::DEFAULT_GENERATE_TICKS,
+            ),
+            |point| (point.slider_velocity, point.generate_ticks),
+        );
 
         let path = slider.curve(curve_bufs);
 
@@ -197,7 +195,7 @@ impl OsuSlider {
         let duration = end_time - start_time;
         let span_duration = duration / span_count;
 
-        let tick_dist_multiplier = if converted.map.version < 8 {
+        let tick_dist_multiplier = if converted.version < 8 {
             slider_velocity.recip()
         } else {
             1.0

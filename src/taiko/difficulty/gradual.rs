@@ -75,8 +75,8 @@ impl TaikoGradualDifficulty {
         let clock_rate = difficulty.get_clock_rate();
 
         let first_combos = match (
-            converted.map.hit_objects.first().map(HitObject::is_circle),
-            converted.map.hit_objects.get(1).map(HitObject::is_circle),
+            converted.hit_objects.first().map(HitObject::is_circle),
+            converted.hit_objects.get(1).map(HitObject::is_circle),
         ) {
             (None, _) | (Some(false), Some(false) | None) => FirstTwoCombos::None,
             (Some(true), Some(false) | None) => FirstTwoCombos::OnlyFirst,
@@ -105,12 +105,11 @@ impl TaikoGradualDifficulty {
 
         let attrs = TaikoDifficultyAttributes {
             hit_window,
-            is_convert: converted.map.is_convert,
+            is_convert: converted.is_convert,
             ..Default::default()
         };
 
         let total_hits = converted
-            .map
             .hit_objects
             .iter()
             .filter(|h| h.is_circle())
@@ -288,10 +287,9 @@ mod tests {
         let mut gradual_2nd = TaikoGradualDifficulty::new(&difficulty, &converted);
         let mut gradual_3rd = TaikoGradualDifficulty::new(&difficulty, &converted);
 
-        let hit_objects_len = converted.map.hit_objects.len();
+        let hit_objects_len = converted.hit_objects.len();
 
         let n_hits = converted
-            .map
             .hit_objects
             .iter()
             .filter(|h| h.is_circle())

@@ -140,8 +140,7 @@ impl DifficultyValues {
             let mut flashlight = Skill::new(&mut skills.flashlight, &diff_objects);
 
             // The first hit object has no difficulty object
-            let take_diff_objects =
-                cmp::min(converted.map.hit_objects.len(), take).saturating_sub(1);
+            let take_diff_objects = cmp::min(converted.hit_objects.len(), take).saturating_sub(1);
 
             for hit_object in diff_objects.iter().take(take_diff_objects) {
                 aim.process(hit_object);

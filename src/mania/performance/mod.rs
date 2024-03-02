@@ -938,7 +938,7 @@ mod tests {
 
                 let attrs = ModeDifficulty::new().calculate(&converted);
 
-                assert_eq!(N_OBJECTS, converted.map.hit_objects.len() as u32);
+                assert_eq!(N_OBJECTS, converted.hit_objects.len() as u32);
 
                 attrs
             })

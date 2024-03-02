@@ -45,13 +45,13 @@ macro_rules! impl_from_mode {
     ( $mode:ident ) => {
         impl<'a> From<Converted<'a, $mode>> for Difficulty<'a> {
             fn from(converted: Converted<'a, $mode>) -> Self {
-                Self::new_with_cow(converted.map)
+                Self::new_with_cow(converted.into_inner())
             }
         }
 
         impl<'a, 'b: 'a> From<&'b Converted<'a, $mode>> for Difficulty<'a> {
             fn from(converted: &'b Converted<'a, $mode>) -> Self {
-                Self::new(converted.map.as_ref())
+                Self::new(&converted)
             }
         }
     };
@@ -73,10 +73,10 @@ impl Difficulty<'_> {
     /// [`mode_or_ignore`]: Self::mode_or_ignore
     pub fn try_mode(&mut self, mode: GameMode) -> Option<&mut Self> {
         let map = match mode {
-            GameMode::Osu => OsuBeatmap::try_from_ref(self.map.as_ref())?.map,
-            GameMode::Taiko => TaikoBeatmap::try_from_ref(self.map.as_ref())?.map,
-            GameMode::Catch => CatchBeatmap::try_from_ref(self.map.as_ref())?.map,
-            GameMode::Mania => ManiaBeatmap::try_from_ref(self.map.as_ref())?.map,
+            GameMode::Osu => OsuBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
+            GameMode::Taiko => TaikoBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
+            GameMode::Catch => CatchBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
+            GameMode::Mania => ManiaBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
         };
 
         if matches!(map, Cow::Owned(_)) {
@@ -96,40 +96,21 @@ impl Difficulty<'_> {
     ///
     /// [`try_mode`]: Self::try_mode
     pub fn mode_or_ignore(&mut self, mode: GameMode) -> &mut Self {
-        let map = match mode {
-            GameMode::Osu => {
-                let Some(converted) = OsuBeatmap::try_from_ref(self.map.as_ref()) else {
-                    return self;
-                };
+        let map = self.map.as_ref();
 
-                converted.map
-            }
-            GameMode::Taiko => {
-                let Some(converted) = TaikoBeatmap::try_from_ref(self.map.as_ref()) else {
-                    return self;
-                };
-
-                converted.map
-            }
-            GameMode::Catch => {
-                let Some(converted) = CatchBeatmap::try_from_ref(self.map.as_ref()) else {
-                    return self;
-                };
-
-                converted.map
-            }
-            GameMode::Mania => {
-                let Some(converted) = ManiaBeatmap::try_from_ref(self.map.as_ref()) else {
-                    return self;
-                };
-
-                converted.map
-            }
+        let map_opt = match mode {
+            GameMode::Osu => OsuBeatmap::try_from_ref(map).map(Converted::into_inner),
+            GameMode::Taiko => TaikoBeatmap::try_from_ref(map).map(Converted::into_inner),
+            GameMode::Catch => CatchBeatmap::try_from_ref(map).map(Converted::into_inner),
+            GameMode::Mania => ManiaBeatmap::try_from_ref(map).map(Converted::into_inner),
         };
 
-        if matches!(map, Cow::Owned(_)) {
-            let map = map.into_owned();
-            self.map = Cow::Owned(map);
+        match map_opt {
+            Some(cow @ Cow::Owned(_)) => {
+                let map = cow.into_owned();
+                self.map = Cow::Owned(map);
+            }
+            Some(Cow::Borrowed(_)) | None => {}
         }
 
         self

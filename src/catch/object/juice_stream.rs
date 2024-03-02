@@ -28,16 +28,14 @@ impl<'a> JuiceStream<'a> {
         count: &mut ObjectCountBuilder,
         bufs: &'a mut JuiceStreamBufs,
     ) -> Self {
-        let slider_multiplier = converted.map.slider_multiplier;
-        let slider_tick_rate = converted.map.slider_tick_rate;
+        let slider_multiplier = converted.slider_multiplier;
+        let slider_tick_rate = converted.slider_tick_rate;
 
         let beat_len = converted
-            .map
             .timing_point_at(start_time)
             .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
 
         let slider_velocity = converted
-            .map
             .difficulty_point_at(start_time)
             .map_or(DifficultyPoint::DEFAULT_SLIDER_VELOCITY, |point| {
                 point.slider_velocity

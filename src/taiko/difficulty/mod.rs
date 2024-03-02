@@ -40,7 +40,7 @@ pub fn difficulty(
     let mut attrs = TaikoDifficultyAttributes {
         hit_window,
         max_combo,
-        is_convert: converted.map.is_convert,
+        is_convert: converted.is_convert,
         ..Default::default()
     };
 
@@ -146,10 +146,9 @@ impl DifficultyValues {
         n_diff_objects: &mut usize,
     ) -> TaikoDifficultyObjects {
         let mut hit_objects_iter = converted
-            .map
             .hit_objects
             .iter()
-            .zip(converted.map.hit_sounds.iter())
+            .zip(converted.hit_sounds.iter())
             .map(|(h, s)| TaikoObject::new(h, *s))
             .inspect(|h| {
                 if *max_combo < take {
@@ -164,7 +163,7 @@ impl DifficultyValues {
         };
 
         let mut diff_objects =
-            TaikoDifficultyObjects::with_capacity(converted.map.hit_objects.len() - 2);
+            TaikoDifficultyObjects::with_capacity(converted.hit_objects.len() - 2);
 
         for (i, curr) in hit_objects_iter.enumerate() {
             let diff_object = TaikoDifficultyObject::new(

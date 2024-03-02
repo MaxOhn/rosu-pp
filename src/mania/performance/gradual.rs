@@ -137,7 +137,7 @@ mod tests {
 
         let mut state = ManiaScoreState::default();
 
-        let hit_objects_len = converted.map.hit_objects.len();
+        let hit_objects_len = converted.hit_objects.len();
 
         for i in 1.. {
             state.misses += 1;

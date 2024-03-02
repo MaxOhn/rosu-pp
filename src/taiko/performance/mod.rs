@@ -316,7 +316,6 @@ impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
     /// was called.
     ///
     /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
-
     fn try_from(mut osu: OsuPerformance<'map>) -> Result<Self, Self::Error> {
         let MapOrAttrs::Map(converted) = osu.map_or_attrs else {
             return Err(osu);

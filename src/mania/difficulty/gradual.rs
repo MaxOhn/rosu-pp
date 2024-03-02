@@ -64,9 +64,9 @@ impl ManiaGradualDifficulty {
     pub fn new(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
         let mods = difficulty.get_mods();
-        let total_columns = converted.map.cs.round_even().max(1.0);
+        let total_columns = converted.cs.round_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(converted.map.as_ref());
+        let mut params = ObjectParams::new(&converted);
 
         let HitWindows { od: hit_window, .. } = converted
             .attributes()
@@ -75,7 +75,6 @@ impl ManiaGradualDifficulty {
             .hit_windows();
 
         let mania_objects = converted
-            .map
             .hit_objects
             .iter()
             .map(|h| ManiaObject::new(h, total_columns, &mut params))
@@ -88,13 +87,12 @@ impl ManiaGradualDifficulty {
         let mut curr_combo = 0;
 
         let objects_is_circle: Box<[_]> = converted
-            .map
             .hit_objects
             .iter()
             .map(HitObject::is_circle)
             .collect();
 
-        if let Some(h) = converted.map.hit_objects.first() {
+        if let Some(h) = converted.hit_objects.first() {
             let hit_object = ManiaObject::new(h, total_columns, &mut params);
 
             increment_combo_raw(
@@ -110,7 +108,7 @@ impl ManiaGradualDifficulty {
             mods,
             clock_rate,
             objects_is_circle,
-            is_convert: converted.map.is_convert,
+            is_convert: converted.is_convert,
             strain,
             diff_objects,
             hit_window,
@@ -239,7 +237,7 @@ mod tests {
         let mut gradual_2nd = ManiaGradualDifficulty::new(&difficulty, &converted);
         let mut gradual_3rd = ManiaGradualDifficulty::new(&difficulty, &converted);
 
-        let hit_objects_len = converted.map.hit_objects.len();
+        let hit_objects_len = converted.hit_objects.len();
 
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {

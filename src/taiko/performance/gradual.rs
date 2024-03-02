@@ -143,10 +143,9 @@ mod tests {
 
         let mut state = TaikoScoreState::default();
 
-        let hit_objects_len = converted.map.hit_objects.len();
+        let hit_objects_len = converted.hit_objects.len();
 
         let n_hits = converted
-            .map
             .hit_objects
             .iter()
             .filter(|h| h.is_circle())

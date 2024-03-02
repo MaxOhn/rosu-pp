@@ -40,7 +40,6 @@ pub fn convert_objects(
     let mut ticks_buf = Vec::new();
 
     let mut osu_objects: Box<[_]> = converted
-        .map
         .hit_objects
         .iter()
         .map(|h| OsuObject::new(h, converted, &mut curve_bufs, &mut ticks_buf))
@@ -71,9 +70,9 @@ pub fn convert_objects(
         osu_objects.iter_mut().for_each(OsuObject::finalize_tail);
     }
 
-    let stack_threshold = time_preempt * f64::from(converted.map.stack_leniency);
+    let stack_threshold = time_preempt * f64::from(converted.stack_leniency);
 
-    if converted.map.version >= 6 {
+    if converted.version >= 6 {
         stacking(&mut osu_objects, stack_threshold);
     } else {
         old_stacking(&mut osu_objects, stack_threshold);
