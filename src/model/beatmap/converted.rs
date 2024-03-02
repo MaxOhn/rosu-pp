@@ -130,6 +130,30 @@ impl<'a, M: IGameMode> Converted<'a, M> {
         Self::try_from_ref(map).expect(INCOMPATIBLE_MODES)
     }
 
+    /// Attempt to convert a [`&mut Beatmap`] to the specified mode.
+    ///
+    /// If the conversion is incompatible, `None` is returned.
+    ///
+    /// [`&mut Beatmap`]: Beatmap
+    pub fn try_from_mut(map: &'a mut Beatmap) -> Option<Self> {
+        match M::try_convert(map) {
+            ConvertStatus::Conversion => Some(Self::new(Cow::Borrowed(map))),
+            ConvertStatus::Noop => Some(Self::new(Cow::Borrowed(map))),
+            ConvertStatus::Incompatible => None,
+        }
+    }
+
+    /// Convert a [`&mut Beatmap`] to the specified mode.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the conversion is incompatible.
+    ///
+    /// [`&mut Beatmap`]: Beatmap
+    pub fn unchecked_from_mut(map: &'a mut Beatmap) -> Self {
+        Self::try_from_mut(map).expect(INCOMPATIBLE_MODES)
+    }
+
     /// Attempt to convert a [`Converted`] from mode `M` to mode `N`.
     ///
     /// If the conversion is incompatible the [`Converted`] will be returned

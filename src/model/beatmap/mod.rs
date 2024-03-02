@@ -131,6 +131,26 @@ impl Beatmap {
         Converted::unchecked_from_ref(self)
     }
 
+    /// Attempt to convert a [`&mut Beatmap`] to the specified mode.
+    ///
+    /// If the conversion is incompatible, `None` is returned.
+    ///
+    /// [`&mut Beatmap`]: Beatmap
+    pub fn try_as_converted_mut<M: IGameMode>(&mut self) -> Option<Converted<'_, M>> {
+        Converted::try_from_mut(self)
+    }
+
+    /// Convert a [`&mut Beatmap`] to the specified mode.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the conversion is incompatible.
+    ///
+    /// [`&mut Beatmap`]: Beatmap
+    pub fn unchecked_as_converted_mut<M: IGameMode>(&mut self) -> Converted<'_, M> {
+        Converted::unchecked_from_mut(self)
+    }
+
     /// Attempt to convert a [`Beatmap`] to the specified mode.
     ///
     /// If the conversion is incompatible the [`Beatmap`] will be returned
