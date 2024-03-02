@@ -32,6 +32,7 @@ mod decode;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Beatmap {
     pub version: i32,
+    pub is_convert: bool,
 
     // General
     pub stack_leniency: f32,
@@ -176,6 +177,7 @@ impl Default for Beatmap {
     fn default() -> Self {
         Self {
             version: LATEST_FORMAT_VERSION,
+            is_convert: false,
             stack_leniency: DEFAULT_SLIDER_LENIENCY,
             mode: GameMode::default(),
             ar: 5.0,

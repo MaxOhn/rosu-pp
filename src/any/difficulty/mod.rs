@@ -24,20 +24,18 @@ pub mod skills;
 #[must_use]
 pub struct Difficulty<'map> {
     map: Cow<'map, Beatmap>,
-    is_convert: bool,
     inner: ModeDifficulty,
 }
 
 impl<'map> Difficulty<'map> {
     /// Create a new difficulty calculator for the given beatmap.
     pub const fn new(map: &'map Beatmap) -> Self {
-        Self::new_with_is_convert(Cow::Borrowed(map), false)
+        Self::new_with_cow(Cow::Borrowed(map))
     }
 
-    const fn new_with_is_convert(map: Cow<'map, Beatmap>, is_convert: bool) -> Self {
+    const fn new_with_cow(map: Cow<'map, Beatmap>) -> Self {
         Self {
             map,
-            is_convert,
             inner: ModeDifficulty::new(),
         }
     }
@@ -47,16 +45,13 @@ macro_rules! impl_from_mode {
     ( $mode:ident ) => {
         impl<'a> From<Converted<'a, $mode>> for Difficulty<'a> {
             fn from(converted: Converted<'a, $mode>) -> Self {
-                Self::new_with_is_convert(converted.map, converted.is_convert)
+                Self::new_with_cow(converted.map)
             }
         }
 
         impl<'a, 'b: 'a> From<&'b Converted<'a, $mode>> for Difficulty<'a> {
             fn from(converted: &'b Converted<'a, $mode>) -> Self {
-                Self::new_with_is_convert(
-                    Cow::Borrowed(converted.map.as_ref()),
-                    converted.is_convert,
-                )
+                Self::new(converted.map.as_ref())
             }
         }
     };
@@ -77,31 +72,14 @@ impl Difficulty<'_> {
     ///
     /// [`mode_or_ignore`]: Self::mode_or_ignore
     pub fn try_mode(&mut self, mode: GameMode) -> Option<&mut Self> {
-        let (map, is_convert) = match mode {
-            GameMode::Osu => {
-                let converted = OsuBeatmap::try_from_ref(self.map.as_ref())?;
-
-                (converted.map, converted.is_convert)
-            }
-            GameMode::Taiko => {
-                let converted = TaikoBeatmap::try_from_ref(self.map.as_ref())?;
-
-                (converted.map, converted.is_convert)
-            }
-            GameMode::Catch => {
-                let converted = CatchBeatmap::try_from_ref(self.map.as_ref())?;
-
-                (converted.map, converted.is_convert)
-            }
-            GameMode::Mania => {
-                let converted = ManiaBeatmap::try_from_ref(self.map.as_ref())?;
-
-                (converted.map, converted.is_convert)
-            }
+        let map = match mode {
+            GameMode::Osu => OsuBeatmap::try_from_ref(self.map.as_ref())?.map,
+            GameMode::Taiko => TaikoBeatmap::try_from_ref(self.map.as_ref())?.map,
+            GameMode::Catch => CatchBeatmap::try_from_ref(self.map.as_ref())?.map,
+            GameMode::Mania => ManiaBeatmap::try_from_ref(self.map.as_ref())?.map,
         };
 
         if matches!(map, Cow::Owned(_)) {
-            self.is_convert |= is_convert;
             let map = map.into_owned();
             self.map = Cow::Owned(map);
         }
@@ -118,39 +96,38 @@ impl Difficulty<'_> {
     ///
     /// [`try_mode`]: Self::try_mode
     pub fn mode_or_ignore(&mut self, mode: GameMode) -> &mut Self {
-        let (map, is_convert) = match mode {
+        let map = match mode {
             GameMode::Osu => {
                 let Some(converted) = OsuBeatmap::try_from_ref(self.map.as_ref()) else {
                     return self;
                 };
 
-                (converted.map, converted.is_convert)
+                converted.map
             }
             GameMode::Taiko => {
                 let Some(converted) = TaikoBeatmap::try_from_ref(self.map.as_ref()) else {
                     return self;
                 };
 
-                (converted.map, converted.is_convert)
+                converted.map
             }
             GameMode::Catch => {
                 let Some(converted) = CatchBeatmap::try_from_ref(self.map.as_ref()) else {
                     return self;
                 };
 
-                (converted.map, converted.is_convert)
+                converted.map
             }
             GameMode::Mania => {
                 let Some(converted) = ManiaBeatmap::try_from_ref(self.map.as_ref()) else {
                     return self;
                 };
 
-                (converted.map, converted.is_convert)
+                converted.map
             }
         };
 
         if matches!(map, Cow::Owned(_)) {
-            self.is_convert |= is_convert;
             let map = map.into_owned();
             self.map = Cow::Owned(map);
         }
@@ -191,22 +168,19 @@ impl Difficulty<'_> {
     ///
     /// The returned attributes depend on the map's mode.
     pub fn calculate(&self) -> DifficultyAttributes {
-        let is_convert = self.is_convert;
         let map = Cow::Borrowed(self.map.as_ref());
 
         match self.map.mode {
-            GameMode::Osu => {
-                DifficultyAttributes::Osu(self.inner.calculate(&OsuBeatmap::new(map, is_convert)))
+            GameMode::Osu => DifficultyAttributes::Osu(self.inner.calculate(&OsuBeatmap::new(map))),
+            GameMode::Taiko => {
+                DifficultyAttributes::Taiko(self.inner.calculate(&TaikoBeatmap::new(map)))
             }
-            GameMode::Taiko => DifficultyAttributes::Taiko(
-                self.inner.calculate(&TaikoBeatmap::new(map, is_convert)),
-            ),
-            GameMode::Catch => DifficultyAttributes::Catch(
-                self.inner.calculate(&CatchBeatmap::new(map, is_convert)),
-            ),
-            GameMode::Mania => DifficultyAttributes::Mania(
-                self.inner.calculate(&ManiaBeatmap::new(map, is_convert)),
-            ),
+            GameMode::Catch => {
+                DifficultyAttributes::Catch(self.inner.calculate(&CatchBeatmap::new(map)))
+            }
+            GameMode::Mania => {
+                DifficultyAttributes::Mania(self.inner.calculate(&ManiaBeatmap::new(map)))
+            }
         }
     }
 
@@ -218,18 +192,10 @@ impl Difficulty<'_> {
         let map = Cow::Borrowed(self.map.as_ref());
 
         match self.map.mode {
-            GameMode::Osu => {
-                Strains::Osu(self.inner.strains(&OsuBeatmap::new(map, self.is_convert)))
-            }
-            GameMode::Taiko => {
-                Strains::Taiko(self.inner.strains(&TaikoBeatmap::new(map, self.is_convert)))
-            }
-            GameMode::Catch => {
-                Strains::Catch(self.inner.strains(&CatchBeatmap::new(map, self.is_convert)))
-            }
-            GameMode::Mania => {
-                Strains::Mania(self.inner.strains(&ManiaBeatmap::new(map, self.is_convert)))
-            }
+            GameMode::Osu => Strains::Osu(self.inner.strains(&OsuBeatmap::new(map))),
+            GameMode::Taiko => Strains::Taiko(self.inner.strains(&TaikoBeatmap::new(map))),
+            GameMode::Catch => Strains::Catch(self.inner.strains(&CatchBeatmap::new(map))),
+            GameMode::Mania => Strains::Mania(self.inner.strains(&ManiaBeatmap::new(map))),
         }
     }
 }

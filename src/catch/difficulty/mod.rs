@@ -53,7 +53,7 @@ impl CatchDifficultySetup {
 
         let attrs = CatchDifficultyAttributes {
             ar: map_attrs.ar,
-            is_convert: converted.is_convert,
+            is_convert: converted.map.is_convert,
             ..Default::default()
         };
 

@@ -110,7 +110,7 @@ impl ManiaGradualDifficulty {
             mods,
             clock_rate,
             objects_is_circle,
-            is_convert: converted.is_convert,
+            is_convert: converted.map.is_convert,
             strain,
             diff_objects,
             hit_window,

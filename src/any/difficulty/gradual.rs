@@ -65,16 +65,10 @@ impl GradualDifficulty {
         let map = Cow::Borrowed(map);
 
         match map.mode {
-            GameMode::Osu => Self::Osu(difficulty.gradual_difficulty(&OsuBeatmap::new(map, false))),
-            GameMode::Taiko => {
-                Self::Taiko(difficulty.gradual_difficulty(&TaikoBeatmap::new(map, false)))
-            }
-            GameMode::Catch => {
-                Self::Catch(difficulty.gradual_difficulty(&CatchBeatmap::new(map, false)))
-            }
-            GameMode::Mania => {
-                Self::Mania(difficulty.gradual_difficulty(&ManiaBeatmap::new(map, false)))
-            }
+            GameMode::Osu => Self::Osu(difficulty.gradual_difficulty(&OsuBeatmap::new(map))),
+            GameMode::Taiko => Self::Taiko(difficulty.gradual_difficulty(&TaikoBeatmap::new(map))),
+            GameMode::Catch => Self::Catch(difficulty.gradual_difficulty(&CatchBeatmap::new(map))),
+            GameMode::Mania => Self::Mania(difficulty.gradual_difficulty(&ManiaBeatmap::new(map))),
         }
     }
 

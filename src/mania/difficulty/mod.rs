@@ -40,7 +40,7 @@ pub fn difficulty(
         hit_window,
         max_combo: values.max_combo,
         n_objects,
-        is_convert: converted.is_convert,
+        is_convert: converted.map.is_convert,
     }
 }
 

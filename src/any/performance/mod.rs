@@ -35,10 +35,10 @@ impl<'map> Performance<'map> {
         let map = Cow::Borrowed(map);
 
         match mode {
-            GameMode::Osu => Self::Osu(OsuPerformance::new(Converted::new(map, false))),
-            GameMode::Taiko => Self::Taiko(TaikoPerformance::new(Converted::new(map, false))),
-            GameMode::Catch => Self::Catch(CatchPerformance::new(Converted::new(map, false))),
-            GameMode::Mania => Self::Mania(ManiaPerformance::new(Converted::new(map, false))),
+            GameMode::Osu => Self::Osu(OsuPerformance::new(Converted::new(map))),
+            GameMode::Taiko => Self::Taiko(TaikoPerformance::new(Converted::new(map))),
+            GameMode::Catch => Self::Catch(CatchPerformance::new(Converted::new(map))),
+            GameMode::Mania => Self::Mania(ManiaPerformance::new(Converted::new(map))),
         }
     }
 

@@ -170,6 +170,7 @@ fn convert(map: &mut Beatmap) {
     sort::osu_legacy(&mut map.hit_objects);
 
     map.mode = GameMode::Mania;
+    map.is_convert = true;
 }
 
 pub struct PrevValues {
@@ -224,9 +225,8 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Mania>();
 
-        assert!(converted.is_convert);
-
         let map = converted.map;
+        assert!(map.is_convert);
 
         assert_eq!(map.mode, GameMode::Mania);
         assert_eq!(map.version, 14);

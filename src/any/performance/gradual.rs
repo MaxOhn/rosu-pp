@@ -114,18 +114,10 @@ impl GradualPerformance {
         let map = Cow::Borrowed(map);
 
         match map.mode {
-            GameMode::Osu => {
-                Self::Osu(difficulty.gradual_performance(&OsuBeatmap::new(map, false)))
-            }
-            GameMode::Taiko => {
-                Self::Taiko(difficulty.gradual_performance(&TaikoBeatmap::new(map, false)))
-            }
-            GameMode::Catch => {
-                Self::Catch(difficulty.gradual_performance(&CatchBeatmap::new(map, false)))
-            }
-            GameMode::Mania => {
-                Self::Mania(difficulty.gradual_performance(&ManiaBeatmap::new(map, false)))
-            }
+            GameMode::Osu => Self::Osu(difficulty.gradual_performance(&OsuBeatmap::new(map))),
+            GameMode::Taiko => Self::Taiko(difficulty.gradual_performance(&TaikoBeatmap::new(map))),
+            GameMode::Catch => Self::Catch(difficulty.gradual_performance(&CatchBeatmap::new(map))),
+            GameMode::Mania => Self::Mania(difficulty.gradual_performance(&ManiaBeatmap::new(map))),
         }
     }
 

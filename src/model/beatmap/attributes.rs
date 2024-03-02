@@ -34,13 +34,13 @@ pub struct HitWindows {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct BeatmapAttributesBuilder {
     mode: GameMode,
+    is_convert: bool,
     ar: f32,
     od: f32,
     cs: f32,
     hp: f32,
     mods: u32,
     clock_rate: Option<f64>,
-    is_convert: bool,
 }
 
 impl BeatmapAttributesBuilder {
@@ -54,10 +54,6 @@ impl BeatmapAttributesBuilder {
 
     /// Create a new [`BeatmapAttributesBuilder`].
     pub const fn new(map: &Beatmap) -> Self {
-        Self::new_internal(map, false)
-    }
-
-    const fn new_internal(map: &Beatmap, is_convert: bool) -> Self {
         Self {
             mode: map.mode,
             ar: map.ar,
@@ -66,7 +62,7 @@ impl BeatmapAttributesBuilder {
             hp: map.hp,
             mods: 0,
             clock_rate: None,
-            is_convert,
+            is_convert: map.is_convert,
         }
     }
 
@@ -243,7 +239,7 @@ impl From<&Beatmap> for BeatmapAttributesBuilder {
 
 impl<M> From<&Converted<'_, M>> for BeatmapAttributesBuilder {
     fn from(converted: &Converted<'_, M>) -> Self {
-        Self::new_internal(converted.map.as_ref(), converted.is_convert)
+        Self::new(converted.map.as_ref())
     }
 }
 

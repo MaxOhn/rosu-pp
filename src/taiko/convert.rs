@@ -119,6 +119,7 @@ fn convert(map: &mut Beatmap) {
     sorter.sort(&mut map.hit_sounds);
 
     map.mode = GameMode::Taiko;
+    map.is_convert = true;
 }
 
 fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<'_>) -> bool {

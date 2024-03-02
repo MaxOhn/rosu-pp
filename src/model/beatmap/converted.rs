@@ -30,17 +30,15 @@ const INCOMPATIBLE_MODES: &str = "the gamemodes were incompatible";
 /// All other conversions are incompatible.
 pub struct Converted<'a, M> {
     pub(crate) map: Cow<'a, Beatmap>,
-    pub(crate) is_convert: bool,
     mode: PhantomData<M>,
 }
 
 impl<'a, M> Converted<'a, M> {
     /// Initialize a [`Converted`] beatmap by promising the given map's mode
     /// matches the generic type `M`.
-    pub(crate) const fn new(map: Cow<'a, Beatmap>, is_convert: bool) -> Self {
+    pub(crate) const fn new(map: Cow<'a, Beatmap>) -> Self {
         Self {
             map,
-            is_convert,
             mode: PhantomData,
         }
     }
@@ -72,8 +70,8 @@ impl<M: IGameMode> Converted<'_, M> {
     #[allow(clippy::result_large_err)]
     pub fn try_from_owned(mut map: Beatmap) -> Result<Self, Beatmap> {
         match M::try_convert(&mut map) {
-            ConvertStatus::Noop => Ok(Self::new(Cow::Owned(map), false)),
-            ConvertStatus::Conversion => Ok(Self::new(Cow::Owned(map), true)),
+            ConvertStatus::Noop => Ok(Self::new(Cow::Owned(map))),
+            ConvertStatus::Conversion => Ok(Self::new(Cow::Owned(map))),
             ConvertStatus::Incompatible => Err(map),
         }
     }
@@ -106,7 +104,7 @@ impl<'a, M: IGameMode> Converted<'a, M> {
     /// shorter.
     #[must_use]
     pub fn as_owned(&'a self) -> Self {
-        Self::new(Cow::Borrowed(self.map.as_ref()), self.is_convert)
+        Self::new(Cow::Borrowed(self.map.as_ref()))
     }
 
     /// Create a performance calculator for the map.
@@ -121,14 +119,14 @@ impl<'a, M: IGameMode> Converted<'a, M> {
     /// [`&Beatmap`]: Beatmap
     pub fn try_from_ref(map: &'a Beatmap) -> Option<Self> {
         let mut map = match M::check_convert(map) {
-            ConvertStatus::Noop => return Some(Self::new(Cow::Borrowed(map), false)),
+            ConvertStatus::Noop => return Some(Self::new(Cow::Borrowed(map))),
             ConvertStatus::Conversion => map.to_owned(),
             ConvertStatus::Incompatible => return None,
         };
 
         match M::try_convert(&mut map) {
-            ConvertStatus::Conversion => Some(Self::new(Cow::Owned(map), true)),
-            ConvertStatus::Noop => Some(Self::new(Cow::Owned(map), false)),
+            ConvertStatus::Conversion => Some(Self::new(Cow::Owned(map))),
+            ConvertStatus::Noop => Some(Self::new(Cow::Owned(map))),
             ConvertStatus::Incompatible => None,
         }
     }
@@ -152,8 +150,9 @@ impl<'a, M: IGameMode> Converted<'a, M> {
     pub fn try_convert<N: IGameMode>(self) -> Result<Converted<'a, N>, Self> {
         match self.map {
             Cow::Borrowed(map) => Converted::<N>::try_from_ref(map).ok_or(self),
-            Cow::Owned(map) => Converted::<N>::try_from_owned(map)
-                .map_err(|map| Self::new(Cow::Owned(map), self.is_convert)),
+            Cow::Owned(map) => {
+                Converted::<N>::try_from_owned(map).map_err(|map| Self::new(Cow::Owned(map)))
+            }
         }
     }
 
@@ -172,7 +171,7 @@ impl<'a, M: IGameMode> Converted<'a, M> {
 
 impl<M> Clone for Converted<'_, M> {
     fn clone(&self) -> Self {
-        Self::new(self.map.clone(), self.is_convert)
+        Self::new(self.map.clone())
     }
 }
 
@@ -203,7 +202,6 @@ impl<M> Debug for Converted<'_, M> {
 
         f.debug_struct("Converted")
             .field("map", &self.map)
-            .field("is_convert", &self.is_convert)
             .field("mode", &GenericFormatter::<M>::default())
             .finish()
     }
@@ -211,6 +209,6 @@ impl<M> Debug for Converted<'_, M> {
 
 impl<M> PartialEq for Converted<'_, M> {
     fn eq(&self, other: &Self) -> bool {
-        self.map == other.map && self.is_convert == other.is_convert
+        self.map == other.map
     }
 }

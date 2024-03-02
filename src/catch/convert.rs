@@ -38,6 +38,7 @@ pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
     match map.mode {
         GameMode::Osu => {
             map.mode = GameMode::Catch;
+            map.is_convert = true;
 
             ConvertStatus::Conversion
         }

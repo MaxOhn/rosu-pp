@@ -40,7 +40,7 @@ pub fn difficulty(
     let mut attrs = TaikoDifficultyAttributes {
         hit_window,
         max_combo,
-        is_convert: converted.is_convert,
+        is_convert: converted.map.is_convert,
         ..Default::default()
     };
 

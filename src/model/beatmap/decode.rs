@@ -297,6 +297,7 @@ impl From<BeatmapState> for Beatmap {
 
         Beatmap {
             version: state.version,
+            is_convert: false,
             stack_leniency: state.stack_leniency,
             mode: state.mode,
             ar: approach_rate,
