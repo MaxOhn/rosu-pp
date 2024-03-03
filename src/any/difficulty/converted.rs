@@ -35,7 +35,7 @@ impl<M> ConvertedDifficulty<M> {
     }
 
     /// Cast from generic mode `M` to `N`.
-    pub fn cast<N: IGameMode>(self) -> ConvertedDifficulty<N> {
+    pub const fn cast<N: IGameMode>(self) -> ConvertedDifficulty<N> {
         ConvertedDifficulty {
             inner: self.inner,
             _mode: PhantomData,
@@ -108,12 +108,11 @@ impl<M> AsRef<Difficulty> for ConvertedDifficulty<M> {
     }
 }
 
+impl<M> Copy for ConvertedDifficulty<M> {}
+
 impl<M> Clone for ConvertedDifficulty<M> {
     fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            _mode: PhantomData,
-        }
+        *self
     }
 }
 

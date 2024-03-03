@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, num::NonZeroU32};
 
 use rosu_map::section::general::GameMode;
 
@@ -23,12 +23,20 @@ pub mod skills;
 use crate::{model::mode::IGameMode, util::mods::Mods};
 
 /// Difficulty calculator on maps of any mode.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[must_use]
 pub struct Difficulty {
     mods: u32,
     passed_objects: Option<u32>,
-    clock_rate: Option<f64>,
+    /// Clock rate will be clamped internally between 0.01 and 100.0.
+    ///
+    /// Since its minimum value is 0.01, its bits are never zero.
+    /// Additionally, values between 0.01 and 100 are represented sufficiently
+    /// precise with 32 bits.
+    ///
+    /// This allows for an optimization to reduce the struct size by storing its
+    /// bits as a [`NonZeroU32`].
+    clock_rate: Option<NonZeroU32>,
 }
 
 impl Difficulty {
@@ -41,17 +49,9 @@ impl Difficulty {
         }
     }
 
-    /// Use this [`&Difficulty`] as a calculator for a specific [`IGameMode`].
-    ///
-    /// [`&Difficulty`]: Difficulty
-    pub const fn with_mode<M: IGameMode>(&self) -> ConvertedDifficulty<M> {
-        let this = Self {
-            mods: self.mods,
-            passed_objects: self.passed_objects,
-            clock_rate: self.clock_rate,
-        };
-
-        ConvertedDifficulty::from_difficulty(this)
+    /// Use this [`Difficulty`] as a calculator for a specific [`IGameMode`].
+    pub const fn with_mode<M: IGameMode>(self) -> ConvertedDifficulty<M> {
+        ConvertedDifficulty::from_difficulty(self)
     }
 
     /// Specify mods through their bit values.
@@ -74,8 +74,14 @@ impl Difficulty {
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     pub fn clock_rate(self, clock_rate: f64) -> Self {
+        let clock_rate = (clock_rate as f32).clamp(0.01, 100.0).to_bits();
+
+        // SAFETY: The minimum value is 0.01 so its bits can never be fully
+        // zero.
+        let non_zero = unsafe { NonZeroU32::new_unchecked(clock_rate) };
+
         Self {
-            clock_rate: Some(clock_rate.clamp(0.01, 100.0)),
+            clock_rate: Some(non_zero),
             ..self
         }
     }
@@ -130,7 +136,10 @@ impl Difficulty {
     }
 
     pub(crate) fn get_clock_rate(&self) -> f64 {
-        self.clock_rate.unwrap_or_else(|| self.mods.clock_rate())
+        self.clock_rate
+            .map(NonZeroU32::get)
+            .map(u64::from)
+            .map_or_else(|| self.mods.clock_rate(), f64::from_bits)
     }
 
     pub(crate) fn get_passed_objects(&self) -> usize {
