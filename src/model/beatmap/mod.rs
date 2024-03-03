@@ -124,7 +124,7 @@ impl Beatmap {
     /// instead of a generic parameter.
     ///
     /// [`&mut Beatmap`]: Beatmap
-    pub fn convert_inplace(&mut self, mode: GameMode) -> ConvertStatus {
+    pub fn convert_in_place(&mut self, mode: GameMode) -> ConvertStatus {
         match mode {
             GameMode::Osu => Osu::try_convert(self),
             GameMode::Taiko => Taiko::try_convert(self),
