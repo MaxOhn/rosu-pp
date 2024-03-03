@@ -1,9 +1,9 @@
 use crate::{
-    any::ModeDifficulty,
     model::{
         beatmap::Beatmap,
         mode::{ConvertStatus, IGameMode},
     },
+    Difficulty,
 };
 
 pub use self::{
@@ -44,13 +44,13 @@ impl IGameMode for Mania {
     }
 
     fn difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         converted: &ManiaBeatmap<'_>,
     ) -> Self::DifficultyAttributes {
         difficulty::difficulty(difficulty, converted)
     }
 
-    fn strains(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self::Strains {
+    fn strains(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
     }
 
@@ -59,14 +59,14 @@ impl IGameMode for Mania {
     }
 
     fn gradual_difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &ManiaBeatmap<'_>,
     ) -> Self::GradualDifficulty {
         ManiaGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &ManiaBeatmap<'_>,
     ) -> Self::GradualPerformance {
         ManiaGradualPerformance::new(difficulty, map)

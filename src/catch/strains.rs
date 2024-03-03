@@ -1,4 +1,4 @@
-use crate::{any::ModeDifficulty, catch::difficulty::DifficultyValues};
+use crate::{any::Difficulty, catch::difficulty::DifficultyValues};
 
 use super::convert::CatchBeatmap;
 
@@ -16,7 +16,7 @@ impl CatchStrains {
     pub const SECTION_LEN: f64 = 750.0;
 }
 
-pub fn strains(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> CatchStrains {
+pub fn strains(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> CatchStrains {
     let DifficultyValues { movement, .. } = DifficultyValues::calculate(difficulty, converted);
 
     CatchStrains {

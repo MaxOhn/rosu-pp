@@ -4,11 +4,12 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     any::{PerformanceAttributes, ScoreState},
-    catch::{CatchBeatmap, CatchGradualPerformance},
-    mania::{ManiaBeatmap, ManiaGradualPerformance},
-    osu::{OsuBeatmap, OsuGradualPerformance},
-    taiko::{TaikoBeatmap, TaikoGradualPerformance},
-    Beatmap, ModeDifficulty,
+    catch::{Catch, CatchBeatmap, CatchGradualPerformance},
+    mania::{Mania, ManiaBeatmap, ManiaGradualPerformance},
+    model::mode::IGameMode,
+    osu::{Osu, OsuBeatmap, OsuGradualPerformance},
+    taiko::{Taiko, TaikoBeatmap, TaikoGradualPerformance},
+    Beatmap, Converted, Difficulty,
 };
 
 /// Gradually calculate the performance attributes on maps of any mode.
@@ -31,10 +32,10 @@ use crate::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, GradualPerformance, ModeDifficulty, any::ScoreState};
+/// use rosu_pp::{Beatmap, GradualPerformance, Difficulty, any::ScoreState};
 ///
 /// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut gradual = GradualPerformance::new(&difficulty, &map);
 /// let mut state = ScoreState::new(); // empty state, everything is on 0.
 ///
@@ -102,22 +103,28 @@ pub enum GradualPerformance {
 macro_rules! from_converted {
     ( $fn:ident, $mode:ident, $converted:ident ) => {
         #[doc = concat!("Create a [`GradualPerformance`] for a [`", stringify!($converted), "`]")]
-        pub fn $fn(difficulty: &ModeDifficulty, converted: &$converted<'_>) -> Self {
-            Self::$mode(difficulty.gradual_performance(converted))
+        pub fn $fn(difficulty: &Difficulty, converted: &$converted<'_>) -> Self {
+            Self::$mode($mode::gradual_performance(difficulty, converted))
         }
     };
 }
 
 impl GradualPerformance {
     /// Create a [`GradualPerformance`] for a map of any mode.
-    pub fn new(difficulty: &ModeDifficulty, map: &Beatmap) -> Self {
+    pub fn new(difficulty: &Difficulty, map: &Beatmap) -> Self {
         let map = Cow::Borrowed(map);
 
         match map.mode {
-            GameMode::Osu => Self::Osu(difficulty.gradual_performance(&OsuBeatmap::new(map))),
-            GameMode::Taiko => Self::Taiko(difficulty.gradual_performance(&TaikoBeatmap::new(map))),
-            GameMode::Catch => Self::Catch(difficulty.gradual_performance(&CatchBeatmap::new(map))),
-            GameMode::Mania => Self::Mania(difficulty.gradual_performance(&ManiaBeatmap::new(map))),
+            GameMode::Osu => Self::Osu(Osu::gradual_performance(difficulty, &Converted::new(map))),
+            GameMode::Taiko => {
+                Self::Taiko(Taiko::gradual_performance(difficulty, &Converted::new(map)))
+            }
+            GameMode::Catch => {
+                Self::Catch(Catch::gradual_performance(difficulty, &Converted::new(map)))
+            }
+            GameMode::Mania => {
+                Self::Mania(Mania::gradual_performance(difficulty, &Converted::new(map)))
+            }
         }
     }
 

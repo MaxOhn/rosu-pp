@@ -1,4 +1,4 @@
-use crate::{any::ModeDifficulty, mania::difficulty::DifficultyValues};
+use crate::{any::Difficulty, mania::difficulty::DifficultyValues};
 
 use super::convert::ManiaBeatmap;
 
@@ -16,7 +16,7 @@ impl ManiaStrains {
     pub const SECTION_LEN: f64 = 400.0;
 }
 
-pub fn strains(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> ManiaStrains {
+pub fn strains(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> ManiaStrains {
     let values = DifficultyValues::calculate(difficulty, converted);
 
     ManiaStrains {

@@ -5,7 +5,7 @@ use rosu_pp::{
     mania::{Mania, ManiaDifficultyAttributes},
     osu::{Osu, OsuDifficultyAttributes},
     taiko::{Taiko, TaikoDifficultyAttributes},
-    Beatmap, ModeDifficulty,
+    Beatmap, ConvertedDifficulty,
 };
 
 use self::common::*;
@@ -25,7 +25,7 @@ macro_rules! test_cases {
         $(
             let mods = 0 $( + $mods )*;
             let expected = test_cases!(@$mode { $( $key: $value, )* });
-            let actual = ModeDifficulty::new().mods(mods).calculate(&map);
+            let actual = ConvertedDifficulty::new().mods(mods).calculate(&map);
             run(&actual, &expected, mods);
         )*
     };

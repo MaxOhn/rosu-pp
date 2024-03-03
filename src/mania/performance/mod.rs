@@ -1,8 +1,7 @@
 use std::cmp;
 
 use crate::{
-    any::ModeDifficulty,
-    any::{HitResultPriority, ModeAttributeProvider},
+    any::{Difficulty, HitResultPriority, ModeAttributeProvider},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
 };
@@ -21,7 +20,7 @@ pub mod gradual;
 #[must_use]
 pub struct ManiaPerformance<'map> {
     map_or_attrs: MapOrAttrs<'map, Mania>,
-    difficulty: ModeDifficulty,
+    difficulty: Difficulty,
     n320: Option<u32>,
     n300: Option<u32>,
     n200: Option<u32>,
@@ -37,7 +36,7 @@ impl<'map> ManiaPerformance<'map> {
     pub const fn new(map: ManiaBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             n320: None,
             n300: None,
             n200: None,
@@ -52,7 +51,7 @@ impl<'map> ManiaPerformance<'map> {
     pub(crate) const fn from_mania_attributes(attrs: ManiaDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             n320: None,
             n300: None,
             n200: None,
@@ -192,7 +191,7 @@ impl<'map> ManiaPerformance<'map> {
     pub fn generate_state(&mut self) -> ManiaScoreState {
         let attrs = match self.map_or_attrs {
             MapOrAttrs::Map(ref map) => {
-                let attrs = self.generate_attributes(map);
+                let attrs = self.difficulty.with_mode().calculate(map);
 
                 self.map_or_attrs.insert_attrs(attrs)
             }
@@ -718,7 +717,7 @@ impl<'map> ManiaPerformance<'map> {
         let state = self.generate_state();
 
         let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => self.generate_attributes(map),
+            MapOrAttrs::Map(ref map) => self.difficulty.with_mode().calculate(map),
             MapOrAttrs::Attrs(attrs) => attrs,
         };
 
@@ -729,10 +728,6 @@ impl<'map> ManiaPerformance<'map> {
         };
 
         inner.calculate()
-    }
-
-    fn generate_attributes(&self, map: &ManiaBeatmap<'_>) -> ManiaDifficultyAttributes {
-        self.difficulty.calculate(map)
     }
 
     /// Try to create [`ManiaPerformance`] through a [`ModeAttributeProvider`].
@@ -921,7 +916,7 @@ mod tests {
 
     use proptest::prelude::*;
 
-    use crate::Beatmap;
+    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
 
     use super::*;
 
@@ -936,7 +931,7 @@ mod tests {
                     .unwrap()
                     .unchecked_into_converted::<Mania>();
 
-                let attrs = ModeDifficulty::new().calculate(&converted);
+                let attrs = ConvertedDifficulty::new().calculate(&converted);
 
                 assert_eq!(N_OBJECTS, converted.hit_objects.len() as u32);
 

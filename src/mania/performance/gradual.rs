@@ -1,6 +1,6 @@
 use crate::{
     mania::{ManiaBeatmap, ManiaGradualDifficulty},
-    ModeDifficulty,
+    Difficulty,
 };
 
 use super::{ManiaPerformanceAttributes, ManiaScoreState};
@@ -20,14 +20,14 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::mania::{Mania, ManiaGradualPerformance, ManiaScoreState};
 ///
 /// let converted = Beatmap::from_path("./resources/1638954.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Mania>();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut gradual = ManiaGradualPerformance::new(&difficulty, &converted);
 /// let mut state = ManiaScoreState::new(); // empty state, everything is on 0.
 ///
@@ -75,7 +75,7 @@ pub struct ManiaGradualPerformance {
 
 impl ManiaGradualPerformance {
     /// Create a new gradual performance calculator for osu!mania maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let difficulty = ManiaGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -129,7 +129,7 @@ mod tests {
             .unchecked_into_converted::<Mania>();
 
         let mods = 88; // HDHRDT
-        let difficulty = ModeDifficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88);
 
         let mut gradual = ManiaGradualPerformance::new(&difficulty, &converted);
         let mut gradual_2nd = ManiaGradualPerformance::new(&difficulty, &converted);

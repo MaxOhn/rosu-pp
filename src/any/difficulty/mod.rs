@@ -3,144 +3,79 @@ use std::borrow::Cow;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    catch::{Catch, CatchBeatmap},
-    mania::{Mania, ManiaBeatmap},
+    catch::Catch,
+    mania::Mania,
     model::beatmap::{Beatmap, Converted},
-    osu::{Osu, OsuBeatmap},
-    taiko::{Taiko, TaikoBeatmap},
+    osu::Osu,
+    taiko::Taiko,
+    GradualDifficulty, GradualPerformance,
 };
 
-use self::mode::ModeDifficulty;
+use self::converted::ConvertedDifficulty;
 
 use super::{attributes::DifficultyAttributes, Strains};
 
+pub mod converted;
 pub mod gradual;
-pub mod mode;
 pub mod object;
 pub mod skills;
 
+use crate::{model::mode::IGameMode, util::mods::Mods};
+
 /// Difficulty calculator on maps of any mode.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 #[must_use]
-pub struct Difficulty<'map> {
-    map: Cow<'map, Beatmap>,
-    inner: ModeDifficulty,
+pub struct Difficulty {
+    mods: u32,
+    passed_objects: Option<u32>,
+    clock_rate: Option<f64>,
 }
 
-impl<'map> Difficulty<'map> {
-    /// Create a new difficulty calculator for the given beatmap.
-    pub const fn new(map: &'map Beatmap) -> Self {
-        Self::new_with_cow(Cow::Borrowed(map))
-    }
-
-    const fn new_with_cow(map: Cow<'map, Beatmap>) -> Self {
+impl Difficulty {
+    /// Create a new difficulty calculator.
+    pub const fn new() -> Self {
         Self {
-            map,
-            inner: ModeDifficulty::new(),
+            mods: 0,
+            passed_objects: None,
+            clock_rate: None,
         }
     }
-}
 
-macro_rules! impl_from_mode {
-    ( $mode:ident ) => {
-        impl<'a> From<Converted<'a, $mode>> for Difficulty<'a> {
-            fn from(converted: Converted<'a, $mode>) -> Self {
-                Self::new_with_cow(converted.into_inner())
-            }
-        }
-
-        impl<'a, 'b: 'a> From<&'b Converted<'a, $mode>> for Difficulty<'a> {
-            fn from(converted: &'b Converted<'a, $mode>) -> Self {
-                Self::new(&converted)
-            }
-        }
-    };
-}
-
-impl_from_mode!(Osu);
-impl_from_mode!(Taiko);
-impl_from_mode!(Catch);
-impl_from_mode!(Mania);
-
-impl Difficulty<'_> {
-    /// Attempt to convert the map to the specified mode.
+    /// Use this [`&Difficulty`] as a calculator for a specific [`IGameMode`].
     ///
-    /// If the conversion is incompatible, `None` is returned.
-    ///
-    /// If the given mode should be ignored in case it is incompatible, use
-    /// [`mode_or_ignore`] instead.
-    ///
-    /// [`mode_or_ignore`]: Self::mode_or_ignore
-    pub fn try_mode(&mut self, mode: GameMode) -> Option<&mut Self> {
-        let map = match mode {
-            GameMode::Osu => OsuBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
-            GameMode::Taiko => TaikoBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
-            GameMode::Catch => CatchBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
-            GameMode::Mania => ManiaBeatmap::try_from_ref(self.map.as_ref())?.into_inner(),
+    /// [`&Difficulty`]: Difficulty
+    pub const fn with_mode<M: IGameMode>(&self) -> ConvertedDifficulty<M> {
+        let this = Self {
+            mods: self.mods,
+            passed_objects: self.passed_objects,
+            clock_rate: self.clock_rate,
         };
 
-        if matches!(map, Cow::Owned(_)) {
-            let map = map.into_owned();
-            self.map = Cow::Owned(map);
-        }
-
-        Some(self)
-    }
-
-    /// Attempt to convert the map to the specified mode.
-    ///
-    /// If the conversion is incompatible, the map won't be modified.
-    ///
-    /// To see whether the given mode is incompatible, use [`try_mode`]
-    /// instead.
-    ///
-    /// [`try_mode`]: Self::try_mode
-    pub fn mode_or_ignore(&mut self, mode: GameMode) -> &mut Self {
-        let map = self.map.as_ref();
-
-        let map_opt = match mode {
-            GameMode::Osu => OsuBeatmap::try_from_ref(map).map(Converted::into_inner),
-            GameMode::Taiko => TaikoBeatmap::try_from_ref(map).map(Converted::into_inner),
-            GameMode::Catch => CatchBeatmap::try_from_ref(map).map(Converted::into_inner),
-            GameMode::Mania => ManiaBeatmap::try_from_ref(map).map(Converted::into_inner),
-        };
-
-        match map_opt {
-            Some(cow @ Cow::Owned(_)) => {
-                let map = cow.into_owned();
-                self.map = Cow::Owned(map);
-            }
-            Some(Cow::Borrowed(_)) | None => {}
-        }
-
-        self
+        ConvertedDifficulty::from_difficulty(this)
     }
 
     /// Specify mods through their bit values.
     ///
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
-    pub fn mods(self, mods: u32) -> Self {
-        Self {
-            inner: self.inner.mods(mods),
-            ..self
-        }
+    pub const fn mods(self, mods: u32) -> Self {
+        Self { mods, ..self }
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
-    pub fn passed_objects(self, passed_objects: u32) -> Self {
+    pub const fn passed_objects(self, passed_objects: u32) -> Self {
         Self {
-            inner: self.inner.passed_objects(passed_objects),
+            passed_objects: Some(passed_objects),
             ..self
         }
     }
 
-    /// Adjust the clock rate used in the calculation.
+    /// Adjust the clock rate used in the calculation between 0.01 and 100.0.
     ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
     pub fn clock_rate(self, clock_rate: f64) -> Self {
         Self {
-            inner: self.inner.clock_rate(clock_rate),
+            clock_rate: Some(clock_rate.clamp(0.01, 100.0)),
             ..self
         }
     }
@@ -148,19 +83,19 @@ impl Difficulty<'_> {
     /// Perform the difficulty calculation.
     ///
     /// The returned attributes depend on the map's mode.
-    pub fn calculate(&self) -> DifficultyAttributes {
-        let map = Cow::Borrowed(self.map.as_ref());
+    pub fn calculate(&self, map: &Beatmap) -> DifficultyAttributes {
+        let map = Cow::Borrowed(map);
 
-        match self.map.mode {
-            GameMode::Osu => DifficultyAttributes::Osu(self.inner.calculate(&OsuBeatmap::new(map))),
+        match map.mode {
+            GameMode::Osu => DifficultyAttributes::Osu(Osu::difficulty(self, &Converted::new(map))),
             GameMode::Taiko => {
-                DifficultyAttributes::Taiko(self.inner.calculate(&TaikoBeatmap::new(map)))
+                DifficultyAttributes::Taiko(Taiko::difficulty(self, &Converted::new(map)))
             }
             GameMode::Catch => {
-                DifficultyAttributes::Catch(self.inner.calculate(&CatchBeatmap::new(map)))
+                DifficultyAttributes::Catch(Catch::difficulty(self, &Converted::new(map)))
             }
             GameMode::Mania => {
-                DifficultyAttributes::Mania(self.inner.calculate(&ManiaBeatmap::new(map)))
+                DifficultyAttributes::Mania(Mania::difficulty(self, &Converted::new(map)))
             }
         }
     }
@@ -169,14 +104,36 @@ impl Difficulty<'_> {
     /// strains, return them as is.
     ///
     /// Suitable to plot the difficulty of a map over time.
-    pub fn strains(&self) -> Strains {
-        let map = Cow::Borrowed(self.map.as_ref());
+    pub fn strains(&self, map: &Beatmap) -> Strains {
+        let map = Cow::Borrowed(map);
 
-        match self.map.mode {
-            GameMode::Osu => Strains::Osu(self.inner.strains(&OsuBeatmap::new(map))),
-            GameMode::Taiko => Strains::Taiko(self.inner.strains(&TaikoBeatmap::new(map))),
-            GameMode::Catch => Strains::Catch(self.inner.strains(&CatchBeatmap::new(map))),
-            GameMode::Mania => Strains::Mania(self.inner.strains(&ManiaBeatmap::new(map))),
+        match map.mode {
+            GameMode::Osu => Strains::Osu(Osu::strains(self, &Converted::new(map))),
+            GameMode::Taiko => Strains::Taiko(Taiko::strains(self, &Converted::new(map))),
+            GameMode::Catch => Strains::Catch(Catch::strains(self, &Converted::new(map))),
+            GameMode::Mania => Strains::Mania(Mania::strains(self, &Converted::new(map))),
         }
+    }
+
+    /// Create a gradual difficulty calculator for a [`Beatmap`].
+    pub fn gradual_difficulty(&self, map: &Beatmap) -> GradualDifficulty {
+        GradualDifficulty::new(self, map)
+    }
+
+    /// Create a gradual performance calculator for a [`Beatmap`].
+    pub fn gradual_performance(&self, map: &Beatmap) -> GradualPerformance {
+        GradualPerformance::new(self, map)
+    }
+
+    pub(crate) const fn get_mods(&self) -> u32 {
+        self.mods
+    }
+
+    pub(crate) fn get_clock_rate(&self) -> f64 {
+        self.clock_rate.unwrap_or_else(|| self.mods.clock_rate())
+    }
+
+    pub(crate) fn get_passed_objects(&self) -> usize {
+        self.passed_objects.map_or(usize::MAX, |n| n as usize)
     }
 }

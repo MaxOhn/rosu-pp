@@ -8,7 +8,7 @@ use crate::{
         CatchBeatmap, CatchDifficultyAttributes,
     },
     util::mods::Mods,
-    ModeDifficulty,
+    Difficulty,
 };
 
 use super::{
@@ -32,14 +32,14 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::catch::{Catch, CatchGradualDifficulty};
 ///
 /// let converted = Beatmap::from_path("./resources/2118524.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Catch>();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut iter = CatchGradualDifficulty::new(&difficulty, &converted);
 ///
 /// // the difficulty of the map after the first hit object
@@ -66,7 +66,7 @@ pub struct CatchGradualDifficulty {
 }
 
 impl CatchGradualDifficulty {
-    pub fn new(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
 
@@ -163,7 +163,7 @@ impl ExactSizeIterator for CatchGradualDifficulty {
 
 #[cfg(test)]
 mod tests {
-    use crate::Beatmap;
+    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
 
     use super::*;
 
@@ -171,7 +171,7 @@ mod tests {
     fn empty() {
         let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
         let mut gradual = CatchGradualDifficulty::new(&difficulty, &converted);
 
         assert!(gradual.next().is_none());
@@ -183,7 +183,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
 
         let mut gradual = CatchGradualDifficulty::new(&difficulty, &converted);
         let mut gradual_2nd = CatchGradualDifficulty::new(&difficulty, &converted);
@@ -207,7 +207,7 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = ModeDifficulty::new()
+            let expected = ConvertedDifficulty::new()
                 .passed_objects(i as u32)
                 .calculate(&converted);
 

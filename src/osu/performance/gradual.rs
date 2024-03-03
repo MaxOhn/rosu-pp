@@ -1,6 +1,6 @@
 use crate::{
     osu::{OsuBeatmap, OsuGradualDifficulty},
-    ModeDifficulty,
+    Difficulty,
 };
 
 use super::{OsuPerformanceAttributes, OsuScoreState};
@@ -20,14 +20,14 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::osu::{Osu, OsuGradualPerformance, OsuScoreState};
 ///
 /// let converted = Beatmap::from_path("./resources/2785319.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Osu>();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut gradual = OsuGradualPerformance::new(&difficulty, &converted);
 /// let mut state = OsuScoreState::new(); // empty state, everything is on 0.
 ///
@@ -85,7 +85,7 @@ pub struct OsuGradualPerformance {
 
 impl OsuGradualPerformance {
     /// Create a new gradual performance calculator for osu!standard maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> Self {
         let difficulty = OsuGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -139,7 +139,7 @@ mod tests {
             .unchecked_into_converted::<Osu>();
 
         let mods = 88; // HDHRDT
-        let difficulty = ModeDifficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88);
 
         let mut gradual = OsuGradualPerformance::new(&difficulty, &converted);
         let mut gradual_2nd = OsuGradualPerformance::new(&difficulty, &converted);

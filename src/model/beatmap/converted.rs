@@ -1,5 +1,4 @@
 use std::{
-    any,
     borrow::Cow,
     fmt::{Debug, Formatter, Result as FmtResult},
     marker::PhantomData,
@@ -8,7 +7,8 @@ use std::{
 
 use crate::{
     model::mode::{ConvertStatus, IGameMode},
-    ModeDifficulty,
+    util::generic_fmt::GenericFormatter,
+    Difficulty,
 };
 
 use super::Beatmap;
@@ -74,13 +74,13 @@ impl<M: IGameMode> Converted<'_, M> {
     }
 
     /// Create a gradual difficulty calculator for the map.
-    pub fn gradual_difficulty(&self, difficulty: &ModeDifficulty) -> M::GradualDifficulty {
-        difficulty.gradual_difficulty(self)
+    pub fn gradual_difficulty(&self, difficulty: &Difficulty) -> M::GradualDifficulty {
+        M::gradual_difficulty(difficulty, self)
     }
 
     /// Create a gradual performance calculator for the map.
-    pub fn gradual_performance(&self, difficulty: &ModeDifficulty) -> M::GradualPerformance {
-        difficulty.gradual_performance(self)
+    pub fn gradual_performance(&self, difficulty: &Difficulty) -> M::GradualPerformance {
+        M::gradual_performance(difficulty, self)
     }
 }
 
@@ -189,34 +189,9 @@ impl<M> Clone for Converted<'_, M> {
 
 impl<M> Debug for Converted<'_, M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        struct GenericFormatter<T>(PhantomData<T>);
-
-        impl<T> Default for GenericFormatter<T> {
-            fn default() -> Self {
-                Self(PhantomData)
-            }
-        }
-
-        impl<T> Debug for GenericFormatter<T> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-                fn fmt_stripped(full_type_name: &str, f: &mut Formatter<'_>) -> FmtResult {
-                    // Strip fully qualified syntax
-                    if let Some(position) = full_type_name.rfind("::") {
-                        if let Some(type_name) = full_type_name.get(position + 2..) {
-                            f.write_str(type_name)?;
-                        }
-                    }
-
-                    Ok(())
-                }
-
-                fmt_stripped(any::type_name::<T>(), f)
-            }
-        }
-
         f.debug_struct("Converted")
             .field("map", &self.map)
-            .field("mode", &GenericFormatter::<M>::default())
+            .field("mode", &GenericFormatter::<M>::new())
             .finish()
     }
 }

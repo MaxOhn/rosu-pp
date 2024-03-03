@@ -1,4 +1,4 @@
-use crate::any::ModeDifficulty;
+use crate::Difficulty;
 
 use super::{
     convert::OsuBeatmap,
@@ -25,7 +25,7 @@ impl OsuStrains {
     pub const SECTION_LEN: f64 = 400.0;
 }
 
-pub fn strains(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> OsuStrains {
+pub fn strains(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> OsuStrains {
     let DifficultyValues {
         skills:
             OsuSkills {

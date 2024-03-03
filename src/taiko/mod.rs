@@ -1,9 +1,9 @@
 use crate::{
-    any::ModeDifficulty,
     model::{
         beatmap::Beatmap,
         mode::{ConvertStatus, IGameMode},
     },
+    Difficulty,
 };
 
 pub use self::{
@@ -44,13 +44,13 @@ impl IGameMode for Taiko {
     }
 
     fn difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         converted: &TaikoBeatmap<'_>,
     ) -> Self::DifficultyAttributes {
         difficulty::difficulty(difficulty, converted)
     }
 
-    fn strains(difficulty: &ModeDifficulty, converted: &TaikoBeatmap<'_>) -> Self::Strains {
+    fn strains(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
     }
 
@@ -59,14 +59,14 @@ impl IGameMode for Taiko {
     }
 
     fn gradual_difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &TaikoBeatmap<'_>,
     ) -> Self::GradualDifficulty {
         TaikoGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &TaikoBeatmap<'_>,
     ) -> Self::GradualPerformance {
         TaikoGradualPerformance::new(difficulty, map)

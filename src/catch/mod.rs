@@ -1,9 +1,9 @@
 use crate::{
-    any::ModeDifficulty,
     model::{
         beatmap::Beatmap,
         mode::{ConvertStatus, IGameMode},
     },
+    Difficulty,
 };
 
 pub use self::{
@@ -47,13 +47,13 @@ impl IGameMode for Catch {
     }
 
     fn difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         converted: &CatchBeatmap<'_>,
     ) -> Self::DifficultyAttributes {
         difficulty::difficulty(difficulty, converted)
     }
 
-    fn strains(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self::Strains {
+    fn strains(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
     }
 
@@ -62,14 +62,14 @@ impl IGameMode for Catch {
     }
 
     fn gradual_difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &CatchBeatmap<'_>,
     ) -> Self::GradualDifficulty {
         CatchGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &CatchBeatmap<'_>,
     ) -> Self::GradualPerformance {
         CatchGradualPerformance::new(difficulty, map)

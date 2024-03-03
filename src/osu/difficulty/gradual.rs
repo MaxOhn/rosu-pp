@@ -8,7 +8,7 @@ use crate::{
         OsuBeatmap,
     },
     util::mods::Mods,
-    ModeDifficulty,
+    Difficulty,
 };
 
 use self::osu_objects::OsuObjects;
@@ -31,14 +31,14 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::osu::{Osu, OsuGradualDifficulty};
 ///
 /// let converted = Beatmap::from_path("./resources/2785319.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Osu>();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut iter = OsuGradualDifficulty::new(&difficulty, &converted);
 ///
 ///  // the difficulty of the map after the first hit object
@@ -73,7 +73,7 @@ struct NotClonable;
 
 impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> Self {
         let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
 
@@ -262,7 +262,7 @@ mod osu_objects {
 #[cfg(test)]
 mod tests {
 
-    use crate::{osu::Osu, Beatmap};
+    use crate::{any::difficulty::converted::ConvertedDifficulty, osu::Osu, Beatmap};
 
     use super::*;
 
@@ -272,7 +272,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Osu>();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
         let mut gradual = OsuGradualDifficulty::new(&difficulty, &converted);
 
         assert!(gradual.next().is_none());
@@ -284,7 +284,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Osu>();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
 
         let mut gradual = OsuGradualDifficulty::new(&difficulty, &converted);
         let mut gradual_2nd = OsuGradualDifficulty::new(&difficulty, &converted);
@@ -310,7 +310,7 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = ModeDifficulty::new()
+            let expected = ConvertedDifficulty::new()
                 .passed_objects(i as u32)
                 .calculate(&converted);
 

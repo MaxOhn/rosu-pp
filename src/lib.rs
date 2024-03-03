@@ -21,9 +21,9 @@
 //! let map = rosu_pp::Beatmap::from_path("./resources/2785319.osu").unwrap();
 //!
 //! // Calculate difficulty attributes
-//! let diff_attrs = map.difficulty()
+//! let diff_attrs = rosu_pp::Difficulty::new()
 //!     .mods(8 + 16) // HDHR
-//!     .calculate();
+//!     .calculate(&map);
 //!
 //! let stars = diff_attrs.stars();
 //!
@@ -62,12 +62,15 @@
 //! score state.
 //!
 //! ```
-//! use rosu_pp::{Beatmap, GradualPerformance, ModeDifficulty, any::ScoreState};
+//! use rosu_pp::{Beatmap, GradualPerformance, Difficulty, any::ScoreState};
 //!
 //! let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
-//! let difficulty = ModeDifficulty::new().mods(16 + 64).clock_rate(1.2); // HRDT on 1.2x
 //!
-//! let mut gradual = GradualPerformance::new(&difficulty, &map);
+//! let mut gradual = Difficulty::new()
+//!     .mods(16 + 64) // HRDT
+//!     .clock_rate(1.2)
+//!     .gradual_performance(&map);
+//!
 //! let mut state = ScoreState::new(); // empty state, everything is on 0.
 //!
 //! // The first 10 hitresults are 300s
@@ -162,7 +165,7 @@
 
 #[doc(inline)]
 pub use self::{
-    any::{Difficulty, GradualDifficulty, GradualPerformance, ModeDifficulty, Performance},
+    any::{ConvertedDifficulty, Difficulty, GradualDifficulty, GradualPerformance, Performance},
     model::beatmap::{Beatmap, Converted},
 };
 

@@ -1,5 +1,4 @@
 use crate::{
-    any::difficulty::mode::ModeDifficulty,
     taiko::{
         difficulty::{
             color::preprocessor::ColorDifficultyPreprocessor,
@@ -8,6 +7,7 @@ use crate::{
         },
         object::TaikoObject,
     },
+    Difficulty,
 };
 
 use self::skills::peaks::Peaks;
@@ -23,7 +23,7 @@ mod skills;
 const DIFFICULTY_MULTIPLIER: f64 = 1.35;
 
 pub fn difficulty(
-    difficulty: &ModeDifficulty,
+    difficulty: &Difficulty,
     converted: &TaikoBeatmap<'_>,
 ) -> TaikoDifficultyAttributes {
     let clock_rate = difficulty.get_clock_rate();
@@ -74,7 +74,7 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &ModeDifficulty, converted: &TaikoBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
         let clock_rate = difficulty.get_clock_rate();
 

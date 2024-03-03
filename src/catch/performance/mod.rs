@@ -1,8 +1,7 @@
 use std::cmp::{self, Ordering};
 
 use crate::{
-    any::ModeAttributeProvider,
-    any::ModeDifficulty,
+    any::{Difficulty, ModeAttributeProvider},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
 };
@@ -21,7 +20,7 @@ pub mod gradual;
 #[must_use]
 pub struct CatchPerformance<'map> {
     map_or_attrs: MapOrAttrs<'map, Catch>,
-    difficulty: ModeDifficulty,
+    difficulty: Difficulty,
     acc: Option<f64>,
     combo: Option<u32>,
     fruits: Option<u32>,
@@ -36,7 +35,7 @@ impl<'map> CatchPerformance<'map> {
     pub const fn new(map: CatchBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             acc: None,
             combo: None,
             fruits: None,
@@ -50,7 +49,7 @@ impl<'map> CatchPerformance<'map> {
     pub(crate) const fn from_catch_attributes(attrs: CatchDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             acc: None,
             combo: None,
             fruits: None,
@@ -180,7 +179,7 @@ impl<'map> CatchPerformance<'map> {
     pub fn generate_state(&mut self) -> CatchScoreState {
         let attrs = match self.map_or_attrs {
             MapOrAttrs::Map(ref map) => {
-                let attrs = self.generate_attributes(map);
+                let attrs = self.difficulty.with_mode().calculate(map);
 
                 self.map_or_attrs.insert_attrs(attrs)
             }
@@ -327,7 +326,7 @@ impl<'map> CatchPerformance<'map> {
         let state = self.generate_state();
 
         let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => self.generate_attributes(map),
+            MapOrAttrs::Map(ref map) => self.difficulty.with_mode().calculate(map),
             MapOrAttrs::Attrs(attrs) => attrs,
         };
 
@@ -338,10 +337,6 @@ impl<'map> CatchPerformance<'map> {
         };
 
         inner.calculate()
-    }
-
-    fn generate_attributes(&self, map: &CatchBeatmap<'_>) -> CatchDifficultyAttributes {
-        self.difficulty.calculate(map)
     }
 
     /// Try to create [`CatchPerformance`] through a [`ModeAttributeProvider`].
@@ -547,7 +542,7 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::Beatmap;
+    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
 
     use super::*;
 
@@ -564,7 +559,7 @@ mod test {
                     .unwrap()
                     .unchecked_into_converted::<Catch>();
 
-                let attrs = ModeDifficulty::new().calculate(&converted);
+                let attrs = ConvertedDifficulty::new().calculate(&converted);
 
                 assert_eq!(N_FRUITS, attrs.n_fruits);
                 assert_eq!(N_DROPLETS, attrs.n_droplets);

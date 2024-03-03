@@ -2,7 +2,7 @@ pub use self::{
     attributes::{
         AttributeProvider, DifficultyAttributes, ModeAttributeProvider, PerformanceAttributes,
     },
-    difficulty::{gradual::GradualDifficulty, mode::ModeDifficulty, Difficulty},
+    difficulty::{converted::ConvertedDifficulty, gradual::GradualDifficulty, Difficulty},
     performance::{gradual::GradualPerformance, HitResultPriority, Performance},
     score_state::ScoreState,
     strains::Strains,

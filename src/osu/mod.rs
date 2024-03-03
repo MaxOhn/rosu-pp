@@ -1,11 +1,11 @@
 use rosu_map::util::Pos;
 
 use crate::{
-    any::ModeDifficulty,
     model::{
         beatmap::Beatmap,
         mode::{ConvertStatus, IGameMode},
     },
+    Difficulty,
 };
 
 pub use self::{
@@ -48,13 +48,13 @@ impl IGameMode for Osu {
     }
 
     fn difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         converted: &OsuBeatmap<'_>,
     ) -> Self::DifficultyAttributes {
         difficulty::difficulty(difficulty, converted)
     }
 
-    fn strains(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self::Strains {
+    fn strains(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> Self::Strains {
         strains::strains(difficulty, converted)
     }
 
@@ -63,14 +63,14 @@ impl IGameMode for Osu {
     }
 
     fn gradual_difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &OsuBeatmap<'_>,
     ) -> Self::GradualDifficulty {
         OsuGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &OsuBeatmap<'_>,
     ) -> Self::GradualPerformance {
         OsuGradualPerformance::new(difficulty, map)

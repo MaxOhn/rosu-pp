@@ -1,7 +1,7 @@
 use std::{cmp, pin::Pin};
 
 use crate::{
-    any::difficulty::{mode::ModeDifficulty, skills::Skill},
+    any::difficulty::{skills::Skill, Difficulty},
     model::beatmap::BeatmapAttributes,
     osu::{
         convert::convert_objects,
@@ -26,10 +26,7 @@ const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
 const HD_FADE_IN_DURATION_MULTIPLIER: f64 = 0.4;
 const HD_FADE_OUT_DURATION_MULTIPLIER: f64 = 0.3;
 
-pub fn difficulty(
-    difficulty: &ModeDifficulty,
-    converted: &OsuBeatmap<'_>,
-) -> OsuDifficultyAttributes {
+pub fn difficulty(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> OsuDifficultyAttributes {
     let DifficultyValues {
         skills:
             OsuSkills {
@@ -70,7 +67,7 @@ pub struct OsuDifficultySetup {
 }
 
 impl OsuDifficultySetup {
-    pub fn new(difficulty: &ModeDifficulty, converted: &OsuBeatmap) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &OsuBeatmap) -> Self {
         let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
 
@@ -106,7 +103,7 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &ModeDifficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> Self {
         let mods = difficulty.get_mods();
         let take = difficulty.get_passed_objects();
 
@@ -218,7 +215,7 @@ impl DifficultyValues {
     }
 
     pub fn create_difficulty_objects<'a>(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         scaling_factor: &ScalingFactor,
         osu_objects: impl ExactSizeIterator<Item = Pin<&'a mut OsuObject>>,
     ) -> Vec<OsuDifficultyObject<'a>> {

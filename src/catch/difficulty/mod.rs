@@ -1,5 +1,5 @@
 use crate::{
-    any::difficulty::{mode::ModeDifficulty, skills::Skill},
+    any::difficulty::{skills::Skill, Difficulty},
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
@@ -22,7 +22,7 @@ mod skills;
 const STAR_SCALING_FACTOR: f64 = 0.153;
 
 pub fn difficulty(
-    difficulty: &ModeDifficulty,
+    difficulty: &Difficulty,
     converted: &CatchBeatmap<'_>,
 ) -> CatchDifficultyAttributes {
     let DifficultyValues {
@@ -41,7 +41,7 @@ pub struct CatchDifficultySetup {
 }
 
 impl CatchDifficultySetup {
-    pub fn new(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
 
@@ -67,7 +67,7 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
         let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();

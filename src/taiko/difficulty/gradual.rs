@@ -4,7 +4,7 @@ use crate::{
     model::{beatmap::HitWindows, hit_object::HitObject},
     taiko::TaikoBeatmap,
     util::sync::RefCount,
-    ModeDifficulty,
+    Difficulty,
 };
 
 use super::{
@@ -25,14 +25,14 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::taiko::{Taiko, TaikoGradualDifficulty};
 ///
 /// let converted = Beatmap::from_path("./resources/1028484.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Taiko>();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut iter = TaikoGradualDifficulty::new(&difficulty, &converted);
 ///
 /// // the difficulty of the map after the first hit object
@@ -69,7 +69,7 @@ enum FirstTwoCombos {
 
 impl TaikoGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!taiko maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: &TaikoBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
         let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
@@ -260,8 +260,7 @@ impl ExactSizeIterator for TaikoGradualDifficulty {
 
 #[cfg(test)]
 mod tests {
-
-    use crate::Beatmap;
+    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
 
     use super::*;
 
@@ -269,7 +268,7 @@ mod tests {
     fn empty() {
         let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
         let mut gradual = TaikoGradualDifficulty::new(&difficulty, &converted);
 
         assert!(gradual.next().is_none());
@@ -281,7 +280,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
 
         let mut gradual = TaikoGradualDifficulty::new(&difficulty, &converted);
         let mut gradual_2nd = TaikoGradualDifficulty::new(&difficulty, &converted);
@@ -313,7 +312,7 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = ModeDifficulty::new()
+            let expected = ConvertedDifficulty::new()
                 .passed_objects(i as u32)
                 .calculate(&converted);
 

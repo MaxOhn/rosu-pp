@@ -133,10 +133,10 @@ impl<T: fmt::Debug> fmt::Debug for Weak<T> {
 }
 
 /// ```compile_fail
-/// use rosu_pp::{taiko::TaikoGradualDifficulty, Beatmap, ModeDifficulty};
+/// use rosu_pp::{taiko::TaikoGradualDifficulty, Beatmap, Difficulty};
 ///
 /// let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
-/// let difficulty = ModeDifficulty::new();
+/// let difficulty = Difficulty::new();
 /// let mut gradual = TaikoGradualDifficulty::new(&difficulty, &converted);
 ///
 /// // Rc<RefCell<_>> cannot be shared across threads so compilation should fail
@@ -149,10 +149,10 @@ const fn _share_gradual_taiko() {}
 mod tests {
     #[test]
     fn share_gradual_taiko() {
-        use crate::{taiko::TaikoGradualDifficulty, Beatmap, ModeDifficulty};
+        use crate::{taiko::TaikoGradualDifficulty, Beatmap, Difficulty};
 
         let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
         let mut gradual = TaikoGradualDifficulty::new(&difficulty, &converted);
 
         // Arc<RwLock<_>> *can* be shared across threads so this should compile

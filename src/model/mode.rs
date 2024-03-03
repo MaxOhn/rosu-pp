@@ -1,6 +1,6 @@
 pub use rosu_map::section::general::GameMode;
 
-use crate::any::ModeDifficulty;
+use crate::Difficulty;
 
 use super::beatmap::{Beatmap, Converted};
 
@@ -40,27 +40,25 @@ pub trait IGameMode: Sized {
 
     /// Perform a difficulty calculation for a [`Converted`] beatmap and
     /// process the final skill values.
-    fn difficulty(
-        difficulty: &ModeDifficulty,
-        map: &Converted<'_, Self>,
-    ) -> Self::DifficultyAttributes;
+    fn difficulty(difficulty: &Difficulty, map: &Converted<'_, Self>)
+        -> Self::DifficultyAttributes;
 
     /// Perform a difficulty calculation for a [`Converted`] beatmap without
     /// processing the final skill values.
-    fn strains(difficulty: &ModeDifficulty, map: &Converted<'_, Self>) -> Self::Strains;
+    fn strains(difficulty: &Difficulty, map: &Converted<'_, Self>) -> Self::Strains;
 
     /// Create a performance calculator for a [`Converted`] beatmap.
     fn performance(map: Converted<'_, Self>) -> Self::Performance<'_>;
 
     /// Create a gradual difficulty calculator for a [`Converted`] beatmap.
     fn gradual_difficulty(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &Converted<'_, Self>,
     ) -> Self::GradualDifficulty;
 
     /// Create a gradual performance calculator for a [`Converted`] beatmap.
     fn gradual_performance(
-        difficulty: &ModeDifficulty,
+        difficulty: &Difficulty,
         map: &Converted<'_, Self>,
     ) -> Self::GradualPerformance;
 }

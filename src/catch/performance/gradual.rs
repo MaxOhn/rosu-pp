@@ -1,6 +1,6 @@
 use crate::{
     catch::{CatchBeatmap, CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState},
-    ModeDifficulty,
+    Difficulty,
 };
 
 /// Gradually calculate the performance attributes of an osu!catch map.
@@ -21,14 +21,14 @@ use crate::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::catch::{Catch, CatchGradualPerformance, CatchScoreState};
 ///
 /// let converted = Beatmap::from_path("./resources/2118524.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Catch>();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut gradual = CatchGradualPerformance::new(&difficulty, &converted);
 /// let mut state = CatchScoreState::new(); // empty state, everything is on 0.
 ///
@@ -90,7 +90,7 @@ pub struct CatchGradualPerformance {
 
 impl CatchGradualPerformance {
     /// Create a new gradual performance calculator for osu!catch maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: &CatchBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let difficulty = CatchGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -144,7 +144,7 @@ mod tests {
             .unchecked_into_converted();
 
         let mods = 88; // HDHRDT
-        let difficulty = ModeDifficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88);
 
         let mut gradual = CatchGradualPerformance::new(&difficulty, &converted);
         let mut gradual_2nd = CatchGradualPerformance::new(&difficulty, &converted);

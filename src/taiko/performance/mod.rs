@@ -1,8 +1,7 @@
 use std::cmp;
 
 use crate::{
-    any::ModeDifficulty,
-    any::{HitResultPriority, ModeAttributeProvider},
+    any::{Difficulty, HitResultPriority, ModeAttributeProvider},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
 };
@@ -21,7 +20,7 @@ pub mod gradual;
 #[must_use]
 pub struct TaikoPerformance<'map> {
     pub(crate) map_or_attrs: MapOrAttrs<'map, Taiko>,
-    difficulty: ModeDifficulty,
+    difficulty: Difficulty,
     combo: Option<u32>,
     acc: Option<f64>,
     hitresult_priority: HitResultPriority,
@@ -35,7 +34,7 @@ impl<'map> TaikoPerformance<'map> {
     pub const fn new(map: TaikoBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             combo: None,
             acc: None,
             misses: None,
@@ -48,7 +47,7 @@ impl<'map> TaikoPerformance<'map> {
     pub(crate) const fn from_taiko_attributes(attrs: TaikoDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             combo: None,
             acc: None,
             misses: None,
@@ -167,7 +166,7 @@ impl<'map> TaikoPerformance<'map> {
     pub fn generate_state(&mut self) -> TaikoScoreState {
         let attrs = match self.map_or_attrs {
             MapOrAttrs::Map(ref map) => {
-                let attrs = self.generate_attributes(map);
+                let attrs = self.difficulty.with_mode().calculate(map);
 
                 self.map_or_attrs.insert_attrs(attrs)
             }
@@ -255,7 +254,7 @@ impl<'map> TaikoPerformance<'map> {
         let state = self.generate_state();
 
         let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => self.generate_attributes(map),
+            MapOrAttrs::Map(ref map) => self.difficulty.with_mode().calculate(map),
             MapOrAttrs::Attrs(attrs) => attrs,
         };
 
@@ -266,10 +265,6 @@ impl<'map> TaikoPerformance<'map> {
         };
 
         inner.calculate()
-    }
-
-    fn generate_attributes(&self, map: &TaikoBeatmap<'_>) -> TaikoDifficultyAttributes {
-        self.difficulty.calculate(map)
     }
 
     /// Try to create [`TaikoPerformance`] through a [`ModeAttributeProvider`].
@@ -506,7 +501,7 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::Beatmap;
+    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
 
     use super::*;
 
@@ -521,7 +516,7 @@ mod test {
                     .unwrap()
                     .unchecked_into_converted::<Taiko>();
 
-                let attrs = ModeDifficulty::new().calculate(&converted);
+                let attrs = ConvertedDifficulty::new().calculate(&converted);
 
                 assert_eq!(MAX_COMBO, attrs.max_combo);
 

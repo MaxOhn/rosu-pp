@@ -1,6 +1,6 @@
 use crate::{
     taiko::{difficulty::gradual::TaikoGradualDifficulty, TaikoBeatmap, TaikoScoreState},
-    ModeDifficulty,
+    Difficulty,
 };
 
 use super::TaikoPerformanceAttributes;
@@ -20,14 +20,14 @@ use super::TaikoPerformanceAttributes;
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::taiko::{Taiko, TaikoGradualPerformance, TaikoScoreState};
 ///
 /// let converted = Beatmap::from_path("./resources/1028484.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted::<Taiko>();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut gradual = TaikoGradualPerformance::new(&difficulty, &converted);
 /// let mut state = TaikoScoreState::new(); // empty state, everything is on 0.
 ///
@@ -84,7 +84,7 @@ pub struct TaikoGradualPerformance {
 
 impl TaikoGradualPerformance {
     /// Create a new gradual performance calculator for osu!taiko maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: &TaikoBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
         let difficulty = TaikoGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -135,7 +135,7 @@ mod tests {
             .unchecked_into_converted();
 
         let mods = 88; // HDHRDT
-        let difficulty = ModeDifficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88);
 
         let mut gradual = TaikoGradualPerformance::new(&difficulty, &converted);
         let mut gradual_2nd = TaikoGradualPerformance::new(&difficulty, &converted);

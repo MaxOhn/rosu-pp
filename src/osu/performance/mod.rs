@@ -3,8 +3,7 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::ModeDifficulty,
-    any::{HitResultPriority, ModeAttributeProvider, Performance},
+    any::{Difficulty, HitResultPriority, ModeAttributeProvider, Performance},
     catch::CatchPerformance,
     mania::ManiaPerformance,
     taiko::TaikoPerformance,
@@ -25,7 +24,7 @@ pub mod gradual;
 #[must_use]
 pub struct OsuPerformance<'map> {
     pub(crate) map_or_attrs: MapOrAttrs<'map, Osu>,
-    pub(crate) difficulty: ModeDifficulty,
+    pub(crate) difficulty: Difficulty,
     pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<u32>,
     pub(crate) n300: Option<u32>,
@@ -40,7 +39,7 @@ impl<'map> OsuPerformance<'map> {
     pub const fn new(map: OsuBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             acc: None,
             combo: None,
             n300: None,
@@ -54,7 +53,7 @@ impl<'map> OsuPerformance<'map> {
     pub(crate) const fn from_osu_attributes(attrs: OsuDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: ModeDifficulty::new(),
+            difficulty: Difficulty::new(),
             acc: None,
             combo: None,
             n300: None,
@@ -233,7 +232,7 @@ impl<'map> OsuPerformance<'map> {
     pub fn generate_state(&mut self) -> OsuScoreState {
         let attrs = match self.map_or_attrs {
             MapOrAttrs::Map(ref map) => {
-                let attrs = self.generate_attributes(map);
+                let attrs = self.difficulty.with_mode().calculate(map);
 
                 self.map_or_attrs.insert_attrs(attrs)
             }
@@ -417,7 +416,7 @@ impl<'map> OsuPerformance<'map> {
         let state = self.generate_state();
 
         let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => self.generate_attributes(map),
+            MapOrAttrs::Map(ref map) => self.difficulty.with_mode().calculate(map),
             MapOrAttrs::Attrs(attrs) => attrs,
         };
 
@@ -432,10 +431,6 @@ impl<'map> OsuPerformance<'map> {
         };
 
         inner.calculate()
-    }
-
-    fn generate_attributes(&self, map: &OsuBeatmap<'_>) -> OsuDifficultyAttributes {
-        self.difficulty.calculate(map)
     }
 
     /// Try to create [`OsuPerformance`] through a [`ModeAttributeProvider`].
@@ -828,7 +823,7 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::Beatmap;
+    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
 
     use super::*;
 
@@ -843,7 +838,7 @@ mod test {
                     .unwrap()
                     .unchecked_into_converted::<Osu>();
 
-                let attrs = ModeDifficulty::new().calculate(&converted);
+                let attrs = ConvertedDifficulty::new().calculate(&converted);
 
                 assert_eq!(
                     (attrs.n_circles, attrs.n_sliders, attrs.n_spinners),

@@ -5,7 +5,7 @@ use crate::{
     mania::{object::ObjectParams, ManiaBeatmap},
     model::{beatmap::HitWindows, hit_object::HitObject},
     util::float_ext::FloatExt,
-    ModeDifficulty,
+    Difficulty,
 };
 
 use super::{
@@ -25,14 +25,14 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ModeDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::mania::ManiaGradualDifficulty;
 ///
 /// let converted = Beatmap::from_path("./resources/1638954.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted();
 ///
-/// let difficulty = ModeDifficulty::new().mods(64); // DT
+/// let difficulty = Difficulty::new().mods(64); // DT
 /// let mut iter = ManiaGradualDifficulty::new(&difficulty, &converted);
 ///
 /// // the difficulty of the map after the first hit object
@@ -61,7 +61,7 @@ pub struct ManiaGradualDifficulty {
 
 impl ManiaGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!mania maps.
-    pub fn new(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self {
+    pub fn new(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
         let mods = difficulty.get_mods();
         let total_columns = converted.cs.round_even().max(1.0);
@@ -209,7 +209,7 @@ fn increment_combo_raw(is_circle: bool, start_time: f64, end_time: f64, curr_com
 
 #[cfg(test)]
 mod tests {
-    use crate::{mania::Mania, Beatmap};
+    use crate::{any::difficulty::converted::ConvertedDifficulty, mania::Mania, Beatmap};
 
     use super::*;
 
@@ -219,7 +219,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Mania>();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
         let mut gradual = ManiaGradualDifficulty::new(&difficulty, &converted);
 
         assert!(gradual.next().is_none());
@@ -231,7 +231,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Mania>();
 
-        let difficulty = ModeDifficulty::new();
+        let difficulty = Difficulty::new();
 
         let mut gradual = ManiaGradualDifficulty::new(&difficulty, &converted);
         let mut gradual_2nd = ManiaGradualDifficulty::new(&difficulty, &converted);
@@ -257,7 +257,7 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = ModeDifficulty::new()
+            let expected = ConvertedDifficulty::new()
                 .passed_objects(i as u32)
                 .calculate(&converted);
 

@@ -1,4 +1,4 @@
-use crate::{any::ModeDifficulty, taiko::difficulty::DifficultyValues};
+use crate::{taiko::difficulty::DifficultyValues, Difficulty};
 
 use super::convert::TaikoBeatmap;
 
@@ -20,7 +20,7 @@ impl TaikoStrains {
     pub const SECTION_LEN: f64 = 400.0;
 }
 
-pub fn strains(difficulty: &ModeDifficulty, converted: &TaikoBeatmap<'_>) -> TaikoStrains {
+pub fn strains(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> TaikoStrains {
     let values = DifficultyValues::calculate(difficulty, converted);
 
     TaikoStrains {

@@ -1,7 +1,7 @@
 use std::cmp;
 
 use crate::{
-    any::difficulty::{mode::ModeDifficulty, skills::Skill},
+    any::difficulty::{skills::Skill, Difficulty},
     mania::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},
@@ -18,7 +18,7 @@ mod skills;
 const STAR_SCALING_FACTOR: f64 = 0.018;
 
 pub fn difficulty(
-    difficulty: &ModeDifficulty,
+    difficulty: &Difficulty,
     converted: &ManiaBeatmap<'_>,
 ) -> ManiaDifficultyAttributes {
     let n_objects = cmp::min(difficulty.get_passed_objects(), converted.hit_objects.len()) as u32;
@@ -47,7 +47,7 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &ModeDifficulty, converted: &ManiaBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
         let total_columns = converted.cs.round_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();

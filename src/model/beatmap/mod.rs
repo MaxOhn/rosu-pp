@@ -7,7 +7,7 @@ use rosu_map::{
 
 use crate::{
     catch::Catch, mania::Mania, osu::Osu, taiko::Taiko, Difficulty, GradualDifficulty,
-    GradualPerformance, ModeDifficulty, Performance,
+    GradualPerformance, Performance,
 };
 
 pub use self::{
@@ -85,23 +85,18 @@ impl Beatmap {
         bpm::bpm(self.hit_objects.last(), &self.timing_points)
     }
 
-    /// Create a difficulty calculator for this [`Beatmap`].
-    pub const fn difficulty(&self) -> Difficulty<'_> {
-        Difficulty::new(self)
-    }
-
     /// Create a performance calculator for this [`Beatmap`].
     pub const fn performance(&self) -> Performance<'_> {
         Performance::new(self)
     }
 
     /// Create a gradual difficulty calculator for this [`Beatmap`].
-    pub fn gradual_difficulty(&self, difficulty: &ModeDifficulty) -> GradualDifficulty {
+    pub fn gradual_difficulty(&self, difficulty: &Difficulty) -> GradualDifficulty {
         GradualDifficulty::new(difficulty, self)
     }
 
     /// Create a gradual performance calculator for this [`Beatmap`].
-    pub fn gradual_performance(&self, difficulty: &ModeDifficulty) -> GradualPerformance {
+    pub fn gradual_performance(&self, difficulty: &Difficulty) -> GradualPerformance {
         GradualPerformance::new(difficulty, self)
     }
 
@@ -126,7 +121,7 @@ impl Beatmap {
     }
 
     /// Convert a [`&mut Beatmap`] to the specified mode with an argument
-    /// instead of a generic parameter and return the [`ConvertStatus`].
+    /// instead of a generic parameter.
     ///
     /// [`&mut Beatmap`]: Beatmap
     pub fn convert_inplace(&mut self, mode: GameMode) -> ConvertStatus {
