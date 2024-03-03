@@ -10,6 +10,24 @@ use crate::{
 };
 
 /// Difficulty calculator on maps of a given mode.
+///
+/// # Example
+///
+/// ```
+/// use rosu_pp::{Beatmap, ConvertedDifficulty};
+/// use rosu_pp::catch::{Catch, CatchDifficultyAttributes};
+///
+/// let converted = Beatmap::from_path("./resources/2118524.osu")
+///     .unwrap()
+///     .unchecked_into_converted();
+///
+/// let difficulty = ConvertedDifficulty::<Catch>::new();
+/// // Same as `Difficulty::new().with_mode::<Catch>();`
+///
+/// let attrs: CatchDifficultyAttributes = difficulty
+///     .mods(8 + 1024) // HDFL
+///     .calculate(&converted);
+/// ```
 #[must_use]
 pub struct ConvertedDifficulty<M> {
     inner: Difficulty,

@@ -23,6 +23,18 @@ pub mod skills;
 use crate::{model::mode::IGameMode, util::mods::Mods};
 
 /// Difficulty calculator on maps of any mode.
+///
+/// # Example
+///
+/// ```
+/// use rosu_pp::{Beatmap, Difficulty, any::DifficultyAttributes};
+///
+/// let map = Beatmap::from_path("./resources/2118524.osu").unwrap();
+///
+/// let attrs: DifficultyAttributes = Difficulty::new()
+///     .mods(8 + 1024) // HDFL
+///     .calculate(&map);
+/// ```
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 #[must_use]
 pub struct Difficulty {
