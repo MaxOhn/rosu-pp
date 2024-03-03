@@ -150,10 +150,10 @@ impl<'map> CatchPerformance<'map> {
     pub const fn state(mut self, state: CatchScoreState) -> Self {
         let CatchScoreState {
             max_combo,
-            n_fruits,
-            n_droplets,
-            n_tiny_droplets,
-            n_tiny_droplet_misses,
+            fruits: n_fruits,
+            droplets: n_droplets,
+            tiny_droplets: n_tiny_droplets,
+            tiny_droplet_misses: n_tiny_droplet_misses,
             misses,
         } = state;
 
@@ -249,8 +249,8 @@ impl<'map> CatchPerformance<'map> {
             }
         };
 
-        best_state.n_fruits = n_fruits;
-        best_state.n_droplets = n_droplets;
+        best_state.fruits = n_fruits;
+        best_state.droplets = n_droplets;
 
         let mut find_best_tiny_droplets = |acc: f64| {
             let raw_tiny_droplets = acc
@@ -275,8 +275,8 @@ impl<'map> CatchPerformance<'map> {
 
                 if curr_dist < best_dist {
                     best_dist = curr_dist;
-                    best_state.n_tiny_droplets = n_tiny_droplets;
-                    best_state.n_tiny_droplet_misses = n_tiny_droplet_misses;
+                    best_state.tiny_droplets = n_tiny_droplets;
+                    best_state.tiny_droplet_misses = n_tiny_droplet_misses;
                 }
             }
         };
@@ -287,8 +287,8 @@ impl<'map> CatchPerformance<'map> {
                 Some(acc) => {
                     match (n_tiny_droplets + n_tiny_droplet_misses).cmp(&attrs.n_tiny_droplets) {
                         Ordering::Equal => {
-                            best_state.n_tiny_droplets = n_tiny_droplets;
-                            best_state.n_tiny_droplet_misses = n_tiny_droplet_misses;
+                            best_state.tiny_droplets = n_tiny_droplets;
+                            best_state.tiny_droplet_misses = n_tiny_droplet_misses;
                         }
                         Ordering::Less | Ordering::Greater => find_best_tiny_droplets(acc),
                     }
@@ -298,24 +298,24 @@ impl<'map> CatchPerformance<'map> {
                         .n_tiny_droplets
                         .saturating_sub(n_tiny_droplets + n_tiny_droplet_misses);
 
-                    best_state.n_tiny_droplets = n_tiny_droplets + n_remaining;
-                    best_state.n_tiny_droplet_misses = n_tiny_droplet_misses;
+                    best_state.tiny_droplets = n_tiny_droplets + n_remaining;
+                    best_state.tiny_droplet_misses = n_tiny_droplet_misses;
                 }
             },
             (Some(n_tiny_droplets), None) => {
-                best_state.n_tiny_droplets = cmp::min(attrs.n_tiny_droplets, n_tiny_droplets);
-                best_state.n_tiny_droplet_misses =
+                best_state.tiny_droplets = cmp::min(attrs.n_tiny_droplets, n_tiny_droplets);
+                best_state.tiny_droplet_misses =
                     attrs.n_tiny_droplets.saturating_sub(n_tiny_droplets);
             }
             (None, Some(n_tiny_droplet_misses)) => {
-                best_state.n_tiny_droplets =
+                best_state.tiny_droplets =
                     attrs.n_tiny_droplets.saturating_sub(n_tiny_droplet_misses);
-                best_state.n_tiny_droplet_misses =
+                best_state.tiny_droplet_misses =
                     cmp::min(attrs.n_tiny_droplets, n_tiny_droplet_misses);
             }
             (None, None) => match self.acc {
                 Some(acc) => find_best_tiny_droplets(acc),
-                None => best_state.n_tiny_droplets = attrs.n_tiny_droplets,
+                None => best_state.tiny_droplets = attrs.n_tiny_droplets,
             },
         }
 
@@ -524,7 +524,7 @@ impl CatchPerformanceInner {
     }
 
     const fn combo_hits(&self) -> u32 {
-        self.state.n_fruits + self.state.n_droplets + self.state.misses
+        self.state.fruits + self.state.droplets + self.state.misses
     }
 }
 
@@ -636,8 +636,8 @@ mod test {
             }
         };
 
-        best_state.n_fruits = new_fruits;
-        best_state.n_droplets = new_droplets;
+        best_state.fruits = new_fruits;
+        best_state.droplets = new_droplets;
 
         let (min_tiny_droplets, max_tiny_droplets) = match (n_tiny_droplets, n_tiny_droplet_misses)
         {
@@ -676,8 +676,8 @@ mod test {
 
             if curr_dist < best_dist {
                 best_dist = curr_dist;
-                best_state.n_tiny_droplets = new_tiny_droplets;
-                best_state.n_tiny_droplet_misses = new_tiny_droplet_misses;
+                best_state.tiny_droplets = new_tiny_droplets;
+                best_state.tiny_droplet_misses = new_tiny_droplet_misses;
             }
         }
 
@@ -746,10 +746,10 @@ mod test {
 
         let expected = CatchScoreState {
             max_combo: N_FRUITS + N_DROPLETS - 2,
-            n_fruits: N_FRUITS - 2,
-            n_droplets: N_DROPLETS,
-            n_tiny_droplets: N_TINY_DROPLETS - 20,
-            n_tiny_droplet_misses: 20,
+            fruits: N_FRUITS - 2,
+            droplets: N_DROPLETS,
+            tiny_droplets: N_TINY_DROPLETS - 20,
+            tiny_droplet_misses: 20,
             misses: 2,
         };
 

@@ -7,13 +7,13 @@ pub struct CatchScoreState {
     /// Note that only fruits and droplets are considered for osu!catch combo.
     pub max_combo: u32,
     /// Amount of current fruits (300s).
-    pub n_fruits: u32,
+    pub fruits: u32,
     /// Amount of current droplets (100s).
-    pub n_droplets: u32,
+    pub droplets: u32,
     /// Amount of current tiny droplets (50s).
-    pub n_tiny_droplets: u32,
+    pub tiny_droplets: u32,
     /// Amount of current tiny droplet misses (katus).
-    pub n_tiny_droplet_misses: u32,
+    pub tiny_droplet_misses: u32,
     /// Amount of current misses (fruits and droplets).
     pub misses: u32,
 }
@@ -23,21 +23,17 @@ impl CatchScoreState {
     pub const fn new() -> Self {
         Self {
             max_combo: 0,
-            n_fruits: 0,
-            n_droplets: 0,
-            n_tiny_droplets: 0,
-            n_tiny_droplet_misses: 0,
+            fruits: 0,
+            droplets: 0,
+            tiny_droplets: 0,
+            tiny_droplet_misses: 0,
             misses: 0,
         }
     }
 
     /// Return the total amount of hits by adding everything up.
     pub const fn total_hits(&self) -> u32 {
-        self.n_fruits
-            + self.n_droplets
-            + self.n_tiny_droplets
-            + self.n_tiny_droplet_misses
-            + self.misses
+        self.fruits + self.droplets + self.tiny_droplets + self.tiny_droplet_misses + self.misses
     }
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.
@@ -48,7 +44,7 @@ impl CatchScoreState {
             return 0.0;
         }
 
-        let numerator = self.n_fruits + self.n_droplets + self.n_tiny_droplets;
+        let numerator = self.fruits + self.droplets + self.tiny_droplets;
         let denominator = total_hits;
 
         f64::from(numerator) / f64::from(denominator)

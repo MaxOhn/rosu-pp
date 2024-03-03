@@ -34,7 +34,7 @@ use crate::{
 ///
 /// // The first 10 hitresults are only fruits
 /// for _ in 0..10 {
-///     state.n_fruits += 1;
+///     state.fruits += 1;
 ///     state.max_combo += 1;
 ///
 ///     let attrs = gradual.next(state.clone()).unwrap();
@@ -52,15 +52,15 @@ use crate::{
 /// // Notice how tiny droplets from sliders do not count as hit objects
 /// // that require processing. Only fruits and droplets do.
 /// // Also notice how all 10 objects will be processed in one go.
-/// state.n_fruits += 4;
-/// state.n_droplets += 6;
-/// state.n_tiny_droplets += 12;
+/// state.fruits += 4;
+/// state.droplets += 6;
+/// state.tiny_droplets += 12;
 /// // The `nth` method takes a zero-based value.
 /// let attrs = gradual.nth(state.clone(), 9).unwrap();
 /// println!("PP: {}", attrs.pp);
 ///
 /// // Now comes another fruit. Note that the max combo gets incremented again.
-/// state.n_fruits += 1;
+/// state.fruits += 1;
 /// state.max_combo += 1;
 /// let attrs = gradual.next(state.clone()).unwrap();
 /// println!("PP: {}", attrs.pp);
@@ -68,10 +68,10 @@ use crate::{
 /// // Skip to the end
 /// # /*
 /// state.max_combo = ...
-/// state.n_fruits = ...
-/// state.n_droplets = ...
-/// state.n_tiny_droplets = ...
-/// state.n_tiny_droplet_misses = ...
+/// state.fruits = ...
+/// state.droplets = ...
+/// state.tiny_droplets = ...
+/// state.tiny_droplet_misses = ...
 /// state.misses = ...
 /// # */
 /// let attrs = gradual.last(state.clone()).unwrap();

@@ -89,10 +89,10 @@ impl From<ScoreState> for CatchScoreState {
     fn from(state: ScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
-            n_fruits: state.n300,
-            n_droplets: state.n100,
-            n_tiny_droplets: state.n50,
-            n_tiny_droplet_misses: state.n_katu,
+            fruits: state.n300,
+            droplets: state.n100,
+            tiny_droplets: state.n50,
+            tiny_droplet_misses: state.n_katu,
             misses: state.misses,
         }
     }
@@ -144,10 +144,10 @@ impl From<CatchScoreState> for ScoreState {
         Self {
             max_combo: state.max_combo,
             n_geki: 0,
-            n_katu: state.n_tiny_droplet_misses,
-            n300: state.n_fruits,
-            n100: state.n_droplets,
-            n50: state.n_tiny_droplets,
+            n_katu: state.tiny_droplet_misses,
+            n300: state.fruits,
+            n100: state.droplets,
+            n50: state.tiny_droplets,
             misses: state.misses,
         }
     }
