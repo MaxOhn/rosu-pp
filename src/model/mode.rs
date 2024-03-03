@@ -75,3 +75,10 @@ pub enum ConvertStatus {
     /// Conversion not possible.
     Incompatible,
 }
+
+impl ConvertStatus {
+    /// Whether this [`ConvertStatus`] represents a success.
+    pub const fn success(self) -> bool {
+        matches!(self, Self::Noop | Self::Conversion)
+    }
+}
