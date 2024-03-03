@@ -5,7 +5,10 @@ use rosu_map::{
     LATEST_FORMAT_VERSION,
 };
 
-use crate::{Difficulty, GradualDifficulty, GradualPerformance, ModeDifficulty, Performance};
+use crate::{
+    catch::Catch, mania::Mania, osu::Osu, taiko::Taiko, Difficulty, GradualDifficulty,
+    GradualPerformance, ModeDifficulty, Performance,
+};
 
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
@@ -19,7 +22,7 @@ use super::{
         TimingPoint,
     },
     hit_object::HitObject,
-    mode::IGameMode,
+    mode::{ConvertStatus, IGameMode},
 };
 
 mod attributes;
@@ -71,6 +74,17 @@ impl Beatmap {
         rosu_map::from_bytes(bytes)
     }
 
+    /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
+    /// attributes.
+    pub const fn attributes(&self) -> BeatmapAttributesBuilder {
+        BeatmapAttributesBuilder::new(self)
+    }
+
+    /// The beats per minute of the map.
+    pub fn bpm(&self) -> f64 {
+        bpm::bpm(self.hit_objects.last(), &self.timing_points)
+    }
+
     /// Create a difficulty calculator for this [`Beatmap`].
     pub const fn difficulty(&self) -> Difficulty<'_> {
         Difficulty::new(self)
@@ -109,6 +123,19 @@ impl Beatmap {
     /// Sum up the duration of all breaks (in milliseconds).
     pub fn total_break_time(&self) -> f64 {
         self.breaks.iter().map(BreakPeriod::duration).sum()
+    }
+
+    /// Convert a [`&mut Beatmap`] to the specified mode with an argument
+    /// instead of a generic parameter and return the [`ConvertStatus`].
+    ///
+    /// [`&mut Beatmap`]: Beatmap
+    pub fn convert_inplace(&mut self, mode: GameMode) -> ConvertStatus {
+        match mode {
+            GameMode::Osu => Osu::try_convert(self),
+            GameMode::Taiko => Taiko::try_convert(self),
+            GameMode::Catch => Catch::try_convert(self),
+            GameMode::Mania => Mania::try_convert(self),
+        }
     }
 
     /// Attempt to convert a [`&Beatmap`] to the specified mode.
@@ -167,17 +194,6 @@ impl Beatmap {
     /// Panics if the conversion is incompatible.
     pub fn unchecked_into_converted<'a, M: IGameMode>(self) -> Converted<'a, M> {
         Converted::unchecked_from_owned(self)
-    }
-
-    /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
-    /// attributes.
-    pub const fn attributes(&self) -> BeatmapAttributesBuilder {
-        BeatmapAttributesBuilder::new(self)
-    }
-
-    /// The beats per minute of the map.
-    pub fn bpm(&self) -> f64 {
-        bpm::bpm(self.hit_objects.last(), &self.timing_points)
     }
 }
 
