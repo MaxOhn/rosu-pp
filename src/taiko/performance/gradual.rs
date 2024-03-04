@@ -28,7 +28,7 @@ use super::TaikoPerformanceAttributes;
 ///     .unchecked_into_converted::<Taiko>();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = TaikoGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = TaikoGradualPerformance::new(difficulty, &converted);
 /// let mut state = TaikoScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s

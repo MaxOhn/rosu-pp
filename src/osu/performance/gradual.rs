@@ -28,7 +28,7 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 ///     .unchecked_into_converted::<Osu>();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = OsuGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = OsuGradualPerformance::new(difficulty, &converted);
 /// let mut state = OsuScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hits are 300s and there are no sliders for additional combo

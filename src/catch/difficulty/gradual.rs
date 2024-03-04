@@ -39,7 +39,7 @@ use super::{
 ///     .unchecked_into_converted::<Catch>();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = CatchGradualDifficulty::new(&difficulty, &converted);
+/// let mut iter = CatchGradualDifficulty::new(difficulty, &converted);
 ///
 /// // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();

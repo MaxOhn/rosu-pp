@@ -28,7 +28,7 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 ///     .unchecked_into_converted::<Mania>();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = ManiaGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = ManiaGradualPerformance::new(difficulty, &converted);
 /// let mut state = ManiaScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 320s

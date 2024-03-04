@@ -33,7 +33,7 @@ use super::{
 ///     .unchecked_into_converted::<Taiko>();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = TaikoGradualDifficulty::new(&difficulty, &converted);
+/// let mut iter = TaikoGradualDifficulty::new(difficulty, &converted);
 ///
 /// // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();

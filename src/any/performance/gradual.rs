@@ -36,7 +36,7 @@ use crate::{
 ///
 /// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = GradualPerformance::new(&difficulty, &map);
+/// let mut gradual = GradualPerformance::new(difficulty, &map);
 /// let mut state = ScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s

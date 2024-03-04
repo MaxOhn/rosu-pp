@@ -29,7 +29,7 @@ use crate::{
 ///     .unchecked_into_converted::<Catch>();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = CatchGradualPerformance::new(&difficulty, &converted);
+/// let mut gradual = CatchGradualPerformance::new(difficulty, &converted);
 /// let mut state = CatchScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are only fruits

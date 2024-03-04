@@ -27,7 +27,7 @@ use crate::{
 ///
 /// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = GradualDifficulty::new(&difficulty, &map);
+/// let mut iter = GradualDifficulty::new(difficulty, &map);
 ///
 /// // the difficulty of the map after the first object
 /// let attrs1 = iter.next();
