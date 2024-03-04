@@ -542,7 +542,7 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
+    use crate::Beatmap;
 
     use super::*;
 
@@ -559,7 +559,7 @@ mod test {
                     .unwrap()
                     .unchecked_into_converted::<Catch>();
 
-                let attrs = ConvertedDifficulty::new().calculate(&converted);
+                let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(N_FRUITS, attrs.n_fruits);
                 assert_eq!(N_DROPLETS, attrs.n_droplets);

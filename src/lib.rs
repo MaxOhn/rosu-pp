@@ -165,7 +165,7 @@
 
 #[doc(inline)]
 pub use self::{
-    any::{ConvertedDifficulty, Difficulty, GradualDifficulty, GradualPerformance, Performance},
+    any::{Difficulty, GradualDifficulty, GradualPerformance, Performance},
     model::beatmap::{Beatmap, Converted},
 };
 

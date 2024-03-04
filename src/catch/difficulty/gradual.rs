@@ -163,7 +163,7 @@ impl ExactSizeIterator for CatchGradualDifficulty {
 
 #[cfg(test)]
 mod tests {
-    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
+    use crate::Beatmap;
 
     use super::*;
 
@@ -207,8 +207,9 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = ConvertedDifficulty::new()
+            let expected = Difficulty::new()
                 .passed_objects(i as u32)
+                .with_mode()
                 .calculate(&converted);
 
             assert_eq!(next_gradual, expected);

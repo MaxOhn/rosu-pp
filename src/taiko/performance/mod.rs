@@ -501,7 +501,7 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
+    use crate::Beatmap;
 
     use super::*;
 
@@ -516,7 +516,7 @@ mod test {
                     .unwrap()
                     .unchecked_into_converted::<Taiko>();
 
-                let attrs = ConvertedDifficulty::new().calculate(&converted);
+                let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(MAX_COMBO, attrs.max_combo);
 

@@ -823,7 +823,7 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
+    use crate::Beatmap;
 
     use super::*;
 
@@ -838,7 +838,7 @@ mod test {
                     .unwrap()
                     .unchecked_into_converted::<Osu>();
 
-                let attrs = ConvertedDifficulty::new().calculate(&converted);
+                let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(
                     (attrs.n_circles, attrs.n_sliders, attrs.n_spinners),

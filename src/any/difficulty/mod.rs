@@ -1,4 +1,7 @@
-use std::{borrow::Cow, num::NonZeroU32};
+use std::{
+    borrow::Cow,
+    num::{NonZeroU32, NonZeroU64},
+};
 
 use rosu_map::section::general::GameMode;
 
@@ -35,7 +38,7 @@ use crate::{model::mode::IGameMode, util::mods::Mods};
 ///     .mods(8 + 1024) // HDFL
 ///     .calculate(&map);
 /// ```
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[must_use]
 pub struct Difficulty {
     mods: u32,
@@ -49,6 +52,24 @@ pub struct Difficulty {
     /// This allows for an optimization to reduce the struct size by storing its
     /// bits as a [`NonZeroU32`].
     clock_rate: Option<NonZeroU32>,
+    ar: Option<ModsDependent>,
+    cs: Option<ModsDependent>,
+    hp: Option<ModsDependent>,
+    od: Option<ModsDependent>,
+    /// The slider multiplier will be clamped internally between 0.05 and 50.0.
+    ///
+    /// Since its minimum value is 0.05, its bits are never zero.
+    ///
+    /// This allows for an optimization to reduce the struct size by storing its
+    /// bits as a [`NonZeroU64`].
+    slider_multiplier: Option<NonZeroU64>,
+    hardrock_offsets: Option<bool>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ModsDependent {
+    pub value: f32,
+    pub with_mods: bool,
 }
 
 impl Difficulty {
@@ -58,12 +79,21 @@ impl Difficulty {
             mods: 0,
             passed_objects: None,
             clock_rate: None,
+            ar: None,
+            cs: None,
+            hp: None,
+            od: None,
+            slider_multiplier: None,
+            hardrock_offsets: None,
         }
     }
 
     /// Use this [`Difficulty`] as a calculator for a specific [`IGameMode`].
-    pub const fn with_mode<M: IGameMode>(self) -> ConvertedDifficulty<M> {
-        ConvertedDifficulty::from_difficulty(self)
+    ///
+    /// Note that [`ConvertedDifficulty`] won't allow to further customize
+    /// fields so be sure they're all set before converting to it.
+    pub const fn with_mode<M: IGameMode>(&self) -> ConvertedDifficulty<'_, M> {
+        ConvertedDifficulty::new(self)
     }
 
     /// Specify mods through their bit values.
@@ -81,10 +111,14 @@ impl Difficulty {
         }
     }
 
-    /// Adjust the clock rate used in the calculation between 0.01 and 100.0.
+    /// Adjust the clock rate used in the calculation.
     ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | 0.01    | 100     |
     pub fn clock_rate(self, clock_rate: f64) -> Self {
         let clock_rate = (clock_rate as f32).clamp(0.01, 100.0).to_bits();
 
@@ -98,9 +132,117 @@ impl Difficulty {
         }
     }
 
-    /// Perform the difficulty calculation.
+    /// Override a beatmap's set AR.
     ///
-    /// The returned attributes depend on the map's mode.
+    /// Only relevant for osu! and osu!catch.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn ar(self, ar: f32, with_mods: bool) -> Self {
+        Self {
+            ar: Some(ModsDependent {
+                value: ar.clamp(-20.0, 20.0),
+                with_mods,
+            }),
+            ..self
+        }
+    }
+
+    /// Override a beatmap's set CS.
+    ///
+    /// Only relevant for osu! and osu!catch.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn cs(self, cs: f32, with_mods: bool) -> Self {
+        Self {
+            cs: Some(ModsDependent {
+                value: cs.clamp(-20.0, 20.0),
+                with_mods,
+            }),
+            ..self
+        }
+    }
+
+    /// Override a beatmap's set HP.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn hp(self, hp: f32, with_mods: bool) -> Self {
+        Self {
+            hp: Some(ModsDependent {
+                value: hp.clamp(-20.0, 20.0),
+                with_mods,
+            }),
+            ..self
+        }
+    }
+
+    /// Override a beatmap's set OD.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn od(self, od: f32, with_mods: bool) -> Self {
+        Self {
+            od: Some(ModsDependent {
+                value: od.clamp(-20.0, 20.0),
+                with_mods,
+            }),
+            ..self
+        }
+    }
+
+    /// Adjust a beatmap's set scroll speed.
+    ///
+    /// Only relevant for osu!taiko.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | 0.05    | 50      |
+    pub fn slider_multiplier(self, slider_multiplier: f64) -> Self {
+        let slider_multiplier = slider_multiplier.clamp(0.05, 50.0).to_bits();
+
+        // SAFETY: The minimum value is 0.05 so its bits can never be fully
+        // zero.
+        let non_zero = unsafe { NonZeroU64::new_unchecked(slider_multiplier) };
+
+        Self {
+            slider_multiplier: Some(non_zero),
+            ..self
+        }
+    }
+
+    /// Adjust patterns as if the HR mod is enabled.
+    ///
+    /// Only relevant for osu!catch.
+    pub const fn hardrock_offsets(self, hardrock_offsets: bool) -> Self {
+        Self {
+            hardrock_offsets: Some(hardrock_offsets),
+            ..self
+        }
+    }
+
+    /// Perform the difficulty calculation.
     pub fn calculate(&self, map: &Beatmap) -> DifficultyAttributes {
         let map = Cow::Borrowed(map);
 
@@ -156,5 +298,37 @@ impl Difficulty {
 
     pub(crate) fn get_passed_objects(&self) -> usize {
         self.passed_objects.map_or(usize::MAX, |n| n as usize)
+    }
+
+    pub(crate) const fn get_ar(&self) -> Option<ModsDependent> {
+        self.ar
+    }
+
+    pub(crate) const fn get_cs(&self) -> Option<ModsDependent> {
+        self.cs
+    }
+
+    pub(crate) const fn get_hp(&self) -> Option<ModsDependent> {
+        self.hp
+    }
+
+    pub(crate) const fn get_od(&self) -> Option<ModsDependent> {
+        self.od
+    }
+
+    pub(crate) fn get_slider_multiplier(&self) -> f64 {
+        self.slider_multiplier
+            .map(NonZeroU64::get)
+            .map_or(1.0, f64::from_bits)
+    }
+
+    pub(crate) const fn get_hardrock_offsets(&self) -> Option<bool> {
+        self.hardrock_offsets
+    }
+}
+
+impl Default for Difficulty {
+    fn default() -> Self {
+        Self::new()
     }
 }

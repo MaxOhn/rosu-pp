@@ -48,6 +48,16 @@ impl<'a, M> Converted<'a, M> {
     pub fn into_inner(self) -> Cow<'a, Beatmap> {
         self.map
     }
+
+    /// Borrow the contained [`Beatmap`] to cheaply create a new owned
+    /// [`Converted`].
+    ///
+    /// This is the same as `.clone()` except cheap - but its lifetime might be
+    /// shorter.
+    #[must_use]
+    pub fn as_owned(&'a self) -> Self {
+        Self::new(Cow::Borrowed(self.map.as_ref()))
+    }
 }
 
 impl<M: IGameMode> Converted<'_, M> {
@@ -85,16 +95,6 @@ impl<M: IGameMode> Converted<'_, M> {
 }
 
 impl<'a, M: IGameMode> Converted<'a, M> {
-    /// Borrow the contained [`Beatmap`] to cheaply create a new owned
-    /// [`Converted`].
-    ///
-    /// This is the same as `.clone()` except cheap - but its lifetime might be
-    /// shorter.
-    #[must_use]
-    pub fn as_owned(&'a self) -> Self {
-        Self::new(Cow::Borrowed(self.map.as_ref()))
-    }
-
     /// Create a performance calculator for the map.
     pub fn performance(self) -> M::Performance<'a> {
         M::performance(self)

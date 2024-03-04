@@ -14,33 +14,26 @@ use crate::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, ConvertedDifficulty};
+/// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::catch::{Catch, CatchDifficultyAttributes};
 ///
 /// let converted = Beatmap::from_path("./resources/2118524.osu")
 ///     .unwrap()
 ///     .unchecked_into_converted();
 ///
-/// let difficulty = ConvertedDifficulty::<Catch>::new();
-/// // Same as `Difficulty::new().with_mode::<Catch>();`
-///
-/// let attrs: CatchDifficultyAttributes = difficulty
+/// let attrs: CatchDifficultyAttributes = Difficulty::new()
 ///     .mods(8 + 1024) // HDFL
+///     .with_mode::<Catch>() // -> `ConvertedDifficulty`
 ///     .calculate(&converted);
 /// ```
 #[must_use]
-pub struct ConvertedDifficulty<M> {
-    inner: Difficulty,
+pub struct ConvertedDifficulty<'a, M> {
+    inner: &'a Difficulty,
     _mode: PhantomData<M>,
 }
 
-impl<M> ConvertedDifficulty<M> {
-    /// Create a new difficulty calculator for a generic mode.
-    pub const fn new() -> Self {
-        Self::from_difficulty(Difficulty::new())
-    }
-
-    pub(crate) const fn from_difficulty(difficulty: Difficulty) -> Self {
+impl<'a, M> ConvertedDifficulty<'a, M> {
+    pub(crate) const fn new(difficulty: &'a Difficulty) -> Self {
         Self {
             inner: difficulty,
             _mode: PhantomData,
@@ -48,102 +41,73 @@ impl<M> ConvertedDifficulty<M> {
     }
 
     /// Return the internal [`Difficulty`].
-    pub const fn into_inner(self) -> Difficulty {
+    pub const fn inner(self) -> &'a Difficulty {
         self.inner
     }
 
     /// Cast from generic mode `M` to `N`.
-    pub const fn cast<N: IGameMode>(self) -> ConvertedDifficulty<N> {
+    pub const fn cast<N: IGameMode>(self) -> ConvertedDifficulty<'a, N> {
         ConvertedDifficulty {
             inner: self.inner,
             _mode: PhantomData,
         }
     }
-
-    /// Specify mods through their bit values.
-    ///
-    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
-    pub const fn mods(self, mods: u32) -> Self {
-        Self {
-            inner: self.inner.mods(mods),
-            ..self
-        }
-    }
-
-    /// Amount of passed objects for partial plays, e.g. a fail.
-    pub const fn passed_objects(self, passed_objects: u32) -> Self {
-        Self {
-            inner: self.inner.passed_objects(passed_objects),
-            ..self
-        }
-    }
-
-    /// Adjust the clock rate used in the calculation between 0.01 and 100.0.
-    ///
-    /// If none is specified, it will take the clock rate based on the mods
-    /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
-    pub fn clock_rate(self, clock_rate: f64) -> Self {
-        Self {
-            inner: self.inner.clock_rate(clock_rate),
-            ..self
-        }
-    }
 }
 
-impl<M: IGameMode> ConvertedDifficulty<M> {
+impl<M: IGameMode> ConvertedDifficulty<'_, M> {
     /// Perform the difficulty calculation for a [`Converted`] beatmap and
     /// process the final skill values.
-    pub fn calculate(&self, map: &Converted<'_, M>) -> M::DifficultyAttributes {
-        M::difficulty(&self.inner, map)
+    pub fn calculate(self, map: &Converted<'_, M>) -> M::DifficultyAttributes {
+        M::difficulty(self.inner, map)
     }
 
     /// Perform a difficulty calculation for a [`Converted`] beatmap without
     /// processing the final skill values.
-    pub fn strains(&self, map: &Converted<'_, M>) -> M::Strains {
-        M::strains(&self.inner, map)
+    pub fn strains(self, map: &Converted<'_, M>) -> M::Strains {
+        M::strains(self.inner, map)
     }
 
     /// Create a gradual difficulty calculator for a [`Converted`] beatmap.
-    pub fn gradual_difficulty(&self, map: &Converted<'_, M>) -> M::GradualDifficulty {
-        M::gradual_difficulty(&self.inner, map)
+    pub fn gradual_difficulty(self, map: &Converted<'_, M>) -> M::GradualDifficulty {
+        M::gradual_difficulty(self.inner, map)
     }
 
     /// Create a gradual performance calculator for a [`Converted`] beatmap.
-    pub fn gradual_performance(&self, map: &Converted<'_, M>) -> M::GradualPerformance {
-        M::gradual_performance(&self.inner, map)
+    pub fn gradual_performance(self, map: &Converted<'_, M>) -> M::GradualPerformance {
+        M::gradual_performance(self.inner, map)
     }
 }
 
-impl<M: IGameMode> From<Difficulty> for ConvertedDifficulty<M> {
-    fn from(difficulty: Difficulty) -> Self {
-        Self::from_difficulty(difficulty)
+impl<'a, M: IGameMode> From<&'a Difficulty> for ConvertedDifficulty<'a, M> {
+    fn from(difficulty: &'a Difficulty) -> Self {
+        Self::new(difficulty)
     }
 }
 
-impl<M> AsRef<Difficulty> for ConvertedDifficulty<M> {
+impl<M> AsRef<Difficulty> for ConvertedDifficulty<'_, M> {
     fn as_ref(&self) -> &Difficulty {
-        &self.inner
+        self.inner
     }
 }
 
-impl<M> Copy for ConvertedDifficulty<M> {}
+impl<M> Copy for ConvertedDifficulty<'_, M> {}
 
-impl<M> Clone for ConvertedDifficulty<M> {
+impl<M> Clone for ConvertedDifficulty<'_, M> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<M> Debug for ConvertedDifficulty<M> {
+impl<M> Debug for ConvertedDifficulty<'_, M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("ConvertedDifficulty")
-            .field("inner", &self.inner)
+            .field("inner", self.inner)
             .field("mode", &GenericFormatter::<M>::new())
             .finish()
     }
 }
 
-impl<M> PartialEq for ConvertedDifficulty<M> {
+impl<M> PartialEq for ConvertedDifficulty<'_, M> {
     fn eq(&self, other: &Self) -> bool {
         self.inner == other.inner
     }

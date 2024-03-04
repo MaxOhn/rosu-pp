@@ -916,7 +916,7 @@ mod tests {
 
     use proptest::prelude::*;
 
-    use crate::{any::difficulty::converted::ConvertedDifficulty, Beatmap};
+    use crate::Beatmap;
 
     use super::*;
 
@@ -931,7 +931,7 @@ mod tests {
                     .unwrap()
                     .unchecked_into_converted::<Mania>();
 
-                let attrs = ConvertedDifficulty::new().calculate(&converted);
+                let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(N_OBJECTS, converted.hit_objects.len() as u32);
 

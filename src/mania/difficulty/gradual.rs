@@ -209,7 +209,7 @@ fn increment_combo_raw(is_circle: bool, start_time: f64, end_time: f64, curr_com
 
 #[cfg(test)]
 mod tests {
-    use crate::{any::difficulty::converted::ConvertedDifficulty, mania::Mania, Beatmap};
+    use crate::{mania::Mania, Beatmap};
 
     use super::*;
 
@@ -257,8 +257,9 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = ConvertedDifficulty::new()
+            let expected = Difficulty::new()
                 .passed_objects(i as u32)
+                .with_mode()
                 .calculate(&converted);
 
             assert_eq!(next_gradual, expected);
