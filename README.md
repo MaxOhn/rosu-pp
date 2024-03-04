@@ -36,9 +36,9 @@ let stars = diff_attrs.stars();
 // Calculate performance attributes
 let perf_attrs = map.performance()
     // To speed up the calculation, we can use the previous attributes.
-    // **Note** that this should only be done if the map, mode, mods,
-    // clock rate, and amount of passed objects stay the same.
-    // Otherwise, the final attributes will be incorrect.
+    // **Note** that this should only be done if the map and all difficulty
+    // settings stay the same, otherwise the final attributes will be
+    // incorrect!
     .attributes(diff_attrs)
     .mods(24) // HDHR, must be the same as before
     .combo(789)
