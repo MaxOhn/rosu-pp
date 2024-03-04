@@ -85,7 +85,7 @@ pub struct OsuGradualPerformance {
 
 impl OsuGradualPerformance {
     /// Create a new gradual performance calculator for osu!standard maps.
-    pub fn new(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, converted: &OsuBeatmap<'_>) -> Self {
         let difficulty = OsuGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -114,8 +114,7 @@ impl OsuGradualPerformance {
             .nth(n)?
             .performance()
             .state(state)
-            .mods(self.difficulty.mods)
-            .clock_rate(self.difficulty.clock_rate)
+            .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
             .calculate();
 
@@ -138,12 +137,11 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Osu>();
 
-        let mods = 88; // HDHRDT
-        let difficulty = Difficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = OsuGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_2nd = OsuGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_3rd = OsuGradualPerformance::new(&difficulty, &converted);
+        let mut gradual = OsuGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = OsuGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = OsuGradualPerformance::new(difficulty.clone(), &converted);
 
         let mut state = OsuScoreState::default();
 
@@ -170,7 +168,7 @@ mod tests {
             }
 
             let mut regular_calc = OsuPerformance::new(converted.as_owned())
-                .mods(mods)
+                .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state);
 

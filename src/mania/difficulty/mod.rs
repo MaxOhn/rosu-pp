@@ -27,8 +27,7 @@ pub fn difficulty(
 
     let hit_window = converted
         .attributes()
-        .mods(difficulty.get_mods())
-        .clock_rate(difficulty.get_clock_rate())
+        .difficulty(difficulty)
         .hit_windows()
         .od;
 

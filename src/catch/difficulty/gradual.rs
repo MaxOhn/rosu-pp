@@ -7,7 +7,6 @@ use crate::{
         convert::convert_objects,
         CatchBeatmap, CatchDifficultyAttributes,
     },
-    util::mods::Mods,
     Difficulty,
 };
 
@@ -56,8 +55,7 @@ use super::{
 /// [`CatchGradualPerformance`]: crate::catch::CatchGradualPerformance
 pub struct CatchGradualDifficulty {
     pub(crate) idx: usize,
-    pub(crate) mods: u32,
-    pub(crate) clock_rate: f64,
+    pub(crate) difficulty: Difficulty,
     attrs: CatchDifficultyAttributes,
     /// The delta of object counts after each palpable object
     count: Vec<GradualObjectCount>,
@@ -66,16 +64,16 @@ pub struct CatchGradualDifficulty {
 }
 
 impl CatchGradualDifficulty {
-    pub fn new(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
-        let mods = difficulty.get_mods();
+    pub fn new(difficulty: Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let clock_rate = difficulty.get_clock_rate();
 
         let CatchDifficultySetup { map_attrs, attrs } =
-            CatchDifficultySetup::new(difficulty, converted);
+            CatchDifficultySetup::new(&difficulty, converted);
 
-        let hr = mods.hr();
+        let hr_offsets = difficulty.get_hardrock_offsets();
         let mut count = ObjectCountBuilder::new_gradual();
-        let palpable_objects = convert_objects(converted, &mut count, hr, map_attrs.cs as f32);
+        let palpable_objects =
+            convert_objects(converted, &mut count, hr_offsets, map_attrs.cs as f32);
 
         let diff_objects = DifficultyValues::create_difficulty_objects(
             &map_attrs,
@@ -88,8 +86,7 @@ impl CatchGradualDifficulty {
 
         Self {
             idx: 0,
-            mods,
-            clock_rate,
+            difficulty,
             attrs,
             count,
             diff_objects,
@@ -171,8 +168,7 @@ mod tests {
     fn empty() {
         let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
 
-        let difficulty = Difficulty::new();
-        let mut gradual = CatchGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = CatchGradualDifficulty::new(Difficulty::new(), &converted);
 
         assert!(gradual.next().is_none());
     }
@@ -185,9 +181,9 @@ mod tests {
 
         let difficulty = Difficulty::new();
 
-        let mut gradual = CatchGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_2nd = CatchGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_3rd = CatchGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = CatchGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = CatchGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = CatchGradualDifficulty::new(difficulty.clone(), &converted);
 
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {
@@ -207,7 +203,8 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = Difficulty::new()
+            let expected = difficulty
+                .clone()
                 .passed_objects(i as u32)
                 .with_mode()
                 .calculate(&converted);

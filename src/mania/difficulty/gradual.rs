@@ -49,8 +49,7 @@ use super::{
 /// [`ManiaGradualPerformance`]: crate::mania::ManiaGradualPerformance
 pub struct ManiaGradualDifficulty {
     pub(crate) idx: usize,
-    pub(crate) mods: u32,
-    pub(crate) clock_rate: f64,
+    pub(crate) difficulty: Difficulty,
     objects_is_circle: Box<[bool]>,
     is_convert: bool,
     strain: Strain,
@@ -61,18 +60,14 @@ pub struct ManiaGradualDifficulty {
 
 impl ManiaGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!mania maps.
-    pub fn new(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
-        let mods = difficulty.get_mods();
         let total_columns = converted.cs.round_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(converted);
 
-        let HitWindows { od: hit_window, .. } = converted
-            .attributes()
-            .mods(mods)
-            .clock_rate(clock_rate)
-            .hit_windows();
+        let HitWindows { od: hit_window, .. } =
+            converted.attributes().difficulty(&difficulty).hit_windows();
 
         let mania_objects = converted
             .hit_objects
@@ -105,8 +100,7 @@ impl ManiaGradualDifficulty {
 
         Self {
             idx: 0,
-            mods,
-            clock_rate,
+            difficulty,
             objects_is_circle,
             is_convert: converted.is_convert,
             strain,
@@ -130,7 +124,12 @@ impl Iterator for ManiaGradualDifficulty {
             Skill::new(&mut self.strain, &self.diff_objects).process(curr);
 
             let is_circle = self.objects_is_circle[self.idx];
-            increment_combo(is_circle, curr, &mut self.curr_combo, self.clock_rate);
+            increment_combo(
+                is_circle,
+                curr,
+                &mut self.curr_combo,
+                self.difficulty.get_clock_rate(),
+            );
         } else if self.objects_is_circle.is_empty() {
             return None;
         }
@@ -168,9 +167,10 @@ impl Iterator for ManiaGradualDifficulty {
         }
 
         let mut strain = Skill::new(&mut self.strain, &self.diff_objects);
+        let clock_rate = self.difficulty.get_clock_rate();
 
         for (curr, is_circle) in skip_iter.take(take) {
-            increment_combo(*is_circle, curr, &mut self.curr_combo, self.clock_rate);
+            increment_combo(*is_circle, curr, &mut self.curr_combo, clock_rate);
             strain.process(curr);
             self.idx += 1;
         }
@@ -219,8 +219,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Mania>();
 
-        let difficulty = Difficulty::new();
-        let mut gradual = ManiaGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = ManiaGradualDifficulty::new(Difficulty::new(), &converted);
 
         assert!(gradual.next().is_none());
     }
@@ -233,9 +232,9 @@ mod tests {
 
         let difficulty = Difficulty::new();
 
-        let mut gradual = ManiaGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_2nd = ManiaGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_3rd = ManiaGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = ManiaGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = ManiaGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = ManiaGradualDifficulty::new(difficulty.clone(), &converted);
 
         let hit_objects_len = converted.hit_objects.len();
 
@@ -257,7 +256,8 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = Difficulty::new()
+            let expected = difficulty
+                .clone()
                 .passed_objects(i as u32)
                 .with_mode()
                 .calculate(&converted);

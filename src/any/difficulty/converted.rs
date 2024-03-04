@@ -69,12 +69,12 @@ impl<M: IGameMode> ConvertedDifficulty<'_, M> {
 
     /// Create a gradual difficulty calculator for a [`Converted`] beatmap.
     pub fn gradual_difficulty(self, map: &Converted<'_, M>) -> M::GradualDifficulty {
-        M::gradual_difficulty(self.inner, map)
+        M::gradual_difficulty(self.inner.to_owned(), map)
     }
 
     /// Create a gradual performance calculator for a [`Converted`] beatmap.
     pub fn gradual_performance(self, map: &Converted<'_, M>) -> M::GradualPerformance {
-        M::gradual_performance(self.inner, map)
+        M::gradual_performance(self.inner.to_owned(), map)
     }
 }
 

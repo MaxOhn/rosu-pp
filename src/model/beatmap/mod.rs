@@ -91,12 +91,12 @@ impl Beatmap {
     }
 
     /// Create a gradual difficulty calculator for this [`Beatmap`].
-    pub fn gradual_difficulty(&self, difficulty: &Difficulty) -> GradualDifficulty {
+    pub fn gradual_difficulty(&self, difficulty: Difficulty) -> GradualDifficulty {
         GradualDifficulty::new(difficulty, self)
     }
 
     /// Create a gradual performance calculator for this [`Beatmap`].
-    pub fn gradual_performance(&self, difficulty: &Difficulty) -> GradualPerformance {
+    pub fn gradual_performance(&self, difficulty: Difficulty) -> GradualPerformance {
         GradualPerformance::new(difficulty, self)
     }
 

@@ -103,7 +103,7 @@ pub enum GradualPerformance {
 macro_rules! from_converted {
     ( $fn:ident, $mode:ident, $converted:ident ) => {
         #[doc = concat!("Create a [`GradualPerformance`] for a [`", stringify!($converted), "`]")]
-        pub fn $fn(difficulty: &Difficulty, converted: &$converted<'_>) -> Self {
+        pub fn $fn(difficulty: Difficulty, converted: &$converted<'_>) -> Self {
             Self::$mode($mode::gradual_performance(difficulty, converted))
         }
     };
@@ -111,7 +111,7 @@ macro_rules! from_converted {
 
 impl GradualPerformance {
     /// Create a [`GradualPerformance`] for a map of any mode.
-    pub fn new(difficulty: &Difficulty, map: &Beatmap) -> Self {
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Self {
         let map = Cow::Borrowed(map);
 
         match map.mode {

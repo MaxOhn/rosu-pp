@@ -62,15 +62,12 @@ impl IGameMode for Osu {
         OsuPerformance::new(map)
     }
 
-    fn gradual_difficulty(
-        difficulty: &Difficulty,
-        map: &OsuBeatmap<'_>,
-    ) -> Self::GradualDifficulty {
+    fn gradual_difficulty(difficulty: Difficulty, map: &OsuBeatmap<'_>) -> Self::GradualDifficulty {
         OsuGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
-        difficulty: &Difficulty,
+        difficulty: Difficulty,
         map: &OsuBeatmap<'_>,
     ) -> Self::GradualPerformance {
         OsuGradualPerformance::new(difficulty, map)

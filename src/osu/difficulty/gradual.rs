@@ -55,8 +55,7 @@ use super::{
 /// [`OsuGradualPerformance`]: crate::osu::OsuGradualPerformance
 pub struct OsuGradualDifficulty {
     pub(crate) idx: usize,
-    pub(crate) mods: u32,
-    pub(crate) clock_rate: f64,
+    pub(crate) difficulty: Difficulty,
     attrs: OsuDifficultyAttributes,
     skills: OsuSkills,
     // Lifetimes actually depend on `osu_objects` so this type is
@@ -73,16 +72,15 @@ struct NotClonable;
 
 impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
-    pub fn new(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, converted: &OsuBeatmap<'_>) -> Self {
         let mods = difficulty.get_mods();
-        let clock_rate = difficulty.get_clock_rate();
 
         let OsuDifficultySetup {
             scaling_factor,
             map_attrs,
             mut attrs,
             time_preempt,
-        } = OsuDifficultySetup::new(difficulty, converted);
+        } = OsuDifficultySetup::new(&difficulty, converted);
 
         let osu_objects = convert_objects(
             converted,
@@ -105,7 +103,7 @@ impl OsuGradualDifficulty {
         let mut osu_objects = OsuObjects::new(osu_objects);
 
         let diff_objects = DifficultyValues::create_difficulty_objects(
-            difficulty,
+            &difficulty,
             &scaling_factor,
             osu_objects.iter_mut(),
         );
@@ -115,8 +113,7 @@ impl OsuGradualDifficulty {
 
         Self {
             idx: 0,
-            mods,
-            clock_rate,
+            difficulty,
             attrs,
             skills,
             diff_objects,
@@ -181,7 +178,7 @@ impl Iterator for OsuGradualDifficulty {
 
         DifficultyValues::eval(
             &mut attrs,
-            self.mods,
+            self.difficulty.get_mods(),
             aim_difficulty_value,
             aim_no_sliders_difficulty_value,
             speed_difficulty_value,
@@ -271,8 +268,7 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Osu>();
 
-        let difficulty = Difficulty::new();
-        let mut gradual = OsuGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = OsuGradualDifficulty::new(Difficulty::new(), &converted);
 
         assert!(gradual.next().is_none());
     }
@@ -285,9 +281,9 @@ mod tests {
 
         let difficulty = Difficulty::new();
 
-        let mut gradual = OsuGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_2nd = OsuGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_3rd = OsuGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = OsuGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = OsuGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = OsuGradualDifficulty::new(difficulty.clone(), &converted);
 
         let hit_objects_len = converted.hit_objects.len();
 
@@ -309,7 +305,8 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = Difficulty::new()
+            let expected = difficulty
+                .clone()
                 .passed_objects(i as u32)
                 .with_mode()
                 .calculate(&converted);

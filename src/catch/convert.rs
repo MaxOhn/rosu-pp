@@ -50,7 +50,7 @@ pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
 pub fn convert_objects(
     converted: &CatchBeatmap<'_>,
     count: &mut ObjectCountBuilder,
-    hr: bool,
+    hr_offsets: bool,
     cs: f32,
 ) -> Vec<PalpableObject> {
     // mean=686.54 | median=501
@@ -73,7 +73,7 @@ pub fn convert_objects(
 
         apply_pos_offset(
             &mut new_objects,
-            hr,
+            hr_offsets,
             &mut last_pos,
             &mut last_start_time,
             &mut rng,
@@ -174,14 +174,14 @@ impl ExactSizeIterator for ObjectIter<'_> {
 
 fn apply_pos_offset(
     hit_object: &mut ObjectIter<'_>,
-    should_apply_hr_offset: bool,
+    hr_offsets: bool,
     last_pos: &mut Option<f32>,
     last_start_time: &mut f64,
     rng: &mut Random,
 ) {
     match hit_object.state {
         ObjectIterState::Fruit(Some(ref mut fruit)) => {
-            if should_apply_hr_offset {
+            if hr_offsets {
                 apply_hr_offset(
                     hit_object.x,
                     &mut fruit.x_offset,

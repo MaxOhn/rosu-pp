@@ -9,6 +9,7 @@ use crate::{
     model::beatmap::{Beatmap, Converted},
     osu::{Osu, OsuPerformance},
     taiko::{Taiko, TaikoPerformance},
+    Difficulty,
 };
 
 use super::{
@@ -45,8 +46,8 @@ impl<'map> Performance<'map> {
     /// Create a new performance calculator through previously calculated
     /// attributes.
     ///
-    /// Note that the map, mods, and passed object count should be the same
-    /// as when the attributes were calculated.
+    /// Note that the [`Beatmap`] and [`Difficulty`] should be the same as when
+    /// the attributes were calculated.
     pub fn from_attributes(attributes: impl AttributeProvider) -> Self {
         Self::from(attributes)
     }
@@ -63,8 +64,10 @@ impl<'map> Performance<'map> {
     }
 
     /// Provide the result of a previous difficulty or performance calculation.
-    /// If you already calculated the attributes for the current map-mod combination,
-    /// be sure to put them in here so that they don't have to be recalculated.
+    ///
+    /// If you already calculated the attributes for the current [`Beatmap`]
+    /// and [`Difficulty`], be sure to put them in here so that they don't have
+    /// to be recalculated.
     pub fn attributes(self, attributes: impl AttributeProvider) -> Self {
         match self {
             Self::Osu(o) => Self::Osu(o.attributes(attributes.attributes())),
@@ -124,6 +127,16 @@ impl<'map> Performance<'map> {
         }
     }
 
+    /// Use the specified settings of the given [`Difficulty`].
+    pub fn difficulty(self, difficulty: Difficulty) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.difficulty(difficulty)),
+            Self::Taiko(t) => Self::Taiko(t.difficulty(difficulty)),
+            Self::Catch(f) => Self::Catch(f.difficulty(difficulty)),
+            Self::Mania(m) => Self::Mania(m.difficulty(difficulty)),
+        }
+    }
+
     /// Amount of passed objects for partial plays, e.g. a fail.
     ///
     /// If you want to calculate the performance after every few objects,
@@ -141,14 +154,104 @@ impl<'map> Performance<'map> {
     }
 
     /// Adjust the clock rate used in the calculation.
+    ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | 0.01    | 100     |
     pub fn clock_rate(self, clock_rate: f64) -> Self {
         match self {
             Self::Osu(o) => Self::Osu(o.clock_rate(clock_rate)),
             Self::Taiko(t) => Self::Taiko(t.clock_rate(clock_rate)),
             Self::Catch(f) => Self::Catch(f.clock_rate(clock_rate)),
             Self::Mania(m) => Self::Mania(m.clock_rate(clock_rate)),
+        }
+    }
+
+    /// Override a beatmap's set AR.
+    ///
+    /// Only relevant for osu! and osu!catch.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn ar(self, ar: f32, with_mods: bool) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.ar(ar, with_mods)),
+            Self::Catch(c) => Self::Catch(c.ar(ar, with_mods)),
+            Self::Taiko(_) | Self::Mania(_) => self,
+        }
+    }
+
+    /// Override a beatmap's set CS.
+    ///
+    /// Only relevant for osu! and osu!catch.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn cs(self, cs: f32, with_mods: bool) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.cs(cs, with_mods)),
+            Self::Catch(c) => Self::Catch(c.cs(cs, with_mods)),
+            Self::Taiko(_) | Self::Mania(_) => self,
+        }
+    }
+
+    /// Override a beatmap's set HP.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn hp(self, hp: f32, with_mods: bool) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.hp(hp, with_mods)),
+            Self::Taiko(t) => Self::Taiko(t.hp(hp, with_mods)),
+            Self::Catch(c) => Self::Catch(c.hp(hp, with_mods)),
+            Self::Mania(m) => Self::Mania(m.hp(hp, with_mods)),
+        }
+    }
+
+    /// Override a beatmap's set OD.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn od(self, od: f32, with_mods: bool) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.od(od, with_mods)),
+            Self::Taiko(t) => Self::Taiko(t.od(od, with_mods)),
+            Self::Catch(c) => Self::Catch(c.od(od, with_mods)),
+            Self::Mania(m) => Self::Mania(m.od(od, with_mods)),
+        }
+    }
+
+    /// Adjust patterns as if the HR mod is enabled.
+    ///
+    /// Only relevant for osu!catch.
+    pub fn hardrock_offsets(self, hardrock_offsets: bool) -> Self {
+        if let Self::Catch(catch) = self {
+            Self::Catch(catch.hardrock_offsets(hardrock_offsets))
+        } else {
+            self
         }
     }
 
@@ -240,9 +343,8 @@ impl<'map> Performance<'map> {
 
     /// Specify the amount of katus of a play.
     ///
-    /// This value is only relevant for osu!catch for which it represents
-    /// the amount of tiny droplet misses and osu!mania for which it.
-    /// repesents the amount of n200.
+    /// Only relevant for osu!catch for which it represents the amount of tiny
+    /// droplet misses and osu!mania for which it repesents the amount of n200.
     pub fn n_katu(self, n_katu: u32) -> Self {
         match self {
             Self::Osu(_) | Self::Taiko(_) => self,
@@ -253,8 +355,8 @@ impl<'map> Performance<'map> {
 
     /// Specify the amount of gekis of a play.
     ///
-    /// This value is only relevant for osu!mania for which it.
-    /// repesents the amount of n320.
+    /// Only relevant for osu!mania for which it repesents the
+    /// amount of n320.
     pub fn n_geki(self, n_geki: u32) -> Self {
         match self {
             Self::Osu(_) | Self::Taiko(_) | Self::Catch(_) => self,

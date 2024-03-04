@@ -1,7 +1,4 @@
-use std::{
-    borrow::Cow,
-    num::{NonZeroU32, NonZeroU64},
-};
+use std::{borrow::Cow, num::NonZeroU32};
 
 use rosu_map::section::general::GameMode;
 
@@ -56,20 +53,22 @@ pub struct Difficulty {
     cs: Option<ModsDependent>,
     hp: Option<ModsDependent>,
     od: Option<ModsDependent>,
-    /// The slider multiplier will be clamped internally between 0.05 and 50.0.
-    ///
-    /// Since its minimum value is 0.05, its bits are never zero.
-    ///
-    /// This allows for an optimization to reduce the struct size by storing its
-    /// bits as a [`NonZeroU64`].
-    slider_multiplier: Option<NonZeroU64>,
     hardrock_offsets: Option<bool>,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct ModsDependent {
     pub value: f32,
     pub with_mods: bool,
+}
+
+impl ModsDependent {
+    pub const fn new(value: f32) -> Self {
+        Self {
+            value,
+            with_mods: false,
+        }
+    }
 }
 
 impl Difficulty {
@@ -83,7 +82,6 @@ impl Difficulty {
             cs: None,
             hp: None,
             od: None,
-            slider_multiplier: None,
             hardrock_offsets: None,
         }
     }
@@ -212,26 +210,6 @@ impl Difficulty {
         }
     }
 
-    /// Adjust a beatmap's set scroll speed.
-    ///
-    /// Only relevant for osu!taiko.
-    ///
-    /// | Minimum | Maximum |
-    /// | :-----: | :-----: |
-    /// | 0.05    | 50      |
-    pub fn slider_multiplier(self, slider_multiplier: f64) -> Self {
-        let slider_multiplier = slider_multiplier.clamp(0.05, 50.0).to_bits();
-
-        // SAFETY: The minimum value is 0.05 so its bits can never be fully
-        // zero.
-        let non_zero = unsafe { NonZeroU64::new_unchecked(slider_multiplier) };
-
-        Self {
-            slider_multiplier: Some(non_zero),
-            ..self
-        }
-    }
-
     /// Adjust patterns as if the HR mod is enabled.
     ///
     /// Only relevant for osu!catch.
@@ -276,12 +254,12 @@ impl Difficulty {
     }
 
     /// Create a gradual difficulty calculator for a [`Beatmap`].
-    pub fn gradual_difficulty(&self, map: &Beatmap) -> GradualDifficulty {
+    pub fn gradual_difficulty(self, map: &Beatmap) -> GradualDifficulty {
         GradualDifficulty::new(self, map)
     }
 
     /// Create a gradual performance calculator for a [`Beatmap`].
-    pub fn gradual_performance(&self, map: &Beatmap) -> GradualPerformance {
+    pub fn gradual_performance(self, map: &Beatmap) -> GradualPerformance {
         GradualPerformance::new(self, map)
     }
 
@@ -316,14 +294,8 @@ impl Difficulty {
         self.od
     }
 
-    pub(crate) fn get_slider_multiplier(&self) -> f64 {
-        self.slider_multiplier
-            .map(NonZeroU64::get)
-            .map_or(1.0, f64::from_bits)
-    }
-
-    pub(crate) const fn get_hardrock_offsets(&self) -> Option<bool> {
-        self.hardrock_offsets
+    pub(crate) fn get_hardrock_offsets(&self) -> bool {
+        self.hardrock_offsets.unwrap_or(self.mods.hr())
     }
 }
 

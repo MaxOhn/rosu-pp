@@ -59,14 +59,14 @@ impl IGameMode for Mania {
     }
 
     fn gradual_difficulty(
-        difficulty: &Difficulty,
+        difficulty: Difficulty,
         map: &ManiaBeatmap<'_>,
     ) -> Self::GradualDifficulty {
         ManiaGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
-        difficulty: &Difficulty,
+        difficulty: Difficulty,
         map: &ManiaBeatmap<'_>,
     ) -> Self::GradualPerformance {
         ManiaGradualPerformance::new(difficulty, map)

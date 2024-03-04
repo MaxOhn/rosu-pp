@@ -84,12 +84,12 @@ impl<M: IGameMode> Converted<'_, M> {
     }
 
     /// Create a gradual difficulty calculator for the map.
-    pub fn gradual_difficulty(&self, difficulty: &Difficulty) -> M::GradualDifficulty {
+    pub fn gradual_difficulty(&self, difficulty: Difficulty) -> M::GradualDifficulty {
         M::gradual_difficulty(difficulty, self)
     }
 
     /// Create a gradual performance calculator for the map.
-    pub fn gradual_performance(&self, difficulty: &Difficulty) -> M::GradualPerformance {
+    pub fn gradual_performance(&self, difficulty: Difficulty) -> M::GradualPerformance {
         M::gradual_performance(difficulty, self)
     }
 }

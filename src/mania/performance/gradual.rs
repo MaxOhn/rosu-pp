@@ -75,7 +75,7 @@ pub struct ManiaGradualPerformance {
 
 impl ManiaGradualPerformance {
     /// Create a new gradual performance calculator for osu!mania maps.
-    pub fn new(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let difficulty = ManiaGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -104,8 +104,7 @@ impl ManiaGradualPerformance {
             .nth(n)?
             .performance()
             .state(state)
-            .mods(self.difficulty.mods)
-            .clock_rate(self.difficulty.clock_rate)
+            .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
             .calculate();
 
@@ -128,12 +127,11 @@ mod tests {
             .unwrap()
             .unchecked_into_converted::<Mania>();
 
-        let mods = 88; // HDHRDT
-        let difficulty = Difficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = ManiaGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_2nd = ManiaGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_3rd = ManiaGradualPerformance::new(&difficulty, &converted);
+        let mut gradual = ManiaGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = ManiaGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = ManiaGradualPerformance::new(difficulty.clone(), &converted);
 
         let mut state = ManiaScoreState::default();
 
@@ -160,7 +158,7 @@ mod tests {
             }
 
             let mut regular_calc = ManiaPerformance::new(converted.as_owned())
-                .mods(mods)
+                .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state.clone());
 

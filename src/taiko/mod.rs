@@ -59,14 +59,14 @@ impl IGameMode for Taiko {
     }
 
     fn gradual_difficulty(
-        difficulty: &Difficulty,
+        difficulty: Difficulty,
         map: &TaikoBeatmap<'_>,
     ) -> Self::GradualDifficulty {
         TaikoGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
-        difficulty: &Difficulty,
+        difficulty: Difficulty,
         map: &TaikoBeatmap<'_>,
     ) -> Self::GradualPerformance {
         TaikoGradualPerformance::new(difficulty, map)

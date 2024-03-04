@@ -90,7 +90,7 @@ pub struct CatchGradualPerformance {
 
 impl CatchGradualPerformance {
     /// Create a new gradual performance calculator for osu!catch maps.
-    pub fn new(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let difficulty = CatchGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -122,8 +122,7 @@ impl CatchGradualPerformance {
             .nth(n)?
             .performance()
             .state(state)
-            .mods(self.difficulty.mods)
-            .clock_rate(self.difficulty.clock_rate)
+            .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
             .calculate();
 
@@ -143,12 +142,11 @@ mod tests {
             .unwrap()
             .unchecked_into_converted();
 
-        let mods = 88; // HDHRDT
-        let difficulty = Difficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = CatchGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_2nd = CatchGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_3rd = CatchGradualPerformance::new(&difficulty, &converted);
+        let mut gradual = CatchGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = CatchGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = CatchGradualPerformance::new(difficulty.clone(), &converted);
 
         let mut state = CatchScoreState::default();
 
@@ -173,7 +171,7 @@ mod tests {
             }
 
             let regular_calc = CatchPerformance::new(converted.as_owned())
-                .mods(mods)
+                .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state.clone());
 

@@ -4,7 +4,6 @@ use crate::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
     model::beatmap::BeatmapAttributes,
-    util::mods::Mods,
 };
 
 use self::skills::movement::Movement;
@@ -42,14 +41,7 @@ pub struct CatchDifficultySetup {
 
 impl CatchDifficultySetup {
     pub fn new(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
-        let mods = difficulty.get_mods();
-        let clock_rate = difficulty.get_clock_rate();
-
-        let map_attrs = converted
-            .attributes()
-            .mods(mods)
-            .clock_rate(clock_rate)
-            .build();
+        let map_attrs = converted.attributes().difficulty(difficulty).build();
 
         let attrs = CatchDifficultyAttributes {
             ar: map_attrs.ar,
@@ -69,7 +61,6 @@ pub struct DifficultyValues {
 impl DifficultyValues {
     pub fn calculate(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
-        let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
 
         let CatchDifficultySetup {
@@ -77,10 +68,11 @@ impl DifficultyValues {
             mut attrs,
         } = CatchDifficultySetup::new(difficulty, converted);
 
-        let hr = mods.hr();
+        let hr_offsets = difficulty.get_hardrock_offsets();
         let mut count = ObjectCountBuilder::new_regular(take);
 
-        let palpable_objects = convert_objects(converted, &mut count, hr, map_attrs.cs as f32);
+        let palpable_objects =
+            convert_objects(converted, &mut count, hr_offsets, map_attrs.cs as f32);
 
         let diff_objects = Self::create_difficulty_objects(
             &map_attrs,

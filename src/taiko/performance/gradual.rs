@@ -84,7 +84,7 @@ pub struct TaikoGradualPerformance {
 
 impl TaikoGradualPerformance {
     /// Create a new gradual performance calculator for osu!taiko maps.
-    pub fn new(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
         let difficulty = TaikoGradualDifficulty::new(difficulty, converted);
 
         Self { difficulty }
@@ -113,8 +113,7 @@ impl TaikoGradualPerformance {
             .nth(n)?
             .performance()
             .state(state)
-            .mods(self.difficulty.mods)
-            .clock_rate(self.difficulty.clock_rate)
+            .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
             .calculate();
 
@@ -134,12 +133,11 @@ mod tests {
             .unwrap()
             .unchecked_into_converted();
 
-        let mods = 88; // HDHRDT
-        let difficulty = Difficulty::new().mods(88);
+        let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = TaikoGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_2nd = TaikoGradualPerformance::new(&difficulty, &converted);
-        let mut gradual_3rd = TaikoGradualPerformance::new(&difficulty, &converted);
+        let mut gradual = TaikoGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = TaikoGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = TaikoGradualPerformance::new(difficulty.clone(), &converted);
 
         let mut state = TaikoScoreState::default();
 
@@ -172,7 +170,7 @@ mod tests {
             }
 
             let mut regular_calc = TaikoPerformance::new(converted.as_owned())
-                .mods(mods)
+                .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state);
 

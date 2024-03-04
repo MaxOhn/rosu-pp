@@ -49,8 +49,7 @@ use super::{
 /// [`TaikoGradualPerformance`]: crate::taiko::TaikoGradualPerformance
 pub struct TaikoGradualDifficulty {
     pub(crate) idx: usize,
-    pub(crate) mods: u32,
-    pub(crate) clock_rate: f64,
+    pub(crate) difficulty: Difficulty,
     attrs: TaikoDifficultyAttributes,
     diff_objects: TaikoDifficultyObjects,
     diff_objects_iter: Iter<'static, RefCount<TaikoDifficultyObject>>,
@@ -69,9 +68,8 @@ enum FirstTwoCombos {
 
 impl TaikoGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!taiko maps.
-    pub fn new(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
-        let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
 
         let first_combos = match (
@@ -84,11 +82,8 @@ impl TaikoGradualDifficulty {
             (Some(true), Some(true)) => FirstTwoCombos::Both,
         };
 
-        let HitWindows { od: hit_window, .. } = converted
-            .attributes()
-            .mods(mods)
-            .clock_rate(clock_rate)
-            .hit_windows();
+        let HitWindows { od: hit_window, .. } =
+            converted.attributes().difficulty(&difficulty).hit_windows();
 
         let mut n_diff_objects = 0;
         let mut max_combo = 0;
@@ -119,8 +114,7 @@ impl TaikoGradualDifficulty {
 
         Self {
             idx: 0,
-            mods,
-            clock_rate,
+            difficulty,
             diff_objects,
             diff_objects_iter,
             peaks,
@@ -268,8 +262,7 @@ mod tests {
     fn empty() {
         let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
 
-        let difficulty = Difficulty::new();
-        let mut gradual = TaikoGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = TaikoGradualDifficulty::new(Difficulty::new(), &converted);
 
         assert!(gradual.next().is_none());
     }
@@ -282,9 +275,9 @@ mod tests {
 
         let difficulty = Difficulty::new();
 
-        let mut gradual = TaikoGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_2nd = TaikoGradualDifficulty::new(&difficulty, &converted);
-        let mut gradual_3rd = TaikoGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = TaikoGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_2nd = TaikoGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual_3rd = TaikoGradualDifficulty::new(difficulty.clone(), &converted);
 
         let hit_objects_len = converted.hit_objects.len();
 
@@ -312,7 +305,8 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let expected = Difficulty::new()
+            let expected = difficulty
+                .clone()
                 .passed_objects(i as u32)
                 .with_mode()
                 .calculate(&converted);

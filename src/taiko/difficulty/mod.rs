@@ -26,12 +26,9 @@ pub fn difficulty(
     difficulty: &Difficulty,
     converted: &TaikoBeatmap<'_>,
 ) -> TaikoDifficultyAttributes {
-    let clock_rate = difficulty.get_clock_rate();
-
     let hit_window = converted
         .attributes()
-        .mods(difficulty.get_mods())
-        .clock_rate(clock_rate)
+        .difficulty(difficulty)
         .hit_windows()
         .od;
 

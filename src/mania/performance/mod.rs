@@ -64,8 +64,10 @@ impl<'map> ManiaPerformance<'map> {
     }
 
     /// Provide the result of a previous difficulty or performance calculation.
-    /// If you already calculated the attributes for the current map-mod combination,
-    /// be sure to put them in here so that they don't have to be recalculated.
+    ///
+    /// If you already calculated the attributes for the current
+    /// [`ManiaBeatmap`] and [`Difficulty`], be sure to put them in here so
+    /// that they don't have to be recalculated.
     pub fn attributes(mut self, attrs: impl ModeAttributeProvider<Mania>) -> Self {
         if let Some(attrs) = attrs.attributes() {
             self.map_or_attrs = MapOrAttrs::Attrs(attrs);
@@ -79,6 +81,13 @@ impl<'map> ManiaPerformance<'map> {
     /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
     pub const fn mods(mut self, mods: u32) -> Self {
         self.difficulty = self.difficulty.mods(mods);
+
+        self
+    }
+
+    /// Use the specified settings of the given [`Difficulty`].
+    pub const fn difficulty(mut self, difficulty: Difficulty) -> Self {
+        self.difficulty = difficulty;
 
         self
     }
@@ -97,10 +106,45 @@ impl<'map> ManiaPerformance<'map> {
     }
 
     /// Adjust the clock rate used in the calculation.
+    ///
     /// If none is specified, it will take the clock rate based on the mods
     /// i.e. 1.5 for DT, 0.75 for HT and 1.0 otherwise.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | 0.01    | 100     |
     pub fn clock_rate(mut self, clock_rate: f64) -> Self {
         self.difficulty = self.difficulty.clock_rate(clock_rate);
+
+        self
+    }
+
+    /// Override a beatmap's set HP.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn hp(mut self, hp: f32, with_mods: bool) -> Self {
+        self.difficulty = self.difficulty.hp(hp, with_mods);
+
+        self
+    }
+
+    /// Override a beatmap's set OD.
+    ///
+    /// `with_mods` determines if the given value should be used before
+    /// or after accounting for mods, e.g. on `true` the value will be
+    /// used as is and on `false` it will be modified based on the mods.
+    ///
+    /// | Minimum | Maximum |
+    /// | :-----: | :-----: |
+    /// | -20     | 20      |
+    pub fn od(mut self, od: f32, with_mods: bool) -> Self {
+        self.difficulty = self.difficulty.od(od, with_mods);
 
         self
     }

@@ -52,13 +52,13 @@ pub trait IGameMode: Sized {
 
     /// Create a gradual difficulty calculator for a [`Converted`] beatmap.
     fn gradual_difficulty(
-        difficulty: &Difficulty,
+        difficulty: Difficulty,
         map: &Converted<'_, Self>,
     ) -> Self::GradualDifficulty;
 
     /// Create a gradual performance calculator for a [`Converted`] beatmap.
     fn gradual_performance(
-        difficulty: &Difficulty,
+        difficulty: Difficulty,
         map: &Converted<'_, Self>,
     ) -> Self::GradualPerformance;
 }

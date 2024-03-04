@@ -68,15 +68,8 @@ pub struct OsuDifficultySetup {
 
 impl OsuDifficultySetup {
     pub fn new(difficulty: &Difficulty, converted: &OsuBeatmap) -> Self {
-        let mods = difficulty.get_mods();
         let clock_rate = difficulty.get_clock_rate();
-
-        let map_attrs = converted
-            .attributes()
-            .mods(mods)
-            .clock_rate(clock_rate)
-            .build();
-
+        let map_attrs = converted.attributes().difficulty(difficulty).build();
         let scaling_factor = ScalingFactor::new(map_attrs.cs);
 
         let attrs = OsuDifficultyAttributes {
