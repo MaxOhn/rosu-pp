@@ -58,23 +58,9 @@ impl BeatmapAttributesBuilder {
     const TAIKO_MAX: f64 = 20.0;
 
     /// Create a new [`BeatmapAttributesBuilder`].
-    pub const fn new(map: &Beatmap) -> Self {
-        Self {
-            mode: map.mode,
-            ar: ModsDependent::new(map.ar),
-            od: ModsDependent::new(map.od),
-            cs: ModsDependent::new(map.cs),
-            hp: ModsDependent::new(map.hp),
-            mods: 0,
-            clock_rate: None,
-            is_convert: map.is_convert,
-        }
-    }
-
-    /// Create a new blank [`BeatmapAttributesBuilder`].
     ///
     /// The mode will be `GameMode::Osu` and attributes are set to `5.0`.
-    pub const fn new_blank() -> Self {
+    pub const fn new() -> Self {
         Self {
             mode: GameMode::Osu,
             is_convert: false,
@@ -84,6 +70,20 @@ impl BeatmapAttributesBuilder {
             hp: ModsDependent::new(5.0),
             mods: 0,
             clock_rate: None,
+        }
+    }
+
+    /// Create a new [`BeatmapAttributesBuilder`] from a [`Beatmap`].
+    pub const fn from_map(map: &Beatmap) -> Self {
+        Self {
+            mode: map.mode,
+            ar: ModsDependent::new(map.ar),
+            od: ModsDependent::new(map.od),
+            cs: ModsDependent::new(map.cs),
+            hp: ModsDependent::new(map.hp),
+            mods: 0,
+            clock_rate: None,
+            is_convert: map.is_convert,
         }
     }
 
@@ -323,13 +323,13 @@ impl BeatmapAttributesBuilder {
 
 impl From<&Beatmap> for BeatmapAttributesBuilder {
     fn from(map: &Beatmap) -> Self {
-        Self::new(map)
+        Self::from_map(map)
     }
 }
 
 impl<M> From<&Converted<'_, M>> for BeatmapAttributesBuilder {
     fn from(converted: &Converted<'_, M>) -> Self {
-        Self::new(converted)
+        Self::from_map(converted)
     }
 }
 
@@ -345,7 +345,7 @@ fn difficulty_range(difficulty: f64, min: f64, mid: f64, max: f64) -> f64 {
 
 impl Default for BeatmapAttributesBuilder {
     fn default() -> Self {
-        Self::new_blank()
+        Self::new()
     }
 }
 
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn consider_mods() {
-        let attrs = BeatmapAttributesBuilder::new_blank()
+        let attrs = BeatmapAttributesBuilder::new()
             .ar(8.5, false)
             .mods(64)
             .build();
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn skip_mods() {
-        let attrs = BeatmapAttributesBuilder::new_blank()
+        let attrs = BeatmapAttributesBuilder::new()
             .ar(8.5, true)
             .mods(64)
             .build();
