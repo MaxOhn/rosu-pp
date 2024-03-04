@@ -64,6 +64,7 @@ pub struct CatchGradualDifficulty {
 }
 
 impl CatchGradualDifficulty {
+    /// Create a new difficulty attributes iterator for osu!catch maps.
     pub fn new(difficulty: Difficulty, converted: &CatchBeatmap<'_>) -> Self {
         let clock_rate = difficulty.get_clock_rate();
 
