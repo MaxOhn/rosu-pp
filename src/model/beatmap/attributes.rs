@@ -35,7 +35,7 @@ pub struct HitWindows {
 }
 
 /// A builder for [`BeatmapAttributes`] and [`HitWindows`].
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[must_use]
 pub struct BeatmapAttributesBuilder {
     mode: GameMode,
@@ -68,6 +68,22 @@ impl BeatmapAttributesBuilder {
             mods: 0,
             clock_rate: None,
             is_convert: map.is_convert,
+        }
+    }
+
+    /// Create a new blank [`BeatmapAttributesBuilder`].
+    ///
+    /// The mode will be `GameMode::Osu` and attributes are set to `5.0`.
+    pub const fn new_blank() -> Self {
+        Self {
+            mode: GameMode::Osu,
+            is_convert: false,
+            ar: ModsDependent::new(5.0),
+            od: ModsDependent::new(5.0),
+            cs: ModsDependent::new(5.0),
+            hp: ModsDependent::new(5.0),
+            mods: 0,
+            clock_rate: None,
         }
     }
 
@@ -170,7 +186,10 @@ impl BeatmapAttributesBuilder {
     /// Calculate the AR and OD hit windows.
     pub fn hit_windows(&self) -> HitWindows {
         let mods = self.mods;
+
         let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
+        let ar_clock_rate = if self.ar.with_mods { 1.0 } else { clock_rate };
+        let od_clock_rate = if self.ar.with_mods { 1.0 } else { clock_rate };
 
         let mod_mult = |val: f32| {
             if mods.hr() {
@@ -188,7 +207,7 @@ impl BeatmapAttributesBuilder {
             mod_mult(self.ar.value)
         };
 
-        let preempt = difficulty_range(f64::from(raw_ar), 1800.0, 1200.0, 450.0) / clock_rate;
+        let preempt = difficulty_range(f64::from(raw_ar), 1800.0, 1200.0, 450.0) / ar_clock_rate;
 
         // OD
         let hit_window = match self.mode {
@@ -204,7 +223,7 @@ impl BeatmapAttributesBuilder {
                     Self::OSU_MIN,
                     Self::OSU_AVG,
                     Self::OSU_MAX,
-                ) / clock_rate
+                ) / od_clock_rate
             }
             GameMode::Taiko => {
                 let raw_od = if self.od.with_mods {
@@ -220,7 +239,7 @@ impl BeatmapAttributesBuilder {
                     Self::TAIKO_MAX,
                 );
 
-                diff_range / clock_rate
+                diff_range / od_clock_rate
             }
             GameMode::Mania => {
                 let mut value = if !self.is_convert {
@@ -239,7 +258,7 @@ impl BeatmapAttributesBuilder {
                     }
                 }
 
-                ((f64::from(value) * clock_rate).floor() / clock_rate).ceil()
+                ((f64::from(value) * od_clock_rate).floor() / od_clock_rate).ceil()
             }
         };
 
@@ -321,5 +340,40 @@ fn difficulty_range(difficulty: f64, min: f64, mid: f64, max: f64) -> f64 {
         mid - (mid - min) * (5.0 - difficulty) / 5.0
     } else {
         mid
+    }
+}
+
+impl Default for BeatmapAttributesBuilder {
+    fn default() -> Self {
+        Self::new_blank()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn consider_mods() {
+        let attrs = BeatmapAttributesBuilder::new_blank()
+            .ar(8.5, false)
+            .mods(64)
+            .build();
+
+        let expected = 10.0;
+
+        assert!(attrs.ar.eq(expected), "{} != {expected}", attrs.ar);
+    }
+
+    #[test]
+    fn skip_mods() {
+        let attrs = BeatmapAttributesBuilder::new_blank()
+            .ar(8.5, true)
+            .mods(64)
+            .build();
+
+        let expected = 8.5;
+
+        assert!(attrs.ar.eq(expected), "{} != {expected}", attrs.ar);
     }
 }
