@@ -1,4 +1,8 @@
-use std::{borrow::Cow, num::NonZeroU32};
+use std::{
+    borrow::Cow,
+    fmt::{Debug, Formatter, Result as FmtResult},
+    num::NonZeroU32,
+};
 
 use rosu_map::section::general::GameMode;
 
@@ -13,10 +17,11 @@ use crate::{
 
 use self::converted::ConvertedDifficulty;
 
-use super::{attributes::DifficultyAttributes, Strains};
+use super::{attributes::DifficultyAttributes, InspectDifficulty, Strains};
 
 pub mod converted;
 pub mod gradual;
+pub mod inspect;
 pub mod object;
 pub mod skills;
 
@@ -35,7 +40,7 @@ use crate::{model::mode::IGameMode, util::mods::Mods};
 ///     .mods(8 + 1024) // HDFL
 ///     .calculate(&map);
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 #[must_use]
 pub struct Difficulty {
     mods: u32,
@@ -56,9 +61,15 @@ pub struct Difficulty {
     hardrock_offsets: Option<bool>,
 }
 
+/// Wrapper for beatmap attributes in [`Difficulty`].
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct ModsDependent {
+    /// Value of the beatmap attribute.
     pub value: f32,
+    /// Whether `value` should be used as is or modified based on mods.
+    ///
+    /// `true` means "value already considers mods" i.e. use as is;
+    /// `false` means modify with mods.
     pub with_mods: bool,
 }
 
@@ -94,9 +105,35 @@ impl Difficulty {
         ConvertedDifficulty::new(self)
     }
 
+    /// Turn this [`Difficulty`] into a [`InspectDifficulty`] to inspect its
+    /// configured values.
+    pub fn inspect(self) -> InspectDifficulty {
+        let Self {
+            mods,
+            passed_objects,
+            clock_rate,
+            ar,
+            cs,
+            hp,
+            od,
+            hardrock_offsets,
+        } = self;
+
+        InspectDifficulty {
+            mods,
+            passed_objects,
+            clock_rate: clock_rate.map(non_zero_u32_to_f64),
+            ar,
+            cs,
+            hp,
+            od,
+            hardrock_offsets,
+        }
+    }
+
     /// Specify mods through their bit values.
     ///
-    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
+    /// See <https://github.com/ppy/osu-api/wiki#mods>
     pub const fn mods(self, mods: u32) -> Self {
         Self { mods, ..self }
     }
@@ -269,9 +306,7 @@ impl Difficulty {
 
     pub(crate) fn get_clock_rate(&self) -> f64 {
         self.clock_rate
-            .map(NonZeroU32::get)
-            .map(u64::from)
-            .map_or_else(|| self.mods.clock_rate(), f64::from_bits)
+            .map_or(self.mods.clock_rate(), non_zero_u32_to_f64)
     }
 
     pub(crate) fn get_passed_objects(&self) -> usize {
@@ -296,6 +331,36 @@ impl Difficulty {
 
     pub(crate) fn get_hardrock_offsets(&self) -> bool {
         self.hardrock_offsets.unwrap_or(self.mods.hr())
+    }
+}
+
+fn non_zero_u32_to_f64(n: NonZeroU32) -> f64 {
+    f64::from_bits(u64::from(n.get()))
+}
+
+impl Debug for Difficulty {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        let Self {
+            mods,
+            passed_objects,
+            clock_rate,
+            ar,
+            cs,
+            hp,
+            od,
+            hardrock_offsets,
+        } = self;
+
+        f.debug_struct("Difficulty")
+            .field("mods", mods)
+            .field("passed_objects", passed_objects)
+            .field("clock_rate", &clock_rate.map(non_zero_u32_to_f64))
+            .field("ar", ar)
+            .field("cs", cs)
+            .field("hp", hp)
+            .field("od", od)
+            .field("hardrock_offsets", hardrock_offsets)
+            .finish()
     }
 }
 

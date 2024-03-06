@@ -117,7 +117,7 @@ impl<'map> Performance<'map> {
 
     /// Specify mods through their bit values.
     ///
-    /// See [https://github.com/ppy/osu-api/wiki#mods](https://github.com/ppy/osu-api/wiki#mods)
+    /// See <https://github.com/ppy/osu-api/wiki#mods>
     pub fn mods(self, mods: u32) -> Self {
         match self {
             Self::Osu(o) => Self::Osu(o.mods(mods)),
