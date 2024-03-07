@@ -335,7 +335,7 @@ impl Difficulty {
 }
 
 fn non_zero_u32_to_f64(n: NonZeroU32) -> f64 {
-    f64::from_bits(u64::from(n.get()))
+    f64::from(f32::from_bits(n.get()))
 }
 
 impl Debug for Difficulty {
