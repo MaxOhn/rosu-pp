@@ -152,8 +152,7 @@ mod tests {
         use crate::{taiko::TaikoGradualDifficulty, Beatmap, Difficulty};
 
         let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
-        let difficulty = Difficulty::new();
-        let mut gradual = TaikoGradualDifficulty::new(&difficulty, &converted);
+        let mut gradual = TaikoGradualDifficulty::new(Difficulty::new(), &converted);
 
         // Arc<RwLock<_>> *can* be shared across threads so this should compile
         std::thread::spawn(move || {
