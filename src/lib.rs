@@ -54,7 +54,7 @@
 //! Gradually calculating attributes provides an efficient way to process each hitobject
 //! separately and calculate the attributes only up to that point.
 //!
-//! For difficulty attributes, there is [`GradualDifficulty`] which implements [`Iterator`]
+//! For difficulty attributes, there is [`GradualDifficulty`] which implements `Iterator`
 //! and for performance attributes there is [`GradualPerformance`] which requires the current
 //! score state.
 //!
@@ -142,7 +142,6 @@
 //! [benchmark]: https://gist.github.com/MaxOhn/625af10011f6d7e13a171b08ccf959ff
 //! [`GradualDifficulty`]: crate::any::GradualDifficulty
 //! [`GradualPerformance`]: crate::any::GradualPerformance
-//! [`Iterator`]: ::std::iter::Iterator
 
 #![deny(rustdoc::broken_intra_doc_links, rustdoc::missing_crate_level_docs)]
 #![warn(clippy::missing_const_for_fn, clippy::pedantic)]
