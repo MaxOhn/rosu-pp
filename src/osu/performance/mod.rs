@@ -95,7 +95,7 @@ impl<'map> OsuPerformance<'map> {
 
     /// Attempt to convert the map to the specified mode.
     ///
-    /// Returns `None` if the internal beatmap was already replaced with
+    /// Returns `Err(self)` if the internal beatmap was already replaced with
     /// [`OsuDifficultyAttributes`], i.e. if
     /// [`OsuPerformance::from_attributes`] or
     /// [`OsuPerformance::generate_state`] was called.
@@ -104,18 +104,14 @@ impl<'map> OsuPerformance<'map> {
     /// replaced, use [`mode_or_ignore`] instead.
     ///
     /// [`mode_or_ignore`]: Self::mode_or_ignore
-    pub fn try_mode(self, mode: GameMode) -> Option<Performance<'map>> {
+    // The `Ok`-variant is larger in size
+    #[allow(clippy::result_large_err)]
+    pub fn try_mode(self, mode: GameMode) -> Result<Performance<'map>, Self> {
         match mode {
-            GameMode::Osu => Some(Performance::Osu(self)),
-            GameMode::Taiko => TaikoPerformance::try_from(self)
-                .map(Performance::Taiko)
-                .ok(),
-            GameMode::Catch => CatchPerformance::try_from(self)
-                .map(Performance::Catch)
-                .ok(),
-            GameMode::Mania => ManiaPerformance::try_from(self)
-                .map(Performance::Mania)
-                .ok(),
+            GameMode::Osu => Ok(Performance::Osu(self)),
+            GameMode::Taiko => TaikoPerformance::try_from(self).map(Performance::Taiko),
+            GameMode::Catch => CatchPerformance::try_from(self).map(Performance::Catch),
+            GameMode::Mania => ManiaPerformance::try_from(self).map(Performance::Mania),
         }
     }
 

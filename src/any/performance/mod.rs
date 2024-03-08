@@ -82,7 +82,7 @@ impl<'map> Performance<'map> {
 
     /// Attempt to convert the map to the specified mode.
     ///
-    /// Returns `None` if the conversion is incompatible or the internal
+    /// Returns `Err(self)` if the conversion is incompatible or the internal
     /// beatmap was already replaced with difficulty attributes, i.e. if
     /// [`Performance::from_attributes`] or [`Performance::generate_state`] was
     /// called.
@@ -91,13 +91,15 @@ impl<'map> Performance<'map> {
     /// the internal beatmap was replaced, use [`mode_or_ignore`] instead.
     ///
     /// [`mode_or_ignore`]: Self::mode_or_ignore
-    pub fn try_mode(self, mode: GameMode) -> Option<Self> {
+    // Both variants have the same size
+    #[allow(clippy::result_large_err)]
+    pub fn try_mode(self, mode: GameMode) -> Result<Self, Self> {
         match (self, mode) {
-            (Self::Osu(o), _) => o.try_mode(mode),
+            (Self::Osu(o), _) => o.try_mode(mode).map_err(Self::Osu),
             (this @ Self::Taiko(_), GameMode::Taiko)
             | (this @ Self::Catch(_), GameMode::Catch)
-            | (this @ Self::Mania(_), GameMode::Mania) => Some(this),
-            _ => None,
+            | (this @ Self::Mania(_), GameMode::Mania) => Ok(this),
+            (this, _) => Err(this),
         }
     }
 
