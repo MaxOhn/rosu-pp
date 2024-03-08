@@ -1,9 +1,8 @@
 use crate::{
-    catch::{Catch, CatchDifficultyAttributes, CatchPerformanceAttributes},
-    mania::{Mania, ManiaDifficultyAttributes, ManiaPerformanceAttributes},
-    model::mode::IGameMode,
-    osu::{Osu, OsuDifficultyAttributes, OsuPerformanceAttributes},
-    taiko::{Taiko, TaikoDifficultyAttributes, TaikoPerformanceAttributes},
+    catch::{CatchDifficultyAttributes, CatchPerformanceAttributes},
+    mania::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
+    osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
+    taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
 };
 
 use super::performance::Performance;
@@ -137,18 +136,6 @@ impl AttributeProvider for PerformanceAttributes {
     }
 }
 
-/// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
-pub trait ModeAttributeProvider<M: IGameMode> {
-    /// Provide the actual difficulty attributes.
-    fn attributes(self) -> Option<M::DifficultyAttributes>;
-}
-
-impl<M: IGameMode> ModeAttributeProvider<M> for M::DifficultyAttributes {
-    fn attributes(self) -> Option<M::DifficultyAttributes> {
-        Some(self)
-    }
-}
-
 macro_rules! impl_attr_provider {
     ( $mode:ident: $difficulty:ident, $performance:ident ) => {
         impl AttributeProvider for $difficulty {
@@ -160,32 +147,6 @@ macro_rules! impl_attr_provider {
         impl AttributeProvider for $performance {
             fn attributes(self) -> DifficultyAttributes {
                 DifficultyAttributes::$mode(self.difficulty)
-            }
-        }
-
-        impl ModeAttributeProvider<$mode> for $performance {
-            fn attributes(self) -> Option<<$mode as IGameMode>::DifficultyAttributes> {
-                Some(self.difficulty)
-            }
-        }
-
-        impl ModeAttributeProvider<$mode> for DifficultyAttributes {
-            fn attributes(self) -> Option<<$mode as IGameMode>::DifficultyAttributes> {
-                if let Self::$mode(attrs) = self {
-                    Some(attrs)
-                } else {
-                    None
-                }
-            }
-        }
-
-        impl ModeAttributeProvider<$mode> for PerformanceAttributes {
-            fn attributes(self) -> Option<<$mode as IGameMode>::DifficultyAttributes> {
-                if let Self::$mode(attrs) = self {
-                    Some(attrs.difficulty)
-                } else {
-                    None
-                }
             }
         }
     };

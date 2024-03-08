@@ -38,7 +38,7 @@ impl TaikoDifficultyAttributes {
 
     /// Returns a builder for performance calculation.
     pub const fn performance<'a>(self) -> TaikoPerformance<'a> {
-        TaikoPerformance::from_taiko_attributes(self)
+        TaikoPerformance::from_attributes(self)
     }
 }
 
@@ -82,7 +82,7 @@ impl TaikoPerformanceAttributes {
 
     /// Returns a builder for performance calculation.
     pub const fn performance<'a>(self) -> TaikoPerformance<'a> {
-        TaikoPerformance::from_taiko_attributes(self.difficulty)
+        TaikoPerformance::from_attributes(self.difficulty)
     }
 }
 

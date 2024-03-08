@@ -31,25 +31,42 @@ pub enum Performance<'map> {
 
 impl<'map> Performance<'map> {
     /// Create a new performance calculator for maps of any mode.
-    pub const fn new(map: &'map Beatmap) -> Self {
+    ///
+    /// Note that creating [`Performance`] this way will require to perform the
+    /// costly computation of difficulty attributes internally. If attributes
+    /// for the current [`Difficulty`] settings are already available, consider
+    /// using [`from_attributes`] instead.
+    ///
+    /// [`from_attributes`]: Self::from_attributes
+    pub const fn from_map(map: &'map Beatmap) -> Self {
         let mode = map.mode;
         let map = Cow::Borrowed(map);
 
         match mode {
-            GameMode::Osu => Self::Osu(OsuPerformance::new(Converted::new(map))),
-            GameMode::Taiko => Self::Taiko(TaikoPerformance::new(Converted::new(map))),
-            GameMode::Catch => Self::Catch(CatchPerformance::new(Converted::new(map))),
-            GameMode::Mania => Self::Mania(ManiaPerformance::new(Converted::new(map))),
+            GameMode::Osu => Self::Osu(OsuPerformance::from_map(Converted::new(map))),
+            GameMode::Taiko => Self::Taiko(TaikoPerformance::from_map(Converted::new(map))),
+            GameMode::Catch => Self::Catch(CatchPerformance::from_map(Converted::new(map))),
+            GameMode::Mania => Self::Mania(ManiaPerformance::from_map(Converted::new(map))),
         }
     }
 
     /// Create a new performance calculator through previously calculated
     /// attributes.
     ///
-    /// Note that the [`Beatmap`] and [`Difficulty`] should be the same as when
-    /// the attributes were calculated.
-    pub fn from_attributes(attributes: impl AttributeProvider) -> Self {
-        Self::from(attributes)
+    /// Note that `attrs` must have been calculated for the same beatmap and
+    /// [`Difficulty`] settings, otherwise the final attributes will be
+    /// incorrect.
+    pub fn from_attributes(attrs: impl AttributeProvider) -> Self {
+        const fn inner(attrs: DifficultyAttributes) -> Performance<'static> {
+            match attrs {
+                DifficultyAttributes::Osu(attrs) => Performance::Osu(attrs.performance()),
+                DifficultyAttributes::Taiko(attrs) => Performance::Taiko(attrs.performance()),
+                DifficultyAttributes::Catch(attrs) => Performance::Catch(attrs.performance()),
+                DifficultyAttributes::Mania(attrs) => Performance::Mania(attrs.performance()),
+            }
+        }
+
+        inner(attrs.attributes())
     }
 
     /// Consume the performance calculator and calculate
@@ -63,25 +80,11 @@ impl<'map> Performance<'map> {
         }
     }
 
-    /// Provide the result of a previous difficulty or performance calculation.
-    ///
-    /// If you already calculated the attributes for the current [`Beatmap`]
-    /// and [`Difficulty`], be sure to put them in here so that they don't have
-    /// to be recalculated.
-    pub fn attributes(self, attributes: impl AttributeProvider) -> Self {
-        match self {
-            Self::Osu(o) => Self::Osu(o.attributes(attributes.attributes())),
-            Self::Taiko(t) => Self::Taiko(t.attributes(attributes.attributes())),
-            Self::Catch(f) => Self::Catch(f.attributes(attributes.attributes())),
-            Self::Mania(m) => Self::Mania(m.attributes(attributes.attributes())),
-        }
-    }
-
     /// Attempt to convert the map to the specified mode.
     ///
     /// Returns `None` if the conversion is incompatible or the internal
     /// beatmap was already replaced with difficulty attributes, i.e. if
-    /// [`Performance::attributes`] or [`Performance::generate_state`] was
+    /// [`Performance::from_attributes`] or [`Performance::generate_state`] was
     /// called.
     ///
     /// If the given mode should be ignored in case it is incompatible or if
@@ -377,16 +380,7 @@ impl<'map> Performance<'map> {
 
 impl<A: AttributeProvider> From<A> for Performance<'_> {
     fn from(attrs: A) -> Self {
-        const fn inner(attrs: DifficultyAttributes) -> Performance<'static> {
-            match attrs {
-                DifficultyAttributes::Osu(attrs) => Performance::Osu(attrs.performance()),
-                DifficultyAttributes::Taiko(attrs) => Performance::Taiko(attrs.performance()),
-                DifficultyAttributes::Catch(attrs) => Performance::Catch(attrs.performance()),
-                DifficultyAttributes::Mania(attrs) => Performance::Mania(attrs.performance()),
-            }
-        }
-
-        inner(attrs.attributes())
+        Self::from_attributes(attrs)
     }
 }
 

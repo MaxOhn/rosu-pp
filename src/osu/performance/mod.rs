@@ -3,7 +3,7 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::{Difficulty, HitResultPriority, ModeAttributeProvider, Performance},
+    any::{AttributeProvider, Difficulty, DifficultyAttributes, HitResultPriority, Performance},
     catch::CatchPerformance,
     mania::ManiaPerformance,
     taiko::TaikoPerformance,
@@ -36,7 +36,16 @@ pub struct OsuPerformance<'map> {
 
 impl<'map> OsuPerformance<'map> {
     /// Create a new performance calculator for osu!standard maps.
-    pub const fn new(map: OsuBeatmap<'map>) -> Self {
+    ///
+    /// Note that creating [`OsuPerformance`] this way will require to
+    /// perform the costly computation of [`OsuDifficultyAttributes`]
+    /// internally. If difficulty attributes for the current [`Difficulty`]
+    /// settings are already available, consider using [`from_attributes`] or
+    /// [`try_from_attributes`] instead.
+    ///
+    /// [`from_attributes`]: Self::from_attributes
+    /// [`try_from_attributes`]: Self::try_from_attributes
+    pub const fn from_map(map: OsuBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
             difficulty: Difficulty::new(),
@@ -50,7 +59,12 @@ impl<'map> OsuPerformance<'map> {
         }
     }
 
-    pub(crate) const fn from_osu_attributes(attrs: OsuDifficultyAttributes) -> Self {
+    /// Create a new performance calculator from difficulty attributes.
+    ///
+    /// Note that `attrs` must have been calculated for the same beatmap and
+    /// [`Difficulty`] settings, otherwise the final attributes will be
+    /// incorrect.
+    pub const fn from_attributes(attrs: OsuDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
             difficulty: Difficulty::new(),
@@ -64,10 +78,26 @@ impl<'map> OsuPerformance<'map> {
         }
     }
 
+    /// Try to create a new performance calculator from difficulty attributes.
+    ///
+    /// Note that `attrs` must have been calculated for the same beatmap and
+    /// [`Difficulty`] settings, otherwise the final attributes will be
+    /// incorrect.
+    ///
+    /// Returns `None` if `attrs` contained attributes of a different mode.
+    pub fn try_from_attributes(attrs: impl AttributeProvider) -> Option<Self> {
+        if let DifficultyAttributes::Osu(attrs) = attrs.attributes() {
+            Some(Self::from_attributes(attrs))
+        } else {
+            None
+        }
+    }
+
     /// Attempt to convert the map to the specified mode.
     ///
     /// Returns `None` if the internal beatmap was already replaced with
-    /// [`OsuDifficultyAttributes`], i.e. if [`OsuPerformance::attributes`] or
+    /// [`OsuDifficultyAttributes`], i.e. if
+    /// [`OsuPerformance::from_attributes`] or
     /// [`OsuPerformance::generate_state`] was called.
     ///
     /// If the given mode should be ignored in case the internal beatmap was
@@ -111,19 +141,6 @@ impl<'map> OsuPerformance<'map> {
                 ManiaPerformance::try_from(self).map_or_else(Performance::Osu, Performance::Mania)
             }
         }
-    }
-
-    /// Provide the result of a previous difficulty or performance calculation.
-    ///
-    /// If you already calculated the attributes for the current
-    /// [`OsuBeatmap`] and [`Difficulty`], be sure to put them in here so that
-    /// they don't have to be recalculated.
-    pub fn attributes(mut self, attributes: impl ModeAttributeProvider<Osu>) -> Self {
-        if let Some(attrs) = attributes.attributes() {
-            self.map_or_attrs = MapOrAttrs::Attrs(attrs);
-        }
-
-        self
     }
 
     /// Specify mods through their bit values.
@@ -506,55 +523,23 @@ impl<'map> OsuPerformance<'map> {
 
         inner.calculate()
     }
-
-    /// Try to create [`OsuPerformance`] through a [`ModeAttributeProvider`].
-    ///
-    /// If you already calculated the attributes for the current map-mod
-    /// combination, the [`OsuBeatmap`] is no longer necessary to calculate
-    /// performance attributes so this method can be used instead of
-    /// [`OsuPerformance::new`].
-    ///
-    /// Returns `None` only if the [`ModeAttributeProvider`] did not contain
-    /// attributes for osu e.g. if it's [`DifficultyAttributes::Taiko`].
-    ///
-    /// [`DifficultyAttributes::Taiko`]: crate::any::DifficultyAttributes::Taiko
-    pub fn try_from_attributes(attributes: impl ModeAttributeProvider<Osu>) -> Option<Self> {
-        attributes.attributes().map(Self::from)
-    }
-
-    /// Create [`OsuPerformance`] through a [`ModeAttributeProvider`].
-    ///
-    /// If you already calculated the attributes for the current map-mod
-    /// combination, the [`OsuBeatmap`] is no longer necessary to calculate
-    /// performance attributes so this method can be used instead of
-    /// [`OsuPerformance::new`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the [`ModeAttributeProvider`] did not contain attributes for
-    /// osu e.g. if it's [`DifficultyAttributes::Taiko`].
-    ///
-    /// [`DifficultyAttributes::Taiko`]: crate::any::DifficultyAttributes::Taiko
-    pub fn unchecked_from_attributes(attributes: impl ModeAttributeProvider<Osu>) -> Self {
-        Self::try_from_attributes(attributes).expect("invalid osu attributes")
-    }
 }
 
 impl<'map> From<OsuBeatmap<'map>> for OsuPerformance<'map> {
     fn from(map: OsuBeatmap<'map>) -> Self {
-        Self::new(map)
+        Self::from_map(map)
     }
 }
 
 impl From<OsuDifficultyAttributes> for OsuPerformance<'_> {
     fn from(attrs: OsuDifficultyAttributes) -> Self {
-        Self::from_osu_attributes(attrs)
+        Self::from_attributes(attrs)
     }
 }
 
 impl From<OsuPerformanceAttributes> for OsuPerformance<'_> {
     fn from(attrs: OsuPerformanceAttributes) -> Self {
-        Self::from_osu_attributes(attrs.difficulty)
+        Self::from_attributes(attrs.difficulty)
     }
 }
 

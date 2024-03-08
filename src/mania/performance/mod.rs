@@ -1,7 +1,7 @@
 use std::cmp;
 
 use crate::{
-    any::{Difficulty, HitResultPriority, ModeAttributeProvider},
+    any::{AttributeProvider, Difficulty, DifficultyAttributes, HitResultPriority},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
 };
@@ -33,7 +33,16 @@ pub struct ManiaPerformance<'map> {
 
 impl<'map> ManiaPerformance<'map> {
     /// Create a new performance calculator for osu!mania maps.
-    pub const fn new(map: ManiaBeatmap<'map>) -> Self {
+    ///
+    /// Note that creating [`ManiaPerformance`] this way will require to
+    /// perform the costly computation of [`ManiaDifficultyAttributes`]
+    /// internally. If difficulty attributes for the current [`Difficulty`]
+    /// settings are already available, consider using [`from_attributes`] or
+    /// [`try_from_attributes`] instead.
+    ///
+    /// [`from_attributes`]: Self::from_attributes
+    /// [`try_from_attributes`]: Self::try_from_attributes
+    pub const fn from_map(map: ManiaBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
             difficulty: Difficulty::new(),
@@ -48,7 +57,12 @@ impl<'map> ManiaPerformance<'map> {
         }
     }
 
-    pub(crate) const fn from_mania_attributes(attrs: ManiaDifficultyAttributes) -> Self {
+    /// Create a new performance calculator from difficulty attributes.
+    ///
+    /// Note that `attrs` must have been calculated for the same beatmap and
+    /// [`Difficulty`] settings, otherwise the final attributes will be
+    /// incorrect.
+    pub const fn from_attributes(attrs: ManiaDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
             difficulty: Difficulty::new(),
@@ -63,17 +77,19 @@ impl<'map> ManiaPerformance<'map> {
         }
     }
 
-    /// Provide the result of a previous difficulty or performance calculation.
+    /// Try to create a new performance calculator from difficulty attributes.
     ///
-    /// If you already calculated the attributes for the current
-    /// [`ManiaBeatmap`] and [`Difficulty`], be sure to put them in here so
-    /// that they don't have to be recalculated.
-    pub fn attributes(mut self, attrs: impl ModeAttributeProvider<Mania>) -> Self {
-        if let Some(attrs) = attrs.attributes() {
-            self.map_or_attrs = MapOrAttrs::Attrs(attrs);
+    /// Note that `attrs` must have been calculated for the same beatmap and
+    /// [`Difficulty`] settings, otherwise the final attributes will be
+    /// incorrect.
+    ///
+    /// Returns `None` if `attrs` contained attributes of a different mode.
+    pub fn try_from_attributes(attrs: impl AttributeProvider) -> Option<Self> {
+        if let DifficultyAttributes::Mania(attrs) = attrs.attributes() {
+            Some(Self::from_attributes(attrs))
+        } else {
+            None
         }
-
-        self
     }
 
     /// Specify mods through their bit values.
@@ -773,38 +789,6 @@ impl<'map> ManiaPerformance<'map> {
 
         inner.calculate()
     }
-
-    /// Try to create [`ManiaPerformance`] through a [`ModeAttributeProvider`].
-    ///
-    /// If you already calculated the attributes for the current map-mod
-    /// combination, the [`ManiaBeatmap`] is no longer necessary to calculate
-    /// performance attributes so this method can be used instead of
-    /// [`ManiaPerformance::new`].
-    ///
-    /// Returns `None` only if the [`ModeAttributeProvider`] did not contain
-    /// attributes for mania e.g. if it's [`DifficultyAttributes::Taiko`].
-    ///
-    /// [`DifficultyAttributes::Taiko`]: crate::any::DifficultyAttributes::Taiko
-    pub fn try_from_attributes(attributes: impl ModeAttributeProvider<Mania>) -> Option<Self> {
-        attributes.attributes().map(Self::from)
-    }
-
-    /// Create [`ManiaPerformance`] through a [`ModeAttributeProvider`].
-    ///
-    /// If you already calculated the attributes for the current map-mod
-    /// combination, the [`ManiaBeatmap`] is no longer necessary to calculate
-    /// performance attributes so this method can be used instead of
-    /// [`ManiaPerformance::new`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the [`ModeAttributeProvider`] did not contain attributes for
-    /// catch e.g. if it's [`DifficultyAttributes::Taiko`].
-    ///
-    /// [`DifficultyAttributes::Taiko`]: crate::any::DifficultyAttributes::Taiko
-    pub fn unchecked_from_attributes(attributes: impl ModeAttributeProvider<Mania>) -> Self {
-        Self::try_from_attributes(attributes).expect("invalid mania attributes")
-    }
 }
 
 impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
@@ -814,7 +798,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
     ///
     /// Returns `None` if [`OsuPerformance`] already replaced its internal
     /// beatmap with [`OsuDifficultyAttributes`], i.e. if
-    /// [`OsuPerformance::attributes`] or [`OsuPerformance::generate_state`]
+    /// [`OsuPerformance::from_attributes`] or [`OsuPerformance::generate_state`]
     /// was called.
     ///
     /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
@@ -861,19 +845,19 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
 
 impl<'map> From<ManiaBeatmap<'map>> for ManiaPerformance<'map> {
     fn from(map: ManiaBeatmap<'map>) -> Self {
-        Self::new(map)
+        Self::from_map(map)
     }
 }
 
 impl From<ManiaDifficultyAttributes> for ManiaPerformance<'_> {
     fn from(attrs: ManiaDifficultyAttributes) -> Self {
-        Self::from_mania_attributes(attrs)
+        Self::from_attributes(attrs)
     }
 }
 
 impl From<ManiaPerformanceAttributes> for ManiaPerformance<'_> {
     fn from(attrs: ManiaPerformanceAttributes) -> Self {
-        Self::from_mania_attributes(attrs.difficulty)
+        Self::from_attributes(attrs.difficulty)
     }
 }
 

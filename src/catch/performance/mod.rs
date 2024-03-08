@@ -1,7 +1,7 @@
 use std::cmp::{self, Ordering};
 
 use crate::{
-    any::{Difficulty, ModeAttributeProvider},
+    any::{AttributeProvider, Difficulty, DifficultyAttributes},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
 };
@@ -32,7 +32,16 @@ pub struct CatchPerformance<'map> {
 
 impl<'map> CatchPerformance<'map> {
     /// Create a new performance calculator for osu!catch maps.
-    pub const fn new(map: CatchBeatmap<'map>) -> Self {
+    ///
+    /// Note that creating [`CatchPerformance`] this way will require to
+    /// perform the costly computation of [`CatchDifficultyAttributes`]
+    /// internally. If difficulty attributes for the current [`Difficulty`]
+    /// settings are already available, consider using [`from_attributes`] or
+    /// [`try_from_attributes`] instead.
+    ///
+    /// [`from_attributes`]: Self::from_attributes
+    /// [`try_from_attributes`]: Self::try_from_attributes
+    pub const fn from_map(map: CatchBeatmap<'map>) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Map(map),
             difficulty: Difficulty::new(),
@@ -46,7 +55,12 @@ impl<'map> CatchPerformance<'map> {
         }
     }
 
-    pub(crate) const fn from_catch_attributes(attrs: CatchDifficultyAttributes) -> Self {
+    /// Create a new performance calculator from difficulty attributes.
+    ///
+    /// Note that `attrs` must have been calculated for the same beatmap and
+    /// [`Difficulty`] settings, otherwise the final attributes will be
+    /// incorrect.
+    pub const fn from_attributes(attrs: CatchDifficultyAttributes) -> Self {
         Self {
             map_or_attrs: MapOrAttrs::Attrs(attrs),
             difficulty: Difficulty::new(),
@@ -60,17 +74,19 @@ impl<'map> CatchPerformance<'map> {
         }
     }
 
-    /// Provide the result of a previous difficulty or performance calculation.
+    /// Try to create a new performance calculator from difficulty attributes.
     ///
-    /// If you already calculated the attributes for the current
-    /// [`CatchBeatmap`] and [`Difficulty`], be sure to put them in here so
-    /// that they don't have to be recalculated.
-    pub fn attributes(mut self, attributes: impl ModeAttributeProvider<Catch>) -> Self {
-        if let Some(attrs) = attributes.attributes() {
-            self.map_or_attrs = MapOrAttrs::Attrs(attrs);
+    /// Note that `attrs` must have been calculated for the same beatmap and
+    /// [`Difficulty`] settings, otherwise the final attributes will be
+    /// incorrect.
+    ///
+    /// Returns `None` if `attrs` contained attributes of a different mode.
+    pub fn try_from_attributes(attrs: impl AttributeProvider) -> Option<Self> {
+        if let DifficultyAttributes::Catch(attrs) = attrs.attributes() {
+            Some(Self::from_attributes(attrs))
+        } else {
+            None
         }
-
-        self
     }
 
     /// Specify mods through their bit values.
@@ -419,38 +435,6 @@ impl<'map> CatchPerformance<'map> {
 
         inner.calculate()
     }
-
-    /// Try to create [`CatchPerformance`] through a [`ModeAttributeProvider`].
-    ///
-    /// If you already calculated the attributes for the current map-mod
-    /// combination, the [`CatchBeatmap`] is no longer necessary to calculate
-    /// performance attributes so this method can be used instead of
-    /// [`CatchPerformance::new`].
-    ///
-    /// Returns `None` only if the [`ModeAttributeProvider`] did not contain
-    /// attributes for catch e.g. if it's [`DifficultyAttributes::Taiko`].
-    ///
-    /// [`DifficultyAttributes::Taiko`]: crate::any::DifficultyAttributes::Taiko
-    pub fn try_from_attributes(attributes: impl ModeAttributeProvider<Catch>) -> Option<Self> {
-        attributes.attributes().map(Self::from)
-    }
-
-    /// Create [`CatchPerformance`] through a [`ModeAttributeProvider`].
-    ///
-    /// If you already calculated the attributes for the current map-mod
-    /// combination, the [`CatchBeatmap`] is no longer necessary to calculate
-    /// performance attributes so this method can be used instead of
-    /// [`CatchPerformance::new`].
-    ///
-    /// # Panics
-    ///
-    /// Panics if the [`ModeAttributeProvider`] did not contain attributes for
-    /// catch e.g. if it's [`DifficultyAttributes::Taiko`].
-    ///
-    /// [`DifficultyAttributes::Taiko`]: crate::any::DifficultyAttributes::Taiko
-    pub fn unchecked_from_attributes(attributes: impl ModeAttributeProvider<Catch>) -> Self {
-        Self::try_from_attributes(attributes).expect("invalid catch attributes")
-    }
 }
 
 impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
@@ -460,7 +444,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
     ///
     /// Returns `None` if [`OsuPerformance`] already replaced its internal
     /// beatmap with [`OsuDifficultyAttributes`], i.e. if
-    /// [`OsuPerformance::attributes`] or [`OsuPerformance::generate_state`]
+    /// [`OsuPerformance::from_attributes`] or [`OsuPerformance::generate_state`]
     /// was called.
     ///
     /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
@@ -506,19 +490,19 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
 
 impl<'map> From<CatchBeatmap<'map>> for CatchPerformance<'map> {
     fn from(map: CatchBeatmap<'map>) -> Self {
-        Self::new(map)
+        Self::from_map(map)
     }
 }
 
 impl From<CatchDifficultyAttributes> for CatchPerformance<'_> {
     fn from(attrs: CatchDifficultyAttributes) -> Self {
-        Self::from_catch_attributes(attrs)
+        Self::from_attributes(attrs)
     }
 }
 
 impl From<CatchPerformanceAttributes> for CatchPerformance<'_> {
     fn from(attrs: CatchPerformanceAttributes) -> Self {
-        Self::from_catch_attributes(attrs.difficulty)
+        Self::from_attributes(attrs.difficulty)
     }
 }
 

@@ -170,7 +170,7 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let regular_calc = CatchPerformance::new(converted.as_owned())
+            let regular_calc = CatchPerformance::from_map(converted.as_owned())
                 .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state.clone());

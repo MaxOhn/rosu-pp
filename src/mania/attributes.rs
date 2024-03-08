@@ -37,7 +37,7 @@ impl ManiaDifficultyAttributes {
 
     /// Returns a builder for performance calculation.
     pub const fn performance<'a>(self) -> ManiaPerformance<'a> {
-        ManiaPerformance::from_mania_attributes(self)
+        ManiaPerformance::from_attributes(self)
     }
 }
 
@@ -82,7 +82,7 @@ impl ManiaPerformanceAttributes {
 
     /// Returns a builder for performance calculation.
     pub const fn performance<'a>(self) -> ManiaPerformance<'a> {
-        ManiaPerformance::from_mania_attributes(self.difficulty)
+        ManiaPerformance::from_attributes(self.difficulty)
     }
 }
 

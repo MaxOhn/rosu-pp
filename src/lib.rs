@@ -28,12 +28,10 @@
 //! let stars = diff_attrs.stars();
 //!
 //! // Calculate performance attributes
-//! let perf_attrs = map.performance()
-//!     // To speed up the calculation, we can use the previous attributes.
+//! let perf_attrs = rosu_pp::Performance::from_attributes(diff_attrs)
+//!     // To speed up the calculation, we used the previous attributes.
 //!     // **Note** that this should only be done if the map and all difficulty
-//!     // settings stay the same, otherwise the final attributes will be
-//!     // incorrect!
-//!     .attributes(diff_attrs)
+//!     // settings stay the same, otherwise the final attributes will be incorrect!
 //!     .mods(24) // HDHR, must be the same as before
 //!     .combo(789)
 //!     .accuracy(99.2)
@@ -43,7 +41,6 @@
 //! let pp = perf_attrs.pp();
 //!
 //! // Again, we re-use the previous attributes for maximum efficiency.
-//! // This time we do it directly instead of through the map.
 //! let max_pp = perf_attrs.performance()
 //!     .mods(24) // Still the same
 //!     .calculate()
