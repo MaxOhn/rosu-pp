@@ -1,4 +1,4 @@
-use std::{cmp, slice};
+use std::{cmp, error, fmt, slice};
 
 use rosu_map::{
     section::{
@@ -317,40 +317,105 @@ impl From<BeatmapState> for Beatmap {
 }
 
 /// All the ways that parsing a [`Beatmap`] can fail.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum ParseBeatmapError {
-    #[error("failed to parse effect flags")]
-    EffectFlags(#[from] ParseEffectFlagsError),
-    #[error("failed to parse event type")]
-    EventType(#[from] ParseEventTypeError),
-    #[error("failed to parse hit object type")]
-    HitObjectType(#[from] ParseHitObjectTypeError),
-    #[error("failed to parse hit sound type")]
-    HitSoundType(#[from] ParseHitSoundTypeError),
-    #[error("invalid event line")]
+    EffectFlags(ParseEffectFlagsError),
+    EventType(ParseEventTypeError),
+    HitObjectType(ParseHitObjectTypeError),
+    HitSoundType(ParseHitSoundTypeError),
     InvalidEventLine,
-    #[error("repeat count is way too high")]
     InvalidRepeatCount,
-    #[error("invalid timing point line")]
     InvalidTimingPointLine,
-    #[error("invalid hit object line")]
     InvalidHitObjectLine,
-    #[error("failed to parse mode")]
-    Mode(#[from] ParseGameModeError),
-    #[error("failed to parse number")]
-    Number(#[from] ParseNumberError),
-    #[error("invalid time signature, must be positive integer")]
+    Mode(ParseGameModeError),
+    Number(ParseNumberError),
     TimeSignature,
-    #[error("beat length cannot be NaN in a timing control point")]
     TimingControlPointNaN,
-    #[error("unknown hit object type")]
     UnknownHitObjectType,
 }
 
+impl error::Error for ParseBeatmapError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            ParseBeatmapError::EffectFlags(err) => Some(err),
+            ParseBeatmapError::EventType(err) => Some(err),
+            ParseBeatmapError::HitObjectType(err) => Some(err),
+            ParseBeatmapError::HitSoundType(err) => Some(err),
+            ParseBeatmapError::Mode(err) => Some(err),
+            ParseBeatmapError::Number(err) => Some(err),
+            ParseBeatmapError::InvalidEventLine
+            | ParseBeatmapError::InvalidRepeatCount
+            | ParseBeatmapError::InvalidTimingPointLine
+            | ParseBeatmapError::InvalidHitObjectLine
+            | ParseBeatmapError::TimeSignature
+            | ParseBeatmapError::TimingControlPointNaN
+            | ParseBeatmapError::UnknownHitObjectType => None,
+        }
+    }
+}
+
+impl fmt::Display for ParseBeatmapError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::EffectFlags(_) => "failed to parse effect flags",
+            Self::EventType(_) => "failed to parse event type",
+            Self::HitObjectType(_) => "failed to parse hit object type",
+            Self::HitSoundType(_) => "failed to parse hit sound type",
+            Self::InvalidEventLine => "invalid event line",
+            Self::InvalidRepeatCount => "repeat count is way too high",
+            Self::InvalidTimingPointLine => "invalid timing point line",
+            Self::InvalidHitObjectLine => "invalid hit object line",
+            Self::Mode(_) => "failed to parse mode",
+            Self::Number(_) => "failed to parse number",
+            Self::TimeSignature => "invalid time signature, must be positive integer",
+            Self::TimingControlPointNaN => "beat length cannot be NaN in a timing control point",
+            Self::UnknownHitObjectType => "unknown hit object type",
+        };
+
+        f.write_str(s)
+    }
+}
+
+impl From<ParseEffectFlagsError> for ParseBeatmapError {
+    fn from(err: ParseEffectFlagsError) -> Self {
+        Self::EffectFlags(err)
+    }
+}
+
+impl From<ParseEventTypeError> for ParseBeatmapError {
+    fn from(err: ParseEventTypeError) -> Self {
+        Self::EventType(err)
+    }
+}
+
+impl From<ParseHitObjectTypeError> for ParseBeatmapError {
+    fn from(err: ParseHitObjectTypeError) -> Self {
+        Self::HitObjectType(err)
+    }
+}
+
+impl From<ParseHitSoundTypeError> for ParseBeatmapError {
+    fn from(err: ParseHitSoundTypeError) -> Self {
+        Self::HitSoundType(err)
+    }
+}
+
+impl From<ParseGameModeError> for ParseBeatmapError {
+    fn from(err: ParseGameModeError) -> Self {
+        Self::Mode(err)
+    }
+}
+
+impl From<ParseNumberError> for ParseBeatmapError {
+    fn from(err: ParseNumberError) -> Self {
+        Self::Number(err)
+    }
+}
+
 impl From<ParseDifficultyError> for ParseBeatmapError {
-    fn from(e: ParseDifficultyError) -> Self {
-        match e {
-            ParseDifficultyError::Number(e) => Self::Number(e),
+    fn from(err: ParseDifficultyError) -> Self {
+        match err {
+            ParseDifficultyError::Number(err) => Self::Number(err),
         }
     }
 }

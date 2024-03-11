@@ -16,8 +16,7 @@ sync = []
 tracing = ["rosu-map/tracing"]
 
 [dependencies]
-rosu-map = { version = "0.1.0" }
-thiserror = { version = "1.0.50" }
+rosu-map = { version = "0.1.1" }
 
 [dev-dependencies]
 proptest = "1.4.0"
