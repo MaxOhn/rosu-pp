@@ -166,4 +166,14 @@ impl GradualPerformance {
                 .map(PerformanceAttributes::Mania),
         }
     }
+
+    /// Returns the amount of remaining objects.
+    pub fn len(&self) -> usize {
+        match self {
+            GradualPerformance::Osu(gradual) => gradual.len(),
+            GradualPerformance::Taiko(gradual) => gradual.len(),
+            GradualPerformance::Catch(gradual) => gradual.len(),
+            GradualPerformance::Mania(gradual) => gradual.len(),
+        }
+    }
 }

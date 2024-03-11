@@ -128,6 +128,11 @@ impl CatchGradualPerformance {
 
         Some(performance)
     }
+
+    /// Returns the amount of remaining objects.
+    pub fn len(&self) -> usize {
+        self.difficulty.len()
+    }
 }
 
 #[cfg(test)]
