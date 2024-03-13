@@ -1,9 +1,11 @@
 use std::{io, path::Path, str::FromStr};
 
 use rosu_map::{
-    section::{events::BreakPeriod, general::GameMode, hit_objects::hit_samples::HitSoundType},
+    section::{general::GameMode, hit_objects::hit_samples::HitSoundType},
     LATEST_FORMAT_VERSION,
 };
+
+pub use rosu_map::section::events::BreakPeriod;
 
 use crate::{
     catch::Catch, mania::Mania, osu::Osu, taiko::Taiko, Difficulty, GradualDifficulty,
