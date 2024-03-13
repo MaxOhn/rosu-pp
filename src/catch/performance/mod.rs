@@ -266,7 +266,7 @@ impl<'map> CatchPerformance<'map> {
     /// Specify the accuracy of a play between `0.0` and `100.0`.
     /// This will be used to generate matching hitresults.
     pub fn accuracy(mut self, acc: f64) -> Self {
-        self.acc = Some(acc / 100.0);
+        self.acc = Some(acc.clamp(0.0, 100.0) / 100.0);
 
         self
     }
