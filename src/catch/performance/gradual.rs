@@ -130,6 +130,7 @@ impl CatchGradualPerformance {
     }
 
     /// Returns the amount of remaining objects.
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.difficulty.len()
     }
