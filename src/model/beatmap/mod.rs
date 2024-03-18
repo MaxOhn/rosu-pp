@@ -79,7 +79,7 @@ impl Beatmap {
     /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
     /// attributes.
     pub const fn attributes(&self) -> BeatmapAttributesBuilder {
-        BeatmapAttributesBuilder::from_map(self)
+        BeatmapAttributesBuilder::new().map(self)
     }
 
     /// The beats per minute of the map.

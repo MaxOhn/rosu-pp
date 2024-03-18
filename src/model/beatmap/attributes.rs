@@ -73,8 +73,8 @@ impl BeatmapAttributesBuilder {
         }
     }
 
-    /// Create a new [`BeatmapAttributesBuilder`] from a [`Beatmap`].
-    pub const fn from_map(map: &Beatmap) -> Self {
+    /// Use the given [`Beatmap`]'s attributes, mode, and convert status.
+    pub const fn map(self, map: &Beatmap) -> Self {
         Self {
             mode: map.mode,
             ar: ModsDependent::new(map.ar),
@@ -323,13 +323,13 @@ impl BeatmapAttributesBuilder {
 
 impl From<&Beatmap> for BeatmapAttributesBuilder {
     fn from(map: &Beatmap) -> Self {
-        Self::from_map(map)
+        Self::new().map(map)
     }
 }
 
 impl<M> From<&Converted<'_, M>> for BeatmapAttributesBuilder {
     fn from(converted: &Converted<'_, M>) -> Self {
-        Self::from_map(converted)
+        Self::new().map(converted)
     }
 }
 
