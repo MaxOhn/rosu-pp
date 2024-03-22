@@ -12,7 +12,7 @@ use crate::{
         control_point::{DifficultyPoint, EffectPoint, TimingPoint},
         hit_object::HitObject,
     },
-    util::{float_ext::FloatExt, random::Random},
+    util::random::Random,
 };
 
 use super::PatternGenerator;
@@ -65,7 +65,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let beat_len = timing_beat_len * bpm_multiplier;
 
         let span_count = (repeats + 1) as i32;
-        let start_time = hit_object.start_time.round_even() as i32;
+        let start_time = hit_object.start_time.round_ties_even() as i32;
 
         // * This matches stable's calculation.
         let end_time = (f64::from(start_time)
@@ -107,7 +107,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
 
             // Keeping it in-sync with lazer
             #[allow(clippy::if_not_else)]
-            if self.end_time != obj.end_time().round_even() as i32 {
+            if self.end_time != obj.end_time().round_ties_even() as i32 {
                 intermediate_pattern.add_object(obj, col);
             } else {
                 end_time_pattern.add_object(obj, col);

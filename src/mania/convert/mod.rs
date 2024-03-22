@@ -9,7 +9,7 @@ use crate::{
         hit_object::{HitObjectKind, HoldNote, Spinner},
         mode::ConvertStatus,
     },
-    util::{float_ext::FloatExt, limited_queue::LimitedQueue, random::Random, sort},
+    util::{limited_queue::LimitedQueue, random::Random, sort},
 };
 
 use self::{
@@ -53,9 +53,9 @@ pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
 }
 
 fn convert(map: &mut Beatmap) {
-    let seed = (map.hp + map.cs).round_even() as i32 * 20
+    let seed = (map.hp + map.cs).round_ties_even() as i32 * 20
         + (map.od * 41.2) as i32
-        + map.ar.round_even() as i32;
+        + map.ar.round_ties_even() as i32;
 
     let mut random = Random::new(seed);
 
@@ -192,8 +192,8 @@ impl Default for PrevValues {
 }
 
 fn target_columns(map: &Beatmap) -> f32 {
-    let rounded_cs = map.cs.round_even();
-    let rounded_od = map.od.round_even();
+    let rounded_cs = map.cs.round_ties_even();
+    let rounded_od = map.od.round_ties_even();
 
     let slider_or_spinner_count = map
         .hit_objects
@@ -217,6 +217,8 @@ fn target_columns(map: &Beatmap) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use crate::util::float_ext::FloatExt;
+
     use super::*;
 
     #[test]

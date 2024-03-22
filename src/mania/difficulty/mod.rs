@@ -6,7 +6,6 @@ use crate::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},
     },
-    util::float_ext::FloatExt,
 };
 
 use super::{attributes::ManiaDifficultyAttributes, convert::ManiaBeatmap};
@@ -48,7 +47,7 @@ pub struct DifficultyValues {
 impl DifficultyValues {
     pub fn calculate(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
-        let total_columns = converted.cs.round_even().max(1.0);
+        let total_columns = converted.cs.round_ties_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(converted);
 

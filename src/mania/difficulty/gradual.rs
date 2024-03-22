@@ -4,7 +4,6 @@ use crate::{
     any::difficulty::skills::Skill,
     mania::{object::ObjectParams, ManiaBeatmap},
     model::{beatmap::HitWindows, hit_object::HitObject},
-    util::float_ext::FloatExt,
     Difficulty,
 };
 
@@ -62,7 +61,7 @@ impl ManiaGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(difficulty: Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
         let take = difficulty.get_passed_objects();
-        let total_columns = converted.cs.round_even().max(1.0);
+        let total_columns = converted.cs.round_ties_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(converted);
 
