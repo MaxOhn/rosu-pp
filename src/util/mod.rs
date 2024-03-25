@@ -1,3 +1,4 @@
+pub mod compact_zeros;
 pub mod float_ext;
 pub mod generic_fmt;
 pub mod limited_queue;

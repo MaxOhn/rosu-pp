@@ -6,7 +6,7 @@ use crate::{
         skills::{strain_decay, ISkill, Skill, StrainSkill},
     },
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
-    util::mods::Mods,
+    util::{compact_zeros::CompactZerosVec, mods::Mods},
 };
 
 use super::strain::OsuStrainSkill;
@@ -33,7 +33,7 @@ impl Flashlight {
         }
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> CompactZerosVec {
         self.inner.get_curr_strain_peaks()
     }
 
@@ -48,8 +48,7 @@ impl Flashlight {
     }
 
     fn static_difficulty_value(skill: StrainSkill) -> f64 {
-        skill.get_curr_strain_peaks().into_iter().sum::<f64>()
-            * OsuStrainSkill::DIFFICULTY_MULTIPLER
+        skill.get_curr_strain_peaks().sum() * OsuStrainSkill::DIFFICULTY_MULTIPLER
     }
 }
 

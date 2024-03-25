@@ -12,7 +12,10 @@ use crate::{
         },
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     },
-    util::sync::{RefCount, Weak},
+    util::{
+        compact_zeros::CompactZerosVec,
+        sync::{RefCount, Weak},
+    },
 };
 
 const SKILL_MULTIPLIER: f64 = 0.12;
@@ -43,7 +46,7 @@ impl Color {
         ColorEvaluator::evaluate_diff_of(curr)
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> CompactZerosVec {
         self.inner.get_curr_strain_peaks()
     }
 

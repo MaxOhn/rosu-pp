@@ -38,9 +38,9 @@ pub fn strains(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> OsuStrain
     } = DifficultyValues::calculate(difficulty, converted);
 
     OsuStrains {
-        aim: aim.get_curr_strain_peaks(),
-        aim_no_sliders: aim_no_sliders.get_curr_strain_peaks(),
-        speed: speed.get_curr_strain_peaks(),
-        flashlight: flashlight.get_curr_strain_peaks(),
+        aim: aim.get_curr_strain_peaks().to_vec(),
+        aim_no_sliders: aim_no_sliders.get_curr_strain_peaks().to_vec(),
+        speed: speed.get_curr_strain_peaks().to_vec(),
+        flashlight: flashlight.get_curr_strain_peaks().to_vec(),
     }
 }

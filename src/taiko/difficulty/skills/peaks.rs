@@ -61,9 +61,8 @@ impl Peaks {
 
         let zip = color_peaks
             .iter()
-            .copied()
-            .zip(rhythm_peaks.iter().copied())
-            .zip(stamina_peaks.iter().copied());
+            .zip(rhythm_peaks.iter())
+            .zip(stamina_peaks.iter());
 
         for ((mut color_peak, mut rhythm_peak), mut stamina_peak) in zip {
             color_peak *= COLOR_SKILL_MULTIPLIER;
