@@ -2,6 +2,14 @@ use std::{iter::Copied, slice::Iter};
 
 use self::entry::CompactZerosEntry;
 
+/// A specialized `Vec<f64>` where all entries must be positive.
+///
+/// It is compact in the sense that zeros are not stored directly but instead
+/// as amount of times they appear consecutively.
+///
+/// For cases with few consecutive zeros, this type generally reduces
+/// performance slightly. However, for edge cases like `/b/3739922` the length
+/// of the list is massively reduced, preventing out-of-memory issues.
 #[derive(Clone)]
 pub struct CompactZerosVec {
     inner: Vec<CompactZerosEntry>,
@@ -12,6 +20,8 @@ pub struct CompactZerosVec {
 }
 
 impl CompactZerosVec {
+    /// Constructs a new, empty [`CompactZerosVec`] with at least the specified
+    /// capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: Vec::with_capacity(capacity),
@@ -21,10 +31,12 @@ impl CompactZerosVec {
         }
     }
 
+    /// Returns the number of elements.
     pub const fn len(&self) -> usize {
         self.len
     }
 
+    /// Appends an element to the back.
     pub fn push(&mut self, value: f64) {
         if value.to_bits() > 0 {
             self.inner.push(CompactZerosEntry::new_value(value));
@@ -70,6 +82,7 @@ impl CompactZerosVec {
     ///
     /// Panics if there are zeros.
     pub fn non_zero_iter(&self) -> impl ExactSizeIterator<Item = f64> + '_ {
+        #[cfg(debug_assertions)]
         debug_assert!(!self.has_zero);
 
         self.inner.iter().copied().map(CompactZerosEntry::value)
@@ -84,12 +97,15 @@ impl CompactZerosVec {
         self.non_zero_iter()
     }
 
+    /// Removes all zeros, sorts the remaining entries in descending order, and
+    /// returns an iterator over mutable references to the values.
     pub fn sorted_non_zero_iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut f64> {
         self.retain_non_zero_and_sort();
 
         self.inner.iter_mut().map(CompactZerosEntry::as_value_mut)
     }
 
+    /// Sum up all values.
     pub fn sum(&self) -> f64 {
         self.inner
             .iter()
@@ -98,10 +114,12 @@ impl CompactZerosVec {
             .fold(0.0, |sum, e| sum + e.value())
     }
 
+    /// Returns an iterator over the [`CompactZerosVec`].
     pub fn iter(&self) -> CompactZerosIter<'_> {
         CompactZerosIter::new(self)
     }
 
+    /// Allocates a new `Vec<f64>` to store all values, including zeros.
     pub fn to_vec(&self) -> Vec<f64> {
         let mut vec = Vec::with_capacity(self.len);
         vec.extend(self.iter());
@@ -147,9 +165,9 @@ impl<'a> Iterator for CompactZerosIter<'a> {
                 self.len -= 1;
 
                 return Some(0.0);
-            } else {
-                self.curr = self.inner.next();
             }
+
+            self.curr = self.inner.next();
         }
     }
 }
@@ -160,8 +178,13 @@ impl ExactSizeIterator for CompactZerosIter<'_> {
     }
 }
 
+/// Private module to hide internal fields.
 mod entry {
-
+    /// Either a non-zero `f64` or an amount of consecutive `0.0`.
+    ///
+    /// If the first bit is not set, i.e. the sign bit of a `f64` indicates
+    /// that it's positive, the union represents that `f64`. Otherwise, the
+    /// first bit is ignored and the union represents a `u64`.
     #[derive(Copy, Clone)]
     pub union CompactZerosEntry {
         value: f64,
@@ -171,7 +194,12 @@ mod entry {
     impl CompactZerosEntry {
         const ZERO_COUNT_MASK: u64 = u64::MAX >> 1;
 
-        pub const fn new_value(value: f64) -> Self {
+        pub fn new_value(value: f64) -> Self {
+            debug_assert!(
+                value.is_sign_positive(),
+                "attempted to create negative entry, please report as a bug"
+            );
+
             Self { value }
         }
 
@@ -201,7 +229,7 @@ mod entry {
         pub fn as_value_mut(&mut self) -> &mut f64 {
             debug_assert!(self.is_value());
 
-            // SAFETY: Union has the same layout as a `f64`.
+            // SAFETY: `CompactZerosEntry` has the same layout as a `f64`.
             unsafe { &mut *(self as *mut CompactZerosEntry).cast::<f64>() }
         }
 
