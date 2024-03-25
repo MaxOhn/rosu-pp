@@ -256,3 +256,54 @@ mod entry {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use crate::util::float_ext::FloatExt;
+
+    use super::*;
+
+    proptest! {
+        #[test]
+        fn expected(mut values in prop::collection::vec(prop::option::of(0.0..1_000.0), 0..1_000)) {
+            let mut vec = CompactZerosVec::with_capacity(values.len());
+
+            let mut additional_zeros = 0;
+            let mut prev_zero = false;
+            let mut sum = 0.0;
+
+            for opt in values.iter().copied() {
+                if let Some(value) = opt {
+                    vec.push(value);
+                    prev_zero = false;
+                    sum += value;
+                } else {
+                    vec.push(0.0);
+
+                    if prev_zero {
+                        additional_zeros += 1;
+                    }
+
+                    prev_zero = true;
+                }
+            }
+
+            assert_eq!(vec.len(), values.len());
+            assert_eq!(vec.inner.len(), values.len() - additional_zeros);
+            assert!(vec.sum().eq(sum));
+            assert!(vec.iter().eq(values.iter().copied().map(|opt| opt.unwrap_or(0.0))));
+
+            values.retain(Option::is_some);
+
+            values.sort_by(|a, b| {
+                let (Some(a), Some(b)) = (a, b) else { unreachable!() };
+
+                b.total_cmp(a)
+            });
+
+            assert!(vec.sorted_non_zero_iter().eq(values.into_iter().flatten()));
+        }
+    }
+}
