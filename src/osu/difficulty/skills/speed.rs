@@ -6,7 +6,7 @@ use crate::{
         skills::{strain_decay, ISkill, Skill},
     },
     osu::difficulty::object::OsuDifficultyObject,
-    util::compact_zeros::CompactZerosVec,
+    util::strains_vec::StrainsVec,
 };
 
 use super::strain::OsuStrainSkill;
@@ -38,7 +38,7 @@ impl Speed {
         }
     }
 
-    pub fn get_curr_strain_peaks(self) -> CompactZerosVec {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 

@@ -4,7 +4,7 @@ use crate::{
         skills::{strain_decay, ISkill, Skill, StrainDecaySkill},
     },
     mania::difficulty::object::ManiaDifficultyObject,
-    util::compact_zeros::CompactZerosVec,
+    util::strains_vec::StrainsVec,
 };
 
 const INDIVIDUAL_DECAY_BASE: f64 = 0.125;
@@ -38,7 +38,7 @@ impl Strain {
         }
     }
 
-    pub fn get_curr_strain_peaks(self) -> CompactZerosVec {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 

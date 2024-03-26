@@ -4,7 +4,7 @@ pub use inner::*;
 mod inner {
     use std::{iter::Copied, slice::Iter};
 
-    use self::entry::CompactZerosEntry;
+    use self::entry::StrainsEntry;
 
     /// A specialized `Vec<f64>` where all entries must be positive.
     ///
@@ -15,16 +15,16 @@ mod inner {
     /// performance slightly. However, for edge cases like `/b/3739922` the length
     /// of the list is massively reduced, preventing out-of-memory issues.
     #[derive(Clone)]
-    pub struct CompactZerosVec {
-        inner: Vec<CompactZerosEntry>,
+    pub struct StrainsVec {
+        inner: Vec<StrainsEntry>,
         len: usize,
         #[cfg(debug_assertions)]
         // Ensures that methods are used correctly
         has_zero: bool,
     }
 
-    impl CompactZerosVec {
-        /// Constructs a new, empty [`CompactZerosVec`] with at least the specified
+    impl StrainsVec {
+        /// Constructs a new, empty [`StrainsVec`] with at least the specified
         /// capacity.
         pub fn with_capacity(capacity: usize) -> Self {
             Self {
@@ -43,11 +43,11 @@ mod inner {
         /// Appends an element to the back.
         pub fn push(&mut self, value: f64) {
             if value.to_bits() > 0 {
-                self.inner.push(CompactZerosEntry::new_value(value));
+                self.inner.push(StrainsEntry::new_value(value));
             } else if let Some(last) = self.inner.last_mut().filter(|e| e.is_zero()) {
                 last.incr_zero_count();
             } else {
-                self.inner.push(CompactZerosEntry::new_zero());
+                self.inner.push(StrainsEntry::new_zero());
 
                 #[cfg(debug_assertions)]
                 {
@@ -68,7 +68,7 @@ mod inner {
 
         /// Removes all zero entries
         pub fn retain_non_zero(&mut self) {
-            self.inner.retain(CompactZerosEntry::is_value);
+            self.inner.retain(StrainsEntry::is_value);
 
             #[cfg(debug_assertions)]
             {
@@ -89,11 +89,11 @@ mod inner {
             #[cfg(debug_assertions)]
             debug_assert!(!self.has_zero);
 
-            self.inner.iter().copied().map(CompactZerosEntry::value)
+            self.inner.iter().copied().map(StrainsEntry::value)
         }
 
-        /// Same as [`CompactZerosVec::retain_non_zero_and_sort`] followed by
-        /// [`CompactZerosVec::iter`] but the resulting iterator is faster
+        /// Same as [`StrainsVec::retain_non_zero_and_sort`] followed by
+        /// [`StrainsVec::iter`] but the resulting iterator is faster
         /// because it doesn't need to check whether entries are zero.
         pub fn sorted_non_zero_iter(&mut self) -> impl ExactSizeIterator<Item = f64> + '_ {
             self.retain_non_zero_and_sort();
@@ -106,7 +106,7 @@ mod inner {
         pub fn sorted_non_zero_iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut f64> {
             self.retain_non_zero_and_sort();
 
-            self.inner.iter_mut().map(CompactZerosEntry::as_value_mut)
+            self.inner.iter_mut().map(StrainsEntry::as_value_mut)
         }
 
         /// Sum up all values.
@@ -114,11 +114,11 @@ mod inner {
             self.inner
                 .iter()
                 .copied()
-                .filter(CompactZerosEntry::is_value)
+                .filter(StrainsEntry::is_value)
                 .fold(0.0, |sum, e| sum + e.value())
         }
 
-        /// Returns an iterator over the [`CompactZerosVec`].
+        /// Returns an iterator over the [`StrainsVec`].
         pub fn iter(&self) -> CompactZerosIter<'_> {
             CompactZerosIter::new(self)
         }
@@ -133,13 +133,13 @@ mod inner {
     }
 
     pub struct CompactZerosIter<'a> {
-        inner: Copied<Iter<'a, CompactZerosEntry>>,
-        curr: Option<CompactZerosEntry>,
+        inner: Copied<Iter<'a, StrainsEntry>>,
+        curr: Option<StrainsEntry>,
         len: usize,
     }
 
     impl<'a> CompactZerosIter<'a> {
-        pub fn new(vec: &'a CompactZerosVec) -> Self {
+        pub fn new(vec: &'a StrainsVec) -> Self {
             let mut inner = vec.inner.iter().copied();
             let curr = inner.next();
 
@@ -190,12 +190,12 @@ mod inner {
         /// that it's positive, the union represents that `f64`. Otherwise, the
         /// first bit is ignored and the union represents a `u64`.
         #[derive(Copy, Clone)]
-        pub union CompactZerosEntry {
+        pub union StrainsEntry {
             value: f64,
             zero_count: u64,
         }
 
-        impl CompactZerosEntry {
+        impl StrainsEntry {
             const ZERO_COUNT_MASK: u64 = u64::MAX >> 1;
 
             pub fn new_value(value: f64) -> Self {
@@ -233,8 +233,8 @@ mod inner {
             pub fn as_value_mut(&mut self) -> &mut f64 {
                 debug_assert!(self.is_value());
 
-                // SAFETY: `CompactZerosEntry` has the same layout as a `f64`.
-                unsafe { &mut *(self as *mut CompactZerosEntry).cast::<f64>() }
+                // SAFETY: `StrainsEntry` has the same layout as a `f64`.
+                unsafe { &mut *(self as *mut StrainsEntry).cast::<f64>() }
             }
 
             pub fn zero_count(self) -> u64 {
@@ -272,7 +272,7 @@ mod inner {
         proptest! {
             #[test]
             fn expected(mut values in prop::collection::vec(prop::option::of(0.0..1_000.0), 0..1_000)) {
-                let mut vec = CompactZerosVec::with_capacity(values.len());
+                let mut vec = StrainsVec::with_capacity(values.len());
 
                 let mut additional_zeros = 0;
                 let mut prev_zero = false;
@@ -321,11 +321,11 @@ mod inner {
     };
 
     #[derive(Clone)]
-    pub struct CompactZerosVec {
+    pub struct StrainsVec {
         inner: Vec<f64>,
     }
 
-    impl CompactZerosVec {
+    impl StrainsVec {
         pub fn with_capacity(capacity: usize) -> Self {
             Self {
                 inner: Vec::with_capacity(capacity),

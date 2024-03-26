@@ -1,4 +1,4 @@
-use crate::{any::difficulty::skills::StrainSkill, util::compact_zeros::CompactZerosVec};
+use crate::{any::difficulty::skills::StrainSkill, util::strains_vec::StrainsVec};
 
 #[derive(Clone, Default)]
 pub struct OsuStrainSkill {
@@ -21,7 +21,7 @@ impl OsuStrainSkill {
         self.inner.start_new_section_from(initial_strain);
     }
 
-    pub fn get_curr_strain_peaks(self) -> CompactZerosVec {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 
