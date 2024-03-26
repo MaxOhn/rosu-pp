@@ -174,6 +174,12 @@ mod inner {
                 self.curr = self.inner.next();
             }
         }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            let len = self.len();
+
+            (len, Some(len))
+        }
     }
 
     impl ExactSizeIterator for CompactZerosIter<'_> {
