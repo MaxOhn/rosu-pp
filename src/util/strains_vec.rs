@@ -119,8 +119,8 @@ mod inner {
         }
 
         /// Returns an iterator over the [`StrainsVec`].
-        pub fn iter(&self) -> CompactZerosIter<'_> {
-            CompactZerosIter::new(self)
+        pub fn iter(&self) -> StrainsIter<'_> {
+            StrainsIter::new(self)
         }
 
         /// Allocates a new `Vec<f64>` to store all values, including zeros.
@@ -132,13 +132,13 @@ mod inner {
         }
     }
 
-    pub struct CompactZerosIter<'a> {
+    pub struct StrainsIter<'a> {
         inner: Copied<Iter<'a, StrainsEntry>>,
         curr: Option<StrainsEntry>,
         len: usize,
     }
 
-    impl<'a> CompactZerosIter<'a> {
+    impl<'a> StrainsIter<'a> {
         pub fn new(vec: &'a StrainsVec) -> Self {
             let mut inner = vec.inner.iter().copied();
             let curr = inner.next();
@@ -151,7 +151,7 @@ mod inner {
         }
     }
 
-    impl<'a> Iterator for CompactZerosIter<'a> {
+    impl<'a> Iterator for StrainsIter<'a> {
         type Item = f64;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -182,7 +182,7 @@ mod inner {
         }
     }
 
-    impl ExactSizeIterator for CompactZerosIter<'_> {
+    impl ExactSizeIterator for StrainsIter<'_> {
         fn len(&self) -> usize {
             self.len
         }
