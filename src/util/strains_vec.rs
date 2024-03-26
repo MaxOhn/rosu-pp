@@ -190,7 +190,7 @@ mod inner {
 
     /// Private module to hide internal fields.
     mod entry {
-        /// Either a non-zero `f64` or an amount of consecutive `0.0`.
+        /// Either a positive `f64` or an amount of consecutive `0.0`.
         ///
         /// If the first bit is not set, i.e. the sign bit of a `f64` indicates
         /// that it's positive, the union represents that `f64`. Otherwise, the
@@ -207,7 +207,7 @@ mod inner {
             pub fn new_value(value: f64) -> Self {
                 debug_assert!(
                     value.is_sign_positive(),
-                    "attempted to create negative entry, please report as a bug"
+                    "attempted to create negative strain entry, please report as a bug"
                 );
 
                 Self { value }
@@ -326,6 +326,8 @@ mod inner {
         slice::{Iter, IterMut},
     };
 
+    /// Plain wrapper around `Vec<f64>` because the `compact_strains` feature
+    /// is disabled.
     #[derive(Clone)]
     pub struct StrainsVec {
         inner: Vec<f64>,
@@ -359,11 +361,11 @@ mod inner {
             self.sort_desc();
         }
 
-        pub fn non_zero_iter(&self) -> impl ExactSizeIterator<Item = f64> + '_ {
+        pub fn non_zero_iter(&self) -> Copied<Iter<'_, f64>> {
             self.inner.iter().copied()
         }
 
-        pub fn sorted_non_zero_iter(&mut self) -> impl ExactSizeIterator<Item = f64> + '_ {
+        pub fn sorted_non_zero_iter(&mut self) -> Copied<Iter<'_, f64>> {
             self.retain_non_zero_and_sort();
 
             self.non_zero_iter()
