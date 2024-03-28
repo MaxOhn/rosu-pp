@@ -12,7 +12,7 @@ use crate::{
         },
         object::HitType,
     },
-    util::{float_ext::FloatExt, limited_queue::LimitedQueue},
+    util::{float_ext::FloatExt, limited_queue::LimitedQueue, strains_vec::StrainsVec},
 };
 
 const SKILL_MULTIPLIER: f64 = 10.0;
@@ -142,7 +142,7 @@ impl Rhythm {
         self.curr_strain()
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 

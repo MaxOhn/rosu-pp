@@ -20,6 +20,6 @@ pub fn strains(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> CatchSt
     let DifficultyValues { movement, .. } = DifficultyValues::calculate(difficulty, converted);
 
     CatchStrains {
-        movement: movement.get_curr_strain_peaks(),
+        movement: movement.get_curr_strain_peaks().into_vec(),
     }
 }

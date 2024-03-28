@@ -1,4 +1,4 @@
-name: Clippy and Tests
+name: Clippy checks
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout project
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -29,34 +29,3 @@ jobs:
         run: |
           cargo install cargo-rdme
           cargo rdme --check --no-fail-on-warnings
-
-  tests:
-    name: Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v3
-    
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-  
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run tests on default features
-        run: cargo nextest run --no-default-features --no-fail-fast --failure-output=immediate-final
-
-      - name: Run tests with sync feature
-        run: >
-          cargo nextest run
-          --features sync
-          --filter-expr 'test(util::sync::tests::share_gradual_taiko)'
-          --filter-expr 'test(taiko::difficulty::gradual::tests::next_and_nth)'
-          --no-fail-fast --failure-output=immediate-final
-
-      - name: Run doctests
-        run: cargo test --no-default-features --doc

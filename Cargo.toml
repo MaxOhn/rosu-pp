@@ -11,7 +11,8 @@ description = "Difficulty and performance calculation for osu!"
 keywords = ["osu", "pp", "stars", "performance", "osu!"]
 
 [features]
-default = []
+default = ["compact_strains"]
+compact_strains = []
 sync = []
 tracing = ["rosu-map/tracing"]
 

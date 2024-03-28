@@ -7,6 +7,7 @@ use crate::{
         difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
         object::HitType,
     },
+    util::strains_vec::StrainsVec,
 };
 
 const SKILL_MULTIPLIER: f64 = 1.1;
@@ -18,7 +19,7 @@ pub struct Stamina {
 }
 
 impl Stamina {
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 
