@@ -6,7 +6,7 @@ mod inner {
 
     use self::entry::StrainsEntry;
 
-    /// A specialized `Vec<f64>` where all entries must be positive.
+    /// A specialized `Vec<f64>` where all entries must be non-negative.
     ///
     /// It is compact in the sense that zeros are not stored directly but instead
     /// as amount of times they appear consecutively.
@@ -239,8 +239,7 @@ mod inner {
             pub fn as_value_mut(&mut self) -> &mut f64 {
                 debug_assert!(self.is_value());
 
-                // SAFETY: `StrainsEntry` has the same layout as a `f64`.
-                unsafe { &mut *(self as *mut StrainsEntry).cast::<f64>() }
+                unsafe { &mut self.value }
             }
 
             pub fn zero_count(self) -> u64 {
