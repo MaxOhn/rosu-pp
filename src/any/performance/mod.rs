@@ -1,23 +1,16 @@
-use std::borrow::Cow;
-
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::attributes::DifficultyAttributes,
-    catch::{Catch, CatchPerformance},
-    mania::{Mania, ManiaPerformance},
-    model::beatmap::{Beatmap, Converted},
-    osu::{Osu, OsuPerformance},
-    taiko::{Taiko, TaikoPerformance},
+    catch::CatchPerformance, mania::ManiaPerformance, osu::OsuPerformance, taiko::TaikoPerformance,
     Difficulty,
 };
 
-use super::{
-    attributes::{AttributeProvider, PerformanceAttributes},
-    score_state::ScoreState,
-};
+use self::into::IntoPerformance;
+
+use super::{attributes::PerformanceAttributes, score_state::ScoreState};
 
 pub mod gradual;
+pub mod into;
 
 /// Performance calculator on maps of any mode.
 #[derive(Clone, Debug, PartialEq)]
@@ -30,43 +23,29 @@ pub enum Performance<'map> {
 }
 
 impl<'map> Performance<'map> {
-    /// Create a new performance calculator for maps of any mode.
+    /// Create a new performance calculator for any mode.
     ///
-    /// Note that creating [`Performance`] this way will require to perform the
-    /// costly computation of difficulty attributes internally. If attributes
-    /// for the current [`Difficulty`] settings are already available, consider
-    /// using [`from_attributes`] instead.
+    /// `map_or_attrs` must be either
+    /// - previously calculated attributes ([`DifficultyAttributes`],
+    /// [`PerformanceAttributes`], or mode-specific attributes like
+    /// [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
+    /// - a beatmap ([`Beatmap`] or [`Converted<'_, M>`])
     ///
-    /// [`from_attributes`]: Self::from_attributes
-    pub const fn from_map(map: &'map Beatmap) -> Self {
-        let mode = map.mode;
-        let map = Cow::Borrowed(map);
-
-        match mode {
-            GameMode::Osu => Self::Osu(OsuPerformance::from_map(Converted::new(map))),
-            GameMode::Taiko => Self::Taiko(TaikoPerformance::from_map(Converted::new(map))),
-            GameMode::Catch => Self::Catch(CatchPerformance::from_map(Converted::new(map))),
-            GameMode::Mania => Self::Mania(ManiaPerformance::from_map(Converted::new(map))),
-        }
-    }
-
-    /// Create a new performance calculator through previously calculated
-    /// attributes.
+    /// If a map is given, difficulty attributes will need to be calculated
+    /// internally which is a costly operation. Hence, passing attributes
+    /// should be prefered.
     ///
-    /// Note that `attrs` must have been calculated for the same beatmap and
-    /// [`Difficulty`] settings, otherwise the final attributes will be
-    /// incorrect.
-    pub fn from_attributes(attrs: impl AttributeProvider) -> Self {
-        const fn inner(attrs: DifficultyAttributes) -> Performance<'static> {
-            match attrs {
-                DifficultyAttributes::Osu(attrs) => Performance::Osu(attrs.performance()),
-                DifficultyAttributes::Taiko(attrs) => Performance::Taiko(attrs.performance()),
-                DifficultyAttributes::Catch(attrs) => Performance::Catch(attrs.performance()),
-                DifficultyAttributes::Mania(attrs) => Performance::Mania(attrs.performance()),
-            }
-        }
-
-        inner(attrs.attributes())
+    /// However, when passing previously calculated attributes, make sure they
+    /// have been calculated for the same map and [`Difficulty`] settings.
+    /// Otherwise, the final attributes will be incorrect.
+    ///
+    /// [`Beatmap`]: crate::model::beatmap::Beatmap
+    /// [`Converted<'_, M>`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`TaikoDifficultyAttributes`]: crate::taiko::TaikoDifficultyAttributes
+    /// [`ManiaPerformanceAttributes`]: crate::mania::ManiaPerformanceAttributes
+    pub fn new(map_or_attrs: impl IntoPerformance<'map>) -> Self {
+        map_or_attrs.into_performance()
     }
 
     /// Consume the performance calculator and calculate
@@ -82,13 +61,12 @@ impl<'map> Performance<'map> {
 
     /// Attempt to convert the map to the specified mode.
     ///
-    /// Returns `Err(self)` if the conversion is incompatible or the internal
-    /// beatmap was already replaced with difficulty attributes, i.e. if
-    /// [`Performance::from_attributes`] or [`Performance::generate_state`] was
-    /// called.
+    /// Returns `Err(self)` if the conversion is incompatible or no beatmap is
+    /// contained, i.e. if this [`Performance`] was created through attributes
+    /// or [`Performance::generate_state`] was called.
     ///
-    /// If the given mode should be ignored in case it is incompatible or if
-    /// the internal beatmap was replaced, use [`mode_or_ignore`] instead.
+    /// If the given mode should be ignored in case of an error, use
+    /// [`mode_or_ignore`] instead.
     ///
     /// [`mode_or_ignore`]: Self::mode_or_ignore
     // Both variants have the same size
@@ -380,33 +358,6 @@ impl<'map> Performance<'map> {
     }
 }
 
-impl<A: AttributeProvider> From<A> for Performance<'_> {
-    fn from(attrs: A) -> Self {
-        Self::from_attributes(attrs)
-    }
-}
-
-macro_rules! impl_from_converted {
-    ( $mode:ident ) => {
-        impl<'a> From<Converted<'a, $mode>> for Performance<'a> {
-            fn from(converted: Converted<'a, $mode>) -> Self {
-                Self::$mode(converted.into())
-            }
-        }
-
-        impl<'a, 'b: 'a> From<&'b Converted<'a, $mode>> for Performance<'a> {
-            fn from(converted: &'b Converted<'a, $mode>) -> Self {
-                Self::$mode(converted.as_owned().into())
-            }
-        }
-    };
-}
-
-impl_from_converted!(Osu);
-impl_from_converted!(Taiko);
-impl_from_converted!(Catch);
-impl_from_converted!(Mania);
-
 /// While generating remaining hitresults, decide how they should be distributed.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum HitResultPriority {
@@ -423,5 +374,11 @@ impl HitResultPriority {
 impl Default for HitResultPriority {
     fn default() -> Self {
         Self::DEFAULT
+    }
+}
+
+impl<'a, T: IntoPerformance<'a>> From<T> for Performance<'a> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }

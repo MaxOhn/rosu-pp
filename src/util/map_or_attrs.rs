@@ -13,6 +13,7 @@ impl<'map, M: IGameMode> MapOrAttrs<'map, M> {
     /// If `self` is of variant `Map`, store `attrs` in `self`, and return a
     /// mutable reference to it.
     pub fn insert_attrs(&mut self, attrs: M::DifficultyAttributes) -> &mut M::DifficultyAttributes {
+        // TODO: dont match, just overwrite
         match self {
             MapOrAttrs::Map(_) => {
                 *self = Self::Attrs(attrs);
@@ -67,3 +68,62 @@ where
         }
     }
 }
+
+impl<'map, M: IGameMode> From<Converted<'map, M>> for MapOrAttrs<'map, M> {
+    fn from(converted: Converted<'map, M>) -> Self {
+        Self::Map(converted)
+    }
+}
+
+impl<'map, M: IGameMode> From<&'map Converted<'_, M>> for MapOrAttrs<'map, M> {
+    fn from(converted: &'map Converted<'_, M>) -> Self {
+        Self::Map(converted.as_owned())
+    }
+}
+
+macro_rules! from_attrs {
+    (
+        $(
+            $module:ident {
+                $mode:ident, $diff:ident, $perf:ident
+            }
+        ,)*
+    ) => {
+        $(
+            impl From<crate::$module::$diff> for MapOrAttrs<'_, crate::$module::$mode> {
+                fn from(attrs: crate::$module::$diff) -> Self {
+                    Self::Attrs(attrs)
+                }
+            }
+
+            impl From<crate::$module::$perf> for MapOrAttrs<'_, crate::$module::$mode> {
+                fn from(attrs: crate::$module::$perf) -> Self {
+                    Self::Attrs(attrs.difficulty)
+                }
+            }
+        )*
+    };
+}
+
+from_attrs!(
+    osu {
+        Osu,
+        OsuDifficultyAttributes,
+        OsuPerformanceAttributes
+    },
+    taiko {
+        Taiko,
+        TaikoDifficultyAttributes,
+        TaikoPerformanceAttributes
+    },
+    catch {
+        Catch,
+        CatchDifficultyAttributes,
+        CatchPerformanceAttributes
+    },
+    mania {
+        Mania,
+        ManiaDifficultyAttributes,
+        ManiaPerformanceAttributes
+    },
+);

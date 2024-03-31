@@ -163,7 +163,7 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let mut regular_calc = ManiaPerformance::from_map(converted.as_owned())
+            let mut regular_calc = ManiaPerformance::new(converted.as_owned())
                 .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state.clone());

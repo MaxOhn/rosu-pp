@@ -43,8 +43,8 @@ impl OsuDifficultyAttributes {
     }
 
     /// Returns a builder for performance calculation.
-    pub const fn performance<'a>(self) -> OsuPerformance<'a> {
-        OsuPerformance::from_attributes(self)
+    pub fn performance<'a>(self) -> OsuPerformance<'a> {
+        self.into()
     }
 }
 
@@ -88,8 +88,8 @@ impl OsuPerformanceAttributes {
     }
 
     /// Returns a builder for performance calculation.
-    pub const fn performance<'a>(self) -> OsuPerformance<'a> {
-        OsuPerformance::from_attributes(self.difficulty)
+    pub fn performance<'a>(self) -> OsuPerformance<'a> {
+        self.difficulty.into()
     }
 }
 

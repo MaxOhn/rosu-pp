@@ -88,8 +88,8 @@ impl Beatmap {
     }
 
     /// Create a performance calculator for this [`Beatmap`].
-    pub const fn performance(&self) -> Performance<'_> {
-        Performance::from_map(self)
+    pub fn performance(&self) -> Performance<'_> {
+        Performance::new(self)
     }
 
     /// Create a gradual difficulty calculator for this [`Beatmap`].
