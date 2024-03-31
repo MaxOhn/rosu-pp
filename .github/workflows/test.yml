@@ -1,0 +1,101 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - next
+  pull_request:
+
+jobs:
+  doc:
+    name: Doc tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+    
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+  
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run doctests
+        run: >
+          cargo test
+          --doc
+          --no-default-features --features compact_strains
+
+  default:
+    name: Default tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+    
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Run all tests
+        run: >
+          cargo nextest run
+          --no-default-features --features compact_strains
+          --no-fail-fast --failure-output=immediate-final
+
+  sync:
+    name: Test sync feature
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+    
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+  
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Run specific tests
+        run: >
+          cargo nextest run
+          --features sync
+          --filter-expr 'test(util::sync::tests::share_gradual_taiko)'
+          --filter-expr 'test(taiko::difficulty::gradual::tests::next_and_nth)'
+          --no-fail-fast --failure-output=immediate-final
+
+  non_compact:
+    name: Test without compact_strains feature
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+    
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+  
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Run integration tests
+        run: >
+          cargo nextest run
+          --no-default-features
+          --test '*'
+          --no-fail-fast --failure-output=immediate-final

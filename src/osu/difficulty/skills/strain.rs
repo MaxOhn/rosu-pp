@@ -1,4 +1,4 @@
-use crate::any::difficulty::skills::StrainSkill;
+use crate::{any::difficulty::skills::StrainSkill, util::strains_vec::StrainsVec};
 
 #[derive(Clone, Default)]
 pub struct OsuStrainSkill {
@@ -21,7 +21,7 @@ impl OsuStrainSkill {
         self.inner.start_new_section_from(initial_strain);
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 
@@ -36,10 +36,8 @@ impl OsuStrainSkill {
         let mut weight = 1.0;
 
         let mut peaks = self.get_curr_strain_peaks();
-        peaks.retain(|&strain| strain > 0.0);
-        peaks.sort_by(|a, b| b.total_cmp(a));
 
-        let peaks_iter = peaks.iter_mut().take(reduced_section_count);
+        let peaks_iter = peaks.sorted_non_zero_iter_mut().take(reduced_section_count);
 
         for (i, strain) in peaks_iter.enumerate() {
             let clamped = f64::from((i as f32 / reduced_section_count as f32).clamp(0.0, 1.0));
@@ -47,9 +45,9 @@ impl OsuStrainSkill {
             *strain *= lerp(reduced_strain_baseline, 1.0, scale);
         }
 
-        peaks.sort_by(|a, b| b.total_cmp(a));
+        peaks.sort_desc();
 
-        for strain in peaks {
+        for strain in peaks.iter() {
             difficulty += strain * weight;
             weight *= decay_weight;
         }

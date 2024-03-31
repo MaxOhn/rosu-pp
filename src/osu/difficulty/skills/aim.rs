@@ -6,7 +6,7 @@ use crate::{
         skills::{strain_decay, ISkill, Skill},
     },
     osu::difficulty::object::OsuDifficultyObject,
-    util::float_ext::FloatExt,
+    util::{float_ext::FloatExt, strains_vec::StrainsVec},
 };
 
 use super::strain::OsuStrainSkill;
@@ -30,7 +30,7 @@ impl Aim {
         }
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 

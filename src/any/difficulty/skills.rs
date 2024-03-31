@@ -1,3 +1,5 @@
+use crate::util::strains_vec::StrainsVec;
+
 pub fn strain_decay(ms: f64, strain_decay_base: f64) -> f64 {
     strain_decay_base.powf(ms / 1000.0)
 }
@@ -27,7 +29,7 @@ pub trait ISkill {
 pub struct StrainSkill {
     pub curr_section_peak: f64,
     pub curr_section_end: f64,
-    pub strain_peaks: Vec<f64>,
+    pub strain_peaks: StrainsVec,
 }
 
 impl Default for StrainSkill {
@@ -36,7 +38,7 @@ impl Default for StrainSkill {
             curr_section_peak: 0.0,
             curr_section_end: 0.0,
             // mean=386.81 | median=279
-            strain_peaks: Vec::with_capacity(256),
+            strain_peaks: StrainsVec::with_capacity(256),
         }
     }
 }
@@ -53,7 +55,7 @@ impl StrainSkill {
         self.curr_section_peak = initial_strain;
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         let mut strain_peaks = self.strain_peaks;
         strain_peaks.push(self.curr_section_peak);
 
@@ -65,10 +67,8 @@ impl StrainSkill {
         let mut weight = 1.0;
 
         let mut peaks = self.get_curr_strain_peaks();
-        peaks.retain(|&strain| strain > 0.0);
-        peaks.sort_by(|a, b| b.total_cmp(a));
 
-        for strain in peaks {
+        for strain in peaks.sorted_non_zero_iter() {
             difficulty += strain * weight;
             weight *= decay_weight;
         }
@@ -95,7 +95,7 @@ impl StrainDecaySkill {
         self.inner.start_new_section_from(initial_strain);
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 

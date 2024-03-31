@@ -20,6 +20,6 @@ pub fn strains(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> ManiaSt
     let values = DifficultyValues::calculate(difficulty, converted);
 
     ManiaStrains {
-        strains: values.strain.get_curr_strain_peaks(),
+        strains: values.strain.get_curr_strain_peaks().into_vec(),
     }
 }

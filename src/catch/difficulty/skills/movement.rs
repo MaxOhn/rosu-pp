@@ -4,6 +4,7 @@ use crate::{
         skills::{strain_decay, ISkill, Skill, StrainDecaySkill},
     },
     catch::difficulty::object::CatchDifficultyObject,
+    util::strains_vec::StrainsVec,
 };
 
 const ABSOLUTE_PLAYER_POSITIONING_ERROR: f32 = 16.0;
@@ -107,7 +108,7 @@ impl Movement {
         dist_addition / weighted_strain_time
     }
 
-    pub fn get_curr_strain_peaks(self) -> Vec<f64> {
+    pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 
