@@ -34,7 +34,7 @@ pub struct CatchPerformance<'map> {
 impl<'map> CatchPerformance<'map> {
     /// Create a new performance calculator for osu!catch maps.
     ///
-    /// `map_or_attrs` must be either
+    /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`CatchDifficultyAttributes`]
     /// or [`CatchPerformanceAttributes`])
     /// - a beatmap ([`CatchBeatmap<'map>`])
@@ -54,9 +54,15 @@ impl<'map> CatchPerformance<'map> {
 
     /// Try to create a new performance calculator for osu!catch maps.
     ///
-    /// Returns `None` if `map_or_attrs` does not belong to osu!catch.
+    /// Returns `None` if `map_or_attrs` does not belong to osu!catch e.g.
+    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
+    /// of a different mode.
     ///
     /// See [`CatchPerformance::new`] for more information.
+    ///
+    /// [`Converted`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
     pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
         if let Performance::Catch(calc) = map_or_attrs.into_performance() {
             Some(calc)

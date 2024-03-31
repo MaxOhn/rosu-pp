@@ -35,7 +35,7 @@ pub struct ManiaPerformance<'map> {
 impl<'map> ManiaPerformance<'map> {
     /// Create a new performance calculator for osu!mania maps.
     ///
-    /// `map_or_attrs` must be either
+    /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`ManiaDifficultyAttributes`]
     /// or [`ManiaPerformanceAttributes`])
     /// - a beatmap ([`ManiaBeatmap<'map>`])
@@ -55,9 +55,15 @@ impl<'map> ManiaPerformance<'map> {
 
     /// Try to create a new performance calculator for osu!mania maps.
     ///
-    /// Returns `None` if `map_or_attrs` does not belong to osu!mania.
+    /// Returns `None` if `map_or_attrs` does not belong to osu!mania e.g.
+    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
+    /// of a different mode.
     ///
     /// See [`ManiaPerformance::new`] for more information.
+    ///
+    /// [`Converted`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
     pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
         if let Performance::Mania(calc) = map_or_attrs.into_performance() {
             Some(calc)

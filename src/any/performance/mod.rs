@@ -25,7 +25,7 @@ pub enum Performance<'map> {
 impl<'map> Performance<'map> {
     /// Create a new performance calculator for any mode.
     ///
-    /// `map_or_attrs` must be either
+    /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`DifficultyAttributes`],
     /// [`PerformanceAttributes`], or mode-specific attributes like
     /// [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)

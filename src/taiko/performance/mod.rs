@@ -33,7 +33,7 @@ pub struct TaikoPerformance<'map> {
 impl<'map> TaikoPerformance<'map> {
     /// Create a new performance calculator for osu!taiko maps.
     ///
-    /// `map_or_attrs` must be either
+    /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`TaikoDifficultyAttributes`]
     /// or [`TaikoPerformanceAttributes`])
     /// - a beatmap ([`TaikoBeatmap<'map>`])
@@ -53,9 +53,15 @@ impl<'map> TaikoPerformance<'map> {
 
     /// Try to create a new performance calculator for osu!taiko maps.
     ///
-    /// Returns `None` if `map_or_attrs` does not belong to osu!taiko.
+    /// Returns `None` if `map_or_attrs` does not belong to osu!taiko e.g.
+    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
+    /// of a different mode.
     ///
     /// See [`TaikoPerformance::new`] for more information.
+    ///
+    /// [`Converted`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
     pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
         if let Performance::Taiko(calc) = map_or_attrs.into_performance() {
             Some(calc)

@@ -37,7 +37,7 @@ pub struct OsuPerformance<'map> {
 impl<'map> OsuPerformance<'map> {
     /// Create a new performance calculator for osu! maps.
     ///
-    /// `map_or_attrs` must be either
+    /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`OsuDifficultyAttributes`]
     /// or [`OsuPerformanceAttributes`])
     /// - a beatmap ([`OsuBeatmap<'map>`])
@@ -57,9 +57,15 @@ impl<'map> OsuPerformance<'map> {
 
     /// Try to create a new performance calculator for osu! maps.
     ///
-    /// Returns `None` if `map_or_attrs` does not belong to osu!.
+    /// Returns `None` if `map_or_attrs` does not belong to osu! e.g.
+    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
+    /// of a different mode.
     ///
     /// See [`OsuPerformance::new`] for more information.
+    ///
+    /// [`Converted`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
     pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
         if let Performance::Osu(calc) = map_or_attrs.into_performance() {
             Some(calc)
