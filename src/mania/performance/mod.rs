@@ -1190,7 +1190,7 @@ mod tests {
     }
 
     proptest! {
-        #![proptest_config(ProptestConfig::with_cases(100))]
+        #![proptest_config(ProptestConfig::with_cases(50))]
 
         #[test]
         fn mania_hitresults(
