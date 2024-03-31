@@ -872,7 +872,11 @@ mod test {
 
     use proptest::prelude::*;
 
-    use crate::Beatmap;
+    use crate::{
+        any::{DifficultyAttributes, PerformanceAttributes},
+        taiko::{Taiko, TaikoDifficultyAttributes, TaikoPerformanceAttributes},
+        Beatmap,
+    };
 
     use super::*;
 
@@ -880,13 +884,14 @@ mod test {
 
     const N_OBJECTS: u32 = 601;
 
+    fn beatmap() -> Beatmap {
+        Beatmap::from_path("./resources/2785319.osu").unwrap()
+    }
+
     fn attrs() -> OsuDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = Beatmap::from_path("./resources/2785319.osu")
-                    .unwrap()
-                    .unchecked_into_converted::<Osu>();
-
+                let converted = beatmap().unchecked_into_converted::<Osu>();
                 let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(
@@ -1132,5 +1137,52 @@ mod test {
         };
 
         assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn create() {
+        let mut map = beatmap();
+        let converted = map.unchecked_as_converted();
+
+        let _ = OsuPerformance::new(OsuDifficultyAttributes::default());
+        let _ = OsuPerformance::new(OsuPerformanceAttributes::default());
+        let _ = OsuPerformance::new(&converted);
+        let _ = OsuPerformance::new(converted.as_owned());
+
+        let _ = OsuPerformance::try_new(OsuDifficultyAttributes::default()).unwrap();
+        let _ = OsuPerformance::try_new(OsuPerformanceAttributes::default()).unwrap();
+        let _ =
+            OsuPerformance::try_new(DifficultyAttributes::Osu(OsuDifficultyAttributes::default()))
+                .unwrap();
+        let _ = OsuPerformance::try_new(PerformanceAttributes::Osu(
+            OsuPerformanceAttributes::default(),
+        ))
+        .unwrap();
+        let _ = OsuPerformance::try_new(&converted).unwrap();
+        let _ = OsuPerformance::try_new(converted.as_owned()).unwrap();
+
+        let _ = OsuPerformance::from(OsuDifficultyAttributes::default());
+        let _ = OsuPerformance::from(OsuPerformanceAttributes::default());
+        let _ = OsuPerformance::from(&converted);
+        let _ = OsuPerformance::from(converted);
+
+        let _ = OsuDifficultyAttributes::default().performance();
+        let _ = OsuPerformanceAttributes::default().performance();
+
+        map.mode = GameMode::Taiko;
+        let converted = map.unchecked_as_converted::<Taiko>();
+
+        assert!(OsuPerformance::try_new(TaikoDifficultyAttributes::default()).is_none());
+        assert!(OsuPerformance::try_new(TaikoPerformanceAttributes::default()).is_none());
+        assert!(OsuPerformance::try_new(DifficultyAttributes::Taiko(
+            TaikoDifficultyAttributes::default()
+        ))
+        .is_none());
+        assert!(OsuPerformance::try_new(PerformanceAttributes::Taiko(
+            TaikoPerformanceAttributes::default()
+        ))
+        .is_none());
+        assert!(OsuPerformance::try_new(&converted).is_none());
+        assert!(OsuPerformance::try_new(converted).is_none());
     }
 }

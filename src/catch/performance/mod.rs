@@ -599,8 +599,13 @@ mod test {
     use std::sync::OnceLock;
 
     use proptest::prelude::*;
+    use rosu_map::section::general::GameMode;
 
-    use crate::Beatmap;
+    use crate::{
+        any::{DifficultyAttributes, PerformanceAttributes},
+        osu::{Osu, OsuDifficultyAttributes, OsuPerformanceAttributes},
+        Beatmap,
+    };
 
     use super::*;
 
@@ -610,13 +615,14 @@ mod test {
     const N_DROPLETS: u32 = 2;
     const N_TINY_DROPLETS: u32 = 291;
 
+    fn beatmap() -> Beatmap {
+        Beatmap::from_path("./resources/2118524.osu").unwrap()
+    }
+
     fn attrs() -> CatchDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = Beatmap::from_path("./resources/2118524.osu")
-                    .unwrap()
-                    .unchecked_into_converted::<Catch>();
-
+                let converted = beatmap().unchecked_into_converted::<Catch>();
                 let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(N_FRUITS, attrs.n_fruits);
@@ -807,5 +813,53 @@ mod test {
         };
 
         assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn create() {
+        let mut map = beatmap();
+        let converted = map.unchecked_as_converted();
+
+        let _ = CatchPerformance::new(CatchDifficultyAttributes::default());
+        let _ = CatchPerformance::new(CatchPerformanceAttributes::default());
+        let _ = CatchPerformance::new(&converted);
+        let _ = CatchPerformance::new(converted.as_owned());
+
+        let _ = CatchPerformance::try_new(CatchDifficultyAttributes::default()).unwrap();
+        let _ = CatchPerformance::try_new(CatchPerformanceAttributes::default()).unwrap();
+        let _ = CatchPerformance::try_new(DifficultyAttributes::Catch(
+            CatchDifficultyAttributes::default(),
+        ))
+        .unwrap();
+        let _ = CatchPerformance::try_new(PerformanceAttributes::Catch(
+            CatchPerformanceAttributes::default(),
+        ))
+        .unwrap();
+        let _ = CatchPerformance::try_new(&converted).unwrap();
+        let _ = CatchPerformance::try_new(converted.as_owned()).unwrap();
+
+        let _ = CatchPerformance::from(CatchDifficultyAttributes::default());
+        let _ = CatchPerformance::from(CatchPerformanceAttributes::default());
+        let _ = CatchPerformance::from(&converted);
+        let _ = CatchPerformance::from(converted);
+
+        let _ = CatchDifficultyAttributes::default().performance();
+        let _ = CatchPerformanceAttributes::default().performance();
+
+        map.mode = GameMode::Osu;
+        let converted = map.unchecked_as_converted::<Osu>();
+
+        assert!(CatchPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
+        assert!(CatchPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
+        assert!(CatchPerformance::try_new(DifficultyAttributes::Osu(
+            OsuDifficultyAttributes::default()
+        ))
+        .is_none());
+        assert!(CatchPerformance::try_new(PerformanceAttributes::Osu(
+            OsuPerformanceAttributes::default()
+        ))
+        .is_none());
+        assert!(CatchPerformance::try_new(&converted).is_none());
+        assert!(CatchPerformance::try_new(converted).is_none());
     }
 }

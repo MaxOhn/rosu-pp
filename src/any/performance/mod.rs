@@ -382,3 +382,66 @@ impl<'a, T: IntoPerformance<'a>> From<T> for Performance<'a> {
         into.into_performance()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        any::DifficultyAttributes,
+        catch::{CatchDifficultyAttributes, CatchPerformanceAttributes},
+        mania::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
+        osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
+        taiko::{Taiko, TaikoDifficultyAttributes, TaikoPerformanceAttributes},
+        Beatmap,
+    };
+
+    use super::*;
+
+    #[test]
+    fn create() {
+        let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
+        let converted = map.unchecked_as_converted::<Taiko>();
+
+        let _ = Performance::new(&converted);
+        let _ = Performance::new(converted.as_owned());
+        let _ = Performance::new(&map);
+        let _ = Performance::new(map.clone());
+
+        let _ = Performance::new(OsuDifficultyAttributes::default());
+        let _ = Performance::new(TaikoDifficultyAttributes::default());
+        let _ = Performance::new(CatchDifficultyAttributes::default());
+        let _ = Performance::new(ManiaDifficultyAttributes::default());
+
+        let _ = Performance::new(OsuPerformanceAttributes::default());
+        let _ = Performance::new(TaikoPerformanceAttributes::default());
+        let _ = Performance::new(CatchPerformanceAttributes::default());
+        let _ = Performance::new(ManiaPerformanceAttributes::default());
+
+        let _ = Performance::new(DifficultyAttributes::Osu(OsuDifficultyAttributes::default()));
+        let _ = Performance::new(PerformanceAttributes::Taiko(
+            TaikoPerformanceAttributes::default(),
+        ));
+
+        let _ = Performance::from(&converted);
+        let _ = Performance::from(converted);
+        let _ = Performance::from(&map);
+        let _ = Performance::from(map);
+
+        let _ = Performance::from(OsuDifficultyAttributes::default());
+        let _ = Performance::from(TaikoDifficultyAttributes::default());
+        let _ = Performance::from(CatchDifficultyAttributes::default());
+        let _ = Performance::from(ManiaDifficultyAttributes::default());
+
+        let _ = Performance::from(OsuPerformanceAttributes::default());
+        let _ = Performance::from(TaikoPerformanceAttributes::default());
+        let _ = Performance::from(CatchPerformanceAttributes::default());
+        let _ = Performance::from(ManiaPerformanceAttributes::default());
+
+        let _ = Performance::from(DifficultyAttributes::Osu(OsuDifficultyAttributes::default()));
+        let _ = Performance::from(PerformanceAttributes::Taiko(
+            TaikoPerformanceAttributes::default(),
+        ));
+
+        let _ = DifficultyAttributes::Osu(OsuDifficultyAttributes::default()).performance();
+        let _ = PerformanceAttributes::Taiko(TaikoPerformanceAttributes::default()).performance();
+    }
+}

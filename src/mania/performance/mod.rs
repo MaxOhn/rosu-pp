@@ -935,8 +935,13 @@ mod tests {
     use std::{cmp::Ordering, sync::OnceLock};
 
     use proptest::prelude::*;
+    use rosu_map::section::general::GameMode;
 
-    use crate::Beatmap;
+    use crate::{
+        any::{DifficultyAttributes, PerformanceAttributes},
+        osu::{Osu, OsuDifficultyAttributes, OsuPerformanceAttributes},
+        Beatmap,
+    };
 
     use super::*;
 
@@ -944,13 +949,14 @@ mod tests {
 
     const N_OBJECTS: u32 = 594;
 
+    fn beatmap() -> Beatmap {
+        Beatmap::from_path("./resources/1638954.osu").unwrap()
+    }
+
     fn attrs() -> ManiaDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = Beatmap::from_path("./resources/1638954.osu")
-                    .unwrap()
-                    .unchecked_into_converted::<Mania>();
-
+                let converted = beatmap().unchecked_into_converted::<Mania>();
                 let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(N_OBJECTS, converted.hit_objects.len() as u32);
@@ -1285,5 +1291,53 @@ mod tests {
         };
 
         assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn create() {
+        let mut map = beatmap();
+        let converted = map.unchecked_as_converted();
+
+        let _ = ManiaPerformance::new(ManiaDifficultyAttributes::default());
+        let _ = ManiaPerformance::new(ManiaPerformanceAttributes::default());
+        let _ = ManiaPerformance::new(&converted);
+        let _ = ManiaPerformance::new(converted.as_owned());
+
+        let _ = ManiaPerformance::try_new(ManiaDifficultyAttributes::default()).unwrap();
+        let _ = ManiaPerformance::try_new(ManiaPerformanceAttributes::default()).unwrap();
+        let _ = ManiaPerformance::try_new(DifficultyAttributes::Mania(
+            ManiaDifficultyAttributes::default(),
+        ))
+        .unwrap();
+        let _ = ManiaPerformance::try_new(PerformanceAttributes::Mania(
+            ManiaPerformanceAttributes::default(),
+        ))
+        .unwrap();
+        let _ = ManiaPerformance::try_new(&converted).unwrap();
+        let _ = ManiaPerformance::try_new(converted.as_owned()).unwrap();
+
+        let _ = ManiaPerformance::from(ManiaDifficultyAttributes::default());
+        let _ = ManiaPerformance::from(ManiaPerformanceAttributes::default());
+        let _ = ManiaPerformance::from(&converted);
+        let _ = ManiaPerformance::from(converted);
+
+        let _ = ManiaDifficultyAttributes::default().performance();
+        let _ = ManiaPerformanceAttributes::default().performance();
+
+        map.mode = GameMode::Osu;
+        let converted = map.unchecked_as_converted::<Osu>();
+
+        assert!(ManiaPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
+        assert!(ManiaPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
+        assert!(ManiaPerformance::try_new(DifficultyAttributes::Osu(
+            OsuDifficultyAttributes::default()
+        ))
+        .is_none());
+        assert!(ManiaPerformance::try_new(PerformanceAttributes::Osu(
+            OsuPerformanceAttributes::default()
+        ))
+        .is_none());
+        assert!(ManiaPerformance::try_new(&converted).is_none());
+        assert!(ManiaPerformance::try_new(converted).is_none());
     }
 }
