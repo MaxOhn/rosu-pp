@@ -33,25 +33,25 @@ macro_rules! impl_from_mode {
 
             impl<'map> IntoModePerformance<'map, mode!()> for Converted<'map, mode!()> {
                 fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
-                    self.into()
+                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.into())
                 }
             }
 
             impl<'map> IntoModePerformance<'map, mode!()> for &'map Converted<'_, mode!()> {
                 fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
-                    self.as_owned().into()
+                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.as_owned().into())
                 }
             }
 
             impl<'map> IntoModePerformance<'map, mode!()> for crate::$module::$diff {
                 fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
-                    self.performance()
+                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.into())
                 }
             }
 
             impl<'map> IntoModePerformance<'map, mode!()> for crate::$module::$perf {
                 fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
-                    self.performance()
+                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.difficulty.into())
                 }
             }
 

@@ -12,7 +12,6 @@ use crate::{
 
 use super::{
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
-    convert::OsuBeatmap,
     score_state::OsuScoreState,
     Osu,
 };
@@ -500,7 +499,7 @@ impl<'map> OsuPerformance<'map> {
         inner.calculate()
     }
 
-    const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Osu>) -> Self {
+    pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Osu>) -> Self {
         Self {
             map_or_attrs,
             difficulty: Difficulty::new(),
@@ -515,27 +514,9 @@ impl<'map> OsuPerformance<'map> {
     }
 }
 
-impl<'map> From<OsuBeatmap<'map>> for OsuPerformance<'map> {
-    fn from(map: OsuBeatmap<'map>) -> Self {
-        Self::from_map_or_attrs(map.into())
-    }
-}
-
-impl<'map> From<&'map OsuBeatmap<'_>> for OsuPerformance<'map> {
-    fn from(map: &'map OsuBeatmap<'_>) -> Self {
-        Self::from_map_or_attrs(map.as_owned().into())
-    }
-}
-
-impl From<OsuDifficultyAttributes> for OsuPerformance<'_> {
-    fn from(attrs: OsuDifficultyAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.into())
-    }
-}
-
-impl From<OsuPerformanceAttributes> for OsuPerformance<'_> {
-    fn from(attrs: OsuPerformanceAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.difficulty.into())
+impl<'map, T: IntoModePerformance<'map, Osu>> From<T> for OsuPerformance<'map> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }
 

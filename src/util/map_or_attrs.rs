@@ -75,12 +75,6 @@ impl<'map, M: IGameMode> From<Converted<'map, M>> for MapOrAttrs<'map, M> {
     }
 }
 
-impl<'map, M: IGameMode> From<&'map Converted<'_, M>> for MapOrAttrs<'map, M> {
-    fn from(converted: &'map Converted<'_, M>) -> Self {
-        Self::Map(converted.as_owned())
-    }
-}
-
 macro_rules! from_attrs {
     (
         $(

@@ -9,7 +9,6 @@ use crate::{
 
 use super::{
     attributes::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
-    convert::ManiaBeatmap,
     score_state::ManiaScoreState,
     Mania,
 };
@@ -770,7 +769,7 @@ impl<'map> ManiaPerformance<'map> {
         inner.calculate()
     }
 
-    const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Mania>) -> Self {
+    pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Mania>) -> Self {
         Self {
             map_or_attrs,
             difficulty: Difficulty::new(),
@@ -835,27 +834,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
     }
 }
 
-impl<'map> From<ManiaBeatmap<'map>> for ManiaPerformance<'map> {
-    fn from(map: ManiaBeatmap<'map>) -> Self {
-        Self::from_map_or_attrs(map.into())
-    }
-}
-
-impl<'map> From<&'map ManiaBeatmap<'_>> for ManiaPerformance<'map> {
-    fn from(map: &'map ManiaBeatmap<'_>) -> Self {
-        Self::from_map_or_attrs(map.as_owned().into())
-    }
-}
-
-impl From<ManiaDifficultyAttributes> for ManiaPerformance<'_> {
-    fn from(attrs: ManiaDifficultyAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.into())
-    }
-}
-
-impl From<ManiaPerformanceAttributes> for ManiaPerformance<'_> {
-    fn from(attrs: ManiaPerformanceAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.difficulty.into())
+impl<'map, T: IntoModePerformance<'map, Mania>> From<T> for ManiaPerformance<'map> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }
 

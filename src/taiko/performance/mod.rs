@@ -9,7 +9,6 @@ use crate::{
 
 use super::{
     attributes::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
-    convert::TaikoBeatmap,
     score_state::TaikoScoreState,
     Taiko,
 };
@@ -311,7 +310,7 @@ impl<'map> TaikoPerformance<'map> {
         inner.calculate()
     }
 
-    const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Taiko>) -> Self {
+    pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Taiko>) -> Self {
         Self {
             map_or_attrs,
             difficulty: Difficulty::new(),
@@ -372,27 +371,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
     }
 }
 
-impl<'map> From<TaikoBeatmap<'map>> for TaikoPerformance<'map> {
-    fn from(map: TaikoBeatmap<'map>) -> Self {
-        Self::from_map_or_attrs(map.into())
-    }
-}
-
-impl<'map> From<&'map TaikoBeatmap<'_>> for TaikoPerformance<'map> {
-    fn from(map: &'map TaikoBeatmap<'_>) -> Self {
-        Self::from_map_or_attrs(map.as_owned().into())
-    }
-}
-
-impl From<TaikoDifficultyAttributes> for TaikoPerformance<'_> {
-    fn from(attrs: TaikoDifficultyAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.into())
-    }
-}
-
-impl From<TaikoPerformanceAttributes> for TaikoPerformance<'_> {
-    fn from(attrs: TaikoPerformanceAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.difficulty.into())
+impl<'map, T: IntoModePerformance<'map, Taiko>> From<T> for TaikoPerformance<'map> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }
 

@@ -9,7 +9,6 @@ use crate::{
 
 use super::{
     attributes::{CatchDifficultyAttributes, CatchPerformanceAttributes},
-    convert::CatchBeatmap,
     score_state::CatchScoreState,
     Catch,
 };
@@ -418,7 +417,7 @@ impl<'map> CatchPerformance<'map> {
         inner.calculate()
     }
 
-    const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Catch>) -> Self {
+    pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Catch>) -> Self {
         Self {
             map_or_attrs,
             difficulty: Difficulty::new(),
@@ -481,27 +480,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
     }
 }
 
-impl<'map> From<CatchBeatmap<'map>> for CatchPerformance<'map> {
-    fn from(map: CatchBeatmap<'map>) -> Self {
-        Self::from_map_or_attrs(map.into())
-    }
-}
-
-impl<'map> From<&'map CatchBeatmap<'_>> for CatchPerformance<'map> {
-    fn from(map: &'map CatchBeatmap<'_>) -> Self {
-        Self::from_map_or_attrs(map.as_owned().into())
-    }
-}
-
-impl From<CatchDifficultyAttributes> for CatchPerformance<'_> {
-    fn from(attrs: CatchDifficultyAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.into())
-    }
-}
-
-impl From<CatchPerformanceAttributes> for CatchPerformance<'_> {
-    fn from(attrs: CatchPerformanceAttributes) -> Self {
-        Self::from_map_or_attrs(attrs.difficulty.into())
+impl<'map, T: IntoModePerformance<'map, Catch>> From<T> for CatchPerformance<'map> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }
 
