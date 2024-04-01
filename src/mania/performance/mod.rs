@@ -1,14 +1,14 @@
 use std::cmp;
 
 use crate::{
-    any::{AttributeProvider, Difficulty, DifficultyAttributes, HitResultPriority},
+    any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
+    Performance,
 };
 
 use super::{
     attributes::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
-    convert::ManiaBeatmap,
     score_state::ManiaScoreState,
     Mania,
 };
@@ -34,59 +34,38 @@ pub struct ManiaPerformance<'map> {
 impl<'map> ManiaPerformance<'map> {
     /// Create a new performance calculator for osu!mania maps.
     ///
-    /// Note that creating [`ManiaPerformance`] this way will require to
-    /// perform the costly computation of [`ManiaDifficultyAttributes`]
-    /// internally. If difficulty attributes for the current [`Difficulty`]
-    /// settings are already available, consider using [`from_attributes`] or
-    /// [`try_from_attributes`] instead.
+    /// The argument `map_or_attrs` must be either
+    /// - previously calculated attributes ([`ManiaDifficultyAttributes`]
+    /// or [`ManiaPerformanceAttributes`])
+    /// - a beatmap ([`ManiaBeatmap<'map>`])
     ///
-    /// [`from_attributes`]: Self::from_attributes
-    /// [`try_from_attributes`]: Self::try_from_attributes
-    pub const fn from_map(map: ManiaBeatmap<'map>) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: Difficulty::new(),
-            n320: None,
-            n300: None,
-            n200: None,
-            n100: None,
-            n50: None,
-            misses: None,
-            acc: None,
-            hitresult_priority: HitResultPriority::DEFAULT,
-        }
+    /// If a map is given, difficulty attributes will need to be calculated
+    /// internally which is a costly operation. Hence, passing attributes
+    /// should be prefered.
+    ///
+    /// However, when passing previously calculated attributes, make sure they
+    /// have been calculated for the same map and [`Difficulty`] settings.
+    /// Otherwise, the final attributes will be incorrect.
+    ///
+    /// [`ManiaBeatmap<'map>`]: crate::mania::ManiaBeatmap
+    pub fn new(map_or_attrs: impl IntoModePerformance<'map, Mania>) -> Self {
+        map_or_attrs.into_performance()
     }
 
-    /// Create a new performance calculator from difficulty attributes.
+    /// Try to create a new performance calculator for osu!mania maps.
     ///
-    /// Note that `attrs` must have been calculated for the same beatmap and
-    /// [`Difficulty`] settings, otherwise the final attributes will be
-    /// incorrect.
-    pub const fn from_attributes(attrs: ManiaDifficultyAttributes) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: Difficulty::new(),
-            n320: None,
-            n300: None,
-            n200: None,
-            n100: None,
-            n50: None,
-            misses: None,
-            acc: None,
-            hitresult_priority: HitResultPriority::DEFAULT,
-        }
-    }
-
-    /// Try to create a new performance calculator from difficulty attributes.
+    /// Returns `None` if `map_or_attrs` does not belong to osu!mania e.g.
+    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
+    /// of a different mode.
     ///
-    /// Note that `attrs` must have been calculated for the same beatmap and
-    /// [`Difficulty`] settings, otherwise the final attributes will be
-    /// incorrect.
+    /// See [`ManiaPerformance::new`] for more information.
     ///
-    /// Returns `None` if `attrs` contained attributes of a different mode.
-    pub fn try_from_attributes(attrs: impl AttributeProvider) -> Option<Self> {
-        if let DifficultyAttributes::Mania(attrs) = attrs.attributes() {
-            Some(Self::from_attributes(attrs))
+    /// [`Converted`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
+    pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
+        if let Performance::Mania(calc) = map_or_attrs.into_performance() {
+            Some(calc)
         } else {
             None
         }
@@ -789,6 +768,21 @@ impl<'map> ManiaPerformance<'map> {
 
         inner.calculate()
     }
+
+    pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Mania>) -> Self {
+        Self {
+            map_or_attrs,
+            difficulty: Difficulty::new(),
+            n320: None,
+            n300: None,
+            n200: None,
+            n100: None,
+            n50: None,
+            misses: None,
+            acc: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
+    }
 }
 
 impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
@@ -796,12 +790,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
 
     /// Try to create [`ManiaPerformance`] through [`OsuPerformance`].
     ///
-    /// Returns `None` if [`OsuPerformance`] already replaced its internal
-    /// beatmap with [`OsuDifficultyAttributes`], i.e. if
-    /// [`OsuPerformance::from_attributes`] or [`OsuPerformance::generate_state`]
-    /// was called.
-    ///
-    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
+    /// Returns `None` if [`OsuPerformance`] does not contain a beatmap, i.e.
+    /// if it was constructed through attributes or
+    /// [`OsuPerformance::generate_state`] was called.
     fn try_from(mut osu: OsuPerformance<'map>) -> Result<Self, Self::Error> {
         let MapOrAttrs::Map(converted) = osu.map_or_attrs else {
             return Err(osu);
@@ -843,21 +834,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
     }
 }
 
-impl<'map> From<ManiaBeatmap<'map>> for ManiaPerformance<'map> {
-    fn from(map: ManiaBeatmap<'map>) -> Self {
-        Self::from_map(map)
-    }
-}
-
-impl From<ManiaDifficultyAttributes> for ManiaPerformance<'_> {
-    fn from(attrs: ManiaDifficultyAttributes) -> Self {
-        Self::from_attributes(attrs)
-    }
-}
-
-impl From<ManiaPerformanceAttributes> for ManiaPerformance<'_> {
-    fn from(attrs: ManiaPerformanceAttributes) -> Self {
-        Self::from_attributes(attrs.difficulty)
+impl<'map, T: IntoModePerformance<'map, Mania>> From<T> for ManiaPerformance<'map> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }
 
@@ -943,8 +922,13 @@ mod tests {
     use std::{cmp::Ordering, sync::OnceLock};
 
     use proptest::prelude::*;
+    use rosu_map::section::general::GameMode;
 
-    use crate::Beatmap;
+    use crate::{
+        any::{DifficultyAttributes, PerformanceAttributes},
+        osu::{Osu, OsuDifficultyAttributes, OsuPerformanceAttributes},
+        Beatmap,
+    };
 
     use super::*;
 
@@ -952,13 +936,14 @@ mod tests {
 
     const N_OBJECTS: u32 = 594;
 
+    fn beatmap() -> Beatmap {
+        Beatmap::from_path("./resources/1638954.osu").unwrap()
+    }
+
     fn attrs() -> ManiaDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = Beatmap::from_path("./resources/1638954.osu")
-                    .unwrap()
-                    .unchecked_into_converted::<Mania>();
-
+                let converted = beatmap().unchecked_into_converted::<Mania>();
                 let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(N_OBJECTS, converted.hit_objects.len() as u32);
@@ -1293,5 +1278,53 @@ mod tests {
         };
 
         assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn create() {
+        let mut map = beatmap();
+        let converted = map.unchecked_as_converted();
+
+        let _ = ManiaPerformance::new(ManiaDifficultyAttributes::default());
+        let _ = ManiaPerformance::new(ManiaPerformanceAttributes::default());
+        let _ = ManiaPerformance::new(&converted);
+        let _ = ManiaPerformance::new(converted.as_owned());
+
+        let _ = ManiaPerformance::try_new(ManiaDifficultyAttributes::default()).unwrap();
+        let _ = ManiaPerformance::try_new(ManiaPerformanceAttributes::default()).unwrap();
+        let _ = ManiaPerformance::try_new(DifficultyAttributes::Mania(
+            ManiaDifficultyAttributes::default(),
+        ))
+        .unwrap();
+        let _ = ManiaPerformance::try_new(PerformanceAttributes::Mania(
+            ManiaPerformanceAttributes::default(),
+        ))
+        .unwrap();
+        let _ = ManiaPerformance::try_new(&converted).unwrap();
+        let _ = ManiaPerformance::try_new(converted.as_owned()).unwrap();
+
+        let _ = ManiaPerformance::from(ManiaDifficultyAttributes::default());
+        let _ = ManiaPerformance::from(ManiaPerformanceAttributes::default());
+        let _ = ManiaPerformance::from(&converted);
+        let _ = ManiaPerformance::from(converted);
+
+        let _ = ManiaDifficultyAttributes::default().performance();
+        let _ = ManiaPerformanceAttributes::default().performance();
+
+        map.mode = GameMode::Osu;
+        let converted = map.unchecked_as_converted::<Osu>();
+
+        assert!(ManiaPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
+        assert!(ManiaPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
+        assert!(ManiaPerformance::try_new(DifficultyAttributes::Osu(
+            OsuDifficultyAttributes::default()
+        ))
+        .is_none());
+        assert!(ManiaPerformance::try_new(PerformanceAttributes::Osu(
+            OsuPerformanceAttributes::default()
+        ))
+        .is_none());
+        assert!(ManiaPerformance::try_new(&converted).is_none());
+        assert!(ManiaPerformance::try_new(converted).is_none());
     }
 }

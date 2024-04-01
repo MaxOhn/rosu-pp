@@ -55,7 +55,7 @@ impl IGameMode for Taiko {
     }
 
     fn performance(map: TaikoBeatmap<'_>) -> Self::Performance<'_> {
-        TaikoPerformance::from_map(map)
+        TaikoPerformance::new(map)
     }
 
     fn gradual_difficulty(

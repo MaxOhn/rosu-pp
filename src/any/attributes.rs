@@ -5,7 +5,7 @@ use crate::{
     taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
 };
 
-use super::performance::Performance;
+use super::performance::{into::IntoPerformance, Performance};
 
 /// The result of a difficulty calculation based on the mode.
 #[derive(Clone, Debug, PartialEq)]
@@ -43,7 +43,7 @@ impl DifficultyAttributes {
 
     /// Returns a builder for performance calculation.
     pub fn performance<'a>(self) -> Performance<'a> {
-        self.into()
+        self.into_performance()
     }
 }
 
@@ -103,7 +103,7 @@ impl PerformanceAttributes {
 
     /// Returns a builder for performance calculation.
     pub fn performance<'a>(self) -> Performance<'a> {
-        self.into()
+        self.into_performance()
     }
 }
 
@@ -112,47 +112,3 @@ impl From<PerformanceAttributes> for DifficultyAttributes {
         attrs.difficulty_attributes()
     }
 }
-
-/// Abstract type to provide flexibility when passing difficulty attributes to a performance calculation.
-pub trait AttributeProvider {
-    /// Provide the actual difficulty attributes.
-    fn attributes(self) -> DifficultyAttributes;
-}
-
-impl AttributeProvider for DifficultyAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        self
-    }
-}
-
-impl AttributeProvider for PerformanceAttributes {
-    fn attributes(self) -> DifficultyAttributes {
-        match self {
-            Self::Osu(attrs) => DifficultyAttributes::Osu(attrs.difficulty),
-            Self::Taiko(attrs) => DifficultyAttributes::Taiko(attrs.difficulty),
-            Self::Catch(attrs) => DifficultyAttributes::Catch(attrs.difficulty),
-            Self::Mania(attrs) => DifficultyAttributes::Mania(attrs.difficulty),
-        }
-    }
-}
-
-macro_rules! impl_attr_provider {
-    ( $mode:ident: $difficulty:ident, $performance:ident ) => {
-        impl AttributeProvider for $difficulty {
-            fn attributes(self) -> DifficultyAttributes {
-                DifficultyAttributes::$mode(self)
-            }
-        }
-
-        impl AttributeProvider for $performance {
-            fn attributes(self) -> DifficultyAttributes {
-                DifficultyAttributes::$mode(self.difficulty)
-            }
-        }
-    };
-}
-
-impl_attr_provider!(Catch: CatchDifficultyAttributes, CatchPerformanceAttributes);
-impl_attr_provider!(Mania: ManiaDifficultyAttributes, ManiaPerformanceAttributes);
-impl_attr_provider!(Osu: OsuDifficultyAttributes, OsuPerformanceAttributes);
-impl_attr_provider!(Taiko: TaikoDifficultyAttributes, TaikoPerformanceAttributes);

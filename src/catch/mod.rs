@@ -58,7 +58,7 @@ impl IGameMode for Catch {
     }
 
     fn performance(map: CatchBeatmap<'_>) -> Self::Performance<'_> {
-        CatchPerformance::from_map(map)
+        CatchPerformance::new(map)
     }
 
     fn gradual_difficulty(

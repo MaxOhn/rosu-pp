@@ -1,14 +1,14 @@
 use std::cmp;
 
 use crate::{
-    any::{AttributeProvider, Difficulty, DifficultyAttributes, HitResultPriority},
+    any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
+    Performance,
 };
 
 use super::{
     attributes::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
-    convert::TaikoBeatmap,
     score_state::TaikoScoreState,
     Taiko,
 };
@@ -32,55 +32,38 @@ pub struct TaikoPerformance<'map> {
 impl<'map> TaikoPerformance<'map> {
     /// Create a new performance calculator for osu!taiko maps.
     ///
-    /// Note that creating [`TaikoPerformance`] this way will require to
-    /// perform the costly computation of [`TaikoDifficultyAttributes`]
-    /// internally. If difficulty attributes for the current [`Difficulty`]
-    /// settings are already available, consider using [`from_attributes`] or
-    /// [`try_from_attributes`] instead.
+    /// The argument `map_or_attrs` must be either
+    /// - previously calculated attributes ([`TaikoDifficultyAttributes`]
+    /// or [`TaikoPerformanceAttributes`])
+    /// - a beatmap ([`TaikoBeatmap<'map>`])
     ///
-    /// [`from_attributes`]: Self::from_attributes
-    /// [`try_from_attributes`]: Self::try_from_attributes
-    pub const fn from_map(map: TaikoBeatmap<'map>) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: Difficulty::new(),
-            combo: None,
-            acc: None,
-            misses: None,
-            n300: None,
-            n100: None,
-            hitresult_priority: HitResultPriority::DEFAULT,
-        }
+    /// If a map is given, difficulty attributes will need to be calculated
+    /// internally which is a costly operation. Hence, passing attributes
+    /// should be prefered.
+    ///
+    /// However, when passing previously calculated attributes, make sure they
+    /// have been calculated for the same map and [`Difficulty`] settings.
+    /// Otherwise, the final attributes will be incorrect.
+    ///
+    /// [`TaikoBeatmap<'map>`]: crate::taiko::TaikoBeatmap
+    pub fn new(map_or_attrs: impl IntoModePerformance<'map, Taiko>) -> Self {
+        map_or_attrs.into_performance()
     }
 
-    /// Create a new performance calculator from difficulty attributes.
+    /// Try to create a new performance calculator for osu!taiko maps.
     ///
-    /// Note that `attrs` must have been calculated for the same beatmap and
-    /// [`Difficulty`] settings, otherwise the final attributes will be
-    /// incorrect.
-    pub const fn from_attributes(attrs: TaikoDifficultyAttributes) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: Difficulty::new(),
-            combo: None,
-            acc: None,
-            misses: None,
-            n300: None,
-            n100: None,
-            hitresult_priority: HitResultPriority::DEFAULT,
-        }
-    }
-
-    /// Try to create a new performance calculator from difficulty attributes.
+    /// Returns `None` if `map_or_attrs` does not belong to osu!taiko e.g.
+    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
+    /// of a different mode.
     ///
-    /// Note that `attrs` must have been calculated for the same beatmap and
-    /// [`Difficulty`] settings, otherwise the final attributes will be
-    /// incorrect.
+    /// See [`TaikoPerformance::new`] for more information.
     ///
-    /// Returns `None` if `attrs` contained attributes of a different mode.
-    pub fn try_from_attributes(attrs: impl AttributeProvider) -> Option<Self> {
-        if let DifficultyAttributes::Taiko(attrs) = attrs.attributes() {
-            Some(Self::from_attributes(attrs))
+    /// [`Converted`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
+    pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
+        if let Performance::Taiko(calc) = map_or_attrs.into_performance() {
+            Some(calc)
         } else {
             None
         }
@@ -326,6 +309,19 @@ impl<'map> TaikoPerformance<'map> {
 
         inner.calculate()
     }
+
+    pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Taiko>) -> Self {
+        Self {
+            map_or_attrs,
+            difficulty: Difficulty::new(),
+            combo: None,
+            acc: None,
+            misses: None,
+            n300: None,
+            n100: None,
+            hitresult_priority: HitResultPriority::DEFAULT,
+        }
+    }
 }
 
 impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
@@ -333,12 +329,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
 
     /// Try to create [`TaikoPerformance`] through [`OsuPerformance`].
     ///
-    /// Returns `None` if [`OsuPerformance`] already replaced its internal
-    /// beatmap with [`OsuDifficultyAttributes`], i.e. if
-    /// [`OsuPerformance::from_attributes`] or [`OsuPerformance::generate_state`]
-    /// was called.
-    ///
-    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
+    /// Returns `None` if [`OsuPerformance`] does not contain a beatmap, i.e.
+    /// if it was constructed through attributes or
+    /// [`OsuPerformance::generate_state`] was called.
     fn try_from(mut osu: OsuPerformance<'map>) -> Result<Self, Self::Error> {
         let MapOrAttrs::Map(converted) = osu.map_or_attrs else {
             return Err(osu);
@@ -378,21 +371,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
     }
 }
 
-impl<'map> From<TaikoBeatmap<'map>> for TaikoPerformance<'map> {
-    fn from(map: TaikoBeatmap<'map>) -> Self {
-        Self::from_map(map)
-    }
-}
-
-impl From<TaikoDifficultyAttributes> for TaikoPerformance<'_> {
-    fn from(attrs: TaikoDifficultyAttributes) -> Self {
-        Self::from_attributes(attrs)
-    }
-}
-
-impl From<TaikoPerformanceAttributes> for TaikoPerformance<'_> {
-    fn from(attrs: TaikoPerformanceAttributes) -> Self {
-        Self::from_attributes(attrs.difficulty)
+impl<'map, T: IntoModePerformance<'map, Taiko>> From<T> for TaikoPerformance<'map> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }
 
@@ -528,8 +509,13 @@ mod test {
     use std::sync::OnceLock;
 
     use proptest::prelude::*;
+    use rosu_map::section::general::GameMode;
 
-    use crate::Beatmap;
+    use crate::{
+        any::{DifficultyAttributes, PerformanceAttributes},
+        osu::{Osu, OsuDifficultyAttributes, OsuPerformanceAttributes},
+        Beatmap,
+    };
 
     use super::*;
 
@@ -537,13 +523,14 @@ mod test {
 
     const MAX_COMBO: u32 = 289;
 
+    fn beatmap() -> Beatmap {
+        Beatmap::from_path("./resources/1028484.osu").unwrap()
+    }
+
     fn attrs() -> TaikoDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = Beatmap::from_path("./resources/1028484.osu")
-                    .unwrap()
-                    .unchecked_into_converted::<Taiko>();
-
+                let converted = beatmap().unchecked_into_converted::<Taiko>();
                 let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(MAX_COMBO, attrs.max_combo);
@@ -697,5 +684,53 @@ mod test {
         };
 
         assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn create() {
+        let mut map = beatmap();
+        let converted = map.unchecked_as_converted();
+
+        let _ = TaikoPerformance::new(TaikoDifficultyAttributes::default());
+        let _ = TaikoPerformance::new(TaikoPerformanceAttributes::default());
+        let _ = TaikoPerformance::new(&converted);
+        let _ = TaikoPerformance::new(converted.as_owned());
+
+        let _ = TaikoPerformance::try_new(TaikoDifficultyAttributes::default()).unwrap();
+        let _ = TaikoPerformance::try_new(TaikoPerformanceAttributes::default()).unwrap();
+        let _ = TaikoPerformance::try_new(DifficultyAttributes::Taiko(
+            TaikoDifficultyAttributes::default(),
+        ))
+        .unwrap();
+        let _ = TaikoPerformance::try_new(PerformanceAttributes::Taiko(
+            TaikoPerformanceAttributes::default(),
+        ))
+        .unwrap();
+        let _ = TaikoPerformance::try_new(&converted).unwrap();
+        let _ = TaikoPerformance::try_new(converted.as_owned()).unwrap();
+
+        let _ = TaikoPerformance::from(TaikoDifficultyAttributes::default());
+        let _ = TaikoPerformance::from(TaikoPerformanceAttributes::default());
+        let _ = TaikoPerformance::from(&converted);
+        let _ = TaikoPerformance::from(converted);
+
+        let _ = TaikoDifficultyAttributes::default().performance();
+        let _ = TaikoPerformanceAttributes::default().performance();
+
+        map.mode = GameMode::Osu;
+        let converted = map.unchecked_as_converted::<Osu>();
+
+        assert!(TaikoPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
+        assert!(TaikoPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
+        assert!(TaikoPerformance::try_new(DifficultyAttributes::Osu(
+            OsuDifficultyAttributes::default()
+        ))
+        .is_none());
+        assert!(TaikoPerformance::try_new(PerformanceAttributes::Osu(
+            OsuPerformanceAttributes::default()
+        ))
+        .is_none());
+        assert!(TaikoPerformance::try_new(&converted).is_none());
+        assert!(TaikoPerformance::try_new(converted).is_none());
     }
 }

@@ -1,14 +1,14 @@
 use std::cmp::{self, Ordering};
 
 use crate::{
-    any::{AttributeProvider, Difficulty, DifficultyAttributes},
+    any::{Difficulty, IntoModePerformance, IntoPerformance},
     osu::OsuPerformance,
     util::{map_or_attrs::MapOrAttrs, mods::Mods},
+    Performance,
 };
 
 use super::{
     attributes::{CatchDifficultyAttributes, CatchPerformanceAttributes},
-    convert::CatchBeatmap,
     score_state::CatchScoreState,
     Catch,
 };
@@ -33,57 +33,38 @@ pub struct CatchPerformance<'map> {
 impl<'map> CatchPerformance<'map> {
     /// Create a new performance calculator for osu!catch maps.
     ///
-    /// Note that creating [`CatchPerformance`] this way will require to
-    /// perform the costly computation of [`CatchDifficultyAttributes`]
-    /// internally. If difficulty attributes for the current [`Difficulty`]
-    /// settings are already available, consider using [`from_attributes`] or
-    /// [`try_from_attributes`] instead.
+    /// The argument `map_or_attrs` must be either
+    /// - previously calculated attributes ([`CatchDifficultyAttributes`]
+    /// or [`CatchPerformanceAttributes`])
+    /// - a beatmap ([`CatchBeatmap<'map>`])
     ///
-    /// [`from_attributes`]: Self::from_attributes
-    /// [`try_from_attributes`]: Self::try_from_attributes
-    pub const fn from_map(map: CatchBeatmap<'map>) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Map(map),
-            difficulty: Difficulty::new(),
-            acc: None,
-            combo: None,
-            fruits: None,
-            droplets: None,
-            tiny_droplets: None,
-            tiny_droplet_misses: None,
-            misses: None,
-        }
+    /// If a map is given, difficulty attributes will need to be calculated
+    /// internally which is a costly operation. Hence, passing attributes
+    /// should be prefered.
+    ///
+    /// However, when passing previously calculated attributes, make sure they
+    /// have been calculated for the same map and [`Difficulty`] settings.
+    /// Otherwise, the final attributes will be incorrect.
+    ///
+    /// [`CatchBeatmap<'map>`]: crate::catch::CatchBeatmap
+    pub fn new(map_or_attrs: impl IntoModePerformance<'map, Catch>) -> Self {
+        map_or_attrs.into_performance()
     }
 
-    /// Create a new performance calculator from difficulty attributes.
+    /// Try to create a new performance calculator for osu!catch maps.
     ///
-    /// Note that `attrs` must have been calculated for the same beatmap and
-    /// [`Difficulty`] settings, otherwise the final attributes will be
-    /// incorrect.
-    pub const fn from_attributes(attrs: CatchDifficultyAttributes) -> Self {
-        Self {
-            map_or_attrs: MapOrAttrs::Attrs(attrs),
-            difficulty: Difficulty::new(),
-            acc: None,
-            combo: None,
-            fruits: None,
-            droplets: None,
-            tiny_droplets: None,
-            tiny_droplet_misses: None,
-            misses: None,
-        }
-    }
-
-    /// Try to create a new performance calculator from difficulty attributes.
+    /// Returns `None` if `map_or_attrs` does not belong to osu!catch e.g.
+    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
+    /// of a different mode.
     ///
-    /// Note that `attrs` must have been calculated for the same beatmap and
-    /// [`Difficulty`] settings, otherwise the final attributes will be
-    /// incorrect.
+    /// See [`CatchPerformance::new`] for more information.
     ///
-    /// Returns `None` if `attrs` contained attributes of a different mode.
-    pub fn try_from_attributes(attrs: impl AttributeProvider) -> Option<Self> {
-        if let DifficultyAttributes::Catch(attrs) = attrs.attributes() {
-            Some(Self::from_attributes(attrs))
+    /// [`Converted`]: crate::model::beatmap::Converted
+    /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
+    /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
+    pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
+        if let Performance::Catch(calc) = map_or_attrs.into_performance() {
+            Some(calc)
         } else {
             None
         }
@@ -435,6 +416,20 @@ impl<'map> CatchPerformance<'map> {
 
         inner.calculate()
     }
+
+    pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Catch>) -> Self {
+        Self {
+            map_or_attrs,
+            difficulty: Difficulty::new(),
+            acc: None,
+            combo: None,
+            fruits: None,
+            droplets: None,
+            tiny_droplets: None,
+            tiny_droplet_misses: None,
+            misses: None,
+        }
+    }
 }
 
 impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
@@ -442,12 +437,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
 
     /// Try to create [`CatchPerformance`] through [`OsuPerformance`].
     ///
-    /// Returns `None` if [`OsuPerformance`] already replaced its internal
-    /// beatmap with [`OsuDifficultyAttributes`], i.e. if
-    /// [`OsuPerformance::from_attributes`] or [`OsuPerformance::generate_state`]
-    /// was called.
-    ///
-    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
+    /// Returns `None` if [`OsuPerformance`] does not contain a beatmap, i.e.
+    /// if it was constructed through attributes or
+    /// [`OsuPerformance::generate_state`] was called.
     fn try_from(mut osu: OsuPerformance<'map>) -> Result<Self, Self::Error> {
         let MapOrAttrs::Map(converted) = osu.map_or_attrs else {
             return Err(osu);
@@ -488,21 +480,9 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
     }
 }
 
-impl<'map> From<CatchBeatmap<'map>> for CatchPerformance<'map> {
-    fn from(map: CatchBeatmap<'map>) -> Self {
-        Self::from_map(map)
-    }
-}
-
-impl From<CatchDifficultyAttributes> for CatchPerformance<'_> {
-    fn from(attrs: CatchDifficultyAttributes) -> Self {
-        Self::from_attributes(attrs)
-    }
-}
-
-impl From<CatchPerformanceAttributes> for CatchPerformance<'_> {
-    fn from(attrs: CatchPerformanceAttributes) -> Self {
-        Self::from_attributes(attrs.difficulty)
+impl<'map, T: IntoModePerformance<'map, Catch>> From<T> for CatchPerformance<'map> {
+    fn from(into: T) -> Self {
+        into.into_performance()
     }
 }
 
@@ -606,8 +586,13 @@ mod test {
     use std::sync::OnceLock;
 
     use proptest::prelude::*;
+    use rosu_map::section::general::GameMode;
 
-    use crate::Beatmap;
+    use crate::{
+        any::{DifficultyAttributes, PerformanceAttributes},
+        osu::{Osu, OsuDifficultyAttributes, OsuPerformanceAttributes},
+        Beatmap,
+    };
 
     use super::*;
 
@@ -617,13 +602,14 @@ mod test {
     const N_DROPLETS: u32 = 2;
     const N_TINY_DROPLETS: u32 = 291;
 
+    fn beatmap() -> Beatmap {
+        Beatmap::from_path("./resources/2118524.osu").unwrap()
+    }
+
     fn attrs() -> CatchDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = Beatmap::from_path("./resources/2118524.osu")
-                    .unwrap()
-                    .unchecked_into_converted::<Catch>();
-
+                let converted = beatmap().unchecked_into_converted::<Catch>();
                 let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(N_FRUITS, attrs.n_fruits);
@@ -814,5 +800,53 @@ mod test {
         };
 
         assert_eq!(state, expected);
+    }
+
+    #[test]
+    fn create() {
+        let mut map = beatmap();
+        let converted = map.unchecked_as_converted();
+
+        let _ = CatchPerformance::new(CatchDifficultyAttributes::default());
+        let _ = CatchPerformance::new(CatchPerformanceAttributes::default());
+        let _ = CatchPerformance::new(&converted);
+        let _ = CatchPerformance::new(converted.as_owned());
+
+        let _ = CatchPerformance::try_new(CatchDifficultyAttributes::default()).unwrap();
+        let _ = CatchPerformance::try_new(CatchPerformanceAttributes::default()).unwrap();
+        let _ = CatchPerformance::try_new(DifficultyAttributes::Catch(
+            CatchDifficultyAttributes::default(),
+        ))
+        .unwrap();
+        let _ = CatchPerformance::try_new(PerformanceAttributes::Catch(
+            CatchPerformanceAttributes::default(),
+        ))
+        .unwrap();
+        let _ = CatchPerformance::try_new(&converted).unwrap();
+        let _ = CatchPerformance::try_new(converted.as_owned()).unwrap();
+
+        let _ = CatchPerformance::from(CatchDifficultyAttributes::default());
+        let _ = CatchPerformance::from(CatchPerformanceAttributes::default());
+        let _ = CatchPerformance::from(&converted);
+        let _ = CatchPerformance::from(converted);
+
+        let _ = CatchDifficultyAttributes::default().performance();
+        let _ = CatchPerformanceAttributes::default().performance();
+
+        map.mode = GameMode::Osu;
+        let converted = map.unchecked_as_converted::<Osu>();
+
+        assert!(CatchPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
+        assert!(CatchPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
+        assert!(CatchPerformance::try_new(DifficultyAttributes::Osu(
+            OsuDifficultyAttributes::default()
+        ))
+        .is_none());
+        assert!(CatchPerformance::try_new(PerformanceAttributes::Osu(
+            OsuPerformanceAttributes::default()
+        ))
+        .is_none());
+        assert!(CatchPerformance::try_new(&converted).is_none());
+        assert!(CatchPerformance::try_new(converted).is_none());
     }
 }
