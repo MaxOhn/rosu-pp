@@ -34,7 +34,7 @@ let diff_attrs = rosu_pp::Difficulty::new()
 let stars = diff_attrs.stars();
 
 // Calculate performance attributes
-let perf_attrs = rosu_pp::Performance::from_attributes(diff_attrs)
+let perf_attrs = rosu_pp::Performance::new(diff_attrs)
     // To speed up the calculation, we used the previous attributes.
     // **Note** that this should only be done if the map and all difficulty
     // settings stay the same, otherwise the final attributes will be incorrect!
