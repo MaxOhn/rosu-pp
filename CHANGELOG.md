@@ -1,4 +1,4 @@
-## Upcoming
+# v1.0.0 (2024-04-02)
 
 The `rosu-pp` interface and internal structure has been rewritten completely. Fields have been
 modified, builders work differently, function arguments have changed, and some types are no longer
