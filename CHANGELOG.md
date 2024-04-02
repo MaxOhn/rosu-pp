@@ -23,18 +23,21 @@ like the other modes already did.
   specify various parameters.
   - To calculate values for a specific mode, the method `Difficulty::with_mode` will produce a
   builder to calculate values for that mode.
-  - Re-cycled attributes are only valid if *all* difficulty parameters match, i.e. it must be on
+  - Recycled attributes are only valid if *all* difficulty parameters match, i.e. it must be on
   the same map, use the same mods, clock rate, custom beatmap attributes, and passed object count
   (and hardrock offset for osu!catch).
-  - Clockrate is now always clamped between 0.01 and 100.
+  - Clockrate is now always clamped between 0.01 and 100 and custom beatmap attributes are clamped
+  between -20 and 20.
 - Performance calculation
   - Each mode's performance calculator was renamed from `[Mode]PP` to `[Mode]Performance` and
   `AnyPP` is now called `Performance`.
   - Difficulty attributes now contain a few more values so that the beatmap is no longer necessary
   for performance calculation as long as difficulty attributes are available.
-  - The functions `[Mode]Performance::new` have been renamed to `[Mode]Performance::from_map`. If
-  difficulty attributes are available, the methods `[Mode]Performance::from_attributes` should be
-  prefered.
+  - The functions `[Mode]Performance::new` now take an argument implementing the trait
+  `Into(Mode)Performance`, i.e. either a beatmap (as before), or attributes (difficulty or
+  performance). Since attributes speed up the calculation, they should be prefered whenever
+  available. However, be mindful that they have been calculated for the same map and difficulty
+  settings. Otherwise, the final attributes will be incorrect.
 - Features
   - The `tracing` feature has been added. Its sole functionality is that errors during beatmap
   parsing will emit a `tracing` event on the `ERROR` level. If this features is not explicitely 
@@ -43,13 +46,16 @@ like the other modes already did.
   - The `sync` feature has been added. Taiko's gradual calculation types contain types that are not
   thread-safe by default. Enabling this feature will add some performance penalty but use types
   that *do* allow moving gradual calculation across threads.
+  - The `compact_strains` feature is now enabled by default and causes strain values during
+  difficulty calculation to be stored in a space-efficient way to prevent out-of-memory issues on
+  maliciously long maps. This comes at a small performance cost.
 - Misc
   - Async is no longer supported. Beatmap parsing now works through [rosu-map]
   which does not support async since evidently it's generally slower than regular sequential code.
   - Errors while *parsing* a beatmap will never be propagated. The only errors that will be
   propagated are those occuring while *decoding*, e.g. a file couldn't be read or other IO errors.
   Notably, this means that some content is now parsed successfully into a `Beatmap` whereas in
-  previous `rosu-pp` versions it would error, e.g. an empty file.
+  previous `rosu-pp` versions it would error, e.g. an empty file is now a valid `Beatmap`.
   - Although new lazer mods such as `DifficultyAdjust` or `DoubleTime` with a custom clockrate are
   essentially supported by providing methods to specify their parameters, mods themselves are still
   specified by their bit value. This means:
