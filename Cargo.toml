@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/MaxOhn/rosu-pp"
 documentation = "https://docs.rs/rosu-pp/"
 description = "Difficulty and performance calculation for osu!"
-keywords = ["osu", "pp", "stars", "performance", "osu!"]
+keywords = ["osu", "pp", "stars", "performance", "difficulty"]
 
 [features]
 default = ["compact_strains"]
