@@ -185,7 +185,7 @@ impl BeatmapAttributesBuilder {
 
         let clock_rate = self.clock_rate.unwrap_or(mods.clock_rate());
         let ar_clock_rate = if self.ar.with_mods { 1.0 } else { clock_rate };
-        let od_clock_rate = if self.ar.with_mods { 1.0 } else { clock_rate };
+        let od_clock_rate = if self.od.with_mods { 1.0 } else { clock_rate };
 
         let mod_mult = |val: f32| {
             if mods.hr() {
