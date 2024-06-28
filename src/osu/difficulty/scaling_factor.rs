@@ -9,10 +9,8 @@ use super::object::OsuDifficultyObject;
 /// osu!lazer stores these in each hit object but since all objects share the
 /// same scaling (w.r.t. difficulty & performance), we store them only once.
 pub struct ScalingFactor {
-    /// `NORMALIZED_RADIUS / Radius`
-    pub factor: f32,
     /// `NORMALIZED_RADIUS / Radius` and then adjusted if `Radius < 30`
-    pub factor_with_small_circle_bonus: f32,
+    pub factor: f32,
     pub radius: f64,
     pub scale: f32,
 }
@@ -31,8 +29,7 @@ impl ScalingFactor {
         };
 
         Self {
-            factor,
-            factor_with_small_circle_bonus,
+            factor: factor_with_small_circle_bonus,
             radius,
             scale,
         }

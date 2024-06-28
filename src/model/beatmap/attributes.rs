@@ -24,7 +24,7 @@ pub struct BeatmapAttributes {
 /// AR and OD hit windows
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct HitWindows {
-    /// Hit window for approach rate i.e. TimePreempt in milliseconds.
+    /// Hit window for approach rate i.e. `TimePreempt` in milliseconds.
     pub ar: f64,
     /// Hit window for overall difficulty i.e. time to hit a 300 ("Great") in milliseconds.
     pub od: f64,

@@ -107,7 +107,7 @@ impl<'a> OsuDifficultyObject<'a> {
             return;
         }
 
-        let scaling_factor = scaling_factor.factor_with_small_circle_bonus;
+        let scaling_factor = scaling_factor.factor;
 
         let last_cursor_pos = Self::get_end_cursor_pos(last_object);
 

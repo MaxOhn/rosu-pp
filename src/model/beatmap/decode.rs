@@ -227,7 +227,7 @@ impl BeatmapState {
         I: Iterator<Item = &'a str>,
         F: FnOnce(&mut Self, &[&'a str]) -> O,
     {
-        self.point_split.extend(point_split.map(|s| s as *const _));
+        self.point_split.extend(point_split.map(std::ptr::from_ref));
         let ptr = self.point_split.as_ptr();
         let len = self.point_split.len();
 
