@@ -7,7 +7,6 @@ use crate::{
         object::{OsuObject, OsuObjectKind},
         OsuBeatmap,
     },
-    util::mods::Mods,
     Difficulty,
 };
 

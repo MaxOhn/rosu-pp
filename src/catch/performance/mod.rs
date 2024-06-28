@@ -2,8 +2,9 @@ use std::cmp::{self, Ordering};
 
 use crate::{
     any::{Difficulty, IntoModePerformance, IntoPerformance},
+    model::mods::GameMods,
     osu::OsuPerformance,
-    util::{map_or_attrs::MapOrAttrs, mods::Mods},
+    util::map_or_attrs::MapOrAttrs,
     Performance,
 };
 
@@ -70,10 +71,17 @@ impl<'map> CatchPerformance<'map> {
         }
     }
 
-    /// Specify mods through their bit values.
+    /// Specify mods.
+    ///
+    /// Accepted types are
+    /// - `u32`
+    /// - [`rosu_mods::GameModsLegacy`]
+    /// - [`rosu_mods::GameMods`]
+    /// - [`rosu_mods::GameModsIntermode`]
+    /// - [`&rosu_mods::GameModsIntermode`](rosu_mods::GameModsIntermode)
     ///
     /// See <https://github.com/ppy/osu-api/wiki#mods>
-    pub const fn mods(mut self, mods: u32) -> Self {
+    pub fn mods(mut self, mods: impl Into<GameMods>) -> Self {
         self.difficulty = self.difficulty.mods(mods);
 
         self
@@ -122,7 +130,7 @@ impl<'map> CatchPerformance<'map> {
     }
 
     /// Use the specified settings of the given [`Difficulty`].
-    pub const fn difficulty(mut self, difficulty: Difficulty) -> Self {
+    pub fn difficulty(mut self, difficulty: Difficulty) -> Self {
         self.difficulty = difficulty;
 
         self
@@ -135,7 +143,7 @@ impl<'map> CatchPerformance<'map> {
     /// `passed_objects`, you should use [`CatchGradualPerformance`].
     ///
     /// [`CatchGradualPerformance`]: crate::catch::CatchGradualPerformance
-    pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
+    pub fn passed_objects(mut self, passed_objects: u32) -> Self {
         self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
@@ -216,7 +224,7 @@ impl<'map> CatchPerformance<'map> {
     }
 
     /// Adjust patterns as if the HR mod is enabled.
-    pub const fn hardrock_offsets(mut self, hardrock_offsets: bool) -> Self {
+    pub fn hardrock_offsets(mut self, hardrock_offsets: bool) -> Self {
         self.difficulty = self.difficulty.hardrock_offsets(hardrock_offsets);
 
         self
@@ -486,13 +494,13 @@ impl<'map, T: IntoModePerformance<'map, Catch>> From<T> for CatchPerformance<'ma
     }
 }
 
-struct CatchPerformanceInner {
+struct CatchPerformanceInner<'mods> {
     attrs: CatchDifficultyAttributes,
-    mods: u32,
+    mods: &'mods GameMods,
     state: CatchScoreState,
 }
 
-impl CatchPerformanceInner {
+impl CatchPerformanceInner<'_> {
     fn calculate(self) -> CatchPerformanceAttributes {
         let attributes = &self.attrs;
         let stars = attributes.stars;
