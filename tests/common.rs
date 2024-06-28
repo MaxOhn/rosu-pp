@@ -57,6 +57,7 @@ macro_rules! impl_float {
 impl_float!(f32 f64);
 
 /// Trait to compare two instances and panic if they are not equal.
+#[allow(unused)]
 pub trait AssertEq {
     fn assert_eq(&self, expected: &Self);
 }
