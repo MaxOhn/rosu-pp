@@ -78,7 +78,7 @@ impl Beatmap {
 
     /// Returns a [`BeatmapAttributesBuilder`] to calculate modified beatmap
     /// attributes.
-    pub const fn attributes(&self) -> BeatmapAttributesBuilder {
+    pub fn attributes(&self) -> BeatmapAttributesBuilder {
         BeatmapAttributesBuilder::new().map(self)
     }
 

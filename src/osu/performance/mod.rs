@@ -6,8 +6,9 @@ use crate::{
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance, Performance},
     catch::CatchPerformance,
     mania::ManiaPerformance,
+    model::mods::GameMods,
     taiko::TaikoPerformance,
-    util::{float_ext::FloatExt, map_or_attrs::MapOrAttrs, mods::Mods},
+    util::{float_ext::FloatExt, map_or_attrs::MapOrAttrs},
 };
 
 use super::{
@@ -118,10 +119,17 @@ impl<'map> OsuPerformance<'map> {
         }
     }
 
-    /// Specify mods through their bit values.
+    /// Specify mods.
+    ///
+    /// Accepted types are
+    /// - `u32`
+    /// - [`rosu_mods::GameModsLegacy`]
+    /// - [`rosu_mods::GameMods`]
+    /// - [`rosu_mods::GameModsIntermode`]
+    /// - [`&rosu_mods::GameModsIntermode`](rosu_mods::GameModsIntermode)
     ///
     /// See <https://github.com/ppy/osu-api/wiki#mods>
-    pub const fn mods(mut self, mods: u32) -> Self {
+    pub fn mods(mut self, mods: impl Into<GameMods>) -> Self {
         self.difficulty = self.difficulty.mods(mods);
 
         self
@@ -172,7 +180,7 @@ impl<'map> OsuPerformance<'map> {
     }
 
     /// Use the specified settings of the given [`Difficulty`].
-    pub const fn difficulty(mut self, difficulty: Difficulty) -> Self {
+    pub fn difficulty(mut self, difficulty: Difficulty) -> Self {
         self.difficulty = difficulty;
 
         self
@@ -185,7 +193,7 @@ impl<'map> OsuPerformance<'map> {
     /// `passed_objects`, you should use [`OsuGradualPerformance`].
     ///
     /// [`OsuGradualPerformance`]: crate::osu::OsuGradualPerformance
-    pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
+    pub fn passed_objects(mut self, passed_objects: u32) -> Self {
         self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
@@ -522,15 +530,15 @@ impl<'map, T: IntoModePerformance<'map, Osu>> From<T> for OsuPerformance<'map> {
 
 pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.14;
 
-struct OsuPerformanceInner {
+struct OsuPerformanceInner<'mods> {
     attrs: OsuDifficultyAttributes,
-    mods: u32,
+    mods: &'mods GameMods,
     acc: f64,
     state: OsuScoreState,
     effective_miss_count: f64,
 }
 
-impl OsuPerformanceInner {
+impl OsuPerformanceInner<'_> {
     fn calculate(mut self) -> OsuPerformanceAttributes {
         let total_hits = self.state.total_hits();
 

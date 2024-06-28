@@ -1,4 +1,7 @@
-use crate::{model::beatmap::BeatmapAttributes, osu::object::OsuObject, util::mods::Mods};
+use crate::{
+    model::{beatmap::BeatmapAttributes, mods::GameMods},
+    osu::object::OsuObject,
+};
 
 use self::{aim::Aim, flashlight::Flashlight, speed::Speed};
 
@@ -18,7 +21,7 @@ pub struct OsuSkills {
 
 impl OsuSkills {
     pub fn new(
-        mods: u32,
+        mods: &GameMods,
         scaling_factor: &ScalingFactor,
         map_attrs: &BeatmapAttributes,
         time_preempt: f64,

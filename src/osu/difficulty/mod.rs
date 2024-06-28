@@ -2,14 +2,13 @@ use std::{cmp, pin::Pin};
 
 use crate::{
     any::difficulty::{skills::Skill, Difficulty},
-    model::beatmap::BeatmapAttributes,
+    model::{beatmap::BeatmapAttributes, mods::GameMods},
     osu::{
         convert::convert_objects,
         difficulty::{object::OsuDifficultyObject, scaling_factor::ScalingFactor},
         object::OsuObject,
         performance::PERFORMANCE_BASE_MULTIPLIER,
     },
-    util::mods::Mods,
 };
 
 use self::skills::OsuSkills;
@@ -146,7 +145,7 @@ impl DifficultyValues {
     /// Process the difficulty values and store the results in `attrs`.
     pub fn eval(
         attrs: &mut OsuDifficultyAttributes,
-        mods: u32,
+        mods: &GameMods,
         aim_difficulty_value: f64,
         aim_no_sliders_difficulty_value: f64,
         speed_difficulty_value: f64,

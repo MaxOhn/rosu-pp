@@ -1,6 +1,6 @@
 use rosu_map::section::general::GameMode;
 
-use crate::{any::difficulty::ModsDependent, util::mods::Mods, Difficulty};
+use crate::{any::difficulty::ModsDependent, model::mods::GameMods, Difficulty};
 
 use super::{converted::Converted, Beatmap};
 
@@ -40,7 +40,7 @@ pub struct BeatmapAttributesBuilder {
     od: ModsDependent,
     cs: ModsDependent,
     hp: ModsDependent,
-    mods: u32,
+    mods: GameMods,
     clock_rate: Option<f64>,
 }
 
@@ -64,20 +64,20 @@ impl BeatmapAttributesBuilder {
             od: ModsDependent::new(5.0),
             cs: ModsDependent::new(5.0),
             hp: ModsDependent::new(5.0),
-            mods: 0,
+            mods: GameMods::DEFAULT,
             clock_rate: None,
         }
     }
 
     /// Use the given [`Beatmap`]'s attributes, mode, and convert status.
-    pub const fn map(self, map: &Beatmap) -> Self {
+    pub fn map(self, map: &Beatmap) -> Self {
         Self {
             mode: map.mode,
             ar: ModsDependent::new(map.ar),
             od: ModsDependent::new(map.od),
             cs: ModsDependent::new(map.cs),
             hp: ModsDependent::new(map.hp),
-            mods: 0,
+            mods: GameMods::DEFAULT,
             clock_rate: None,
             is_convert: map.is_convert,
         }
@@ -88,14 +88,13 @@ impl BeatmapAttributesBuilder {
     /// `with_mods` determines if the given value should be used before
     /// or after accounting for mods, e.g. on `true` the value will be
     /// used as is and on `false` it will be modified based on the mods.
-    pub const fn ar(self, ar: f32, with_mods: bool) -> Self {
-        Self {
-            ar: ModsDependent {
-                value: ar,
-                with_mods,
-            },
-            ..self
-        }
+    pub const fn ar(mut self, ar: f32, with_mods: bool) -> Self {
+        self.ar = ModsDependent {
+            value: ar,
+            with_mods,
+        };
+
+        self
     }
 
     /// Specify the overall difficulty.
@@ -103,14 +102,13 @@ impl BeatmapAttributesBuilder {
     /// `with_mods` determines if the given value should be used before
     /// or after accounting for mods, e.g. on `true` the value will be
     /// used as is and on `false` it will be modified based on the mods.
-    pub const fn od(self, od: f32, with_mods: bool) -> Self {
-        Self {
-            od: ModsDependent {
-                value: od,
-                with_mods,
-            },
-            ..self
-        }
+    pub const fn od(mut self, od: f32, with_mods: bool) -> Self {
+        self.od = ModsDependent {
+            value: od,
+            with_mods,
+        };
+
+        self
     }
 
     /// Specify the circle size.
@@ -118,14 +116,13 @@ impl BeatmapAttributesBuilder {
     /// `with_mods` determines if the given value should be used before
     /// or after accounting for mods, e.g. on `true` the value will be
     /// used as is and on `false` it will be modified based on the mods.
-    pub const fn cs(self, cs: f32, with_mods: bool) -> Self {
-        Self {
-            cs: ModsDependent {
-                value: cs,
-                with_mods,
-            },
-            ..self
-        }
+    pub const fn cs(mut self, cs: f32, with_mods: bool) -> Self {
+        self.cs = ModsDependent {
+            value: cs,
+            with_mods,
+        };
+
+        self
     }
 
     /// Specify the drain rate.
@@ -133,36 +130,35 @@ impl BeatmapAttributesBuilder {
     /// `with_mods` determines if the given value should be used before
     /// or after accounting for mods, e.g. on `true` the value will be
     /// used as is and on `false` it will be modified based on the mods.
-    pub const fn hp(self, hp: f32, with_mods: bool) -> Self {
-        Self {
-            hp: ModsDependent {
-                value: hp,
-                with_mods,
-            },
-            ..self
-        }
+    pub const fn hp(mut self, hp: f32, with_mods: bool) -> Self {
+        self.hp = ModsDependent {
+            value: hp,
+            with_mods,
+        };
+
+        self
     }
 
     /// Specify the mods.
-    pub const fn mods(self, mods: u32) -> Self {
-        Self { mods, ..self }
+    pub fn mods(mut self, mods: impl Into<GameMods>) -> Self {
+        self.mods = mods.into();
+
+        self
     }
 
     /// Specify a custom clock rate.
-    pub const fn clock_rate(self, clock_rate: f64) -> Self {
-        Self {
-            clock_rate: Some(clock_rate),
-            ..self
-        }
+    pub const fn clock_rate(mut self, clock_rate: f64) -> Self {
+        self.clock_rate = Some(clock_rate);
+
+        self
     }
 
     /// Specify a [`GameMode`] and whether it's a converted map.
-    pub const fn mode(self, mode: GameMode, is_convert: bool) -> Self {
-        Self {
-            mode,
-            is_convert,
-            ..self
-        }
+    pub const fn mode(mut self, mode: GameMode, is_convert: bool) -> Self {
+        self.mode = mode;
+        self.is_convert = is_convert;
+
+        self
     }
 
     /// Specify all settings through [`Difficulty`].
@@ -174,16 +170,19 @@ impl BeatmapAttributesBuilder {
             od: difficulty.get_od().unwrap_or(self.od),
             cs: difficulty.get_cs().unwrap_or(self.cs),
             hp: difficulty.get_hp().unwrap_or(self.hp),
-            mods: difficulty.get_mods(),
+            mods: difficulty.get_mods().clone(),
             clock_rate: Some(difficulty.get_clock_rate()),
         }
     }
 
     /// Calculate the AR and OD hit windows.
     pub fn hit_windows(&self) -> HitWindows {
-        let mods = self.mods;
+        let mods = &self.mods;
 
-        let clock_rate = self.clock_rate.unwrap_or(mods.clock_rate());
+        let clock_rate = self
+            .clock_rate
+            .unwrap_or_else(|| f64::from(mods.clock_rate()));
+
         let ar_clock_rate = if self.ar.with_mods { 1.0 } else { clock_rate };
         let od_clock_rate = if self.od.with_mods { 1.0 } else { clock_rate };
 
@@ -266,8 +265,10 @@ impl BeatmapAttributesBuilder {
 
     /// Calculate the [`BeatmapAttributes`].
     pub fn build(&self) -> BeatmapAttributes {
-        let mods = self.mods;
-        let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
+        let mods = &self.mods;
+        let clock_rate = self
+            .clock_rate
+            .unwrap_or_else(|| f64::from(mods.clock_rate()));
 
         // HP
         let mut hp = self.hp.value;

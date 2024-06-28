@@ -5,8 +5,9 @@ use crate::{
         object::IDifficultyObject,
         skills::{strain_decay, ISkill, Skill, StrainSkill},
     },
+    model::mods::GameMods,
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
-    util::{mods::Mods, strains_vec::StrainsVec},
+    util::strains_vec::StrainsVec,
 };
 
 use super::strain::OsuStrainSkill;
@@ -22,7 +23,7 @@ pub struct Flashlight {
 }
 
 impl Flashlight {
-    pub fn new(mods: u32, radius: f64, time_preempt: f64, time_fade_in: f64) -> Self {
+    pub fn new(mods: &GameMods, radius: f64, time_preempt: f64, time_fade_in: f64) -> Self {
         let scaling_factor = 52.0 / radius;
 
         Self {

@@ -1,14 +1,12 @@
-use crate::Difficulty;
+use crate::{model::mods::GameMods, Difficulty};
 
 use super::ModsDependent;
 
 /// [`Difficulty`] but all fields are public for inspection.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct InspectDifficulty {
-    /// Specify mods through their bit values.
-    ///
-    /// See <https://github.com/ppy/osu-api/wiki#mods>
-    pub mods: u32,
+    /// Specify mods.
+    pub mods: GameMods,
     /// Amount of passed objects for partial plays, e.g. a fail.
     pub passed_objects: Option<u32>,
     /// Adjust the clock rate used in the calculation.
