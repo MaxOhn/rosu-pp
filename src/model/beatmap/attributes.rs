@@ -139,7 +139,16 @@ impl BeatmapAttributesBuilder {
         self
     }
 
-    /// Specify the mods.
+    /// Specify mods.
+    ///
+    /// Accepted types are
+    /// - `u32`
+    /// - [`rosu_mods::GameModsLegacy`]
+    /// - [`rosu_mods::GameMods`]
+    /// - [`rosu_mods::GameModsIntermode`]
+    /// - [`&rosu_mods::GameModsIntermode`](rosu_mods::GameModsIntermode)
+    ///
+    /// See <https://github.com/ppy/osu-api/wiki#mods>
     pub fn mods(mut self, mods: impl Into<GameMods>) -> Self {
         self.mods = mods.into();
 
