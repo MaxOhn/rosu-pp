@@ -344,7 +344,8 @@ impl Difficulty {
     }
 
     pub(crate) fn get_hardrock_offsets(&self) -> bool {
-        self.hardrock_offsets.unwrap_or(self.mods.hr())
+        self.hardrock_offsets
+            .unwrap_or_else(|| self.mods.hardrock_offsets())
     }
 }
 

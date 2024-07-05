@@ -1,6 +1,11 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-use rosu_mods::{GameModIntermode, GameMods as GameModsLazer, GameModsIntermode, GameModsLegacy};
+use rosu_mods::{
+    generated_mods::{
+        DifficultyAdjustCatch, DifficultyAdjustMania, DifficultyAdjustOsu, DifficultyAdjustTaiko,
+    },
+    GameMod, GameModIntermode, GameMods as GameModsLazer, GameModsIntermode, GameModsLegacy,
+};
 
 /// Collection of game mods.
 ///
@@ -52,6 +57,10 @@ impl GameMods {
         inner: GameModsInner::Legacy(GameModsLegacy::NoMod),
     };
 
+    /// Returns the mods' clock rate.
+    ///
+    /// In case of variable clock rates like for `WindUp`, this will return
+    /// `1.0`.
     pub(crate) fn clock_rate(&self) -> f32 {
         match self.inner {
             GameModsInner::Lazer(ref mods) => mods.clock_rate().unwrap_or(1.0),
@@ -69,6 +78,57 @@ impl GameMods {
             1.0
         }
     }
+
+    /// Check whether the mods enable `hardrock_offsets`.
+    pub(crate) fn hardrock_offsets(&self) -> bool {
+        fn custom_hardrock_offsets(mods: &GameMods) -> Option<bool> {
+            match mods.inner {
+                GameModsInner::Lazer(ref mods) => mods.iter().find_map(|gamemod| match gamemod {
+                    GameMod::DifficultyAdjustCatch(DifficultyAdjustCatch {
+                        hard_rock_offsets,
+                        ..
+                    }) => *hard_rock_offsets,
+                    _ => None,
+                }),
+                GameModsInner::Intermode(_) | GameModsInner::Legacy(_) => None,
+            }
+        }
+
+        custom_hardrock_offsets(self).unwrap_or_else(|| self.hr())
+    }
+}
+
+macro_rules! impl_map_attr {
+    ( $( $fn:ident: $field:ident [ $( $mode:ident ),* ] [$s:literal] ;)* ) => {
+        impl GameMods {
+            $(
+                #[doc = "Check whether the mods specify a custom "]
+                #[doc = $s]
+                #[doc = "value."]
+                pub(crate) fn $fn(&self) -> Option<f32> {
+                    match self.inner {
+                        GameModsInner::Lazer(ref mods) => mods.iter().find_map(|gamemod| match gamemod {
+                            $( impl_map_attr!( @ $mode $field) => *$field, )*
+                            _ => None,
+                        }),
+                        GameModsInner::Intermode(_) | GameModsInner::Legacy(_) => None,
+                    }
+                }
+            )*
+        }
+    };
+
+    ( @ Osu $field:ident) => { GameMod::DifficultyAdjustOsu(DifficultyAdjustOsu { $field, .. }) };
+    ( @ Taiko $field:ident) => { GameMod::DifficultyAdjustTaiko(DifficultyAdjustTaiko { $field, .. }) };
+    ( @ Catch $field:ident) => { GameMod::DifficultyAdjustCatch(DifficultyAdjustCatch { $field, .. }) };
+    ( @ Mania $field:ident) => { GameMod::DifficultyAdjustMania(DifficultyAdjustMania { $field, .. }) };
+}
+
+impl_map_attr! {
+    ar: approach_rate [Osu, Catch] ["ar"];
+    cs: circle_size [Osu, Catch] ["cs"];
+    hp: drain_rate [Osu, Taiko, Catch, Mania] ["hp"];
+    od: overall_difficulty [Osu, Taiko, Catch, Mania] ["od"];
 }
 
 macro_rules! impl_has_mod {
