@@ -132,7 +132,7 @@ impl_map_attr! {
 }
 
 macro_rules! impl_has_mod {
-    ( $( $fn:ident: $name:ident [ $s:literal ], )* ) => {
+    ( $( $fn:ident: $sign:tt $name:ident [ $s:literal ], )* ) => {
         impl GameMods {
             $(
                 // workaround for <https://github.com/rust-lang/rust-analyzer/issues/8092>
@@ -147,25 +147,34 @@ macro_rules! impl_has_mod {
                         GameModsInner::Intermode(ref mods) => {
                             mods.contains(GameModIntermode::$name)
                         },
-                        GameModsInner::Legacy(mods) => {
-                            mods.contains(GameModsLegacy::$name)
+                        GameModsInner::Legacy(_mods) => {
+                            impl_has_mod!(LEGACY $sign $name _mods)
                         },
                     }
                 }
             )*
         }
     };
+
+    ( LEGACY + $name:ident $mods:ident ) => {
+        $mods.contains(GameModsLegacy::$name)
+    };
+
+    ( LEGACY - $name:ident $mods:ident ) => {
+        false
+    };
 }
 
 impl_has_mod! {
-    nf: NoFail ["NoFail"],
-    ez: Easy ["Easy"],
-    td: TouchDevice ["TouchDevice"],
-    hd: Hidden ["Hidden"],
-    hr: HardRock ["HardRock"],
-    rx: Relax ["Relax"],
-    fl: Flashlight ["Flashlight"],
-    so: SpunOut ["SpunOut"],
+    nf: + NoFail ["NoFail"],
+    ez: + Easy ["Easy"],
+    td: + TouchDevice ["TouchDevice"],
+    hd: + Hidden ["Hidden"],
+    hr: + HardRock ["HardRock"],
+    rx: + Relax ["Relax"],
+    fl: + Flashlight ["Flashlight"],
+    so: + SpunOut ["SpunOut"],
+    bl: - Blinds ["Blinds"],
 }
 
 impl Default for GameMods {

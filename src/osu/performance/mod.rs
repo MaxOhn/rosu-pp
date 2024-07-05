@@ -640,7 +640,13 @@ impl OsuPerformanceInner<'_> {
         // * Buff for longer maps with high AR.
         aim_value *= 1.0 + ar_factor * len_bonus;
 
-        if self.mods.hd() {
+        if self.mods.bl() {
+            aim_value *= 1.3
+                + (total_hits
+                    * (0.0016 / (1.0 + 2.0 * self.effective_miss_count))
+                    * self.acc.powf(16.0))
+                    * (1.0 - 0.003 * self.attrs.hp * self.attrs.hp);
+        } else if self.mods.hd() {
             // * We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
             aim_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
         }
@@ -703,7 +709,11 @@ impl OsuPerformanceInner<'_> {
         // * Buff for longer maps with high AR.
         speed_value *= 1.0 + ar_factor * len_bonus;
 
-        if self.mods.hd() {
+        if self.mods.bl() {
+            // * Increasing the speed value by object count for Blinds isn't
+            // * ideal, so the minimum buff is given.
+            speed_value *= 1.12;
+        } else if self.mods.hd() {
             // * We want to give more reward for lower AR when it comes to aim and HD.
             // * This nerfs high AR and buffs lower AR.
             speed_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
@@ -772,8 +782,11 @@ impl OsuPerformanceInner<'_> {
             .powf(0.3)
             .min(1.15);
 
-        // * Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
-        if self.mods.hd() {
+        // * Increasing the accuracy value by object count for Blinds isn't
+        // * ideal, so the minimum buff is given.
+        if self.mods.bl() {
+            acc_value *= 1.14;
+        } else if self.mods.hd() {
             acc_value *= 1.08;
         }
 
