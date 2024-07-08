@@ -404,6 +404,13 @@ impl<'map> CatchPerformance<'map> {
             },
         }
 
+        self.combo = Some(best_state.max_combo);
+        self.fruits = Some(best_state.fruits);
+        self.droplets = Some(best_state.droplets);
+        self.tiny_droplets = Some(best_state.tiny_droplets);
+        self.tiny_droplet_misses = Some(best_state.tiny_droplet_misses);
+        self.misses = Some(best_state.misses);
+
         best_state
     }
 
@@ -773,7 +780,9 @@ mod test {
                 state = state.misses(misses);
             }
 
+            let first = state.generate_state();
             let state = state.generate_state();
+            assert_eq!(first, state);
 
             let expected = brute_force_best(
                 acc,

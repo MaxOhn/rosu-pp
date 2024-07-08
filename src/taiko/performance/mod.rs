@@ -292,6 +292,11 @@ impl<'map> TaikoPerformance<'map> {
             cmp::min(combo, max_possible_combo)
         });
 
+        self.combo = Some(max_combo);
+        self.n300 = Some(n300);
+        self.n100 = Some(n100);
+        self.misses = Some(misses);
+
         TaikoScoreState {
             max_combo,
             n300,
@@ -642,7 +647,9 @@ mod test {
                 state = state.misses(misses);
             }
 
+            let first = state.generate_state();
             let state = state.generate_state();
+            assert_eq!(first, state);
 
             let mut expected = brute_force_best(
                 acc,
