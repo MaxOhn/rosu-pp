@@ -6,8 +6,9 @@ use crate::{
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance, Performance},
     catch::CatchPerformance,
     mania::ManiaPerformance,
+    model::mods::GameMods,
     taiko::TaikoPerformance,
-    util::{float_ext::FloatExt, map_or_attrs::MapOrAttrs, mods::Mods},
+    util::{float_ext::FloatExt, map_or_attrs::MapOrAttrs},
 };
 
 use super::{
@@ -118,10 +119,17 @@ impl<'map> OsuPerformance<'map> {
         }
     }
 
-    /// Specify mods through their bit values.
+    /// Specify mods.
+    ///
+    /// Accepted types are
+    /// - `u32`
+    /// - [`rosu_mods::GameModsLegacy`]
+    /// - [`rosu_mods::GameMods`]
+    /// - [`rosu_mods::GameModsIntermode`]
+    /// - [`&rosu_mods::GameModsIntermode`](rosu_mods::GameModsIntermode)
     ///
     /// See <https://github.com/ppy/osu-api/wiki#mods>
-    pub const fn mods(mut self, mods: u32) -> Self {
+    pub fn mods(mut self, mods: impl Into<GameMods>) -> Self {
         self.difficulty = self.difficulty.mods(mods);
 
         self
@@ -172,7 +180,7 @@ impl<'map> OsuPerformance<'map> {
     }
 
     /// Use the specified settings of the given [`Difficulty`].
-    pub const fn difficulty(mut self, difficulty: Difficulty) -> Self {
+    pub fn difficulty(mut self, difficulty: Difficulty) -> Self {
         self.difficulty = difficulty;
 
         self
@@ -185,7 +193,7 @@ impl<'map> OsuPerformance<'map> {
     /// `passed_objects`, you should use [`OsuGradualPerformance`].
     ///
     /// [`OsuGradualPerformance`]: crate::osu::OsuGradualPerformance
-    pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
+    pub fn passed_objects(mut self, passed_objects: u32) -> Self {
         self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
@@ -522,15 +530,15 @@ impl<'map, T: IntoModePerformance<'map, Osu>> From<T> for OsuPerformance<'map> {
 
 pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.14;
 
-struct OsuPerformanceInner {
+struct OsuPerformanceInner<'mods> {
     attrs: OsuDifficultyAttributes,
-    mods: u32,
+    mods: &'mods GameMods,
     acc: f64,
     state: OsuScoreState,
     effective_miss_count: f64,
 }
 
-impl OsuPerformanceInner {
+impl OsuPerformanceInner<'_> {
     fn calculate(mut self) -> OsuPerformanceAttributes {
         let total_hits = self.state.total_hits();
 
@@ -632,7 +640,13 @@ impl OsuPerformanceInner {
         // * Buff for longer maps with high AR.
         aim_value *= 1.0 + ar_factor * len_bonus;
 
-        if self.mods.hd() {
+        if self.mods.bl() {
+            aim_value *= 1.3
+                + (total_hits
+                    * (0.0016 / (1.0 + 2.0 * self.effective_miss_count))
+                    * self.acc.powf(16.0))
+                    * (1.0 - 0.003 * self.attrs.hp * self.attrs.hp);
+        } else if self.mods.hd() {
             // * We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
             aim_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
         }
@@ -695,7 +709,11 @@ impl OsuPerformanceInner {
         // * Buff for longer maps with high AR.
         speed_value *= 1.0 + ar_factor * len_bonus;
 
-        if self.mods.hd() {
+        if self.mods.bl() {
+            // * Increasing the speed value by object count for Blinds isn't
+            // * ideal, so the minimum buff is given.
+            speed_value *= 1.12;
+        } else if self.mods.hd() {
             // * We want to give more reward for lower AR when it comes to aim and HD.
             // * This nerfs high AR and buffs lower AR.
             speed_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
@@ -764,8 +782,11 @@ impl OsuPerformanceInner {
             .powf(0.3)
             .min(1.15);
 
-        // * Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
-        if self.mods.hd() {
+        // * Increasing the accuracy value by object count for Blinds isn't
+        // * ideal, so the minimum buff is given.
+        if self.mods.bl() {
+            acc_value *= 1.14;
+        } else if self.mods.hd() {
             acc_value *= 1.08;
         }
 

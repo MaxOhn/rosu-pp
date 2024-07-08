@@ -2,8 +2,9 @@ use std::cmp;
 
 use crate::{
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance},
+    model::mods::GameMods,
     osu::OsuPerformance,
-    util::{map_or_attrs::MapOrAttrs, mods::Mods},
+    util::map_or_attrs::MapOrAttrs,
     Performance,
 };
 
@@ -71,17 +72,24 @@ impl<'map> ManiaPerformance<'map> {
         }
     }
 
-    /// Specify mods through their bit values.
+    /// Specify mods.
+    ///
+    /// Accepted types are
+    /// - `u32`
+    /// - [`rosu_mods::GameModsLegacy`]
+    /// - [`rosu_mods::GameMods`]
+    /// - [`rosu_mods::GameModsIntermode`]
+    /// - [`&rosu_mods::GameModsIntermode`](rosu_mods::GameModsIntermode)
     ///
     /// See <https://github.com/ppy/osu-api/wiki#mods>
-    pub const fn mods(mut self, mods: u32) -> Self {
+    pub fn mods(mut self, mods: impl Into<GameMods>) -> Self {
         self.difficulty = self.difficulty.mods(mods);
 
         self
     }
 
     /// Use the specified settings of the given [`Difficulty`].
-    pub const fn difficulty(mut self, difficulty: Difficulty) -> Self {
+    pub fn difficulty(mut self, difficulty: Difficulty) -> Self {
         self.difficulty = difficulty;
 
         self
@@ -94,7 +102,7 @@ impl<'map> ManiaPerformance<'map> {
     /// `passed_objects`, you should use [`ManiaGradualPerformance`].
     ///
     /// [`ManiaGradualPerformance`]: crate::mania::ManiaGradualPerformance
-    pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
+    pub fn passed_objects(mut self, passed_objects: u32) -> Self {
         self.difficulty = self.difficulty.passed_objects(passed_objects);
 
         self
@@ -840,13 +848,13 @@ impl<'map, T: IntoModePerformance<'map, Mania>> From<T> for ManiaPerformance<'ma
     }
 }
 
-struct ManiaPerformanceInner {
+struct ManiaPerformanceInner<'mods> {
     attrs: ManiaDifficultyAttributes,
-    mods: u32,
+    mods: &'mods GameMods,
     state: ManiaScoreState,
 }
 
-impl ManiaPerformanceInner {
+impl ManiaPerformanceInner<'_> {
     fn calculate(self) -> ManiaPerformanceAttributes {
         // * Arbitrary initial value for scaling pp in order to standardize distributions across game modes.
         // * The specific number has no intrinsic meaning and can be adjusted as needed.

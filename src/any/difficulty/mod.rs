@@ -9,7 +9,10 @@ use rosu_map::section::general::GameMode;
 use crate::{
     catch::Catch,
     mania::Mania,
-    model::beatmap::{Beatmap, Converted},
+    model::{
+        beatmap::{Beatmap, Converted},
+        mods::GameMods,
+    },
     osu::Osu,
     taiko::Taiko,
     GradualDifficulty, GradualPerformance,
@@ -25,7 +28,7 @@ pub mod inspect;
 pub mod object;
 pub mod skills;
 
-use crate::{model::mode::IGameMode, util::mods::Mods};
+use crate::model::mode::IGameMode;
 
 /// Difficulty calculator on maps of any mode.
 ///
@@ -43,7 +46,7 @@ use crate::{model::mode::IGameMode, util::mods::Mods};
 #[derive(Clone, PartialEq)]
 #[must_use]
 pub struct Difficulty {
-    mods: u32,
+    mods: GameMods,
     passed_objects: Option<u32>,
     /// Clock rate will be clamped internally between 0.01 and 100.0.
     ///
@@ -86,7 +89,7 @@ impl Difficulty {
     /// Create a new difficulty calculator.
     pub const fn new() -> Self {
         Self {
-            mods: 0,
+            mods: GameMods::DEFAULT,
             passed_objects: None,
             clock_rate: None,
             ar: None,
@@ -122,7 +125,7 @@ impl Difficulty {
         InspectDifficulty {
             mods,
             passed_objects,
-            clock_rate: clock_rate.map(non_zero_u32_to_f64),
+            clock_rate: clock_rate.map(non_zero_u32_to_f32).map(f64::from),
             ar,
             cs,
             hp,
@@ -131,19 +134,28 @@ impl Difficulty {
         }
     }
 
-    /// Specify mods through their bit values.
+    /// Specify mods.
+    ///
+    /// Accepted types are
+    /// - `u32`
+    /// - [`rosu_mods::GameModsLegacy`]
+    /// - [`rosu_mods::GameMods`]
+    /// - [`rosu_mods::GameModsIntermode`]
+    /// - [`&rosu_mods::GameModsIntermode`](rosu_mods::GameModsIntermode)
     ///
     /// See <https://github.com/ppy/osu-api/wiki#mods>
-    pub const fn mods(self, mods: u32) -> Self {
-        Self { mods, ..self }
+    pub fn mods(self, mods: impl Into<GameMods>) -> Self {
+        Self {
+            mods: mods.into(),
+            ..self
+        }
     }
 
     /// Amount of passed objects for partial plays, e.g. a fail.
-    pub const fn passed_objects(self, passed_objects: u32) -> Self {
-        Self {
-            passed_objects: Some(passed_objects),
-            ..self
-        }
+    pub const fn passed_objects(mut self, passed_objects: u32) -> Self {
+        self.passed_objects = Some(passed_objects);
+
+        self
     }
 
     /// Adjust the clock rate used in the calculation.
@@ -250,11 +262,10 @@ impl Difficulty {
     /// Adjust patterns as if the HR mod is enabled.
     ///
     /// Only relevant for osu!catch.
-    pub const fn hardrock_offsets(self, hardrock_offsets: bool) -> Self {
-        Self {
-            hardrock_offsets: Some(hardrock_offsets),
-            ..self
-        }
+    pub const fn hardrock_offsets(mut self, hardrock_offsets: bool) -> Self {
+        self.hardrock_offsets = Some(hardrock_offsets);
+
+        self
     }
 
     /// Perform the difficulty calculation.
@@ -300,13 +311,16 @@ impl Difficulty {
         GradualPerformance::new(self, map)
     }
 
-    pub(crate) const fn get_mods(&self) -> u32 {
-        self.mods
+    pub(crate) const fn get_mods(&self) -> &GameMods {
+        &self.mods
     }
 
     pub(crate) fn get_clock_rate(&self) -> f64 {
-        self.clock_rate
-            .map_or(self.mods.clock_rate(), non_zero_u32_to_f64)
+        let clock_rate = self
+            .clock_rate
+            .map_or(self.mods.clock_rate(), non_zero_u32_to_f32);
+
+        f64::from(clock_rate)
     }
 
     pub(crate) fn get_passed_objects(&self) -> usize {
@@ -330,12 +344,13 @@ impl Difficulty {
     }
 
     pub(crate) fn get_hardrock_offsets(&self) -> bool {
-        self.hardrock_offsets.unwrap_or(self.mods.hr())
+        self.hardrock_offsets
+            .unwrap_or_else(|| self.mods.hardrock_offsets())
     }
 }
 
-fn non_zero_u32_to_f64(n: NonZeroU32) -> f64 {
-    f64::from(f32::from_bits(n.get()))
+fn non_zero_u32_to_f32(n: NonZeroU32) -> f32 {
+    f32::from_bits(n.get())
 }
 
 impl Debug for Difficulty {
@@ -354,7 +369,7 @@ impl Debug for Difficulty {
         f.debug_struct("Difficulty")
             .field("mods", mods)
             .field("passed_objects", passed_objects)
-            .field("clock_rate", &clock_rate.map(non_zero_u32_to_f64))
+            .field("clock_rate", &clock_rate.map(non_zero_u32_to_f32))
             .field("ar", ar)
             .field("cs", cs)
             .field("hp", hp)
