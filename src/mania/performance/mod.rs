@@ -749,6 +749,13 @@ impl<'map> ManiaPerformance<'map> {
             }
         }
 
+        self.n320 = Some(n320);
+        self.n300 = Some(n300);
+        self.n200 = Some(n200);
+        self.n100 = Some(n100);
+        self.n50 = Some(n50);
+        self.misses = Some(misses);
+
         ManiaScoreState {
             n320,
             n300,
@@ -1230,7 +1237,9 @@ mod tests {
                 state = state.misses(misses);
             }
 
+            let first = state.generate_state();
             let state = state.generate_state();
+            assert_eq!(first, state);
 
             let expected = brute_force_best(
                 acc,
