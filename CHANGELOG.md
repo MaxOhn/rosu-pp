@@ -1,4 +1,4 @@
-## Upcoming
+# v1.1.0 (2024-07-10)
 
 - __Additions:__
   - Mods no longer need to be specified through their legacy bitflags. Instead, [`rosu-mods`] is being used to accept any type that's convertible into the new `rosu-pp` type "`GameMods`". Currently, those types are:
@@ -16,7 +16,7 @@
 - __Fixes:__
   - The `od_with_mods` argument is now being used properly ([#35])
 
-# v1.0.0 (2024-04-02)
+## v1.0.0 (2024-04-02)
 
 The `rosu-pp` interface and internal structure has been rewritten completely. Fields have been
 modified, builders work differently, function arguments have changed, and some types are no longer
