@@ -1,3 +1,21 @@
+## Upcoming
+
+- __Additions:__
+  - Mods no longer need to be specified through their legacy bitflags. Instead, [`rosu-mods`] is being used to accept any type that's convertible into the new `rosu-pp` type "`GameMods`". Currently, those types are:
+    - `u32`
+    - [`rosu_mods::GameModsLegacy`](https://docs.rs/rosu-mods/0.1.0/rosu_mods/struct.GameModsLegacy.html)
+    - [`rosu_mods::GameMods`](https://docs.rs/rosu-mods/0.1.0/rosu_mods/struct.GameMods.html)
+    - [`rosu_mods::GameModsIntermode`](https://docs.rs/rosu-mods/0.1.0/rosu_mods/struct.GameModsIntermode.html)
+    - `&rosu_mods::GameModsIntermode`
+  
+  This also means that settings of mods like `DoubleTime` or `DifficultyAdjust` can now be used without having to specify clock rate or beatmap attributes manually. Additionally, the `Blinds` mod is now considered in performance calculation.
+
+- __Performance:__
+  - The `generate_state` method now stores the resulting state internally so calling it multiple times is faster. ([#34])
+
+- __Fixes:__
+  - The `od_with_mods` argument is now being used properly ([#35])
+
 # v1.0.0 (2024-04-02)
 
 The `rosu-pp` interface and internal structure has been rewritten completely. Fields have been
@@ -50,7 +68,7 @@ like the other modes already did.
   difficulty calculation to be stored in a space-efficient way to prevent out-of-memory issues on
   maliciously long maps. This comes at a small performance cost.
 - Misc
-  - Async is no longer supported. Beatmap parsing now works through [rosu-map]
+  - Async is no longer supported. Beatmap parsing now works through [`rosu-map`]
   which does not support async since evidently it's generally slower than regular sequential code.
   - Errors while *parsing* a beatmap will never be propagated. The only errors that will be
   propagated are those occuring while *decoding*, e.g. a file couldn't be read or other IO errors.
@@ -350,6 +368,10 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
 [#24]: https://github.com/MaxOhn/rosu-pp/pull/24
 [#25]: https://github.com/MaxOhn/rosu-pp/pull/25
 [#26]: https://github.com/MaxOhn/rosu-pp/pull/26
+[#34]: https://github.com/MaxOhn/rosu-pp/pull/34
+[#35]: https://github.com/MaxOhn/rosu-pp/pull/35
+[#36]: https://github.com/MaxOhn/rosu-pp/pull/36
 
 [ZST]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
-[rosu-map]: https://github.com/MaxOhn/rosu-map
+[`rosu-map`]: https://github.com/MaxOhn/rosu-map
+[`rosu-mods`]: https://github.com/MaxOhn/rosu-mods
