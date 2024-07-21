@@ -1,0 +1,12 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 1883e1e612026e7f7c8035803830ff21b6d98c946cfb92c5c144e682a5d72ad2 # shrinks to acc = 0.0, n300 = None, n100 = None, n_misses = None, best_case = false
+cc 84792fb0ec8971122d0eb2e61355a637e9326ac2b7469226bba06a2defdc44dd # shrinks to acc = 0.659020825478002, n300 = None, n100 = None, n_misses = Some(99), best_case = false
+cc 94fb95e246e580e010115334e5fd7de6160b3a24a735e4cb4ab4341f5f7b769e # shrinks to acc = 0.0, n300 = Some(0), n100 = Some(1), n_misses = None, best_case = false
+cc fcc52507f0304061f5b94a7aa8bb5cc40e7156effe1e2c3434161a5c152409d0 # shrinks to acc = 0.0, n300 = None, n100 = Some(1), n_misses = None, best_case = false
+cc 8d6b15c9881ebf33b1b91bb9398264048b28a95cb902f747af6c8320063c21a6 # shrinks to acc = 0.0, n300 = Some(240), n100 = Some(50), n_misses = None, best_case = false
+cc eda23b52ad1453caba35977df01c1aecf4151a8fc64968fec38f66e2b4970422 # shrinks to acc = 0.0, n300 = None, n100 = None, n_misses = Some(290), best_case = false

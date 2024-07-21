@@ -2,207 +2,148 @@
 
 # rosu-pp
 
-A standalone crate to calculate star ratings and performance points for all [osu!](https://osu.ppy.sh/home) gamemodes.
+<!-- cargo-rdme start -->
 
-Async is supported through features, see below.
+Library to calculate difficulty and performance attributes for all [osu!] gamemodes.
+
+A large part of `rosu-pp` is a port of [osu!lazer]'s difficulty and performance calculation
+with emphasis on a precise translation to Rust for the most [accurate results](#accuracy)
+while also providing a significant [boost in performance](#speed).
+
+Last commits of the ported code:
+  - [osu!lazer] : `7342fb7f51b34533a42bffda89c3d6c569cc69ce` (2022-10-11)
+  - [osu!tools] : `146d5916937161ef65906aa97f85d367035f3712` (2022-10-08)
+
+News posts of the latest gamemode updates:
+  - osu: <https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp>
+  - taiko: <https://osu.ppy.sh/home/news/2022-09-28-changes-to-osu-taiko-sr-and-pp>
+  - catch: <https://osu.ppy.sh/home/news/2020-05-14-osucatch-scoring-updates>
+  - mania: <https://osu.ppy.sh/home/news/2022-10-09-changes-to-osu-mania-sr-and-pp>
 
 ### Usage
 
 ```rust
-use rosu_pp::{Beatmap, BeatmapExt};
+// Decode the map
+let map = rosu_pp::Beatmap::from_path("./resources/2785319.osu").unwrap();
 
-// Parse the map yourself
-let map = match Beatmap::from_path("/path/to/file.osu") {
-    Ok(map) => map,
-    Err(why) => panic!("Error while parsing map: {}", why),
-};
+// Calculate difficulty attributes
+let diff_attrs = rosu_pp::Difficulty::new()
+    .mods(8 + 16) // HDHR
+    .calculate(&map);
 
-// If `BeatmapExt` is included, you can make use of
-// some methods on `Beatmap` to make your life simpler.
-let result = map.pp()
-    .mods(24) // HDHR
-    .combo(1234)
+let stars = diff_attrs.stars();
+
+// Calculate performance attributes
+let perf_attrs = rosu_pp::Performance::new(diff_attrs)
+    // To speed up the calculation, we used the previous attributes.
+    // **Note** that this should only be done if the map and all difficulty
+    // settings stay the same, otherwise the final attributes will be incorrect!
+    .mods(24) // HDHR, must be the same as before
+    .combo(789)
     .accuracy(99.2)
     .misses(2)
     .calculate();
 
-println!("PP: {}", result.pp());
+let pp = perf_attrs.pp();
 
-// If you want to reuse the current map-mod combination, make use of the previous result!
-// If attributes are given, then stars & co don't have to be recalculated.
-let next_result = map.pp()
-    .mods(24) // HDHR
-    .attributes(result) // recycle
-    .combo(543)
-    .misses(5)
-    .n50(3)
-    .accuracy(96.5)
-    .calculate();
-
-println!("Next PP: {}", next_result.pp());
-
-let stars = map.stars()
-    .mods(16)  // HR
+// Again, we re-use the previous attributes for maximum efficiency.
+let max_pp = perf_attrs.performance()
+    .mods(24) // Still the same
     .calculate()
-    .stars();
+    .pp();
 
-let max_pp = map.max_pp(16).pp();
-
-println!("Stars: {} | Max PP: {}", stars, max_pp);
-```
-
-### With async
-If either the `async_tokio` or `async_std` feature is enabled, beatmap parsing will be async.
-
-```rust
-use rosu_pp::{Beatmap, BeatmapExt};
-
-// Parse the map asynchronously
-let map = match Beatmap::from_path("/path/to/file.osu").await {
-    Ok(map) => map,
-    Err(why) => panic!("Error while parsing map: {}", why),
-};
-
-// The rest stays the same
-let result = map.pp()
-    .mods(24) // HDHR
-    .combo(1234)
-    .n_misses(2)
-    .accuracy(99.2)
-    .calculate();
-
-println!("PP: {}", result.pp());
+println!("Stars: {stars} | PP: {pp}/{max_pp}");
 ```
 
 ### Gradual calculation
-Sometimes you might want to calculate the difficulty of a map or performance of a score after each hit object.
-This could be done by using `passed_objects` as the amount of objects that were passed so far.
-However, this requires to recalculate the beginning again and again, we can be more efficient than that.
 
-Instead, you should use `GradualDifficultyAttributes` and `GradualPerformanceAttributes`:
+Gradually calculating attributes provides an efficient way to process each hitobject
+separately and calculate the attributes only up to that point.
+
+For difficulty attributes, there is `GradualDifficulty` which implements `Iterator`
+and for performance attributes there is `GradualPerformance` which requires the current
+score state.
 
 ```rust
-use rosu_pp::{
-    Beatmap, BeatmapExt, GradualPerformanceAttributes, ScoreState, taiko::TaikoScoreState,
-};
+use rosu_pp::{Beatmap, GradualPerformance, Difficulty, any::ScoreState};
 
-let map = match Beatmap::from_path("/path/to/file.osu") {
-    Ok(map) => map,
-    Err(why) => panic!("Error while parsing map: {}", why),
-};
+let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
 
-let mods = 8 + 64; // HDDT
+let mut gradual = Difficulty::new()
+    .mods(16 + 64) // HRDT
+    .clock_rate(1.2)
+    .gradual_performance(&map);
 
-// If you're only interested in the star rating or other difficulty value,
-// use `GradualDifficultyAttributes`, either through its function `new`
-// or through the method `BeatmapExt::gradual_difficulty`.
-let gradual_difficulty = map.gradual_difficulty(mods);
+let mut state = ScoreState::new(); // empty state, everything is on 0.
 
-// Since `GradualDifficultyAttributes` implements `Iterator`, you can use
-// any iterate function on it, use it in loops, collect them into a `Vec`, ...
-for (i, difficulty) in gradual_difficulty.enumerate() {
-    println!("Stars after object {}: {}", i, difficulty.stars());
+// The first 10 hitresults are 300s
+for _ in 0..10 {
+    state.n300 += 1;
+    state.max_combo += 1;
+    let attrs = gradual.next(state.clone()).unwrap();
+    println!("PP: {}", attrs.pp());
 }
 
-// Gradually calculating performance values does the same as calculating
-// difficulty attributes but it goes the extra step and also evaluates
-// the state of a score for these difficulty attributes.
-let mut gradual_performance = map.gradual_performance(mods);
+// Fast-forward to the end
+state.max_combo = ...
+state.n300 = ...
+state.n_katu = ...
+...
+let attrs = gradual.last(state).unwrap();
+println!("PP: {}", attrs.pp());
+```
 
-// The default score state is kinda chunky because it considers all modes.
-let state = ScoreState {
-    max_combo: 1,
-    n_geki: 0, // only relevant for mania
-    n_katu: 0, // only relevant for mania and ctb
-    n300: 1,
-    n100: 0,
-    n50: 0,
-    n_misses: 0,
-};
+### Accuracy
 
-// Process the score state after the first object
-let curr_performance = match gradual_performance.process_next_object(state) {
-    Some(perf) => perf,
-    None => panic!("the map has no hit objects"),
-};
+`rosu-pp` was tested against all current beatmaps on multiple mod combinations and delivered
+values that matched osu!lazer perfectly down to the last decimal place.
 
-println!("PP after the first object: {}", curr_performance.pp());
+However, there is one small caveat: the values are only this precise on debug mode.
+On release mode, Rust's compiler performs optimizations that produce the tiniest discrepancies
+due to floating point inaccuracies which can cascade into larger differences in the end.
+With this in mind, `rosu-pp` is still as accurate as can be without targeting the
+.NET compiler itself. Realistically, the inaccuracies in release mode are negligibly small.
 
-// If you're only interested in maps of a specific mode, consider
-// using the mode's gradual calculator instead of the general one.
-// Let's assume it's a taiko map.
-// Instead of starting off with `BeatmapExt::gradual_performance` one could have
-// created the struct via `TaikoGradualPerformanceAttributes::new`.
-let mut gradual_performance = match gradual_performance {
-    GradualPerformanceAttributes::Taiko(gradual) => gradual,
-    _ => panic!("the map was not taiko but {:?}", map.mode),
-};
+### Speed
 
-// A little simpler than the general score state.
-let state = TaikoScoreState {
-    max_combo: 11,
-    n300: 9,
-    n100: 1,
-    n_misses: 1,
-};
+An important factor for `rosu-pp` is the calculation speed. Optimizations and an accurate translation
+unfortunately don't always go hand-in-hand. Nonetheless, performance improvements are still
+snuck in wherever possible, providing a significantly faster runtime than the native C# code.
 
-// Process the next 10 objects in one go
-let curr_performance = match gradual_performance.process_next_n_objects(state, 10) {
-    Some(perf) => perf,
-    None => panic!("the last `process_next_object` already processed the last object"),
-};
+Results of a rudimentary [benchmark] of osu!lazer and rosu-pp:
+```txt
+osu!lazer:
+Decoding maps:            Median: 378.10ms | Mean: 381.47ms
+Calculating difficulties: Median: 588.89ms | Mean: 597.11ms
+Calculating performances: Median: 315.90µs | Mean: 310.60µs
 
-println!("PP after the first 11 objects: {}", curr_performance.pp());
+rosu-pp:
+Decoding maps:            Median: 46.94ms | Mean: 47.21ms
+Calculating difficulties: Median: 72.90ms | Mean: 73.13ms
+Calculating performances: Median: 44.13µs | Mean: 45.53µs
 ```
 
 ### Features
 
-| Flag          | Description                                                                              |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| `default`     | Beatmap parsing will be non-async                                                        |
-| `async_tokio` | Beatmap parsing will be async through [tokio](https://github.com/tokio-rs/tokio)         |
-| `async_std`   | Beatmap parsing will be async through [async-std](https://github.com/async-rs/async-std) |
-
-### Version
-
-A large portion of this repository is a port of [osu!lazer](https://github.com/ppy/osu)'s difficulty and performance calculation.
-
-- osu!:
-  - osu!lazer: Commit `85adfc2df7d931164181e145377a6ced8db2bfb3` (Wed Sep 28 18:26:36 2022 +0300)
-  - osu!tools: Commit `146d5916937161ef65906aa97f85d367035f3712` (Sat Oct 8 14:28:49 2022 +0900)
-  - [Article](https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp)
-
-- taiko:
-  - osu!lazer: Commit `234c6ac7998fbc6742503e1a589536255554e56a` (Wed Oct 5 20:21:15 2022 +0900)
-  - osu!tools: Commit `146d5916937161ef65906aa97f85d367035f3712` (Sat Oct 8 14:28:49 2022 +0900)
-  - [Article](https://osu.ppy.sh/home/news/2022-09-28-changes-to-osu-taiko-sr-and-pp)
-
-- catch: (will be updated on the next rework)
-  - osu!lazer: -
-  - osu!tools: -
-
-- mania:
-  - osu!lazer: Commit `7342fb7f51b34533a42bffda89c3d6c569cc69ce` (Tue Oct 11 14:34:50 2022 +0900)
-  - osu!tools: Commit `146d5916937161ef65906aa97f85d367035f3712` (Sat Oct 8 14:28:49 2022 +0900)
-  - [Article](https://osu.ppy.sh/home/news/2022-10-09-changes-to-osu-mania-sr-and-pp)
-
-### Accuracy
-
-The difficulty and performance attributes generated by [osu-tools](https://github.com/ppy/osu-tools) itself were compared with rosu-pp's results when running on `130,000` different maps. Additionally, multiple mod combinations were tested depending on the mode:
-
-- osu!: NM, EZ, HD, HR, DT
-- taiko: NM, HD, HR, DT (+ all osu! converts)
-- catch: -
-- mania: NM, DT (+ all osu! converts)
-
-For every (!) comparison of the star and pp values, the error margin was below `0.000000001`, ensuing a great accuracy.
-
-### Benchmark
-
-To be done
+| Flag              | Description                           | Dependencies
+| ----------------- | ------------------------------------- | ------------
+| `default`         | Enables the `compact_strains` feature |
+| `compact_strains` | Storing internal strain values in a plain Vec introduces an out-of-memory risk on maliciously long maps (see [/b/3739922](https://osu.ppy.sh/b/3739922)). This feature stores strains more compactly, but comes with a ~5% loss in performance. |
+| `sync`            | Some gradual calculation types can only be shared across threads if this feature is enabled. This adds a performance penalty so only enable this if really needed. |
+| `tracing`         | Any error encountered during beatmap decoding will be logged through `tracing::error`. If this feature is **not** enabled, errors will be ignored. | [`tracing`]
 
 ### Bindings
 
-Using rosu-pp from other languages than Rust:
-- JavaScript: [rosu-pp-js](https://github.com/MaxOhn/rosu-pp-js)
-- Python: [rosu-pp-py](https://github.com/MaxOhn/rosu-pp-py)
+Using `rosu-pp` from other languages than Rust:
+- JavaScript: [rosu-pp-js]
+- Python: [rosu-pp-py]
+
+[osu!]: https://osu.ppy.sh/home
+[osu!lazer]: https://github.com/ppy/osu
+[osu!tools]: https://github.com/ppy/osu-tools
+[`tracing`]: https://docs.rs/tracing
+[rosu-pp-js]: https://github.com/MaxOhn/rosu-pp-js
+[rosu-pp-py]: https://github.com/MaxOhn/rosu-pp-py
+[benchmark]: https://gist.github.com/MaxOhn/625af10011f6d7e13a171b08ccf959ff
+
+<!-- cargo-rdme end -->

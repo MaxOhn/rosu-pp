@@ -1,27 +1,31 @@
 [package]
 name = "rosu-pp"
-version = "0.9.4"
-authors = ["MaxOhn <ohn.m@hotmail.de>"]
+version = "1.1.0"
 edition = "2021"
+authors = ["MaxOhn <ohn.m@hotmail.de>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/MaxOhn/rosu-pp"
 documentation = "https://docs.rs/rosu-pp/"
-description = "osu! difficulty and pp calculation for all modes"
-keywords = ["osu", "pp", "stars", "async"]
+description = "Difficulty and performance calculation for osu!"
+keywords = ["osu", "pp", "stars", "performance", "difficulty"]
 
 [features]
-default = []
-async_std = ["async-std"]
-async_tokio = ["tokio"]
+default = ["compact_strains"]
+compact_strains = []
+sync = []
+tracing = ["rosu-map/tracing"]
 
 [dependencies]
-async-std = { version = "1.9", optional = true }
-tokio = { version = "1.2", optional = true, default-features = false, features = ["fs", "io-util"] }
-wasm-bindgen = "0.2.87"
+wasm-bindgen = "0.2.92"
+rosu-map = { version = "0.1.1" }
+rosu-mods = { version = "0.1.0" }
 
 [dev-dependencies]
-tokio = { version = "1.2", default-features = false, features = ["fs", "rt"] }
+proptest = "1.4.0"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
+[profile.test.package.proptest]
+opt-level = 3
+
+[profile.test.package.rand_chacha]
+opt-level = 3

@@ -1,8 +1,126 @@
-## Upcoming
+# v1.1.0 (2024-07-10)
 
-Nothing as of now
+- __Additions:__
+  - Mods no longer need to be specified through their legacy bitflags. Instead, [`rosu-mods`] is being used to accept any type that's convertible into the new `rosu-pp` type "`GameMods`". Currently, those types are:
+    - `u32`
+    - [`rosu_mods::GameModsLegacy`](https://docs.rs/rosu-mods/0.1.0/rosu_mods/struct.GameModsLegacy.html)
+    - [`rosu_mods::GameMods`](https://docs.rs/rosu-mods/0.1.0/rosu_mods/struct.GameMods.html)
+    - [`rosu_mods::GameModsIntermode`](https://docs.rs/rosu-mods/0.1.0/rosu_mods/struct.GameModsIntermode.html)
+    - `&rosu_mods::GameModsIntermode`
+  
+  This also means that settings of mods like `DoubleTime` or `DifficultyAdjust` can now be used without having to specify clock rate or beatmap attributes manually. Additionally, the `Blinds` mod is now considered in performance calculation.
 
-# v0.9.4 (2023-02-09)
+- __Performance:__
+  - The `generate_state` method now stores the resulting state internally so calling it multiple times is faster. ([#34])
+
+- __Fixes:__
+  - The `od_with_mods` argument is now being used properly ([#35])
+
+## v1.0.0 (2024-04-02)
+
+The `rosu-pp` interface and internal structure has been rewritten completely. Fields have been
+modified, builders work differently, function arguments have changed, and some types are no longer
+exposed.
+
+Additionally, osu!catch has finally been updated to match osu!lazer as closely as possible, just
+like the other modes already did.
+
+- Beatmap converts
+  - Each mode now has a [ZST], i.e. `Osu`, `Taiko`, `Catch`, and `Mania`, which are used to specify
+  a mode at compile-time. Most of their utility comes from the new `IGameMode` trait.
+  - Each mode's calculators now require `Converted` beatmaps to make sure they're valid for the
+  mode, e.g. the `TaikoPerformance` calculator no longer takes a simple `Beatmap` but a
+  `Converted<'_, Taiko>` (or its alias `TaikoBeatmap<'_>`).
+  - Conversion between `Beatmap` and `Converted<'_, M>` either
+    - is essentially a free operation if the map's mode already matches `M`,
+    - or performs the required conversion by modifying hitobjects & co,
+    - or indicates an error due to incompatible mode conversion, e.g. a mania map cannot be
+    converted to a taiko map
+- Difficulty calculation
+  - The `Difficulty` type is the core of all difficulty calculations and acts as a builder to
+  specify various parameters.
+  - To calculate values for a specific mode, the method `Difficulty::with_mode` will produce a
+  builder to calculate values for that mode.
+  - Recycled attributes are only valid if *all* difficulty parameters match, i.e. it must be on
+  the same map, use the same mods, clock rate, custom beatmap attributes, and passed object count
+  (and hardrock offset for osu!catch).
+  - Clockrate is now always clamped between 0.01 and 100 and custom beatmap attributes are clamped
+  between -20 and 20.
+- Performance calculation
+  - Each mode's performance calculator was renamed from `[Mode]PP` to `[Mode]Performance` and
+  `AnyPP` is now called `Performance`.
+  - Difficulty attributes now contain a few more values so that the beatmap is no longer necessary
+  for performance calculation as long as difficulty attributes are available.
+  - The functions `[Mode]Performance::new` now take an argument implementing the trait
+  `Into(Mode)Performance`, i.e. either a beatmap (as before), or attributes (difficulty or
+  performance). Since attributes speed up the calculation, they should be prefered whenever
+  available. However, be mindful that they have been calculated for the same map and difficulty
+  settings. Otherwise, the final attributes will be incorrect.
+- Features
+  - The `tracing` feature has been added. Its sole functionality is that errors during beatmap
+  parsing will emit a `tracing` event on the `ERROR` level. If this features is not explicitely 
+  enabled, parsing errors will be ignored entirely.
+  - The `gradual` features has been removed. Types for gradual calculation are now always available.
+  - The `sync` feature has been added. Taiko's gradual calculation types contain types that are not
+  thread-safe by default. Enabling this feature will add some performance penalty but use types
+  that *do* allow moving gradual calculation across threads.
+  - The `compact_strains` feature is now enabled by default and causes strain values during
+  difficulty calculation to be stored in a space-efficient way to prevent out-of-memory issues on
+  maliciously long maps. This comes at a small performance cost.
+- Misc
+  - Async is no longer supported. Beatmap parsing now works through [`rosu-map`]
+  which does not support async since evidently it's generally slower than regular sequential code.
+  - Errors while *parsing* a beatmap will never be propagated. The only errors that will be
+  propagated are those occuring while *decoding*, e.g. a file couldn't be read or other IO errors.
+  Notably, this means that some content is now parsed successfully into a `Beatmap` whereas in
+  previous `rosu-pp` versions it would error, e.g. an empty file is now a valid `Beatmap`.
+  - Although new lazer mods such as `DifficultyAdjust` or `DoubleTime` with a custom clockrate are
+  essentially supported by providing methods to specify their parameters, mods themselves are still
+  specified by their bit value. This means:
+    - `Daycore` will not be considered unless its clockrate change is explicitly specified
+    - /!\\ `Blinds` will not be considered for osu! performance calculation /!\\
+  - Most `usize` types are now `u32`, e.g. fields of `ScoreState` or `max_combo` in attributes.
+  - `n_misses` has generally been renamed to `misses` for both fields and methods.
+  - Types such as `NestedObjectKind`, `ManiaObject`, or `Mods` that were only used for internal
+  calculations are no longer publicly exposed.
+
+# v0.10.0 (2023-11-19)
+
+Essentially only adjustments to the API so bindings won't need an update.
+
+- __Additions:__
+  - Added `From<u8>` impl for `GameMode`
+  - Added the method `AnyPP::hitresult_priority`
+  - Added the method `[Mode]PP::generate_state` which returns the score state that will be used for performance calculation ([#23])
+  - The struct `SortedVec` has now an improved public interface so it can be constructed and pushed onto ([#22])
+  
+- __Breaking adjustments:__
+  - Removed the method `HitObject::end_time` from the public api. ([#25])
+  - The fields `control_points` and `edge_sounds` of `HitObjectKind::Slider` are now stored in a `Box` rather than a `Vec`. ([#26])
+  - Overhauled gradual calculation. All relevant types are now gated behind the `gradual` feature which must be enabled. ([#24])
+  - `*GradualDifficultyAttributes` has been renamed to `*GradualDifficulty` and `*GradualPerformanceAttributes`
+    has been renamed to `*GradualPerformance`.
+  - Types for gradual calculation that depend on a lifetime now have a counterpart without a lifetime that might clone
+    underlying data along the way. E.g. now there is `CatchOwnedGradualDifficulty` and `[Mode]OwnedGradualPerformance`.
+  - `OsuGradualDifficulty` and thus `GradualDifficulty` no longer implement `Clone`.
+  - Gradual performance calculators' method `process_next_object` has been renamed to `next` and `process_next_n_objects`
+    has been renamed to `nth`. They now also have the new method `last`.
+  - Similar to `Iterator::nth`, gradual performance calculators' method `nth` is now zero-indexed i.e. passing `n=0`
+    will process 1 object, `n=1` will process 2, and so on.
+
+## v0.9.5 (2023-09-06)
+
+- __Additions:__
+  - Added the method `{AnyStars/AnyPP}::is_convert` which **needs** to be used if the map was manually converted beforehand
+
+- __Adjustments:__
+  - Specified clock rates can go below 0.001 again
+
+- __Fixes:__
+  - Fixed underflow for osu!std scores that were FCs but quit mid-slider
+  - Fixed panic on incorrect file headers ([#21])
+
+## v0.9.4 (2023-02-09)
 
 - __Additions:__
   - Added the method `{TaikoPP/ManiaPP}::is_convert` which **needs** to be used if the map was manually converted beforehand
@@ -243,4 +361,17 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
 [#14]: https://github.com/MaxOhn/rosu-pp/pull/14
 [#15]: https://github.com/MaxOhn/rosu-pp/pull/15
 [#18]: https://github.com/MaxOhn/rosu-pp/pull/18
-#[#20]: https://github.com/MaxOhn/rosu-pp/pull/20
+[#20]: https://github.com/MaxOhn/rosu-pp/pull/20
+[#21]: https://github.com/MaxOhn/rosu-pp/pull/21
+[#22]: https://github.com/MaxOhn/rosu-pp/pull/22
+[#23]: https://github.com/MaxOhn/rosu-pp/pull/23
+[#24]: https://github.com/MaxOhn/rosu-pp/pull/24
+[#25]: https://github.com/MaxOhn/rosu-pp/pull/25
+[#26]: https://github.com/MaxOhn/rosu-pp/pull/26
+[#34]: https://github.com/MaxOhn/rosu-pp/pull/34
+[#35]: https://github.com/MaxOhn/rosu-pp/pull/35
+[#36]: https://github.com/MaxOhn/rosu-pp/pull/36
+
+[ZST]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
+[`rosu-map`]: https://github.com/MaxOhn/rosu-map
+[`rosu-mods`]: https://github.com/MaxOhn/rosu-mods
