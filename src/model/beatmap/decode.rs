@@ -186,7 +186,10 @@ impl BeatmapState {
             }
         }
 
-        self.vertices[0].path_type = Some(path_type);
+        self.vertices
+            .first_mut()
+            .ok_or(ParseBeatmapError::InvalidHitObjectLine)?
+            .path_type = Some(path_type);
 
         let mut start_idx = 0;
         let mut end_idx = 0;
