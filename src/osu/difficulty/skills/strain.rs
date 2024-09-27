@@ -8,7 +8,6 @@ pub struct OsuStrainSkill {
 impl OsuStrainSkill {
     pub const REDUCED_SECTION_COUNT: usize = 10;
     pub const REDUCED_STRAIN_BASELINE: f64 = 0.75;
-    pub const DIFFICULTY_MULTIPLER: f64 = 1.06;
 
     pub const DECAY_WEIGHT: f64 = 0.9;
     pub const SECTION_LEN: f64 = 400.0;
@@ -30,7 +29,6 @@ impl OsuStrainSkill {
         reduced_section_count: usize,
         reduced_strain_baseline: f64,
         decay_weight: f64,
-        difficulty_multiplier: f64,
     ) -> f64 {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
@@ -52,7 +50,11 @@ impl OsuStrainSkill {
             weight *= decay_weight;
         }
 
-        difficulty * difficulty_multiplier
+        difficulty
+    }
+
+    pub fn difficulty_to_performance(difficulty: f64) -> f64 {
+        (5.0 * (difficulty / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0
     }
 }
 

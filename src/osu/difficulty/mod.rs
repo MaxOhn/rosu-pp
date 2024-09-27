@@ -1,5 +1,7 @@
 use std::{cmp, pin::Pin};
 
+use skills::{flashlight::Flashlight, strain::OsuStrainSkill};
+
 use crate::{
     any::difficulty::{skills::Skill, Difficulty},
     model::{beatmap::BeatmapAttributes, mods::GameMods},
@@ -174,13 +176,11 @@ impl DifficultyValues {
             flashlight_rating *= 0.7;
         }
 
-        let base_aim_performance =
-            (5.0 * (aim_rating / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0;
-        let base_speed_performance =
-            (5.0 * (speed_rating / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0;
+        let base_aim_performance = OsuStrainSkill::difficulty_to_performance(aim_rating);
+        let base_speed_performance = OsuStrainSkill::difficulty_to_performance(speed_rating);
 
         let base_flashlight_performance = if mods.fl() {
-            flashlight_rating.powf(2.0) * 25.0
+            Flashlight::difficulty_to_performance(flashlight_rating)
         } else {
             0.0
         };

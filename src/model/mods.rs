@@ -175,6 +175,7 @@ impl_has_mod! {
     fl: + Flashlight ["Flashlight"],
     so: + SpunOut ["SpunOut"],
     bl: - Blinds ["Blinds"],
+    tc: - Traceable ["Traceable"],
 }
 
 impl Default for GameMods {

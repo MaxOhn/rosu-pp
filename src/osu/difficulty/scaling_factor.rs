@@ -4,6 +4,8 @@ use crate::osu::object::OsuObject;
 
 use super::object::OsuDifficultyObject;
 
+const BROKEN_GAMEFIELD_ROUNDING_ALLOWANCE: f32 = 1.00041;
+
 /// Fields around the scaling of hit objects.
 ///
 /// osu!lazer stores these in each hit object but since all objects share the
@@ -17,7 +19,8 @@ pub struct ScalingFactor {
 
 impl ScalingFactor {
     pub fn new(cs: f64) -> Self {
-        let scale = (1.0 - 0.7 * (cs as f32 - 5.0) / 5.0) / 2.0;
+        let scale =
+            (1.0 - 0.7 * ((cs - 5.0) / 5.0)) as f32 / 2.0 * BROKEN_GAMEFIELD_ROUNDING_ALLOWANCE;
 
         let radius = f64::from(OsuObject::OBJECT_RADIUS * scale);
         let factor = OsuDifficultyObject::NORMALIZED_RADIUS / radius as f32;

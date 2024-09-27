@@ -131,7 +131,7 @@ fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<
         tick_spacing,
     } = params;
 
-    let curve = slider.curve(bufs);
+    let curve = slider.curve(GameMode::Taiko, bufs);
 
     // * The true distance, accounting for any repeats. This ends up being the drum roll distance later
     let spans = slider.span_count() as f64;

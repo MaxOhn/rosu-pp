@@ -1,10 +1,10 @@
-use std::pin::Pin;
+use std::{borrow::Cow, pin::Pin};
 
 use rosu_map::util::Pos;
 
 use crate::{
     any::difficulty::object::IDifficultyObject,
-    osu::object::{OsuObject, OsuObjectKind},
+    osu::object::{OsuObject, OsuObjectKind, OsuSlider},
 };
 
 use super::{scaling_factor::ScalingFactor, HD_FADE_OUT_DURATION_MULTIPLIER};
@@ -158,20 +158,26 @@ impl<'a> OsuDifficultyObject<'a> {
     ) -> Pin<&mut OsuObject> {
         let pos = h.pos;
         let stack_offset = h.stack_offset;
+        let start_time = h.start_time;
 
         let OsuObjectKind::Slider(ref mut slider) = h.kind else {
             return h;
         };
 
+        let mut nested = Cow::Borrowed(slider.nested_objects.as_slice());
+        let duration = slider.end_time - start_time;
+        OsuSlider::lazy_travel_time(start_time, duration, &mut nested);
+        let nested = nested.as_ref();
+
         let mut curr_cursor_pos = pos + stack_offset;
         let scaling_factor = f64::from(OsuDifficultyObject::NORMALIZED_RADIUS) / radius;
 
-        for (curr_movement_obj, i) in slider.nested_objects.iter().zip(1..) {
+        for (curr_movement_obj, i) in nested.iter().zip(1..) {
             let mut curr_movement = curr_movement_obj.pos + stack_offset - curr_cursor_pos;
             let mut curr_movement_len = scaling_factor * f64::from(curr_movement.length());
             let mut required_movement = f64::from(OsuDifficultyObject::ASSUMED_SLIDER_RADIUS);
 
-            if i == slider.nested_objects.len() {
+            if i == nested.len() {
                 let lazy_movement = slider.lazy_end_pos - curr_cursor_pos;
 
                 if lazy_movement.length() < curr_movement.length() {
@@ -190,7 +196,7 @@ impl<'a> OsuDifficultyObject<'a> {
                 slider.lazy_travel_dist += curr_movement_len as f32;
             }
 
-            if i == slider.nested_objects.len() {
+            if i == nested.len() {
                 slider.lazy_end_pos = curr_cursor_pos;
             }
         }

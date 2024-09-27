@@ -13,6 +13,7 @@ use crate::{
 
 use super::{
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
+    difficulty::skills::{flashlight::Flashlight, strain::OsuStrainSkill},
     score_state::OsuScoreState,
     Osu,
 };
@@ -613,7 +614,7 @@ impl OsuPerformanceInner<'_> {
     }
 
     fn compute_aim_value(&self) -> f64 {
-        let mut aim_value = (5.0 * (self.attrs.aim / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0;
+        let mut aim_value = OsuStrainSkill::difficulty_to_performance(self.attrs.aim);
 
         let total_hits = self.total_hits();
 
@@ -652,7 +653,7 @@ impl OsuPerformanceInner<'_> {
                     * (0.0016 / (1.0 + 2.0 * self.effective_miss_count))
                     * self.acc.powf(16.0))
                     * (1.0 - 0.003 * self.attrs.hp * self.attrs.hp);
-        } else if self.mods.hd() {
+        } else if self.mods.hd() || self.mods.tc() {
             // * We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
             aim_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
         }
@@ -685,8 +686,7 @@ impl OsuPerformanceInner<'_> {
             return 0.0;
         }
 
-        let mut speed_value =
-            (5.0 * (self.attrs.speed / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0;
+        let mut speed_value = OsuStrainSkill::difficulty_to_performance(self.attrs.speed);
 
         let total_hits = self.total_hits();
 
@@ -719,7 +719,7 @@ impl OsuPerformanceInner<'_> {
             // * Increasing the speed value by object count for Blinds isn't
             // * ideal, so the minimum buff is given.
             speed_value *= 1.12;
-        } else if self.mods.hd() {
+        } else if self.mods.hd() || self.mods.tc() {
             // * We want to give more reward for lower AR when it comes to aim and HD.
             // * This nerfs high AR and buffs lower AR.
             speed_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
@@ -792,7 +792,7 @@ impl OsuPerformanceInner<'_> {
         // * ideal, so the minimum buff is given.
         if self.mods.bl() {
             acc_value *= 1.14;
-        } else if self.mods.hd() {
+        } else if self.mods.hd() || self.mods.tc() {
             acc_value *= 1.08;
         }
 
@@ -808,7 +808,7 @@ impl OsuPerformanceInner<'_> {
             return 0.0;
         }
 
-        let mut flashlight_value = self.attrs.flashlight.powf(2.0) * 25.0;
+        let mut flashlight_value = Flashlight::difficulty_to_performance(self.attrs.flashlight);
 
         let total_hits = self.total_hits();
 

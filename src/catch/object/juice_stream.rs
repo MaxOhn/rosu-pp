@@ -1,7 +1,8 @@
 use std::vec::Drain;
 
-use rosu_map::section::hit_objects::{
-    CurveBuffers, PathControlPoint, SliderEvent, SliderEventType, SliderEventsIter,
+use rosu_map::section::{
+    general::GameMode,
+    hit_objects::{CurveBuffers, PathControlPoint, SliderEvent, SliderEventType, SliderEventsIter},
 };
 
 use crate::{
@@ -41,7 +42,7 @@ impl<'a> JuiceStream<'a> {
                 point.slider_velocity
             });
 
-        let path = slider.curve(&mut bufs.curve);
+        let path = slider.curve(GameMode::Catch, &mut bufs.curve);
 
         let velocity_factor = JuiceStream::BASE_SCORING_DIST * slider_multiplier / beat_len;
         let velocity = velocity_factor * slider_velocity;

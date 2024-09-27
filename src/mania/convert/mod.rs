@@ -108,7 +108,7 @@ fn convert(map: &mut Beatmap) {
                 last_values.pattern = new_pattern;
             }
             HitObjectKind::Slider(ref slider) => {
-                let curve = slider.curve(&mut curve_bufs);
+                let curve = slider.curve(GameMode::Mania, &mut curve_bufs);
 
                 let mut gen = DistanceObjectPatternGenerator::new(
                     &mut random,
