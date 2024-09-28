@@ -14,7 +14,7 @@ pub mod gradual;
 mod object;
 mod skills;
 
-const STAR_SCALING_FACTOR: f64 = 0.018;
+const DIFFICULTY_MULTIPLIER: f64 = 0.018;
 
 pub fn difficulty(
     difficulty: &Difficulty,
@@ -31,7 +31,7 @@ pub fn difficulty(
         .od;
 
     ManiaDifficultyAttributes {
-        stars: values.strain.difficulty_value() * STAR_SCALING_FACTOR,
+        stars: values.strain.difficulty_value() * DIFFICULTY_MULTIPLIER,
         hit_window,
         max_combo: values.max_combo,
         n_objects,

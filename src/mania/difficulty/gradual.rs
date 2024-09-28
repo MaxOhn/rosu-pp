@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     object::ManiaDifficultyObject, skills::strain::Strain, DifficultyValues,
-    ManiaDifficultyAttributes, ManiaObject, STAR_SCALING_FACTOR,
+    ManiaDifficultyAttributes, ManiaObject, DIFFICULTY_MULTIPLIER,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!mania map.
@@ -136,7 +136,7 @@ impl Iterator for ManiaGradualDifficulty {
         self.idx += 1;
 
         Some(ManiaDifficultyAttributes {
-            stars: self.strain.as_difficulty_value() * STAR_SCALING_FACTOR,
+            stars: self.strain.as_difficulty_value() * DIFFICULTY_MULTIPLIER,
             hit_window: self.hit_window,
             max_combo: self.curr_combo,
             n_objects: self.idx as u32,

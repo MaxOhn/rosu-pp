@@ -863,9 +863,7 @@ struct ManiaPerformanceInner<'mods> {
 
 impl ManiaPerformanceInner<'_> {
     fn calculate(self) -> ManiaPerformanceAttributes {
-        // * Arbitrary initial value for scaling pp in order to standardize distributions across game modes.
-        // * The specific number has no intrinsic meaning and can be adjusted as needed.
-        let mut multiplier = 8.0;
+        let mut multiplier = 1.0;
 
         if self.mods.nf() {
             multiplier *= 0.75;
@@ -887,7 +885,7 @@ impl ManiaPerformanceInner<'_> {
 
     fn compute_difficulty_value(&self) -> f64 {
         // * Star rating to pp curve
-        (self.attrs.stars - 0.15).max(0.05).powf(2.2)
+        8.0 * (self.attrs.stars - 0.15).max(0.05).powf(2.2)
              // * From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
              * (5.0 * self.calculate_custom_accuracy() - 4.0).max(0.0)
              // * Length bonus, capped at 1500 notes
