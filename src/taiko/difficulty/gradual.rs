@@ -9,7 +9,6 @@ use crate::{
 };
 
 use super::{
-    combined_difficulty_value,
     object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     skills::TaikoSkills,
     DifficultyValues, TaikoDifficultyAttributes,
@@ -171,18 +170,9 @@ impl Iterator for TaikoGradualDifficulty {
 
         self.idx += 1;
 
-        let color = self.skills.color.as_difficulty_value();
-        let rhythm = self.skills.rhythm.as_difficulty_value();
-        let stamina = self.skills.stamina.as_difficulty_value();
-        let combined = combined_difficulty_value(
-            self.skills.color.clone(),
-            self.skills.rhythm.clone(),
-            self.skills.stamina.clone(),
-        );
-
         let mut attrs = self.attrs.clone();
 
-        DifficultyValues::eval(&mut attrs, color, rhythm, stamina, combined);
+        DifficultyValues::eval(&mut attrs, self.skills.clone());
 
         Some(attrs)
     }

@@ -37,14 +37,7 @@ pub fn difficulty(
         .hit_windows()
         .od;
 
-    let DifficultyValues {
-        skills: TaikoSkills {
-            rhythm,
-            color,
-            stamina,
-        },
-        max_combo,
-    } = DifficultyValues::calculate(difficulty, converted);
+    let DifficultyValues { skills, max_combo } = DifficultyValues::calculate(difficulty, converted);
 
     let mut attrs = TaikoDifficultyAttributes {
         hit_window,
@@ -53,18 +46,7 @@ pub fn difficulty(
         ..Default::default()
     };
 
-    let color_rating = color.as_difficulty_value();
-    let rhythm_rating = rhythm.as_difficulty_value();
-    let stamina_rating = stamina.as_difficulty_value();
-    let combined_rating = combined_difficulty_value(color, rhythm, stamina);
-
-    DifficultyValues::eval(
-        &mut attrs,
-        color_rating,
-        rhythm_rating,
-        stamina_rating,
-        combined_rating,
-    );
+    DifficultyValues::eval(&mut attrs, skills);
 
     attrs
 }
@@ -169,17 +151,12 @@ impl DifficultyValues {
         Self { skills, max_combo }
     }
 
-    pub fn eval(
-        attrs: &mut TaikoDifficultyAttributes,
-        color_difficulty_value: f64,
-        rhythm_difficulty_value: f64,
-        stamina_difficulty_value: f64,
-        combined_difficulty_value: f64,
-    ) {
-        let color_rating = color_difficulty_value * COLOR_SKILL_MULTIPLIER;
-        let rhythm_rating = rhythm_difficulty_value * RHYTHM_SKILL_MULTIPLIER;
-        let stamina_rating = stamina_difficulty_value * STAMINA_SKILL_MULTIPLIER;
-        let combined_rating = combined_difficulty_value;
+    pub fn eval(attrs: &mut TaikoDifficultyAttributes, skills: TaikoSkills) {
+        let color_rating = skills.color.as_difficulty_value() * COLOR_SKILL_MULTIPLIER;
+        let rhythm_rating = skills.rhythm.as_difficulty_value() * RHYTHM_SKILL_MULTIPLIER;
+        let stamina_rating = skills.stamina.as_difficulty_value() * STAMINA_SKILL_MULTIPLIER;
+        let combined_rating =
+            combined_difficulty_value(skills.color, skills.rhythm, skills.stamina);
 
         let star_rating = rescale(combined_rating * 1.4);
 

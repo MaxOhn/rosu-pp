@@ -4,6 +4,7 @@ pub mod color;
 pub mod rhythm;
 pub mod stamina;
 
+#[derive(Clone)]
 pub struct TaikoSkills {
     pub rhythm: Rhythm,
     pub color: Color,
