@@ -1,6 +1,7 @@
 use std::{cmp, mem, slice::Iter};
 
 use crate::{
+    any::difficulty::skills::Skill,
     model::{beatmap::HitWindows, hit_object::HitObject},
     taiko::TaikoBeatmap,
     util::sync::RefCount,
@@ -8,8 +9,9 @@ use crate::{
 };
 
 use super::{
+    combined_difficulty_value,
     object::{TaikoDifficultyObject, TaikoDifficultyObjects},
-    skills::peaks::{Peaks, PeaksSkill},
+    skills::TaikoSkills,
     DifficultyValues, TaikoDifficultyAttributes,
 };
 
@@ -53,7 +55,7 @@ pub struct TaikoGradualDifficulty {
     attrs: TaikoDifficultyAttributes,
     diff_objects: TaikoDifficultyObjects,
     diff_objects_iter: Iter<'static, RefCount<TaikoDifficultyObject>>,
-    peaks: Peaks,
+    skills: TaikoSkills,
     total_hits: usize,
     first_combos: FirstTwoCombos,
 }
@@ -96,7 +98,7 @@ impl TaikoGradualDifficulty {
             &mut n_diff_objects,
         );
 
-        let peaks = Peaks::new();
+        let skills = TaikoSkills::new();
 
         let attrs = TaikoDifficultyAttributes {
             hit_window,
@@ -117,7 +119,7 @@ impl TaikoGradualDifficulty {
             difficulty,
             diff_objects,
             diff_objects_iter,
-            peaks,
+            skills,
             attrs,
             total_hits,
             first_combos,
@@ -144,7 +146,10 @@ impl Iterator for TaikoGradualDifficulty {
             loop {
                 let curr = self.diff_objects_iter.next()?;
                 let borrowed = curr.get();
-                PeaksSkill::new(&mut self.peaks, &self.diff_objects).process(&borrowed);
+
+                Skill::new(&mut self.skills.rhythm, &self.diff_objects).process(&borrowed);
+                Skill::new(&mut self.skills.color, &self.diff_objects).process(&borrowed);
+                Skill::new(&mut self.skills.stamina, &self.diff_objects).process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;
@@ -166,10 +171,14 @@ impl Iterator for TaikoGradualDifficulty {
 
         self.idx += 1;
 
-        let color = self.peaks.color_difficulty_value();
-        let rhythm = self.peaks.rhythm_difficulty_value();
-        let stamina = self.peaks.stamina_difficulty_value();
-        let combined = self.peaks.clone().difficulty_value();
+        let color = self.skills.color.as_difficulty_value();
+        let rhythm = self.skills.rhythm.as_difficulty_value();
+        let stamina = self.skills.stamina.as_difficulty_value();
+        let combined = combined_difficulty_value(
+            self.skills.color.clone(),
+            self.skills.rhythm.clone(),
+            self.skills.stamina.clone(),
+        );
 
         let mut attrs = self.attrs.clone();
 
@@ -225,13 +234,17 @@ impl Iterator for TaikoGradualDifficulty {
             }
         }
 
-        let mut peaks = PeaksSkill::new(&mut self.peaks, &self.diff_objects);
+        let mut rhythm = Skill::new(&mut self.skills.rhythm, &self.diff_objects);
+        let mut color = Skill::new(&mut self.skills.color, &self.diff_objects);
+        let mut stamina = Skill::new(&mut self.skills.stamina, &self.diff_objects);
 
         for _ in 0..take {
             loop {
                 let curr = self.diff_objects_iter.next()?;
                 let borrowed = curr.get();
-                peaks.process(&borrowed);
+                rhythm.process(&borrowed);
+                color.process(&borrowed);
+                stamina.process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;

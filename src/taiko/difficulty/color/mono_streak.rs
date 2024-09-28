@@ -35,4 +35,8 @@ impl MonoStreak {
     pub fn first_hit_object(&self) -> Option<RefCount<TaikoDifficultyObject>> {
         self.hit_objects.first().and_then(Weak::upgrade)
     }
+
+    pub fn last_hit_object(&self) -> Option<RefCount<TaikoDifficultyObject>> {
+        self.hit_objects.last().and_then(Weak::upgrade)
+    }
 }

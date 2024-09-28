@@ -446,7 +446,7 @@ impl TaikoPerformanceInner<'_> {
             diff_value *= 0.985;
         }
 
-        if self.mods.hd() {
+        if self.mods.hd() && !self.attrs.is_convert {
             diff_value *= 1.025;
         }
 
@@ -476,8 +476,8 @@ impl TaikoPerformanceInner<'_> {
         let len_bonus = (self.total_hits() / 1500.0).powf(0.3).min(1.15);
         acc_value *= len_bonus;
 
-        // * Slight HDFL Bonus for accuracy. A clamp is used to prevent against negative values
-        if self.mods.hd() && self.mods.fl() {
+        // * Slight HDFL Bonus for accuracy. A clamp is used to prevent against negative values.
+        if self.mods.hd() && self.mods.fl() && !self.attrs.is_convert {
             acc_value *= (1.075 * len_bonus).max(1.05);
         }
 
