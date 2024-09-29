@@ -569,7 +569,7 @@ impl CatchPerformanceInner<'_> {
 
         // NF penalty
         if self.mods.nf() {
-            pp *= 0.9;
+            pp *= (1.0 - 0.02 * f64::from(self.state.misses)).max(0.9);
         }
 
         CatchPerformanceAttributes {
