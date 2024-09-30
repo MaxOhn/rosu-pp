@@ -232,11 +232,14 @@ fn apply_hr_offset(
 ) {
     let mut offset_pos = x;
 
-    let Some(last_pos) = last_pos else {
-        *last_pos = Some(offset_pos);
-        *last_start_time = start_time;
+    let last_pos = match last_pos {
+        Some(pos) if pos.abs() >= f32::EPSILON => pos,
+        Some(_) | None => {
+            *last_pos = Some(offset_pos);
+            *last_start_time = start_time;
 
-        return;
+            return;
+        }
     };
 
     let pos_diff = offset_pos - *last_pos;
@@ -310,7 +313,10 @@ fn initialize_hyper_dash(cs: f32, palpable_objects: &mut [PalpableObject]) {
             -1
         };
 
-        let time_to_next = next.start_time - curr.start_time - f64::from(1000.0_f32 / 60.0 / 4.0);
+        // * Int truncation added to match osu!stable.
+        let time_to_next = f64::from(
+            (next.start_time as i32 - curr.start_time as i32) as f32 - 1000.0 / 60.0 / 4.0,
+        );
 
         let dist_to_next = f64::from((next.effective_x() - curr.effective_x()).abs())
             - if last_dir == this_dir {

@@ -44,12 +44,29 @@ impl<'a> JuiceStream<'a> {
 
         let path = slider.curve(GameMode::Catch, &mut bufs.curve);
 
-        let velocity_factor = JuiceStream::BASE_SCORING_DIST * slider_multiplier / beat_len;
-        let velocity = velocity_factor * slider_velocity;
-        let tick_dist_factor =
-            JuiceStream::BASE_SCORING_DIST * slider_multiplier / slider_tick_rate;
+        fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
+            let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;
 
-        let tick_dist = tick_dist_factor * slider_velocity;
+            let bpm_multiplier = if slider_velocity_as_beat_len < 0.0 {
+                f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
+            } else {
+                1.0
+            };
+
+            beat_len * bpm_multiplier
+        }
+
+        let velocity = JuiceStream::BASE_SCORING_DIST * slider_multiplier
+            / get_precision_adjusted_beat_len(slider_velocity, beat_len);
+        let scoring_dist = velocity * beat_len;
+
+        let tick_dist_multiplier = if converted.version < 8 {
+            slider_velocity.recip()
+        } else {
+            1.0
+        };
+
+        let tick_dist = scoring_dist / slider_tick_rate * tick_dist_multiplier;
 
         let span_count = slider.span_count() as f64;
         let duration = span_count * path.dist() / velocity;
@@ -70,7 +87,7 @@ impl<'a> JuiceStream<'a> {
         for e in events {
             if let Some(last_event_time) = last_event_time {
                 let mut tiny_droplets = 0;
-                let since_last_tick = e.time - last_event_time;
+                let since_last_tick = f64::from(e.time as i32 - last_event_time as i32);
 
                 if since_last_tick > 80.0 {
                     let mut time_between_tiny = since_last_tick;
@@ -135,12 +152,14 @@ impl<'a> JuiceStream<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct NestedJuiceStreamObject {
     pub pos: f32,
     pub start_time: f64,
     pub kind: NestedJuiceStreamObjectKind,
 }
 
+#[derive(Debug)]
 pub enum NestedJuiceStreamObjectKind {
     Fruit,
     Droplet,

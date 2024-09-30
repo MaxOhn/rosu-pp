@@ -15,6 +15,6 @@ impl Catcher {
     }
 
     fn calculate_scale(cs: f32) -> f32 {
-        1.0 - 0.7 * (cs - 5.0) / 5.0
+        ((1.0 - 0.7 * ((f64::from(cs) - 5.0) / 5.0)) as f32 / 2.0 * 1.0) * 2.0
     }
 }
