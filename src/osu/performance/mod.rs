@@ -40,7 +40,7 @@ impl<'map> OsuPerformance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`OsuDifficultyAttributes`]
-    /// or [`OsuPerformanceAttributes`])
+    ///   or [`OsuPerformanceAttributes`])
     /// - a beatmap ([`OsuBeatmap<'map>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated

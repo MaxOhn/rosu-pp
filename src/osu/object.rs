@@ -142,7 +142,7 @@ impl OsuObject {
         self.end_pos() + self.stack_offset
     }
 
-    pub fn lazy_travel_time(&self) -> f64 {
+    pub const fn lazy_travel_time(&self) -> f64 {
         match self.kind {
             OsuObjectKind::Circle | OsuObjectKind::Spinner(_) => 0.0,
             OsuObjectKind::Slider(ref slider) => slider.lazy_travel_time,
@@ -207,18 +207,6 @@ impl OsuSlider {
 
         let span_count = slider.span_count() as f64;
 
-        fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
-            let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;
-
-            let bpm_multiplier = if slider_velocity_as_beat_len < 0.0 {
-                f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
-            } else {
-                1.0
-            };
-
-            beat_len * bpm_multiplier
-        }
-
         let velocity = f64::from(OsuObject::BASE_SCORING_DIST) * slider_multiplier
             / get_precision_adjusted_beat_len(slider_velocity, beat_len);
         let scoring_dist = velocity * beat_len;
@@ -277,13 +265,11 @@ impl OsuSlider {
                         start_time: start_time + f64::from(e.span_idx + 1) * span_duration,
                         kind: NestedSliderObjectKind::Repeat,
                     },
-                    SliderEventType::Tail => {
-                        NestedSliderObject {
-                            pos: end_path_pos, // no `h.pos` yet to keep order of float operations
-                            start_time: e.time,
-                            kind: NestedSliderObjectKind::Tail,
-                        }
-                    }
+                    SliderEventType::Tail => NestedSliderObject {
+                        pos: end_path_pos, // no `h.pos` yet to keep order of float operations
+                        start_time: e.time,
+                        kind: NestedSliderObjectKind::Tail,
+                    },
                     SliderEventType::Head | SliderEventType::LastTick => return None,
                 };
 
@@ -398,4 +384,16 @@ pub enum NestedSliderObjectKind {
     Repeat,
     Tail,
     Tick,
+}
+
+fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
+    let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;
+
+    let bpm_multiplier = if slider_velocity_as_beat_len < 0.0 {
+        f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
+    } else {
+        1.0
+    };
+
+    beat_len * bpm_multiplier
 }

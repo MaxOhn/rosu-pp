@@ -196,7 +196,7 @@ impl SpeedEvaluator {
         let difficulty = speed_bonus * dist_bonus * 1000.0 / strain_time;
 
         // * Apply penalty if there's doubletappable doubles
-        return difficulty * doubletapness;
+        difficulty * doubletapness
     }
 }
 

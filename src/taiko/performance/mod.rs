@@ -35,7 +35,7 @@ impl<'map> TaikoPerformance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`TaikoDifficultyAttributes`]
-    /// or [`TaikoPerformanceAttributes`])
+    ///   or [`TaikoPerformanceAttributes`])
     /// - a beatmap ([`TaikoBeatmap<'map>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated

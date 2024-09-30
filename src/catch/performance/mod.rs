@@ -36,7 +36,7 @@ impl<'map> CatchPerformance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`CatchDifficultyAttributes`]
-    /// or [`CatchPerformanceAttributes`])
+    ///   or [`CatchPerformanceAttributes`])
     /// - a beatmap ([`CatchBeatmap<'map>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated

@@ -44,18 +44,6 @@ impl<'a> JuiceStream<'a> {
 
         let path = slider.curve(GameMode::Catch, &mut bufs.curve);
 
-        fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
-            let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;
-
-            let bpm_multiplier = if slider_velocity_as_beat_len < 0.0 {
-                f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
-            } else {
-                1.0
-            };
-
-            beat_len * bpm_multiplier
-        }
-
         let velocity = JuiceStream::BASE_SCORING_DIST * slider_multiplier
             / get_precision_adjusted_beat_len(slider_velocity, beat_len);
         let scoring_dist = velocity * beat_len;
@@ -170,4 +158,16 @@ pub struct JuiceStreamBufs {
     pub nested_objects: Vec<NestedJuiceStreamObject>,
     pub curve: CurveBuffers,
     pub ticks: Vec<SliderEvent>,
+}
+
+fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
+    let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;
+
+    let bpm_multiplier = if slider_velocity_as_beat_len < 0.0 {
+        f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
+    } else {
+        1.0
+    };
+
+    beat_len * bpm_multiplier
 }

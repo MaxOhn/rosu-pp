@@ -37,7 +37,7 @@ impl<'map> ManiaPerformance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`ManiaDifficultyAttributes`]
-    /// or [`ManiaPerformanceAttributes`])
+    ///   or [`ManiaPerformanceAttributes`])
     /// - a beatmap ([`ManiaBeatmap<'map>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated

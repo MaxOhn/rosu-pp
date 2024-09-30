@@ -27,8 +27,8 @@ impl<'map> Performance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`DifficultyAttributes`],
-    /// [`PerformanceAttributes`], or mode-specific attributes like
-    /// [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
+    ///   [`PerformanceAttributes`], or mode-specific attributes like
+    ///   [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
     /// - a beatmap ([`Beatmap`] or [`Converted<'_, M>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated
