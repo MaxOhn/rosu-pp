@@ -28,7 +28,7 @@ pub fn difficulty(
         .attributes()
         .difficulty(difficulty)
         .hit_windows()
-        .od;
+        .od_great;
 
     ManiaDifficultyAttributes {
         stars: values.strain.difficulty_value() * DIFFICULTY_MULTIPLIER,

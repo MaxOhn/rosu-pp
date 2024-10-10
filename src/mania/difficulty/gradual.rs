@@ -65,8 +65,10 @@ impl ManiaGradualDifficulty {
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(converted);
 
-        let HitWindows { od: hit_window, .. } =
-            converted.attributes().difficulty(&difficulty).hit_windows();
+        let HitWindows {
+            od_great: hit_window,
+            ..
+        } = converted.attributes().difficulty(&difficulty).hit_windows();
 
         let mania_objects = converted
             .hit_objects

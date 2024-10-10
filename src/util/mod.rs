@@ -4,5 +4,6 @@ pub mod limited_queue;
 pub mod map_or_attrs;
 pub mod random;
 pub mod sort;
+pub mod special_functions;
 pub mod strains_vec;
 pub mod sync;

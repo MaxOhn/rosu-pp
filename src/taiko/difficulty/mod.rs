@@ -2,6 +2,7 @@ use std::cmp;
 
 use crate::{
     any::difficulty::skills::Skill,
+    model::beatmap::HitWindows,
     taiko::{
         difficulty::{
             color::preprocessor::ColorDifficultyPreprocessor,
@@ -31,16 +32,17 @@ pub fn difficulty(
     difficulty: &Difficulty,
     converted: &TaikoBeatmap<'_>,
 ) -> TaikoDifficultyAttributes {
-    let hit_window = converted
-        .attributes()
-        .difficulty(difficulty)
-        .hit_windows()
-        .od;
+    let HitWindows {
+        od_great,
+        od_ok,
+        ar: _,
+    } = converted.attributes().difficulty(difficulty).hit_windows();
 
     let DifficultyValues { skills, max_combo } = DifficultyValues::calculate(difficulty, converted);
 
     let mut attrs = TaikoDifficultyAttributes {
-        hit_window,
+        great_hit_window: od_great,
+        ok_hit_window: od_ok.unwrap_or(0.0),
         max_combo,
         is_convert: converted.is_convert,
         ..Default::default()

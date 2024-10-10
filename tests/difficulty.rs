@@ -69,7 +69,8 @@ macro_rules! test_cases {
         rhythm: $rhythm:literal,
         color: $color:literal,
         peak: $peak:literal,
-        hit_window: $hit_window:literal,
+        great_hit_window: $great_hit_window:literal,
+        ok_hit_window: $ok_hit_window:literal,
         stars: $stars:literal,
         max_combo: $max_combo:literal,
         is_convert: $is_convert:literal,
@@ -79,7 +80,8 @@ macro_rules! test_cases {
             rhythm: $rhythm,
             color: $color,
             peak: $peak,
-            hit_window: $hit_window,
+            great_hit_window: $great_hit_window,
+            ok_hit_window: $ok_hit_window,
             stars: $stars,
             max_combo: $max_combo,
             is_convert: $is_convert,
@@ -334,7 +336,8 @@ fn basic_taiko() {
                 rhythm: 0.20130047251681948,
                 color: 1.0487315549761433,
                 peak: 1.8881824429738323,
-                hit_window: 35.0,
+                great_hit_window: 35.0,
+                ok_hit_window: 0.0, // TODO
                 stars: 2.9778030386845606,
                 max_combo: 289,
                 is_convert: false,
@@ -344,7 +347,8 @@ fn basic_taiko() {
                 rhythm: 0.20130047251681948,
                 color: 1.0487315549761433,
                 peak: 1.8881824429738323,
-                hit_window: 29.0,
+                great_hit_window: 29.0,
+                ok_hit_window: 0.0, // TODO
                 stars: 2.9778030386845606,
                 max_combo: 289,
                 is_convert: false,
@@ -354,7 +358,8 @@ fn basic_taiko() {
                 rhythm: 0.4448175371191029,
                 color: 1.3637624960988888,
                 peak: 2.6393434317991886,
-                hit_window: 23.333333333333332,
+                great_hit_window: 23.333333333333332,
+                ok_hit_window: 0.0, // TODO
                 stars: 3.9605501866340607,
                 max_combo: 289,
                 is_convert: false,
@@ -372,7 +377,8 @@ fn convert_taiko() {
                 rhythm: 1.4696991260446617,
                 color: 2.3032281729649067,
                 peak: 4.130240422926277,
-                hit_window: 23.59999942779541,
+                great_hit_window: 23.59999942779541,
+                ok_hit_window: 0.0, // TODO
                 stars: 5.247857660585606,
                 max_combo: 908,
                 is_convert: true,
@@ -382,7 +388,8 @@ fn convert_taiko() {
                 rhythm: 1.4696991260446617,
                 color: 2.3032281729649067,
                 peak: 4.130240422926277,
-                hit_window: 20.0,
+                great_hit_window: 20.0,
+                ok_hit_window: 0.0, // TODO
                 stars: 5.247857660585606,
                 max_combo: 908,
                 is_convert: true,
@@ -392,7 +399,8 @@ fn convert_taiko() {
                 rhythm: 2.002843919169095,
                 color: 3.1864894777399986,
                 peak: 6.107962386775966,
-                hit_window: 15.733332951863607,
+                great_hit_window: 15.733332951863607,
+                ok_hit_window: 0.0, // TODO
                 stars: 7.0140481946324815,
                 max_combo: 908,
                 is_convert: true,
@@ -559,7 +567,8 @@ impl AssertEq for TaikoDifficultyAttributes {
         assert_eq_float(self.rhythm, expected.rhythm);
         assert_eq_float(self.color, expected.color);
         assert_eq_float(self.peak, expected.peak);
-        assert_eq_float(self.hit_window, expected.hit_window);
+        assert_eq_float(self.great_hit_window, expected.great_hit_window);
+        assert_eq_float(self.ok_hit_window, expected.ok_hit_window);
         assert_eq_float(self.stars, expected.stars);
         assert_eq!(self.max_combo, expected.max_combo);
         assert_eq!(self.is_convert, expected.is_convert);

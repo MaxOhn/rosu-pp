@@ -83,8 +83,11 @@ impl TaikoGradualDifficulty {
             (Some(true), Some(true)) => FirstTwoCombos::Both,
         };
 
-        let HitWindows { od: hit_window, .. } =
-            converted.attributes().difficulty(&difficulty).hit_windows();
+        let HitWindows {
+            od_great,
+            od_ok,
+            ar: _,
+        } = converted.attributes().difficulty(&difficulty).hit_windows();
 
         let mut n_diff_objects = 0;
         let mut max_combo = 0;
@@ -100,7 +103,8 @@ impl TaikoGradualDifficulty {
         let skills = TaikoSkills::new();
 
         let attrs = TaikoDifficultyAttributes {
-            hit_window,
+            great_hit_window: od_great,
+            ok_hit_window: od_ok.unwrap_or(0.0),
             is_convert: converted.is_convert,
             ..Default::default()
         };

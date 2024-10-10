@@ -1,9 +1,6 @@
 use std::cmp;
 
-use rosu_map::{
-    section::{general::GameMode, hit_objects::CurveBuffers},
-    util::Pos,
-};
+use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
     model::{
@@ -20,7 +17,7 @@ use super::Taiko;
 /// A [`Beatmap`] for [`Taiko`] calculations.
 pub type TaikoBeatmap<'a> = Converted<'a, Taiko>;
 
-const LEGACY_TAIKO_VELOCITY_MULTIPLIER: f32 = 1.4;
+const VELOCITY_MULTIPLIER: f32 = 1.4;
 const OSU_BASE_SCORING_DIST: f32 = 100.0;
 
 pub const fn check_convert(map: &Beatmap) -> ConvertStatus {
@@ -44,8 +41,6 @@ pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
 }
 
 fn convert(map: &mut Beatmap) {
-    map.slider_multiplier *= f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER);
-
     let mut new_objects = Vec::new();
     let mut new_sounds = Vec::new();
 
@@ -125,32 +120,46 @@ fn convert(map: &mut Beatmap) {
 fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<'_>) -> bool {
     let SliderParams {
         slider,
-        bufs,
         duration,
         start_time,
         tick_spacing,
     } = params;
 
-    let curve = slider.curve(GameMode::Taiko, bufs);
-
     // * The true distance, accounting for any repeats. This ends up being the drum roll distance later
     let spans = slider.span_count() as f64;
-    let dist = curve.dist() * spans * f64::from(LEGACY_TAIKO_VELOCITY_MULTIPLIER);
+    let mut dist = slider.expected_dist.unwrap_or(0.0);
+
+    // * Do not combine the following two lines!
+    dist *= f64::from(VELOCITY_MULTIPLIER);
+    dist *= spans;
 
     let timing_beat_len = map
         .timing_point_at(*start_time)
         .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
 
-    let bpm_multiplier = map
+    let slider_velocity = map
         .difficulty_point_at(*start_time)
-        .map_or(DifficultyPoint::DEFAULT_BPM_MULTIPLIER, |point| {
-            point.bpm_multiplier
+        .map_or(DifficultyPoint::DEFAULT_SLIDER_VELOCITY, |point| {
+            point.slider_velocity
         });
 
-    let mut beat_len = timing_beat_len * bpm_multiplier;
+    fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
+        let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;
 
-    let slider_scoring_point_dist =
-        f64::from(OSU_BASE_SCORING_DIST) * map.slider_multiplier / map.slider_tick_rate;
+        let bpm_multiplier = if slider_velocity_as_beat_len < 0.0 {
+            f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
+        } else {
+            1.0
+        };
+
+        beat_len * bpm_multiplier
+    }
+
+    let mut beat_len = get_precision_adjusted_beat_len(slider_velocity, timing_beat_len);
+
+    let slider_scoring_point_dist = f64::from(OSU_BASE_SCORING_DIST)
+        * (map.slider_multiplier * f64::from(VELOCITY_MULTIPLIER))
+        / map.slider_tick_rate;
 
     // * The velocity and duration of the taiko hit object - calculated as the velocity of a drum roll.
     let taiko_vel = slider_scoring_point_dist * map.slider_tick_rate;
@@ -171,7 +180,6 @@ fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<
 
 struct SliderParams<'c> {
     slider: &'c Slider,
-    bufs: CurveBuffers,
     duration: u32,
     start_time: f64,
     tick_spacing: f64,
@@ -181,7 +189,6 @@ impl<'c> SliderParams<'c> {
     fn new(start_time: f64, slider: &'c Slider) -> Self {
         Self {
             slider,
-            bufs: CurveBuffers::default(),
             start_time,
             duration: 0,
             tick_spacing: 0.0,
