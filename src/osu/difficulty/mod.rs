@@ -1,6 +1,9 @@
 use std::{cmp, pin::Pin};
 
-use skills::{flashlight::Flashlight, strain::OsuStrainSkill};
+use skills::{
+    flashlight::Flashlight,
+    strain::{DifficultyValue, OsuStrainSkill, UsedOsuStrainSkills},
+};
 
 use crate::{
     any::difficulty::{skills::Skill, Difficulty},
@@ -148,15 +151,16 @@ impl DifficultyValues {
     pub fn eval(
         attrs: &mut OsuDifficultyAttributes,
         mods: &GameMods,
-        aim_difficulty_value: f64,
-        aim_no_sliders_difficulty_value: f64,
-        speed_difficulty_value: f64,
+        aim: UsedOsuStrainSkills<DifficultyValue>,
+        aim_no_sliders: UsedOsuStrainSkills<DifficultyValue>,
+        speed: UsedOsuStrainSkills<DifficultyValue>,
         speed_relevant_note_count: f64,
         flashlight_difficulty_value: f64,
     ) {
-        let mut aim_rating = aim_difficulty_value.sqrt() * DIFFICULTY_MULTIPLIER;
-        let aim_rating_no_sliders = aim_no_sliders_difficulty_value.sqrt() * DIFFICULTY_MULTIPLIER;
-        let mut speed_rating = speed_difficulty_value.sqrt() * DIFFICULTY_MULTIPLIER;
+        let mut aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+        let aim_rating_no_sliders =
+            aim_no_sliders.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+        let mut speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
         let mut flashlight_rating = flashlight_difficulty_value.sqrt() * DIFFICULTY_MULTIPLIER;
 
         let slider_factor = if aim_rating > 0.0 {
@@ -164,6 +168,9 @@ impl DifficultyValues {
         } else {
             1.0
         };
+
+        let aim_difficult_strain_count = aim.count_difficult_strains();
+        let speed_difficult_strain_count = speed.count_difficult_strains();
 
         if mods.td() {
             aim_rating = aim_rating.powf(0.8);
@@ -202,6 +209,8 @@ impl DifficultyValues {
         attrs.speed = speed_rating;
         attrs.flashlight = flashlight_rating;
         attrs.slider_factor = slider_factor;
+        attrs.aim_difficult_strain_count = aim_difficult_strain_count;
+        attrs.speed_difficult_strain_count = speed_difficult_strain_count;
         attrs.stars = star_rating;
         attrs.speed_note_count = speed_relevant_note_count;
     }

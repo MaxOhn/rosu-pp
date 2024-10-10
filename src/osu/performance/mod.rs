@@ -33,6 +33,7 @@ pub struct OsuPerformance<'map> {
     pub(crate) n50: Option<u32>,
     pub(crate) misses: Option<u32>,
     pub(crate) hitresult_priority: HitResultPriority,
+    pub(crate) lazer: Option<bool>,
 }
 
 impl<'map> OsuPerformance<'map> {
@@ -148,6 +149,19 @@ impl<'map> OsuPerformance<'map> {
     /// Defauls to [`HitResultPriority::BestCase`].
     pub const fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
         self.hitresult_priority = priority;
+
+        self
+    }
+
+    /// Whether the calculated attributes belong to an osu!lazer or osu!stable
+    /// score.
+    ///
+    /// Defaults to lazer.
+    ///
+    /// This affects internal accuracy calculation because lazer considers
+    /// slider heads for accuracy whereas stable does not.
+    pub const fn lazer(mut self, lazer: bool) -> Self {
+        self.lazer = Some(lazer);
 
         self
     }
@@ -509,6 +523,7 @@ impl<'map> OsuPerformance<'map> {
             acc: state.accuracy(),
             state,
             effective_miss_count,
+            lazer: self.lazer.unwrap_or(true),
         };
 
         inner.calculate()
@@ -525,6 +540,7 @@ impl<'map> OsuPerformance<'map> {
             n50: None,
             misses: None,
             hitresult_priority: HitResultPriority::DEFAULT,
+            lazer: None,
         }
     }
 }
@@ -535,7 +551,8 @@ impl<'map, T: IntoModePerformance<'map, Osu>> From<T> for OsuPerformance<'map> {
     }
 }
 
-pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.14;
+// * This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
+pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.15;
 
 struct OsuPerformanceInner<'mods> {
     attrs: OsuDifficultyAttributes,
@@ -543,10 +560,13 @@ struct OsuPerformanceInner<'mods> {
     acc: f64,
     state: OsuScoreState,
     effective_miss_count: f64,
+    lazer: bool,
 }
 
 impl OsuPerformanceInner<'_> {
     fn calculate(mut self) -> OsuPerformanceAttributes {
+        let using_classic_slider_acc = self.mods.no_slider_head_acc(self.lazer);
+
         let total_hits = self.state.total_hits();
 
         if total_hits == 0 {
@@ -592,7 +612,7 @@ impl OsuPerformanceInner<'_> {
 
         let aim_value = self.compute_aim_value();
         let speed_value = self.compute_speed_value();
-        let acc_value = self.compute_accuracy_value();
+        let acc_value = self.compute_accuracy_value(using_classic_slider_acc);
         let flashlight_value = self.compute_flashlight_value();
 
         let pp = (aim_value.powf(1.1)
@@ -624,15 +644,12 @@ impl OsuPerformanceInner<'_> {
 
         aim_value *= len_bonus;
 
-        // * Penalize misses by assessing # of misses relative to the total # of objects.
-        // * Default a 3% reduction for any # of misses.
         if self.effective_miss_count > 0.0 {
-            aim_value *= 0.97
-                * (1.0 - (self.effective_miss_count / total_hits).powf(0.775))
-                    .powf(self.effective_miss_count);
+            aim_value *= self.calculate_miss_penalty(
+                self.effective_miss_count,
+                self.attrs.aim_difficult_strain_count,
+            );
         }
-
-        aim_value *= self.get_combo_scaling_factor();
 
         let ar_factor = if self.mods.rx() {
             0.0
@@ -696,15 +713,12 @@ impl OsuPerformanceInner<'_> {
 
         speed_value *= len_bonus;
 
-        // * Penalize misses by assessing # of misses relative to the total # of objects.
-        // * Default a 3% reduction for any # of misses.
         if self.effective_miss_count > 0.0 {
-            speed_value *= 0.97
-                * (1.0 - (self.effective_miss_count / total_hits).powf(0.775))
-                    .powf(self.effective_miss_count.powf(0.875));
+            speed_value *= self.calculate_miss_penalty(
+                self.effective_miss_count,
+                self.attrs.speed_difficult_strain_count,
+            );
         }
-
-        speed_value *= self.get_combo_scaling_factor();
 
         let ar_factor = if self.attrs.ar > 10.33 {
             0.3 * (self.attrs.ar - 10.33)
@@ -744,7 +758,7 @@ impl OsuPerformanceInner<'_> {
 
         // * Scale the speed value with accuracy and OD.
         speed_value *= (0.95 + self.attrs.od * self.attrs.od / 750.0)
-            * ((self.acc + relevant_acc) / 2.0).powf((14.5 - (self.attrs.od).max(8.0)) / 2.0);
+            * ((self.acc + relevant_acc) / 2.0).powf((14.5 - self.attrs.od) / 2.0);
 
         // * Scale the speed value with # of 50s to punish doubletapping.
         speed_value *= 0.99_f64.powf(
@@ -755,14 +769,18 @@ impl OsuPerformanceInner<'_> {
         speed_value
     }
 
-    fn compute_accuracy_value(&self) -> f64 {
+    fn compute_accuracy_value(&self, using_classic_slider_acc: bool) -> f64 {
         if self.mods.rx() {
             return 0.0;
         }
 
         // * This percentage only considers HitCircles of any value - in this part
         // * of the calculation we focus on hitting the timing hit window.
-        let amount_hit_objects_with_acc = self.attrs.n_circles;
+        let mut amount_hit_objects_with_acc = self.attrs.n_circles;
+
+        if using_classic_slider_acc {
+            amount_hit_objects_with_acc += self.attrs.n_sliders;
+        }
 
         let better_acc_percentage = if amount_hit_objects_with_acc > 0 {
             let sub = self.state.total_hits() - amount_hit_objects_with_acc;
@@ -834,6 +852,13 @@ impl OsuPerformanceInner<'_> {
         flashlight_value *= 0.98 + self.attrs.od.powf(2.0) / 2500.0;
 
         flashlight_value
+    }
+
+    // * Miss penalty assumes that a player will miss on the hardest parts of a map,
+    // * so we use the amount of relatively difficult sections to adjust miss penalty
+    // * to make it more punishing on maps with lower amount of hard sections.
+    fn calculate_miss_penalty(&self, miss_count: f64, diff_strain_count: f64) -> f64 {
+        0.96 / ((miss_count / (4.0 * diff_strain_count.ln().powf(0.94))) + 1.0)
     }
 
     fn get_combo_scaling_factor(&self) -> f64 {

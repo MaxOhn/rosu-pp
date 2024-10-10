@@ -66,53 +66,21 @@ impl OsuObject {
         reflect_y(&mut self.pos.y);
 
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            let repeat_count = slider.repeat_count();
-
             // Requires `stack_offset` so we can't add `h.pos` just yet
             slider.lazy_end_pos.y = -slider.lazy_end_pos.y;
 
-            let mut nested_iter = slider.nested_objects.iter_mut();
-
-            // Since the tail is handled differently but it's not necessarily
-            // the last object, we first search for it, and then handle the
-            // other nested objects
-            for nested in nested_iter.by_ref().rev() {
-                if let NestedSliderObjectKind::Tail = nested.kind {
-                    let mut tail_pos = self.pos; // already reflected at this point
-                    tail_pos += Pos::new(nested.pos.x, -nested.pos.y);
-                    nested.pos = tail_pos;
-
-                    break;
-                }
-
-                reflect_y(&mut nested.pos.y);
-            }
-
-            // Same for the last repeat point
-            for nested in nested_iter.by_ref().rev() {
-                if let NestedSliderObjectKind::Repeat = nested.kind {
-                    nested.pos = if repeat_count % 2 == 0 {
-                        self.pos
-                    } else {
-                        self.pos + Pos::new(slider.path_end_pos.x, -slider.path_end_pos.y)
-                    };
-
-                    break;
-                }
-
-                reflect_y(&mut nested.pos.y);
-            }
-
-            for nested in nested_iter {
-                reflect_y(&mut nested.pos.y);
+            for nested in slider.nested_objects.iter_mut() {
+                let mut nested_pos = self.pos; // already reflected at this point
+                nested_pos += Pos::new(nested.pos.x, -nested.pos.y);
+                nested.pos = nested_pos;
             }
         }
     }
 
-    pub fn finalize_tail(&mut self) {
+    pub fn finalize_nested(&mut self) {
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            if let Some(tail) = slider.tail_mut() {
-                tail.pos += self.pos;
+            for nested in slider.nested_objects.iter_mut() {
+                nested.pos += self.pos;
             }
         }
     }
@@ -173,9 +141,6 @@ pub struct OsuSlider {
     pub lazy_end_pos: Pos,
     pub lazy_travel_dist: f32,
     pub lazy_travel_time: f64,
-    // Very annoyingly, this position might be needed solely to update the last
-    // repeat point's position on HR.
-    pub path_end_pos: Pos,
     pub nested_objects: Vec<NestedSliderObject>,
 }
 
@@ -256,12 +221,12 @@ impl OsuSlider {
             .filter_map(|e| {
                 let obj = match e.kind {
                     SliderEventType::Tick => NestedSliderObject {
-                        pos: h.pos + path.position_at(e.path_progress),
+                        pos: path.position_at(e.path_progress),
                         start_time: e.time,
                         kind: NestedSliderObjectKind::Tick,
                     },
                     SliderEventType::Repeat => NestedSliderObject {
-                        pos: h.pos + path.position_at(e.path_progress),
+                        pos: path.position_at(e.path_progress),
                         start_time: start_time + f64::from(e.span_idx + 1) * span_duration,
                         kind: NestedSliderObjectKind::Repeat,
                     },
@@ -293,14 +258,12 @@ impl OsuSlider {
         }
 
         let lazy_end_pos = path.position_at(end_time_min);
-        let path_end_pos = path.position_at(1.0);
 
         Self {
             end_time,
             lazy_end_pos,
             lazy_travel_dist: 0.0,
             lazy_travel_time,
-            path_end_pos,
             nested_objects,
         }
     }
@@ -348,14 +311,6 @@ impl OsuSlider {
     pub fn tail(&self) -> Option<&NestedSliderObject> {
         self.nested_objects
             .iter()
-            // The tail is not necessarily the last nested object, e.g. on very
-            // short and fast buzz sliders (/b/1001757)
-            .rfind(|nested| matches!(nested.kind, NestedSliderObjectKind::Tail))
-    }
-
-    fn tail_mut(&mut self) -> Option<&mut NestedSliderObject> {
-        self.nested_objects
-            .iter_mut()
             // The tail is not necessarily the last nested object, e.g. on very
             // short and fast buzz sliders (/b/1001757)
             .rfind(|nested| matches!(nested.kind, NestedSliderObjectKind::Tail))

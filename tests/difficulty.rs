@@ -35,6 +35,8 @@ macro_rules! test_cases {
         flashlight: $flashlight:literal,
         slider_factor: $slider_factor:literal,
         speed_note_count: $speed_note_count:literal,
+        aim_difficult_strain_count: $aim_difficult_strain_count:literal,
+        speed_difficult_strain_count: $speed_difficult_strain_count:literal,
         ar: $ar:literal,
         od: $od:literal,
         hp: $hp:literal,
@@ -50,6 +52,8 @@ macro_rules! test_cases {
             flashlight: $flashlight,
             slider_factor: $slider_factor,
             speed_note_count: $speed_note_count,
+            aim_difficult_strain_count: $aim_difficult_strain_count,
+            speed_difficult_strain_count: $speed_difficult_strain_count,
             ar: $ar,
             od: $od,
             hp: $hp,
@@ -126,6 +130,8 @@ fn basic_osu() {
                 flashlight: 2.288770487900865,
                 slider_factor: 0.9803052946037858,
                 speed_note_count: 210.36373973116545,
+                aim_difficult_strain_count: 0.0, // TODO
+                speed_difficult_strain_count: 0.0, // TODO
                 ar: 9.300000190734863,
                 od: 8.800000190734863,
                 hp: 5.0,
@@ -141,6 +147,8 @@ fn basic_osu() {
                 flashlight: 2.606877929965889,
                 slider_factor: 0.9803052946037858,
                 speed_note_count: 210.36373973116545,
+                aim_difficult_strain_count: 0.0, // TODO
+                speed_difficult_strain_count: 0.0, // TODO
                 ar: 9.300000190734863,
                 od: 8.800000190734863,
                 hp: 5.0,
@@ -156,6 +164,8 @@ fn basic_osu() {
                 flashlight: 2.8549217213059936,
                 slider_factor: 0.9690667605258665,
                 speed_note_count: 184.01205359079387,
+                aim_difficult_strain_count: 0.0, // TODO
+                speed_difficult_strain_count: 0.0, // TODO
                 ar: 10.0,
                 od: 10.0,
                 hp: 7.0,
@@ -171,6 +181,8 @@ fn basic_osu() {
                 flashlight: 3.319522943625448,
                 slider_factor: 0.9776943279272041,
                 speed_note_count: 214.80421464205617,
+                aim_difficult_strain_count: 0.0, // TODO
+                speed_difficult_strain_count: 0.0, // TODO
                 ar: 10.53333346048991,
                 od: 10.311111238267687,
                 hp: 5.0,
@@ -186,6 +198,8 @@ fn basic_osu() {
                 flashlight: 2.288770487900865,
                 slider_factor: 0.9803052946037858,
                 speed_note_count: 210.36373973116545,
+                aim_difficult_strain_count: 0.0, // TODO
+                speed_difficult_strain_count: 0.0, // TODO
                 ar: 9.300000190734863,
                 od: 8.800000190734863,
                 hp: 5.0,
@@ -201,6 +215,8 @@ fn basic_osu() {
                 flashlight: 2.606877929965889,
                 slider_factor: 0.9803052946037858,
                 speed_note_count: 210.36373973116545,
+                aim_difficult_strain_count: 0.0, // TODO
+                speed_difficult_strain_count: 0.0, // TODO
                 ar: 9.300000190734863,
                 od: 8.800000190734863,
                 hp: 5.0,

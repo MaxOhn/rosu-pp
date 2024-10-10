@@ -832,6 +832,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             n50,
             misses,
             hitresult_priority,
+            lazer: _,
         } = osu;
 
         Ok(Self {

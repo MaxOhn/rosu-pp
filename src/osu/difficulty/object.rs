@@ -27,7 +27,7 @@ pub struct OsuDifficultyObject<'a> {
 impl<'a> OsuDifficultyObject<'a> {
     pub const NORMALIZED_RADIUS: f32 = 50.0;
 
-    const MIN_DELTA_TIME: f64 = 25.0;
+    pub const MIN_DELTA_TIME: f64 = 25.0;
     const MAX_SLIDER_RADIUS: f32 = Self::NORMALIZED_RADIUS * 2.4;
     const ASSUMED_SLIDER_RADIUS: f32 = Self::NORMALIZED_RADIUS * 1.8;
 
@@ -84,6 +84,24 @@ impl<'a> OsuDifficultyObject<'a> {
         } else {
             ((time - fade_in_start_time) / fade_in_duration).clamp(0.0, 1.0)
         }
+    }
+
+    pub fn get_doubletapness(&self, next: Option<&Self>, hit_window: f64) -> f64 {
+        let Some(next) = next else { return 0.0 };
+
+        let hit_window = if self.base.is_spinner() {
+            0.0
+        } else {
+            hit_window
+        };
+
+        let curr_delta_time = self.delta_time.max(1.0);
+        let next_delta_time = next.delta_time.max(1.0);
+        let delta_diff = (next_delta_time - curr_delta_time).abs();
+        let speed_ratio = curr_delta_time / curr_delta_time.max(delta_diff);
+        let window_ratio = (curr_delta_time / hit_window).min(1.0).powf(2.0);
+
+        1.0 - (speed_ratio).powf(1.0 - window_ratio)
     }
 
     fn set_distances(

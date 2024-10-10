@@ -178,6 +178,26 @@ impl_has_mod! {
     tc: - Traceable ["Traceable"],
 }
 
+impl GameMods {
+    pub fn no_slider_head_acc(&self, lazer: bool) -> bool {
+        match self.inner {
+            GameModsInner::Lazer(ref mods) => mods
+                .iter()
+                .find_map(|m| match m {
+                    GameMod::ClassicOsu(classic) => Some(classic),
+                    _ => None,
+                })
+                .map_or(!lazer, |classic| {
+                    classic.no_slider_head_accuracy.unwrap_or(true)
+                }),
+            GameModsInner::Intermode(ref mods) => {
+                mods.contains(GameModIntermode::Classic) || !lazer
+            }
+            GameModsInner::Legacy(_) => !lazer,
+        }
+    }
+}
+
 impl Default for GameMods {
     fn default() -> Self {
         Self::DEFAULT

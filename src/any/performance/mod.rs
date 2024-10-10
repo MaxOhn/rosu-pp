@@ -299,6 +299,23 @@ impl<'map> Performance<'map> {
         }
     }
 
+    /// Whether the calculated attributes belong to an osu!lazer or osu!stable
+    /// score.
+    ///
+    /// Defaults to lazer.
+    ///
+    /// This affects internal accuracy calculation because lazer considers
+    /// slider heads for accuracy whereas stable does not.
+    ///
+    /// Only relevant for osu!standard.
+    pub fn lazer(self, lazer: bool) -> Self {
+        if let Self::Osu(osu) = self {
+            Self::Osu(osu.lazer(lazer))
+        } else {
+            self
+        }
+    }
+
     /// Specify the amount of 300s of a play.
     pub fn n300(self, n300: u32) -> Self {
         match self {

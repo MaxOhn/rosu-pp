@@ -1,8 +1,19 @@
 use crate::{any::difficulty::skills::StrainSkill, util::strains_vec::StrainsVec};
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct OsuStrainSkill {
+    pub object_strains: Vec<f64>,
     pub inner: StrainSkill,
+}
+
+impl Default for OsuStrainSkill {
+    fn default() -> Self {
+        Self {
+            // mean=406.72 | median=307
+            object_strains: Vec::with_capacity(256),
+            inner: Default::default(),
+        }
+    }
 }
 
 impl OsuStrainSkill {
@@ -20,8 +31,11 @@ impl OsuStrainSkill {
         self.inner.start_new_section_from(initial_strain);
     }
 
-    pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks()
+    pub fn get_curr_strain_peaks(self) -> UsedOsuStrainSkills<StrainsVec> {
+        UsedOsuStrainSkills {
+            value: self.inner.get_curr_strain_peaks(),
+            object_strains: self.object_strains,
+        }
     }
 
     pub fn difficulty_value(
@@ -29,11 +43,14 @@ impl OsuStrainSkill {
         reduced_section_count: usize,
         reduced_strain_baseline: f64,
         decay_weight: f64,
-    ) -> f64 {
+    ) -> UsedOsuStrainSkills<DifficultyValue> {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
-        let mut peaks = self.get_curr_strain_peaks();
+        let UsedOsuStrainSkills {
+            value: mut peaks,
+            object_strains,
+        } = self.get_curr_strain_peaks();
 
         let peaks_iter = peaks.sorted_non_zero_iter_mut().take(reduced_section_count);
 
@@ -50,7 +67,10 @@ impl OsuStrainSkill {
             weight *= decay_weight;
         }
 
-        difficulty
+        UsedOsuStrainSkills {
+            value: DifficultyValue(difficulty),
+            object_strains,
+        }
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {
@@ -60,4 +80,40 @@ impl OsuStrainSkill {
 
 fn lerp(start: f64, end: f64, amount: f64) -> f64 {
     start + (end - start) * amount
+}
+
+pub struct DifficultyValue(f64);
+
+pub struct UsedOsuStrainSkills<T> {
+    value: T,
+    object_strains: Vec<f64>,
+}
+
+impl UsedOsuStrainSkills<DifficultyValue> {
+    pub fn difficulty_value(&self) -> f64 {
+        self.value.0
+    }
+
+    pub fn count_difficult_strains(&self) -> f64 {
+        let DifficultyValue(diff) = self.value;
+
+        if diff.abs() < f64::EPSILON {
+            return 0.0;
+        }
+
+        // * What would the top strain be if all strain values were identical
+        let consistent_top_strain = diff / 10.0;
+
+        // * Use a weighted sum of all strains. Constants are arbitrary and give nice values
+        self.object_strains
+            .iter()
+            .map(|s| 1.1 / (1.0 + (-10.0 * (s / consistent_top_strain - 0.88)).exp()))
+            .sum()
+    }
+}
+
+impl UsedOsuStrainSkills<StrainsVec> {
+    pub fn strains(self) -> StrainsVec {
+        self.value
+    }
 }

@@ -67,7 +67,7 @@ pub fn convert_objects(
             .iter_mut()
             .for_each(OsuObject::reflect_vertically);
     } else {
-        osu_objects.iter_mut().for_each(OsuObject::finalize_tail);
+        osu_objects.iter_mut().for_each(OsuObject::finalize_nested);
     }
 
     let stack_threshold = time_preempt * f64::from(converted.stack_leniency);
@@ -246,13 +246,20 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
                 break;
             }
 
+            // * Note the use of `StartTime` in the code below doesn't match stable's use of `EndTime`.
+            // * This is because in the stable implementation, `UpdateCalculations` is not called on the inner-loop hitobject (j)
+            // * and therefore it does not have a correct `EndTime`, but instead the default of `EndTime = StartTime`.
+            // *
+            // * Effects of this can be seen on https://osu.ppy.sh/beatmapsets/243#osu/1146 at sliders around 86647 ms, where
+            // * if we use `EndTime` here it would result in unexpected stacking.
+
             if hit_objects[j].pos.distance(hit_objects[i].pos) < STACK_DISTANCE {
                 hit_objects[i].stack_height += 1;
-                start_time = hit_objects[j].end_time();
+                start_time = hit_objects[j].start_time;
             } else if hit_objects[j].pos.distance(pos2) < STACK_DISTANCE {
                 slider_stack += 1;
                 hit_objects[j].stack_height -= slider_stack;
-                start_time = hit_objects[j].end_time();
+                start_time = hit_objects[j].start_time;
             }
         }
     }
