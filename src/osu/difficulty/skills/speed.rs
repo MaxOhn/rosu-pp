@@ -203,6 +203,7 @@ impl RhythmEvaluator {
     const RHYTHM_OVERALL_MULTIPLIER: f64 = 0.95;
     const RHYTHM_RATIO_MULTIPLIER: f64 = 12.0;
 
+    #[allow(clippy::too_many_lines)]
     fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
@@ -409,7 +410,7 @@ const _: [(); 0 - !{ MIN_DELTA_TIME - OsuDifficultyObject::MIN_DELTA_TIME as i32
     [];
 
 impl RhythmIsland {
-    fn new(delta_difference_eps: f64) -> Self {
+    const fn new(delta_difference_eps: f64) -> Self {
         Self {
             delta_difference_eps,
             delta: 0,
@@ -433,7 +434,7 @@ impl RhythmIsland {
         self.delta_count += 1;
     }
 
-    fn is_similar_polarity(&self, other: &Self) -> bool {
+    const fn is_similar_polarity(&self, other: &Self) -> bool {
         // * TODO: consider islands to be of similar polarity only if they're having the same average delta (we don't want to consider 3 singletaps similar to a triple)
         // *       naively adding delta check here breaks _a lot_ of maps because of the flawed ratio calculation
         self.delta_count % 2 == other.delta_count % 2

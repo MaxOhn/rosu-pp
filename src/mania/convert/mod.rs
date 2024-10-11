@@ -200,7 +200,7 @@ fn target_columns(map: &Beatmap) -> f32 {
 
         // * In osu!stable, this division appears as if it happens on floats, but due to release-mode
         // * optimisations, it actually ends up happening on doubles.
-        let percent_slider_or_spinner = f64::from(count_slider_or_spinner as f64 / len as f64);
+        let percent_slider_or_spinner = count_slider_or_spinner as f64 / len as f64;
 
         if percent_slider_or_spinner < 0.2 {
             return 7.0;
@@ -211,7 +211,11 @@ fn target_columns(map: &Beatmap) -> f32 {
         }
     }
 
-    ((rounded_od as i32) + 1).min(7).max(4) as f32
+    // Keeping it in-sync with lazer
+    #[allow(clippy::manual_clamp)]
+    {
+        ((rounded_od as i32) + 1).min(7).max(4) as f32
+    }
 }
 
 #[cfg(test)]

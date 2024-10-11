@@ -174,7 +174,7 @@ struct SliderParams<'c> {
 }
 
 impl<'c> SliderParams<'c> {
-    fn new(start_time: f64, slider: &'c Slider) -> Self {
+    const fn new(start_time: f64, slider: &'c Slider) -> Self {
         Self {
             slider,
             start_time,

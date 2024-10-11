@@ -53,9 +53,9 @@ pub fn difficulty(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> OsuDif
     DifficultyValues::eval(
         &mut attrs,
         mods,
-        aim_difficulty_value,
-        aim_no_sliders_difficulty_value,
-        speed_difficulty_value,
+        &aim_difficulty_value,
+        &aim_no_sliders_difficulty_value,
+        &speed_difficulty_value,
         speed_relevant_note_count,
         flashlight_difficulty_value,
     );
@@ -151,9 +151,9 @@ impl DifficultyValues {
     pub fn eval(
         attrs: &mut OsuDifficultyAttributes,
         mods: &GameMods,
-        aim: UsedOsuStrainSkills<DifficultyValue>,
-        aim_no_sliders: UsedOsuStrainSkills<DifficultyValue>,
-        speed: UsedOsuStrainSkills<DifficultyValue>,
+        aim: &UsedOsuStrainSkills<DifficultyValue>,
+        aim_no_sliders: &UsedOsuStrainSkills<DifficultyValue>,
+        speed: &UsedOsuStrainSkills<DifficultyValue>,
         speed_relevant_note_count: f64,
         flashlight_difficulty_value: f64,
     ) {

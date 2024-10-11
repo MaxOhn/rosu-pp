@@ -11,7 +11,7 @@ impl Default for OsuStrainSkill {
         Self {
             // mean=406.72 | median=307
             object_strains: Vec::with_capacity(256),
-            inner: Default::default(),
+            inner: StrainSkill::default(),
         }
     }
 }
@@ -90,7 +90,7 @@ pub struct UsedOsuStrainSkills<T> {
 }
 
 impl UsedOsuStrainSkills<DifficultyValue> {
-    pub fn difficulty_value(&self) -> f64 {
+    pub const fn difficulty_value(&self) -> f64 {
         self.value.0
     }
 

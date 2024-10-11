@@ -382,6 +382,8 @@ impl<M> From<&Converted<'_, M>> for BeatmapAttributesBuilder {
     }
 }
 
+// False positive? Value looks consumed to me...
+#[allow(clippy::needless_pass_by_value)]
 fn difficulty_range(difficulty: f64, windows: GameModeHitWindows) -> f64 {
     let GameModeHitWindows { min, avg: mid, max } = windows;
 
@@ -425,13 +427,18 @@ impl ModsDependentKind {
 
 #[cfg(test)]
 mod tests {
-    use rosu_mods::{generated_mods::DifficultyAdjustOsu, GameMod, GameMods};
+    #![allow(clippy::float_cmp)]
+
+    use rosu_mods::{
+        generated_mods::{DifficultyAdjustOsu, DoubleTimeCatch, DoubleTimeOsu, HiddenOsu},
+        GameMod, GameMods,
+    };
 
     use super::*;
 
     #[test]
     fn default_ar() {
-        let gamemod = GameMod::HiddenOsu(Default::default());
+        let gamemod = GameMod::HiddenOsu(HiddenOsu::default());
         let diff = Difficulty::new().mods(GameMods::from(gamemod));
         let attrs = BeatmapAttributesBuilder::new().difficulty(&diff).build();
 
@@ -440,7 +447,7 @@ mod tests {
 
     #[test]
     fn custom_ar_without_mods() {
-        let gamemod = GameMod::DoubleTimeOsu(Default::default());
+        let gamemod = GameMod::DoubleTimeOsu(DoubleTimeOsu::default());
         let diff = Difficulty::new().mods(GameMods::from(gamemod));
         let attrs = BeatmapAttributesBuilder::new()
             .ar(8.5, false)
@@ -452,7 +459,7 @@ mod tests {
 
     #[test]
     fn custom_ar_with_mods() {
-        let gamemod = GameMod::DoubleTimeOsu(Default::default());
+        let gamemod = GameMod::DoubleTimeOsu(DoubleTimeOsu::default());
         let diff = Difficulty::new().mods(GameMods::from(gamemod));
         let attrs = BeatmapAttributesBuilder::new()
             .ar(8.5, true)
@@ -465,10 +472,10 @@ mod tests {
     #[test]
     fn custom_mods_ar() {
         let mut mods = GameMods::new();
-        mods.insert(GameMod::DoubleTimeCatch(Default::default()));
+        mods.insert(GameMod::DoubleTimeCatch(DoubleTimeCatch::default()));
         mods.insert(GameMod::DifficultyAdjustOsu(DifficultyAdjustOsu {
             approach_rate: Some(7.0),
-            ..Default::default()
+            ..DifficultyAdjustOsu::default()
         }));
         let diff = Difficulty::new().mods(mods);
         let attrs = BeatmapAttributesBuilder::new().difficulty(&diff).build();
@@ -479,10 +486,10 @@ mod tests {
     #[test]
     fn custom_ar_custom_mods_ar_without_mods() {
         let mut mods = GameMods::new();
-        mods.insert(GameMod::DoubleTimeCatch(Default::default()));
+        mods.insert(GameMod::DoubleTimeCatch(DoubleTimeCatch::default()));
         mods.insert(GameMod::DifficultyAdjustOsu(DifficultyAdjustOsu {
             approach_rate: Some(9.0),
-            ..Default::default()
+            ..DifficultyAdjustOsu::default()
         }));
 
         let diff = Difficulty::new().mods(mods).ar(8.5, false);
@@ -494,10 +501,10 @@ mod tests {
     #[test]
     fn custom_ar_custom_mods_ar_with_mods() {
         let mut mods = GameMods::new();
-        mods.insert(GameMod::DoubleTimeCatch(Default::default()));
+        mods.insert(GameMod::DoubleTimeCatch(DoubleTimeCatch::default()));
         mods.insert(GameMod::DifficultyAdjustOsu(DifficultyAdjustOsu {
             approach_rate: Some(9.0),
-            ..Default::default()
+            ..DifficultyAdjustOsu::default()
         }));
 
         let diff = Difficulty::new().mods(mods).ar(8.5, true);

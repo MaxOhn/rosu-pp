@@ -645,7 +645,7 @@ impl OsuPerformanceInner<'_> {
         aim_value *= len_bonus;
 
         if self.effective_miss_count > 0.0 {
-            aim_value *= self.calculate_miss_penalty(
+            aim_value *= Self::calculate_miss_penalty(
                 self.effective_miss_count,
                 self.attrs.aim_difficult_strain_count,
             );
@@ -714,7 +714,7 @@ impl OsuPerformanceInner<'_> {
         speed_value *= len_bonus;
 
         if self.effective_miss_count > 0.0 {
-            speed_value *= self.calculate_miss_penalty(
+            speed_value *= Self::calculate_miss_penalty(
                 self.effective_miss_count,
                 self.attrs.speed_difficult_strain_count,
             );
@@ -857,7 +857,7 @@ impl OsuPerformanceInner<'_> {
     // * Miss penalty assumes that a player will miss on the hardest parts of a map,
     // * so we use the amount of relatively difficult sections to adjust miss penalty
     // * to make it more punishing on maps with lower amount of hard sections.
-    fn calculate_miss_penalty(&self, miss_count: f64, diff_strain_count: f64) -> f64 {
+    fn calculate_miss_penalty(miss_count: f64, diff_strain_count: f64) -> f64 {
         0.96 / ((miss_count / (4.0 * diff_strain_count.ln().powf(0.94))) + 1.0)
     }
 

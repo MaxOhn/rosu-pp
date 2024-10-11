@@ -511,6 +511,7 @@ impl TaikoPerformanceInner<'_> {
         let h100 = self.attrs.ok_hit_window;
         let n = self.total_hits();
 
+        #[allow(clippy::items_after_statements, clippy::unreadable_literal)]
         // * 99% critical value for the normal distribution (one-tailed).
         const Z: f64 = 2.32634787404;
 
