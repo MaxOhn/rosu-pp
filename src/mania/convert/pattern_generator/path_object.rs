@@ -1,6 +1,6 @@
 use std::cmp;
 
-use rosu_map::section::hit_objects::{hit_samples::HitSoundType, BorrowedCurve};
+use rosu_map::section::hit_objects::hit_samples::HitSoundType;
 
 use crate::{
     mania::{
@@ -17,7 +17,7 @@ use crate::{
 
 use super::PatternGenerator;
 
-pub struct DistanceObjectPatternGenerator<'h> {
+pub struct PathObjectPatternGenerator<'h> {
     pub segment_duration: i32,
     pub sample: HitSoundType,
     pub inner: PatternGenerator<'h>,
@@ -29,7 +29,7 @@ pub struct DistanceObjectPatternGenerator<'h> {
     node_sounds: &'h [HitSoundType],
 }
 
-impl<'h> DistanceObjectPatternGenerator<'h> {
+impl<'h> PathObjectPatternGenerator<'h> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         random: &'h mut Random,
@@ -39,7 +39,7 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         prev_pattern: &'h Pattern,
         orig: &'h Beatmap,
         repeats: usize,
-        curve: &BorrowedCurve<'_>,
+        expected_dist: Option<f64>,
         node_sounds: &'h [HitSoundType],
     ) -> Self {
         let timing_beat_len = orig
@@ -67,9 +67,11 @@ impl<'h> DistanceObjectPatternGenerator<'h> {
         let span_count = (repeats + 1) as i32;
         let start_time = hit_object.start_time.round_ties_even() as i32;
 
+        let dist = expected_dist.unwrap_or(0.0);
+
         // * This matches stable's calculation.
         let end_time = (f64::from(start_time)
-            + curve.dist() * beat_len * f64::from(span_count) * 0.01 / orig.slider_multiplier)
+            + dist * beat_len * f64::from(span_count) * 0.01 / orig.slider_multiplier)
             .floor() as i32;
 
         let segment_duration = (end_time - start_time) / span_count;

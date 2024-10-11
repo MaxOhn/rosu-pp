@@ -1,7 +1,4 @@
-use rosu_map::{
-    section::{general::GameMode, hit_objects::CurveBuffers},
-    util::Pos,
-};
+use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
     model::{
@@ -15,8 +12,8 @@ use crate::{
 use self::{
     pattern::Pattern,
     pattern_generator::{
-        distance_object::DistanceObjectPatternGenerator,
         end_time_object::EndTimeObjectPatternGenerator, hit_object::HitObjectPatternGenerator,
+        path_object::PathObjectPatternGenerator,
     },
     pattern_type::PatternType,
 };
@@ -76,7 +73,6 @@ fn convert(map: &mut Beatmap) {
 
     let total_columns = map.cs as i32;
     let mut last_values = PrevValues::default();
-    let mut curve_bufs = CurveBuffers::default();
 
     // mean=668.7 | median=512
     let mut new_hit_objects = Vec::with_capacity(512);
@@ -108,9 +104,7 @@ fn convert(map: &mut Beatmap) {
                 last_values.pattern = new_pattern;
             }
             HitObjectKind::Slider(ref slider) => {
-                let curve = slider.curve(GameMode::Mania, &mut curve_bufs);
-
-                let mut gen = DistanceObjectPatternGenerator::new(
+                let mut gen = PathObjectPatternGenerator::new(
                     &mut random,
                     obj,
                     sound,
@@ -118,7 +112,7 @@ fn convert(map: &mut Beatmap) {
                     &last_values.pattern,
                     map,
                     slider.repeats,
-                    &curve,
+                    slider.expected_dist,
                     &slider.node_sounds,
                 );
 
@@ -195,24 +189,29 @@ fn target_columns(map: &Beatmap) -> f32 {
     let rounded_cs = map.cs.round_ties_even();
     let rounded_od = map.od.round_ties_even();
 
-    let slider_or_spinner_count = map
-        .hit_objects
-        .iter()
-        .filter(|h| matches!(h.kind, HitObjectKind::Slider(_) | HitObjectKind::Spinner(_)))
-        .count();
+    if !map.hit_objects.is_empty() {
+        let count_slider_or_spinner = map
+            .hit_objects
+            .iter()
+            .filter(|h| matches!(h.kind, HitObjectKind::Slider(_) | HitObjectKind::Spinner(_)))
+            .count();
 
-    let len = map.hit_objects.len();
-    let percent_slider_or_spinner = f64::from(slider_or_spinner_count as f32 / len as f32);
+        let len = map.hit_objects.len();
 
-    if percent_slider_or_spinner < 0.2 {
-        7.0
-    } else if percent_slider_or_spinner < 0.3 || rounded_cs >= 5.0 {
-        f32::from(6 + u8::from(rounded_od > 5.0))
-    } else if percent_slider_or_spinner > 0.6 {
-        f32::from(4 + u8::from(rounded_od > 4.0))
-    } else {
-        (rounded_od + 1.0).clamp(4.0, 7.0)
+        // * In osu!stable, this division appears as if it happens on floats, but due to release-mode
+        // * optimisations, it actually ends up happening on doubles.
+        let percent_slider_or_spinner = f64::from(count_slider_or_spinner as f64 / len as f64);
+
+        if percent_slider_or_spinner < 0.2 {
+            return 7.0;
+        } else if percent_slider_or_spinner < 0.3 || rounded_cs >= 5.0 {
+            return f32::from(6 + u8::from(rounded_od > 5.0));
+        } else if percent_slider_or_spinner > 0.6 {
+            return f32::from(4 + u8::from(rounded_od > 4.0));
+        }
     }
+
+    ((rounded_od as i32) + 1).min(7).max(4) as f32
 }
 
 #[cfg(test)]
