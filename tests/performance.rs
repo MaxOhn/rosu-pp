@@ -39,7 +39,7 @@ macro_rules! test_cases {
         effective_miss_count: $effective_miss_count:expr,
     }) => {
         (
-            OsuPerformance::from($map.as_owned()),
+            OsuPerformance::from($map.as_owned()).lazer(false),
             OsuPerformanceAttributes {
                 pp: $pp,
                 pp_acc: $pp_acc,
@@ -120,11 +120,11 @@ fn basic_osu() {
                 effective_miss_count: 0.0,
             };
             EZ HD => {
-                pp: 185.64881287702838,
-                pp_acc: 13.59914468151693,
-                pp_aim: 96.88083530160195,
+                pp: 186.7137498214991,
+                pp_acc: 16.6270597231239,
+                pp_aim: 98.11121656070222,
                 pp_flashlight: 0.0,
-                pp_speed: 65.96268917477774,
+                pp_speed: 61.51901495973101,
                 effective_miss_count: 0.0,
             };
             HR => {

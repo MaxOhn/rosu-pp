@@ -616,7 +616,7 @@ mod test {
 
     const N_FRUITS: u32 = 728;
     const N_DROPLETS: u32 = 2;
-    const N_TINY_DROPLETS: u32 = 291;
+    const N_TINY_DROPLETS: u32 = 263;
 
     fn beatmap() -> Beatmap {
         Beatmap::from_path("./resources/2118524.osu").unwrap()

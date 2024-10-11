@@ -129,7 +129,7 @@ fn basic_osu() {
             NM => {
                 aim: 2.881184366758021,
                 speed: 2.468469273849314,
-                flashlight: 2.288770487900865,
+                flashlight: 2.287888783550428,
                 slider_factor: 0.9803293523973865,
                 speed_note_count: 204.88794724609374,
                 aim_difficult_strain_count: 106.63833474488378,
@@ -146,7 +146,7 @@ fn basic_osu() {
             HD => {
                 aim: 2.881184366758021,
                 speed: 2.468469273849314,
-                flashlight: 0.0,
+                flashlight: 2.605859779358901,
                 slider_factor: 0.9803293523973865,
                 speed_note_count: 204.88794724609374,
                 aim_difficult_strain_count: 106.63833474488378,
@@ -163,7 +163,7 @@ fn basic_osu() {
             HR => {
                 aim: 3.2515300463985666,
                 speed: 2.6323568908654615,
-                flashlight: 0.0,
+                flashlight: 2.853761577136605,
                 slider_factor: 0.969089944826546,
                 speed_note_count: 178.52041495886283,
                 aim_difficult_strain_count: 108.03970474535397,
@@ -180,7 +180,7 @@ fn basic_osu() {
             DT => {
                 aim: 4.058080039906945,
                 speed: 3.570932204630734,
-                flashlight: 0.0,
+                flashlight: 3.318209122186825,
                 slider_factor: 0.9777224379583133,
                 speed_note_count: 211.29204189490912,
                 aim_difficult_strain_count: 126.9561362975524,
@@ -418,7 +418,7 @@ fn basic_catch() {
                 ar: 8.0,
                 n_fruits: 728,
                 n_droplets: 2,
-                n_tiny_droplets: 291,
+                n_tiny_droplets: 263,
                 is_convert: false,
             };
             HR => {
@@ -426,7 +426,7 @@ fn basic_catch() {
                 ar: 10.0,
                 n_fruits: 728,
                 n_droplets: 2,
-                n_tiny_droplets: 291,
+                n_tiny_droplets: 263,
                 is_convert: false,
             };
             EZ => {
@@ -434,7 +434,7 @@ fn basic_catch() {
                 ar: 4.0,
                 n_fruits: 728,
                 n_droplets: 2,
-                n_tiny_droplets: 291,
+                n_tiny_droplets: 263,
                 is_convert: false,
             };
             DT => {
@@ -442,7 +442,7 @@ fn basic_catch() {
                 ar: 9.666666666666668,
                 n_fruits: 728,
                 n_droplets: 2,
-                n_tiny_droplets: 291,
+                n_tiny_droplets: 263,
                 is_convert: false,
             };
         }
