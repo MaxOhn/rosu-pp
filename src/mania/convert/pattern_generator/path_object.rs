@@ -12,7 +12,7 @@ use crate::{
         control_point::{DifficultyPoint, EffectPoint, TimingPoint},
         hit_object::HitObject,
     },
-    util::random::Random,
+    util::{get_precision_adjusted_beat_len, random::Random},
 };
 
 use super::PatternGenerator;
@@ -46,10 +46,10 @@ impl<'h> PathObjectPatternGenerator<'h> {
             .timing_point_at(hit_object.start_time)
             .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
 
-        let bpm_multiplier = orig
+        let slider_velocity = orig
             .difficulty_point_at(hit_object.start_time)
-            .map_or(DifficultyPoint::DEFAULT_BPM_MULTIPLIER, |point| {
-                point.bpm_multiplier
+            .map_or(DifficultyPoint::DEFAULT_SLIDER_VELOCITY, |point| {
+                point.slider_velocity
             });
 
         let kiai = orig
@@ -62,7 +62,7 @@ impl<'h> PathObjectPatternGenerator<'h> {
             PatternType::LOW_PROBABILITY
         };
 
-        let beat_len = timing_beat_len * bpm_multiplier;
+        let beat_len = get_precision_adjusted_beat_len(slider_velocity, timing_beat_len);
 
         let span_count = (repeats + 1) as i32;
         let start_time = hit_object.start_time.round_ties_even() as i32;

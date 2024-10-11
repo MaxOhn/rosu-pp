@@ -9,7 +9,7 @@ use crate::{
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
         mode::ConvertStatus,
     },
-    util::{float_ext::FloatExt, sort::TandemSorter},
+    util::{float_ext::FloatExt, get_precision_adjusted_beat_len, sort::TandemSorter},
 };
 
 use super::Taiko;
@@ -142,18 +142,6 @@ fn should_convert_slider_to_taiko_hits(map: &Beatmap, params: &mut SliderParams<
         .map_or(DifficultyPoint::DEFAULT_SLIDER_VELOCITY, |point| {
             point.slider_velocity
         });
-
-    fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
-        let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;
-
-        let bpm_multiplier = if slider_velocity_as_beat_len < 0.0 {
-            f64::from(((-slider_velocity_as_beat_len) as f32).clamp(10.0, 10_000.0)) / 100.0
-        } else {
-            1.0
-        };
-
-        beat_len * bpm_multiplier
-    }
 
     let mut beat_len = get_precision_adjusted_beat_len(slider_velocity, timing_beat_len);
 
