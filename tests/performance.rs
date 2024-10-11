@@ -15,7 +15,7 @@ mod common;
 macro_rules! test_cases {
     ( $mode:ident: $path:ident {
         $( $( $mods:ident )+ => {
-            $( $key:ident: $value:literal $( , )? )*
+            $( $key:ident: $value:expr $( , )? )*
         } ;)*
     } ) => {
         let map = Beatmap::from_path(common::$path)
@@ -31,12 +31,12 @@ macro_rules! test_cases {
     };
     ( @Osu {
         $map:ident,
-        pp: $pp:literal,
-        pp_acc: $pp_acc:literal,
-        pp_aim: $pp_aim:literal,
-        pp_flashlight: $pp_flashlight:literal,
-        pp_speed: $pp_speed:literal,
-        effective_miss_count: $effective_miss_count:literal,
+        pp: $pp:expr,
+        pp_acc: $pp_acc:expr,
+        pp_aim: $pp_aim:expr,
+        pp_flashlight: $pp_flashlight:expr,
+        pp_speed: $pp_speed:expr,
+        effective_miss_count: $effective_miss_count:expr,
     }) => {
         (
             OsuPerformance::from($map.as_owned()),
@@ -53,10 +53,11 @@ macro_rules! test_cases {
     };
     ( @Taiko {
         $map: ident,
-        pp: $pp:literal,
-        pp_acc: $pp_acc:literal,
-        pp_difficulty: $pp_difficulty:literal,
-        effective_miss_count: $effective_miss_count:literal,
+        pp: $pp:expr,
+        pp_acc: $pp_acc:expr,
+        pp_difficulty: $pp_difficulty:expr,
+        effective_miss_count: $effective_miss_count:expr,
+        estimated_unstable_rate: $estimated_unstable_rate:expr,
     }) => {
         (
             TaikoPerformance::from($map.as_owned()),
@@ -65,13 +66,14 @@ macro_rules! test_cases {
                 pp_acc: $pp_acc,
                 pp_difficulty: $pp_difficulty,
                 effective_miss_count: $effective_miss_count,
+                estimated_unstable_rate: $estimated_unstable_rate,
                 ..Default::default()
             },
         )
     };
     ( @Catch {
         $map:ident,
-        pp: $pp:literal,
+        pp: $pp:expr,
     }) => {
         (
             CatchPerformance::from($map.as_owned()),
@@ -83,8 +85,8 @@ macro_rules! test_cases {
     };
     ( @Mania {
         $map:ident,
-        pp: $pp:literal,
-        pp_difficulty: $pp_difficulty:literal,
+        pp: $pp:expr,
+        pp_difficulty: $pp_difficulty:expr,
     }) => {
         (
             ManiaPerformance::from($map.as_owned()),
@@ -102,19 +104,19 @@ fn basic_osu() {
     test_cases! {
         Osu: OSU {
             NM => {
-                pp: 255.9419635475736,
-                pp_acc: 79.84500076626814,
-                pp_aim: 98.13131344235279,
+                pp: 272.6047426867276,
+                pp_acc: 97.62287463107766,
+                pp_aim: 99.3726518686143,
                 pp_flashlight: 0.0,
-                pp_speed: 69.86876965478146,
+                pp_speed: 64.48542022217285,
                 effective_miss_count: 0.0,
             };
             HD => {
-                pp: 281.28736211196446,
-                pp_acc: 86.2326008275696,
-                pp_aim: 108.72949454544438,
+                pp: 299.17174736245374,
+                pp_acc: 105.43270460156388,
+                pp_aim: 110.10489751227146,
                 pp_flashlight: 0.0,
-                pp_speed: 77.41459624444144,
+                pp_speed: 71.4498451141828,
                 effective_miss_count: 0.0,
             };
             EZ HD => {
@@ -126,35 +128,35 @@ fn basic_osu() {
                 effective_miss_count: 0.0,
             };
             HR => {
-                pp: 375.0764291059058,
-                pp_acc: 132.13521300659738,
-                pp_aim: 143.28598037767793,
+                pp: 404.7030358947424,
+                pp_acc: 161.55575439788055,
+                pp_aim: 145.04665418031985,
                 pp_flashlight: 0.0,
-                pp_speed: 87.39375701955078,
+                pp_speed: 80.77088499277514,
                 effective_miss_count: 0.0,
             };
             DT => {
-                pp: 716.3683237855254,
-                pp_acc: 150.5694857734174,
-                pp_aim: 300.39084638572484,
+                pp: 738.7899608061098,
+                pp_acc: 184.09450675506795,
+                pp_aim: 304.16666833057235,
                 pp_flashlight: 0.0,
-                pp_speed: 240.8765306794618,
+                pp_speed: 220.06297202966698,
                 effective_miss_count: 0.0,
             };
             FL => {
-                pp: 384.8917879591265,
-                pp_acc: 81.4419007815935,
-                pp_aim: 98.13131344235279,
-                pp_flashlight: 132.3991950960219,
-                pp_speed: 69.86876965478146,
+                pp: 402.408877784248,
+                pp_acc: 99.57533212369923,
+                pp_aim: 99.3726518686143,
+                pp_flashlight: 132.29720631068272,
+                pp_speed: 64.48542022217285,
                 effective_miss_count: 0.0,
             };
             HD FL => {
-                pp: 450.3709760368082,
-                pp_acc: 87.95725284412099,
-                pp_aim: 108.72949454544438,
-                pp_flashlight: 171.7600847331662,
-                pp_speed: 77.41459624444144,
+                pp: 469.3245236137446,
+                pp_acc: 107.54135869359516,
+                pp_aim: 110.10489751227146,
+                pp_flashlight: 171.62594459401154,
+                pp_speed: 71.4498451141828,
                 effective_miss_count: 0.0,
             };
         }
@@ -166,28 +168,32 @@ fn basic_taiko() {
     test_cases! {
         Taiko: TAIKO {
             NM => {
-                pp: 98.47602106219567,
-                pp_acc: 46.11642717726248,
-                pp_difficulty: 46.69844233558799,
+                pp: 117.93083232512124,
+                pp_acc: 67.10083752258917,
+                pp_difficulty: 43.804435430934774,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(148.44150180469418),
             };
             HD => {
-                pp: 107.19493857245885,
-                pp_acc: 46.11642717726248,
-                pp_difficulty: 47.86590339397769,
+                pp: 127.99624094636974,
+                pp_acc: 67.10083752258917,
+                pp_difficulty: 44.89954631670814,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(148.44150180469418),
             };
             HR => {
-                pp: 112.22705475791287,
-                pp_acc: 56.71431676265808,
-                pp_difficulty: 49.033364452367394,
+                pp: 139.75239372681187,
+                pp_acc: 82.52109686788792,
+                pp_difficulty: 48.75926757049594,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(122.99438720960376),
             };
             DT => {
-                pp: 181.5021832786881,
-                pp_acc: 80.74206626516394,
-                pp_difficulty: 90.29961105452931,
+                pp: 220.51543873147975,
+                pp_acc: 118.28107309573312,
+                pp_difficulty: 89.35584221033577,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(98.96100120312946),
             };
         }
     };
@@ -198,28 +204,32 @@ fn convert_taiko() {
     test_cases! {
         Taiko: OSU {
             NM => {
-                pp: 324.23564627433217,
-                pp_acc: 125.81086361861148,
-                pp_difficulty: 179.31471072573842,
+                pp: 396.36982258196866,
+                pp_acc: 160.00481201044695,
+                pp_difficulty: 213.19920144243838,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(85.75868894575865),
             };
             HD => {
-                pp: 353.7513933816713,
-                pp_acc: 125.81086361861148,
-                pp_difficulty: 183.79757849388187,
+                pp: 426.0975592756163,
+                pp_acc: 160.00481201044695,
+                pp_difficulty: 213.19920144243838,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(85.75868894575865),
             };
             HR => {
-                pp: 360.12274556551137,
-                pp_acc: 150.9344373000759,
-                pp_difficulty: 188.28044626202535,
+                pp: 452.71458235192836,
+                pp_acc: 191.95668459371925,
+                pp_difficulty: 234.5205569790155,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(72.67685680089848),
             };
             DT => {
-                pp: 604.8167434609272,
-                pp_acc: 220.7055264311451,
-                pp_difficulty: 347.90986552791844,
+                pp: 739.7393581199891,
+                pp_acc: 280.8904545747157,
+                pp_difficulty: 415.0249135067657,
                 effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(57.17245929717244),
             };
         }
     }
@@ -229,10 +239,10 @@ fn convert_taiko() {
 fn basic_catch() {
     test_cases! {
         Catch: CATCH {
-            NM => { pp: 113.85903714373049 };
-            HD => { pp: 136.63084457247658 };
-            HD HR => { pp: 231.90266535529486 };
-            DT => { pp: 247.18402249125862 };
+            NM => { pp: 113.85903714373046 };
+            HD => { pp: 136.63084457247655 };
+            HD HR => { pp: 231.7403429678108 };
+            DT => { pp: 247.18402249125842 };
         }
     };
 }
@@ -241,10 +251,10 @@ fn basic_catch() {
 fn convert_catch() {
     test_cases! {
         Catch: OSU {
-            NM => { pp: 230.99937552589745 };
-            HD => { pp: 254.6768082128294 };
-            HD HR => { pp: 328.41201070443725 };
-            DT => { pp: 500.4365349891725 };
+            NM => { pp: 232.52175944328079 };
+            HD => { pp: 256.35523645996665 };
+            HD HR => { pp: 327.71861407740374 };
+            DT => { pp: 503.47065792054815 };
         }
     };
 }
@@ -253,9 +263,9 @@ fn convert_catch() {
 fn basic_mania() {
     test_cases! {
         Mania: MANIA {
-            NM => { pp: 114.37175184134917, pp_difficulty: 14.296468980168646 };
-            EZ => { pp: 57.18587592067458, pp_difficulty: 14.296468980168646 };
-            DT => { pp: 233.17882161546717, pp_difficulty: 29.147352701933396 };
+            NM => { pp: 108.08430593303873, pp_difficulty: 108.08430593303873 };
+            EZ => { pp: 54.04215296651937, pp_difficulty: 108.08430593303873 };
+            DT => { pp: 222.79838979800365, pp_difficulty: 222.79838979800365 };
         }
     };
 }
@@ -264,9 +274,9 @@ fn basic_mania() {
 fn convert_mania() {
     test_cases! {
         Mania: OSU {
-            NM => { pp: 99.73849552661329, pp_difficulty: 12.467311940826661 };
-            EZ => { pp: 49.869247763306646, pp_difficulty: 12.467311940826661 };
-            DT => { pp: 195.23247718805612, pp_difficulty: 24.404059648507015 };
+            NM => { pp: 99.73849552661329, pp_difficulty: 99.73849552661329 };
+            EZ => { pp: 49.869247763306646, pp_difficulty: 99.73849552661329 };
+            DT => { pp: 195.23247718805612, pp_difficulty: 195.23247718805612 };
         }
     };
 }
