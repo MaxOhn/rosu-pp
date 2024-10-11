@@ -6,7 +6,7 @@ use crate::{
         hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
         mode::ConvertStatus,
     },
-    util::{float_ext::FloatExt, random::Random, sort::TandemSorter},
+    util::{float_ext::FloatExt, random::Random},
 };
 
 use super::{
@@ -82,20 +82,8 @@ pub fn convert_objects(
         palpable_objects.extend(new_objects);
     }
 
-    // Initializing hyper dashes requires objects to be sorted by C#'s unstable
-    // sort. After that, we unsort the objects again and then apply a stable
-    // sort to have the correct order for generating difficulty objects.
-    // Required e.g. due to map /b/102923.
-    let mut sorter = TandemSorter::new_unstable(&palpable_objects, |a, b| {
-        a.start_time.total_cmp(&b.start_time)
-    });
-
-    sorter.sort(&mut palpable_objects);
-
-    initialize_hyper_dash(cs, &mut palpable_objects);
-
-    sorter.unsort(&mut palpable_objects);
     palpable_objects.sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+    initialize_hyper_dash(cs, &mut palpable_objects);
 
     palpable_objects
 }
