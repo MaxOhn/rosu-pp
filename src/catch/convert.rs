@@ -97,14 +97,14 @@ fn convert_object<'a>(
     let state = match h.kind {
         HitObjectKind::Circle => ObjectIterState::Fruit(Some(Fruit::new(count))),
         HitObjectKind::Slider(ref slider) => {
-            let x = JuiceStream::clamp_to_playfield(h.pos.x);
+            let x = h.pos.x;
             let stream = JuiceStream::new(x, h.start_time, slider, converted, count, bufs);
 
             ObjectIterState::JuiceStream(stream)
         }
         HitObjectKind::Spinner(Spinner { duration })
         | HitObjectKind::Hold(HoldNote { duration }) => {
-            ObjectIterState::BananaShower(BananaShower::new(h.start_time, duration))
+            ObjectIterState::BananaShower(BananaShower::new(h.start_time, h.start_time + duration))
         }
     };
 

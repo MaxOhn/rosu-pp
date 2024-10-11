@@ -6,7 +6,7 @@ use rosu_map::section::{
 };
 
 use crate::{
-    catch::{attributes::ObjectCountBuilder, convert::CatchBeatmap, PLAYFIELD_WIDTH},
+    catch::{attributes::ObjectCountBuilder, convert::CatchBeatmap},
     model::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::Slider,
@@ -122,7 +122,7 @@ impl<'a> JuiceStream<'a> {
             };
 
             let nested = NestedJuiceStreamObject {
-                pos: Self::clamp_to_playfield(x + path.position_at(e.path_progress).x),
+                pos: x + path.position_at(e.path_progress).x,
                 start_time: e.time,
                 kind,
             };
@@ -134,10 +134,6 @@ impl<'a> JuiceStream<'a> {
             control_points: slider.control_points.as_ref(),
             nested_objects: bufs.nested_objects.drain(..),
         }
-    }
-
-    pub fn clamp_to_playfield(value: f32) -> f32 {
-        value.clamp(0.0, PLAYFIELD_WIDTH)
     }
 }
 
