@@ -1,5 +1,8 @@
 use rosu_map::{
-    section::hit_objects::{BorrowedCurve, CurveBuffers},
+    section::{
+        general::GameMode,
+        hit_objects::{BorrowedCurve, CurveBuffers},
+    },
     util::Pos,
 };
 
@@ -91,7 +94,8 @@ impl OsuObject {
                 let span_count = (*repeats + 1) as f64;
 
                 // Build the curve w.r.t. the curve points
-                let curve = BorrowedCurve::new(control_points, *expected_dist, curve_bufs);
+                let curve =
+                    BorrowedCurve::new(GameMode::Osu, control_points, *expected_dist, curve_bufs);
 
                 let end_time = h.start_time + span_count * curve.dist() / vel;
                 let total_duration = end_time - h.start_time;
