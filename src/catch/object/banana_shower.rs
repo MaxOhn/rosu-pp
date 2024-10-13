@@ -3,9 +3,11 @@ pub struct BananaShower {
 }
 
 impl BananaShower {
-    pub fn new(start_time: f64, duration: f64) -> Self {
-        let mut spacing = duration;
-        let end_time = start_time + duration;
+    pub fn new(start_time: f64, end_time: f64) -> Self {
+        // * Int truncation added to match osu!stable.
+        let start_time = start_time as i32;
+        let end_time = end_time as i32;
+        let mut spacing = (end_time - start_time) as f32;
 
         while spacing > 100.0 {
             spacing /= 2.0;
@@ -14,15 +16,16 @@ impl BananaShower {
         let n_bananas = if spacing <= 0.0 {
             0
         } else {
-            let mut time = start_time;
-            let mut i = 0;
+            let end_time = end_time as f32;
+            let mut time = start_time as f32;
+            let mut count = 0;
 
             while time <= end_time {
                 time += spacing;
-                i += 1;
+                count += 1;
             }
 
-            i
+            count
         };
 
         Self { n_bananas }

@@ -12,7 +12,9 @@ pub struct TaikoDifficultyAttributes {
     /// The difficulty of the hardest parts of the map.
     pub peak: f64,
     /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc)
-    pub hit_window: f64,
+    pub great_hit_window: f64,
+    /// The perceived hit window for an n100 inclusive of rate-adjusting mods (DT/HT/etc)
+    pub ok_hit_window: f64,
     /// The final star rating.
     pub stars: f64,
     /// The maximum combo.
@@ -55,6 +57,8 @@ pub struct TaikoPerformanceAttributes {
     pub pp_difficulty: f64,
     /// Scaled miss count based on total hits.
     pub effective_miss_count: f64,
+    /// Upper bound on the player's tap deviation.
+    pub estimated_unstable_rate: Option<f64>,
 }
 
 impl TaikoPerformanceAttributes {

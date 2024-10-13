@@ -1,10 +1,10 @@
-use std::pin::Pin;
+use std::{borrow::Cow, pin::Pin};
 
 use rosu_map::util::Pos;
 
 use crate::{
     any::difficulty::object::IDifficultyObject,
-    osu::object::{OsuObject, OsuObjectKind},
+    osu::object::{OsuObject, OsuObjectKind, OsuSlider},
 };
 
 use super::{scaling_factor::ScalingFactor, HD_FADE_OUT_DURATION_MULTIPLIER};
@@ -27,7 +27,7 @@ pub struct OsuDifficultyObject<'a> {
 impl<'a> OsuDifficultyObject<'a> {
     pub const NORMALIZED_RADIUS: f32 = 50.0;
 
-    const MIN_DELTA_TIME: f64 = 25.0;
+    pub const MIN_DELTA_TIME: f64 = 25.0;
     const MAX_SLIDER_RADIUS: f32 = Self::NORMALIZED_RADIUS * 2.4;
     const ASSUMED_SLIDER_RADIUS: f32 = Self::NORMALIZED_RADIUS * 1.8;
 
@@ -84,6 +84,24 @@ impl<'a> OsuDifficultyObject<'a> {
         } else {
             ((time - fade_in_start_time) / fade_in_duration).clamp(0.0, 1.0)
         }
+    }
+
+    pub fn get_doubletapness(&self, next: Option<&Self>, hit_window: f64) -> f64 {
+        let Some(next) = next else { return 0.0 };
+
+        let hit_window = if self.base.is_spinner() {
+            0.0
+        } else {
+            hit_window
+        };
+
+        let curr_delta_time = self.delta_time.max(1.0);
+        let next_delta_time = next.delta_time.max(1.0);
+        let delta_diff = (next_delta_time - curr_delta_time).abs();
+        let speed_ratio = curr_delta_time / curr_delta_time.max(delta_diff);
+        let window_ratio = (curr_delta_time / hit_window).min(1.0).powf(2.0);
+
+        1.0 - (speed_ratio).powf(1.0 - window_ratio)
     }
 
     fn set_distances(
@@ -158,20 +176,26 @@ impl<'a> OsuDifficultyObject<'a> {
     ) -> Pin<&mut OsuObject> {
         let pos = h.pos;
         let stack_offset = h.stack_offset;
+        let start_time = h.start_time;
 
         let OsuObjectKind::Slider(ref mut slider) = h.kind else {
             return h;
         };
 
+        let mut nested = Cow::Borrowed(slider.nested_objects.as_slice());
+        let duration = slider.end_time - start_time;
+        OsuSlider::lazy_travel_time(start_time, duration, &mut nested);
+        let nested = nested.as_ref();
+
         let mut curr_cursor_pos = pos + stack_offset;
         let scaling_factor = f64::from(OsuDifficultyObject::NORMALIZED_RADIUS) / radius;
 
-        for (curr_movement_obj, i) in slider.nested_objects.iter().zip(1..) {
+        for (curr_movement_obj, i) in nested.iter().zip(1..) {
             let mut curr_movement = curr_movement_obj.pos + stack_offset - curr_cursor_pos;
             let mut curr_movement_len = scaling_factor * f64::from(curr_movement.length());
             let mut required_movement = f64::from(OsuDifficultyObject::ASSUMED_SLIDER_RADIUS);
 
-            if i == slider.nested_objects.len() {
+            if i == nested.len() {
                 let lazy_movement = slider.lazy_end_pos - curr_cursor_pos;
 
                 if lazy_movement.length() < curr_movement.length() {
@@ -190,7 +214,7 @@ impl<'a> OsuDifficultyObject<'a> {
                 slider.lazy_travel_dist += curr_movement_len as f32;
             }
 
-            if i == slider.nested_objects.len() {
+            if i == nested.len() {
                 slider.lazy_end_pos = curr_cursor_pos;
             }
         }

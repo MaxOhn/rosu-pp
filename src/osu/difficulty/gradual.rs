@@ -178,9 +178,9 @@ impl Iterator for OsuGradualDifficulty {
         DifficultyValues::eval(
             &mut attrs,
             self.difficulty.get_mods(),
-            aim_difficulty_value,
-            aim_no_sliders_difficulty_value,
-            speed_difficulty_value,
+            &aim_difficulty_value,
+            &aim_no_sliders_difficulty_value,
+            &speed_difficulty_value,
             speed_relevant_note_count,
             flashlight_difficulty_value,
         );

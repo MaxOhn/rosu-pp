@@ -100,12 +100,33 @@ struct StaminaEvaluator;
 
 impl StaminaEvaluator {
     fn speed_bonus(mut interval: f64) -> f64 {
-        // * Cap to 600bpm 1/4, 25ms note interval, 50ms key interval
-        // * Interval will be capped at a very small value to avoid infinite/negative speed bonuses.
-        // * TODO - This is a temporary measure as we need to implement methods of detecting playstyle-abuse of SpeedBonus.
-        interval = interval.max(50.0);
+        // * Interval is capped at a very small value to prevent infinite values.
+        interval = interval.max(1.0);
 
         30.0 / interval
+    }
+
+    fn available_fingers_for(
+        hit_object: &TaikoDifficultyObject,
+        hit_objects: &TaikoDifficultyObjects,
+    ) -> usize {
+        let prev_color_change = hit_object.color.previous_color_change(hit_objects);
+
+        if prev_color_change
+            .is_some_and(|change| hit_object.start_time - change.get().start_time < 300.0)
+        {
+            return 2;
+        }
+
+        let next_color_change = hit_object.color.next_color_change(hit_objects);
+
+        if next_color_change
+            .is_some_and(|change| change.get().start_time - hit_object.start_time < 300.0)
+        {
+            return 2;
+        }
+
+        4
     }
 
     fn evaluate_diff_of(curr: &TaikoDifficultyObject, hit_objects: &TaikoDifficultyObjects) -> f64 {
@@ -113,15 +134,19 @@ impl StaminaEvaluator {
             return 0.0;
         }
 
-        // * Find the previous hit object hit by the current key, which is two notes of the same colour prior.
+        // * Find the previous hit object hit by the current finger, which is n notes prior, n being the number of
+        // * available fingers.
         let taiko_curr = curr;
-        let key_prev = hit_objects.previous_mono(taiko_curr, 1);
+        let key_prev = hit_objects.previous_mono(
+            taiko_curr,
+            Self::available_fingers_for(taiko_curr, hit_objects) - 1,
+        );
 
         if let Some(key_prev) = key_prev {
             // * Add a base strain to all objects
             0.5 + Self::speed_bonus(taiko_curr.start_time - key_prev.get().start_time)
         } else {
-            // * There is no previous hit object hit by the current key
+            // * There is no previous hit object hit by the current finger
             0.0
         }
     }

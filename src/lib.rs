@@ -5,8 +5,8 @@
 //! while also providing a significant [boost in performance](#speed).
 //!
 //! Last commits of the ported code:
-//!   - [osu!lazer] : `7342fb7f51b34533a42bffda89c3d6c569cc69ce` (2022-10-11)
-//!   - [osu!tools] : `146d5916937161ef65906aa97f85d367035f3712` (2022-10-08)
+//!   - [osu!lazer] : `f08134f443b2cf255fd19c8bc3ef517b6a3bb8e3` (2024-09-23)
+//!   - [osu!tools] : `51965515eb4355fde0591728ef4d38eee119a964` (2024-09-01)
 //!
 //! News posts of the latest gamemode updates:
 //!   - osu: <https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp>

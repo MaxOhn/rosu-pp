@@ -154,7 +154,11 @@ impl ColorEvaluator {
         let mut difficulty = 0.0;
 
         if let Some(mono_streak) = color.mono_streak.as_ref().and_then(Weak::upgrade) {
-            difficulty += Self::evaluate_diff_of_mono_streak(&mono_streak);
+            if let Some(first_hit_object) = mono_streak.get().first_hit_object() {
+                if &*first_hit_object.get() == hit_object {
+                    difficulty += Self::evaluate_diff_of_mono_streak(&mono_streak);
+                }
+            }
         }
 
         if let Some(alternating_mono_pattern) = color
@@ -162,12 +166,21 @@ impl ColorEvaluator {
             .as_ref()
             .and_then(Weak::upgrade)
         {
-            difficulty +=
-                Self::evaluate_diff_of_alternating_mono_pattern(&alternating_mono_pattern);
+            if let Some(first_hit_object) = alternating_mono_pattern.get().first_hit_object() {
+                if &*first_hit_object.get() == hit_object {
+                    difficulty +=
+                        Self::evaluate_diff_of_alternating_mono_pattern(&alternating_mono_pattern);
+                }
+            }
         }
 
         if let Some(repeating_hit_patterns) = color.repeating_hit_patterns.as_ref() {
-            difficulty += Self::evaluate_diff_of_repeating_hit_patterns(repeating_hit_patterns);
+            if let Some(first_hit_object) = repeating_hit_patterns.get().first_hit_object() {
+                if &*first_hit_object.get() == hit_object {
+                    difficulty +=
+                        Self::evaluate_diff_of_repeating_hit_patterns(repeating_hit_patterns);
+                }
+            }
         }
 
         difficulty

@@ -36,7 +36,7 @@ impl<'map> CatchPerformance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`CatchDifficultyAttributes`]
-    /// or [`CatchPerformanceAttributes`])
+    ///   or [`CatchPerformanceAttributes`])
     /// - a beatmap ([`CatchBeatmap<'map>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated
@@ -474,11 +474,14 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
             difficulty,
             acc,
             combo,
+            slider_tick_hits: _,
+            slider_end_hits: _,
             n300,
             n100,
             n50,
             misses,
             hitresult_priority: _,
+            lazer: _,
         } = osu;
 
         Ok(Self {
@@ -569,7 +572,7 @@ impl CatchPerformanceInner<'_> {
 
         // NF penalty
         if self.mods.nf() {
-            pp *= 0.9;
+            pp *= (1.0 - 0.02 * f64::from(self.state.misses)).max(0.9);
         }
 
         CatchPerformanceAttributes {
@@ -615,7 +618,7 @@ mod test {
 
     const N_FRUITS: u32 = 728;
     const N_DROPLETS: u32 = 2;
-    const N_TINY_DROPLETS: u32 = 291;
+    const N_TINY_DROPLETS: u32 = 263;
 
     fn beatmap() -> Beatmap {
         Beatmap::from_path("./resources/2118524.osu").unwrap()

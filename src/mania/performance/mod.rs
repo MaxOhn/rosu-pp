@@ -37,7 +37,7 @@ impl<'map> ManiaPerformance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`ManiaDifficultyAttributes`]
-    /// or [`ManiaPerformanceAttributes`])
+    ///   or [`ManiaPerformanceAttributes`])
     /// - a beatmap ([`ManiaBeatmap<'map>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated
@@ -827,11 +827,14 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             difficulty,
             acc,
             combo: _,
+            slider_tick_hits: _,
+            slider_end_hits: _,
             n300,
             n100,
             n50,
             misses,
             hitresult_priority,
+            lazer: _,
         } = osu;
 
         Ok(Self {
@@ -863,9 +866,7 @@ struct ManiaPerformanceInner<'mods> {
 
 impl ManiaPerformanceInner<'_> {
     fn calculate(self) -> ManiaPerformanceAttributes {
-        // * Arbitrary initial value for scaling pp in order to standardize distributions across game modes.
-        // * The specific number has no intrinsic meaning and can be adjusted as needed.
-        let mut multiplier = 8.0;
+        let mut multiplier = 1.0;
 
         if self.mods.nf() {
             multiplier *= 0.75;
@@ -887,7 +888,7 @@ impl ManiaPerformanceInner<'_> {
 
     fn compute_difficulty_value(&self) -> f64 {
         // * Star rating to pp curve
-        (self.attrs.stars - 0.15).max(0.05).powf(2.2)
+        8.0 * (self.attrs.stars - 0.15).max(0.05).powf(2.2)
              // * From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
              * (5.0 * self.calculate_custom_accuracy() - 4.0).max(0.0)
              // * Length bonus, capped at 1500 notes
