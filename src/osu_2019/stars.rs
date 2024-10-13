@@ -22,13 +22,7 @@ const NORMALIZED_RADIUS: f32 = 52.0;
 /// processing stack leniency is relatively expensive.
 ///
 /// In case of a partial play, e.g. a fail, one can specify the amount of passed objects.
-pub fn stars(
-    map: &Beatmap,
-    mods: GameMods,
-    passed_objects: Option<usize>,
-) -> OsuDifficultyAttributes {
-    let take = passed_objects.unwrap_or(map.hit_objects.len());
-
+pub fn stars(map: &Beatmap, mods: GameMods) -> OsuDifficultyAttributes {
     let map_attributes = map.attributes().mods(mods).build();
 
     let mut diff_attributes = OsuDifficultyAttributes {
@@ -38,7 +32,7 @@ pub fn stars(
         ..Default::default()
     };
 
-    if take < 2 {
+    if map.hit_objects.len() < 2 {
         return diff_attributes;
     }
 
@@ -54,7 +48,7 @@ pub fn stars(
     let mut ticks_buf = Vec::new();
     let mut curve_bufs = CurveBuffers::default();
 
-    let mut hit_objects = map.hit_objects.iter().take(take).filter_map(|h| {
+    let mut hit_objects = map.hit_objects.iter().filter_map(|h| {
         Some(OsuObject::new(
             h,
             map,
