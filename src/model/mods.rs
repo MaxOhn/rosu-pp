@@ -230,6 +230,7 @@ impl_has_mod! {
     dt: + DoubleTime ["DoubleTime"],
     nc: + Nightcore ["Nightcore"],
     ht: + HalfTime ["HalfTime"],
+    ap: + Autopilot ["Autopilot"],
     bl: - Blinds ["Blinds"],
     cl: - Classic ["Classic"],
     tc: - Traceable ["Traceable"],

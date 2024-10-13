@@ -824,6 +824,10 @@ impl OsuPerformanceInner<'_> {
     }
 
     fn compute_aim_value(&self) -> f64 {
+        if self.mods.ap() {
+            return 0.0;
+        }
+
         let mut aim_value = OsuStrainSkill::difficulty_to_performance(self.attrs.aim);
 
         let total_hits = self.total_hits();
@@ -922,7 +926,9 @@ impl OsuPerformanceInner<'_> {
             );
         }
 
-        let ar_factor = if self.attrs.ar > 10.33 {
+        let ar_factor = if self.mods.ap() {
+            0.0
+        } else if self.attrs.ar > 10.33 {
             0.3 * (self.attrs.ar - 10.33)
         } else {
             0.0
