@@ -9,6 +9,7 @@ use rosu_map::{
             hit_samples::{HitSoundType, ParseHitSoundTypeError},
             HitObjectType, ParseHitObjectTypeError, PathControlPoint, PathType,
         },
+        metadata::MetadataKey,
         timing_points::{ControlPoint, EffectFlags, ParseEffectFlagsError},
     },
     util::{KeyValue, ParseNumber, ParseNumberError, Pos, StrExt, MAX_PARSE_VALUE},
@@ -49,6 +50,9 @@ pub struct BeatmapState {
     curve_points: Vec<PathControlPoint>,
     vertices: Vec<PathControlPoint>,
     point_split: Vec<*const str>,
+
+    creator: String,
+    beatmap_id: i32,
 }
 
 impl BeatmapState {
@@ -270,6 +274,8 @@ impl DecodeState for BeatmapState {
             vertices: Vec::with_capacity(8),
             // mean=19.97 | median=8
             point_split: Vec::with_capacity(8),
+            creator: String::default(),
+            beatmap_id: i32::default(),
         }
     }
 }
@@ -315,6 +321,8 @@ impl From<BeatmapState> for Beatmap {
             effect_points: state.effect_points,
             hit_objects: state.hit_objects,
             hit_sounds: state.hit_sounds,
+            creator: state.creator,
+            beatmap_id: state.beatmap_id,
         }
     }
 }
@@ -447,7 +455,17 @@ impl DecodeBeatmap for Beatmap {
         Ok(())
     }
 
-    fn parse_metadata(_: &mut Self::State, _: &str) -> Result<(), Self::Error> {
+    fn parse_metadata(state: &mut Self::State, line: &str) -> Result<(), Self::Error> {
+        let Ok(KeyValue { key, value }) = KeyValue::parse(line.trim_comment()) else {
+            return Ok(());
+        };
+
+        match key {
+            MetadataKey::Creator => state.creator = value.to_string(),
+            MetadataKey::BeatmapID => state.beatmap_id = value.parse_num()?,
+            _ => {}
+        }
+
         Ok(())
     }
 

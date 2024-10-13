@@ -62,6 +62,9 @@ pub struct Beatmap {
     // HitObjects
     pub hit_objects: Vec<HitObject>,
     pub hit_sounds: Vec<HitSoundType>,
+
+    pub creator: String,
+    pub beatmap_id: i32,
 }
 
 impl Beatmap {
@@ -225,6 +228,8 @@ impl Default for Beatmap {
             effect_points: Vec::default(),
             hit_objects: Vec::default(),
             hit_sounds: Vec::default(),
+            creator: String::default(),
+            beatmap_id: i32::default(),
         }
     }
 }

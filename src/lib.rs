@@ -180,6 +180,9 @@ pub mod catch;
 /// Types for osu!mania calculations.
 pub mod mania;
 
+/// Types for osu!standard 2019 for relax calculations.
+pub mod osu_2019;
+
 /// Types used in and around this crate.
 pub mod model;
 
