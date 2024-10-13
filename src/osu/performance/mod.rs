@@ -778,7 +778,7 @@ impl OsuPerformanceInner<'_> {
         // * of the calculation we focus on hitting the timing hit window.
         let mut amount_hit_objects_with_acc = self.attrs.n_circles;
 
-        if using_classic_slider_acc {
+        if !using_classic_slider_acc {
             amount_hit_objects_with_acc += self.attrs.n_sliders;
         }
 
