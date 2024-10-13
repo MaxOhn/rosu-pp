@@ -27,6 +27,8 @@ pub struct OsuDifficultyAttributes {
     pub n_circles: u32,
     /// The amount of sliders.
     pub n_sliders: u32,
+    /// The amount of slider ticks and repeat points.
+    pub n_slider_ticks: u32,
     /// The amount of spinners.
     pub n_spinners: u32,
     /// The final star rating

@@ -39,7 +39,7 @@ macro_rules! test_cases {
         effective_miss_count: $effective_miss_count:expr,
     }) => {
         (
-            OsuPerformance::from($map.as_owned()).lazer(false),
+            OsuPerformance::from($map.as_owned()).lazer(true),
             OsuPerformanceAttributes {
                 pp: $pp,
                 pp_acc: $pp_acc,

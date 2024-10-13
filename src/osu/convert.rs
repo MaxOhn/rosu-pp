@@ -56,6 +56,17 @@ pub fn convert_objects(
                 OsuObjectKind::Slider(ref slider) => {
                     attrs.n_sliders += 1;
                     attrs.max_combo += slider.nested_objects.len() as u32;
+
+                    attrs.n_slider_ticks += slider
+                        .nested_objects
+                        .iter()
+                        .filter(|nested| {
+                            matches!(
+                                nested.kind,
+                                NestedSliderObjectKind::Tick | NestedSliderObjectKind::Repeat
+                            )
+                        })
+                        .count() as u32;
                 }
                 OsuObjectKind::Spinner(_) => attrs.n_spinners += 1,
             }

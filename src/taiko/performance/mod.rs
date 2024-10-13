@@ -364,6 +364,8 @@ impl<'map> TryFrom<OsuPerformance<'map>> for TaikoPerformance<'map> {
             difficulty,
             acc,
             combo,
+            slider_tick_hits: _,
+            slider_end_hits: _,
             n300,
             n100,
             n50: _,
