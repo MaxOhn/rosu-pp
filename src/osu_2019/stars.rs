@@ -40,8 +40,8 @@ pub fn stars(map: &Beatmap, mods: GameMods) -> OsuDifficultyAttributes {
     let radius = OBJECT_RADIUS * (1.0 - 0.7 * (map_attributes.cs as f32 - 5.0) / 5.0) / 2.0;
     let mut scaling_factor = NORMALIZED_RADIUS / radius;
 
-    if radius < 30.05 {
-        let small_circle_bonus = ((30.05 - radius) / 50.0).powf(1.1) * 1.45;
+    if radius < 30.0 {
+        let small_circle_bonus = (30.0 - radius).min(5.0) / 50.0;
         scaling_factor *= 1.0 + small_circle_bonus;
     }
 

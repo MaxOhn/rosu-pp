@@ -389,11 +389,6 @@ impl<'m> OsuPP<'m> {
             aim_value *= base_buff;
         }
 
-        // Precision buff (reading)
-        if attributes.cs > 5.58 {
-            aim_value *= ((attributes.cs as f32 - 5.46).powf(1.8) + 1.0).powf(0.03);
-        }
-
         // Scale with accuracy
         aim_value *= 0.3 + self.acc.unwrap() / 2.0;
         aim_value *= 0.98 + attributes.od as f32 * attributes.od as f32 / 2500.0;
