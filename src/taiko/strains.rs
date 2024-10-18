@@ -24,8 +24,8 @@ pub fn strains(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> TaikoSt
     let values = DifficultyValues::calculate(difficulty, converted);
 
     TaikoStrains {
-        color: values.peaks.color.get_curr_strain_peaks().into_vec(),
-        rhythm: values.peaks.rhythm.get_curr_strain_peaks().into_vec(),
-        stamina: values.peaks.stamina.get_curr_strain_peaks().into_vec(),
+        color: values.skills.color.get_curr_strain_peaks().into_vec(),
+        rhythm: values.skills.rhythm.get_curr_strain_peaks().into_vec(),
+        stamina: values.skills.stamina.get_curr_strain_peaks().into_vec(),
     }
 }

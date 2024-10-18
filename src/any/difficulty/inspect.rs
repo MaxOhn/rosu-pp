@@ -27,6 +27,11 @@ pub struct InspectDifficulty {
     ///
     /// Only relevant for osu!catch.
     pub hardrock_offsets: Option<bool>,
+    /// Whether the calculated attributes belong to an osu!lazer or osu!stable
+    /// score.
+    ///
+    /// Defaults to `true`.
+    pub lazer: Option<bool>,
 }
 
 impl InspectDifficulty {
@@ -41,6 +46,7 @@ impl InspectDifficulty {
             hp,
             od,
             hardrock_offsets,
+            lazer,
         } = self;
 
         let mut difficulty = Difficulty::new().mods(mods);
@@ -71,6 +77,10 @@ impl InspectDifficulty {
 
         if let Some(hardrock_offsets) = hardrock_offsets {
             difficulty = difficulty.hardrock_offsets(hardrock_offsets);
+        }
+
+        if let Some(lazer) = lazer {
+            difficulty = difficulty.lazer(lazer);
         }
 
         difficulty

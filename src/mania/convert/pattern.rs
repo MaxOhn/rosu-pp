@@ -5,8 +5,8 @@ use rosu_map::util::Pos;
 use crate::model::hit_object::{HitObject, HitObjectKind, HoldNote};
 
 use super::pattern_generator::{
-    distance_object::DistanceObjectPatternGenerator,
     end_time_object::EndTimeObjectPatternGenerator, hit_object::HitObjectPatternGenerator,
+    path_object::PathObjectPatternGenerator,
 };
 
 #[derive(Default)]
@@ -87,7 +87,7 @@ impl Pattern {
     }
 
     pub fn new_slider_note(
-        generator: &DistanceObjectPatternGenerator<'_>,
+        generator: &PathObjectPatternGenerator<'_>,
         column: u8,
         start_time: i32,
         end_time: i32,
@@ -118,7 +118,7 @@ impl Pattern {
 
     pub fn add_slider_note(
         &mut self,
-        generator: &DistanceObjectPatternGenerator<'_>,
+        generator: &PathObjectPatternGenerator<'_>,
         column: u8,
         start_time: i32,
         end_time: i32,

@@ -62,6 +62,7 @@ pub struct Difficulty {
     hp: Option<ModsDependent>,
     od: Option<ModsDependent>,
     hardrock_offsets: Option<bool>,
+    lazer: Option<bool>,
 }
 
 /// Wrapper for beatmap attributes in [`Difficulty`].
@@ -97,6 +98,7 @@ impl Difficulty {
             hp: None,
             od: None,
             hardrock_offsets: None,
+            lazer: None,
         }
     }
 
@@ -120,6 +122,7 @@ impl Difficulty {
             hp,
             od,
             hardrock_offsets,
+            lazer,
         } = self;
 
         InspectDifficulty {
@@ -131,6 +134,7 @@ impl Difficulty {
             hp,
             od,
             hardrock_offsets,
+            lazer,
         }
     }
 
@@ -268,6 +272,18 @@ impl Difficulty {
         self
     }
 
+    /// Whether the calculated attributes belong to an osu!lazer or osu!stable
+    /// score.
+    ///
+    /// Defaults to `true`.
+    ///
+    /// Only relevant for osu!standard performance calculation.
+    pub const fn lazer(mut self, lazer: bool) -> Self {
+        self.lazer = Some(lazer);
+
+        self
+    }
+
     /// Perform the difficulty calculation.
     pub fn calculate(&self, map: &Beatmap) -> DifficultyAttributes {
         let map = Cow::Borrowed(map);
@@ -347,6 +363,10 @@ impl Difficulty {
         self.hardrock_offsets
             .unwrap_or_else(|| self.mods.hardrock_offsets())
     }
+
+    pub(crate) fn get_lazer(&self) -> bool {
+        self.lazer.unwrap_or(true)
+    }
 }
 
 fn non_zero_u32_to_f32(n: NonZeroU32) -> f32 {
@@ -364,6 +384,7 @@ impl Debug for Difficulty {
             hp,
             od,
             hardrock_offsets,
+            lazer,
         } = self;
 
         f.debug_struct("Difficulty")
@@ -375,6 +396,7 @@ impl Debug for Difficulty {
             .field("hp", hp)
             .field("od", od)
             .field("hardrock_offsets", hardrock_offsets)
+            .field("lazer", lazer)
             .finish()
     }
 }

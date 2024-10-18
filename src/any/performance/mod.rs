@@ -27,8 +27,8 @@ impl<'map> Performance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`DifficultyAttributes`],
-    /// [`PerformanceAttributes`], or mode-specific attributes like
-    /// [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
+    ///   [`PerformanceAttributes`], or mode-specific attributes like
+    ///   [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
     /// - a beatmap ([`Beatmap`] or [`Converted<'_, M>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated
@@ -296,6 +296,23 @@ impl<'map> Performance<'map> {
             Self::Taiko(t) => Self::Taiko(t.hitresult_priority(priority)),
             Self::Catch(_) => self,
             Self::Mania(m) => Self::Mania(m.hitresult_priority(priority)),
+        }
+    }
+
+    /// Whether the calculated attributes belong to an osu!lazer or osu!stable
+    /// score.
+    ///
+    /// Defaults to `true`.
+    ///
+    /// This affects internal accuracy calculation because lazer considers
+    /// slider heads for accuracy whereas stable does not.
+    ///
+    /// Only relevant for osu!standard.
+    pub fn lazer(self, lazer: bool) -> Self {
+        if let Self::Osu(osu) = self {
+            Self::Osu(osu.lazer(lazer))
+        } else {
+            self
         }
     }
 

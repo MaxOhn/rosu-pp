@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::{
     taiko::difficulty::object::TaikoDifficultyObjects,
-    util::sync::{Ref, RefCount},
+    util::sync::{Ref, RefCount, Weak},
 };
 
 use super::{
@@ -17,11 +17,6 @@ impl ColorDifficultyPreprocessor {
         let hit_patterns = Self::encode(hit_objects);
 
         for repeating_hit_pattern in hit_patterns {
-            if let Some(obj) = repeating_hit_pattern.get().first_hit_object() {
-                obj.get_mut().color.repeating_hit_patterns =
-                    Some(RefCount::clone(&repeating_hit_pattern));
-            }
-
             let mono_patterns = Ref::map(repeating_hit_pattern.get(), |repeating| {
                 repeating.alternating_mono_patterns.as_slice()
             });
@@ -31,11 +26,6 @@ impl ColorDifficultyPreprocessor {
                     let mut mono_pattern = mono_pattern.get_mut();
                     mono_pattern.parent = Some(RefCount::downgrade(&repeating_hit_pattern));
                     mono_pattern.idx = i;
-                }
-
-                if let Some(obj) = mono_pattern.get().first_hit_object() {
-                    obj.get_mut().color.alternating_mono_pattern =
-                        Some(RefCount::downgrade(mono_pattern));
                 }
 
                 let mono_streaks = Ref::map(mono_pattern.get(), |alternating| {
@@ -49,9 +39,19 @@ impl ColorDifficultyPreprocessor {
                         borrowed.idx = j;
                     }
 
-                    if let Some(obj) = mono_streak.get().first_hit_object() {
-                        obj.get_mut().color.mono_streak = Some(RefCount::downgrade(mono_streak));
-                    };
+                    for hit_object in mono_streak
+                        .get()
+                        .hit_objects
+                        .iter()
+                        .filter_map(Weak::upgrade)
+                    {
+                        let mut borrowed = hit_object.get_mut();
+                        borrowed.color.repeating_hit_patterns =
+                            Some(RefCount::clone(&repeating_hit_pattern));
+                        borrowed.color.alternating_mono_pattern =
+                            Some(RefCount::downgrade(mono_pattern));
+                        borrowed.color.mono_streak = Some(RefCount::downgrade(mono_streak));
+                    }
                 }
             }
         }

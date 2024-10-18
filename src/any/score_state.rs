@@ -15,6 +15,14 @@ pub struct ScoreState {
     ///
     /// Irrelevant for osu!mania.
     pub max_combo: u32,
+    /// Amount of successfully hit slider ticks and repeats.
+    ///
+    /// Only relevant for osu!standard in lazer.
+    pub slider_tick_hits: u32,
+    /// Amount of successfully hit slider ends.
+    ///
+    /// Only relevant for osu!standard in lazer.
+    pub slider_end_hits: u32,
     /// Amount of current gekis (n320 for osu!mania).
     pub n_geki: u32,
     /// Amount of current katus (tiny droplet misses for osu!catch / n200 for
@@ -35,6 +43,8 @@ impl ScoreState {
     pub const fn new() -> Self {
         Self {
             max_combo: 0,
+            slider_tick_hits: 0,
+            slider_end_hits: 0,
             n_geki: 0,
             n_katu: 0,
             n300: 0,
@@ -66,6 +76,8 @@ impl From<ScoreState> for OsuScoreState {
     fn from(state: ScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
+            slider_tick_hits: state.slider_tick_hits,
+            slider_end_hits: state.slider_end_hits,
             n300: state.n300,
             n100: state.n100,
             n50: state.n50,
@@ -115,6 +127,8 @@ impl From<OsuScoreState> for ScoreState {
     fn from(state: OsuScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
+            slider_tick_hits: state.slider_tick_hits,
+            slider_end_hits: state.slider_end_hits,
             n_geki: 0,
             n_katu: 0,
             n300: state.n300,
@@ -129,6 +143,8 @@ impl From<TaikoScoreState> for ScoreState {
     fn from(state: TaikoScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
+            slider_tick_hits: 0,
+            slider_end_hits: 0,
             n_geki: 0,
             n_katu: 0,
             n300: state.n300,
@@ -143,6 +159,8 @@ impl From<CatchScoreState> for ScoreState {
     fn from(state: CatchScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
+            slider_tick_hits: 0,
+            slider_end_hits: 0,
             n_geki: 0,
             n_katu: state.tiny_droplet_misses,
             n300: state.fruits,
@@ -157,6 +175,8 @@ impl From<ManiaScoreState> for ScoreState {
     fn from(state: ManiaScoreState) -> Self {
         Self {
             max_combo: 0,
+            slider_tick_hits: 0,
+            slider_end_hits: 0,
             n_geki: state.n320,
             n_katu: state.n200,
             n300: state.n300,

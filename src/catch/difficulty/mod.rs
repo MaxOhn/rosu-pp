@@ -18,7 +18,7 @@ pub mod gradual;
 mod object;
 mod skills;
 
-const STAR_SCALING_FACTOR: f64 = 0.153;
+const DIFFICULTY_MULTIPLIER: f64 = 4.59;
 
 pub fn difficulty(
     difficulty: &Difficulty,
@@ -96,7 +96,7 @@ impl DifficultyValues {
     }
 
     pub fn eval(attrs: &mut CatchDifficultyAttributes, movement_difficulty_value: f64) {
-        attrs.stars = movement_difficulty_value.sqrt() * STAR_SCALING_FACTOR;
+        attrs.stars = movement_difficulty_value.sqrt() * DIFFICULTY_MULTIPLIER;
     }
 
     pub fn create_difficulty_objects<'a>(

@@ -6,8 +6,10 @@ pub use inner::*;
 mod inner {
     use std::{cell::RefCell, rc::Rc};
 
+    #[repr(transparent)]
     pub struct RefCount<T>(pub(super) Rc<RefCell<T>>);
 
+    #[repr(transparent)]
     pub struct Weak<T>(pub(super) std::rc::Weak<RefCell<T>>);
 
     pub type Ref<'a, T> = std::cell::Ref<'a, T>;
@@ -45,8 +47,10 @@ mod inner {
         sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
     };
 
+    #[repr(transparent)]
     pub struct RefCount<T>(pub(super) Arc<RwLock<T>>);
 
+    #[repr(transparent)]
     pub struct Weak<T>(pub(super) std::sync::Weak<RwLock<T>>);
 
     pub struct Ref<'a, T: ?Sized>(RwLockReadGuard<'a, T>);

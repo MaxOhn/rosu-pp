@@ -4,9 +4,9 @@ use crate::{
     util::random::Random,
 };
 
-pub(super) mod distance_object;
 pub(super) mod end_time_object;
 pub(super) mod hit_object;
+pub(super) mod path_object;
 
 pub struct PatternGenerator<'a> {
     pub hit_object: &'a HitObject,

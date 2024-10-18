@@ -9,7 +9,7 @@ use crate::{
 
 const INDIVIDUAL_DECAY_BASE: f64 = 0.125;
 const OVERALL_DECAY_BASE: f64 = 0.3;
-const RELEASE_THRESHOLD: f64 = 24.0;
+const RELEASE_THRESHOLD: f64 = 30.0;
 
 const SKILL_MULTIPLIER: f64 = 1.0;
 const STRAIN_DECAY_BASE: f64 = 1.0;
@@ -87,11 +87,12 @@ impl Strain {
 
         for i in 0..self.end_times.len() {
             // * The current note is overlapped if a previous note or end is overlapping the current note body
-            is_overlapping |=
-                self.end_times[i] > start_time + 1.0 && end_time > self.end_times[i] + 1.0;
+            is_overlapping |= self.end_times[i] > start_time + 1.0
+                && end_time > self.end_times[i] + 1.0
+                && start_time > self.start_times[i] + 1.0;
 
             // * We give a slight bonus to everything if something is held meanwhile
-            if self.end_times[i] > end_time + 1.0 {
+            if self.end_times[i] > end_time + 1.0 && start_time > self.start_times[i] + 1.0 {
                 hold_factor = 1.25;
             }
 
@@ -109,7 +110,7 @@ impl Strain {
         // * 0.0 +--------+-+---------------> Release Difference / ms
         // *         release_threshold
         if is_overlapping {
-            hold_addition = (1.0 + (0.5 * (RELEASE_THRESHOLD - closest_end_time)).exp()).recip();
+            hold_addition = (1.0 + (0.27 * (RELEASE_THRESHOLD - closest_end_time)).exp()).recip();
         }
 
         // * Decay and increase individualStrains in own column

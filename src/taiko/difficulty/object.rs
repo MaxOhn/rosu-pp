@@ -132,14 +132,22 @@ impl TaikoDifficultyObjects {
         }
     }
 
-    pub fn previous_note(
-        &self,
+    pub fn previous_note<'a>(
+        &'a self,
         curr: &TaikoDifficultyObject,
         backwards_idx: usize,
-    ) -> Option<&RefCount<TaikoDifficultyObject>> {
+    ) -> Option<&'a RefCount<TaikoDifficultyObject>> {
         curr.note_idx
             .checked_sub(backwards_idx + 1)
             .and_then(|idx| self.note_objects.get(idx))
+    }
+
+    pub fn next_note<'a>(
+        &'a self,
+        curr: &TaikoDifficultyObject,
+        forwards_idx: usize,
+    ) -> Option<&'a RefCount<TaikoDifficultyObject>> {
+        self.note_objects.get(curr.note_idx + (forwards_idx + 1))
     }
 }
 
@@ -178,5 +186,11 @@ fn closest_rhythm(
 impl IDifficultyObject for TaikoDifficultyObject {
     fn idx(&self) -> usize {
         self.idx
+    }
+}
+
+impl PartialEq for TaikoDifficultyObject {
+    fn eq(&self, other: &Self) -> bool {
+        self.idx == other.idx
     }
 }
