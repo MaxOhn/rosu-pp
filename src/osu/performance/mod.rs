@@ -417,18 +417,17 @@ impl<'map> OsuPerformance<'map> {
 
                     for new100 in min_n100..=max_n100 {
                         let new50 = n_remaining - new100;
-                        let dist = (acc
-                            - accuracy(
-                                n_slider_ticks,
-                                n_slider_ends,
-                                n300,
-                                new100,
-                                new50,
-                                misses,
-                                max_slider_ticks,
-                                max_slider_ends,
-                            ))
-                        .abs();
+
+                        let state = NoComboState {
+                            n300,
+                            n100: new100,
+                            n50: new50,
+                            misses,
+                            n_slider_ticks,
+                            n_slider_ends,
+                        };
+
+                        let dist = (acc - accuracy(state, max_slider_ticks, max_slider_ends)).abs();
 
                         if dist < best_dist {
                             best_dist = dist;
@@ -453,18 +452,18 @@ impl<'map> OsuPerformance<'map> {
 
                     for new300 in min_n300..=max_n300 {
                         let new50 = n_remaining - new300;
-                        let curr_dist = (acc
-                            - accuracy(
-                                n_slider_ticks,
-                                n_slider_ends,
-                                new300,
-                                n100,
-                                new50,
-                                misses,
-                                max_slider_ticks,
-                                max_slider_ends,
-                            ))
-                        .abs();
+
+                        let state = NoComboState {
+                            n300: new300,
+                            n100,
+                            n50: new50,
+                            misses,
+                            n_slider_ticks,
+                            n_slider_ends,
+                        };
+
+                        let curr_dist =
+                            (acc - accuracy(state, max_slider_ticks, max_slider_ends)).abs();
 
                         if curr_dist < best_dist {
                             best_dist = curr_dist;
@@ -488,18 +487,18 @@ impl<'map> OsuPerformance<'map> {
 
                     for new300 in min_n300..=max_n300 {
                         let new100 = n_remaining - new300;
-                        let curr_dist = (acc
-                            - accuracy(
-                                n_slider_ticks,
-                                n_slider_ends,
-                                new300,
-                                new100,
-                                n50,
-                                misses,
-                                max_slider_ticks,
-                                max_slider_ends,
-                            ))
-                        .abs();
+
+                        let state = NoComboState {
+                            n300: new300,
+                            n100: new100,
+                            n50,
+                            misses,
+                            n_slider_ticks,
+                            n_slider_ends,
+                        };
+
+                        let curr_dist =
+                            (acc - accuracy(state, max_slider_ticks, max_slider_ends)).abs();
 
                         if curr_dist < best_dist {
                             best_dist = curr_dist;
@@ -531,18 +530,18 @@ impl<'map> OsuPerformance<'map> {
 
                         for new100 in min_n100..=max_n100 {
                             let new50 = n_remaining - new300 - new100;
-                            let curr_dist = (acc
-                                - accuracy(
-                                    n_slider_ticks,
-                                    n_slider_ends,
-                                    new300,
-                                    new100,
-                                    new50,
-                                    misses,
-                                    max_slider_ticks,
-                                    max_slider_ends,
-                                ))
-                            .abs();
+
+                            let state = NoComboState {
+                                n300: new300,
+                                n100: new100,
+                                n50: new50,
+                                misses,
+                                n_slider_ticks,
+                                n_slider_ends,
+                            };
+
+                            let curr_dist =
+                                (acc - accuracy(state, max_slider_ticks, max_slider_ends)).abs();
 
                             if curr_dist < best_dist {
                                 best_dist = curr_dist;
@@ -1012,16 +1011,26 @@ fn calculate_effective_misses(attrs: &OsuDifficultyAttributes, state: &OsuScoreS
     combo_based_miss_count.max(f64::from(state.misses))
 }
 
-fn accuracy(
-    n_slider_ticks: u32,
-    n_slider_ends: u32,
+struct NoComboState {
     n300: u32,
     n100: u32,
     n50: u32,
     misses: u32,
-    max_slider_ticks: u32,
-    max_slider_ends: u32,
-) -> f64 {
+    n_slider_ticks: u32,
+    n_slider_ends: u32,
+}
+
+#[allow(clippy::needless_pass_by_value)]
+fn accuracy(state: NoComboState, max_slider_ticks: u32, max_slider_ends: u32) -> f64 {
+    let NoComboState {
+        n300,
+        n100,
+        n50,
+        misses,
+        n_slider_ticks,
+        n_slider_ends,
+    } = state;
+
     if n_slider_ticks + n_slider_ends + n300 + n100 + n50 + misses == 0 {
         return 0.0;
     }
@@ -1084,6 +1093,7 @@ mod test {
     /// and returns the [`OsuScoreState`] that matches `acc` the best.
     ///
     /// Very slow but accurate.
+    #[allow(clippy::too_many_arguments)]
     fn brute_force_best(
         lazer: bool,
         acc: f64,
@@ -1146,16 +1156,16 @@ mod test {
                     None => n_remaining.saturating_sub(new300 + new100),
                 };
 
-                let curr_acc = accuracy(
+                let state = NoComboState {
+                    n300: new300,
+                    n100: new100,
+                    n50: new50,
+                    misses,
                     n_slider_ticks,
                     n_slider_ends,
-                    new300,
-                    new100,
-                    new50,
-                    misses,
-                    max_slider_ticks,
-                    max_slider_ends,
-                );
+                };
+
+                let curr_acc = accuracy(state, max_slider_ticks, max_slider_ends);
                 let curr_dist = (acc - curr_acc).abs();
 
                 if curr_dist < best_dist {
