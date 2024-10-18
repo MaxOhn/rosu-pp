@@ -302,7 +302,7 @@ impl<'map> Performance<'map> {
     /// Whether the calculated attributes belong to an osu!lazer or osu!stable
     /// score.
     ///
-    /// Defaults to lazer.
+    /// Defaults to `true`.
     ///
     /// This affects internal accuracy calculation because lazer considers
     /// slider heads for accuracy whereas stable does not.

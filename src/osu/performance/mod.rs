@@ -35,7 +35,6 @@ pub struct OsuPerformance<'map> {
     pub(crate) n50: Option<u32>,
     pub(crate) misses: Option<u32>,
     pub(crate) hitresult_priority: HitResultPriority,
-    pub(crate) lazer: Option<bool>,
 }
 
 impl<'map> OsuPerformance<'map> {
@@ -158,12 +157,12 @@ impl<'map> OsuPerformance<'map> {
     /// Whether the calculated attributes belong to an osu!lazer or osu!stable
     /// score.
     ///
-    /// Defaults to lazer.
+    /// Defaults to `true`.
     ///
     /// This affects internal accuracy calculation because lazer considers
     /// slider heads for accuracy whereas stable does not.
-    pub const fn lazer(mut self, lazer: bool) -> Self {
-        self.lazer = Some(lazer);
+    pub fn lazer(mut self, lazer: bool) -> Self {
+        self.difficulty = self.difficulty.lazer(lazer);
 
         self
     }
@@ -366,7 +365,7 @@ impl<'map> OsuPerformance<'map> {
         let mut n100 = self.n100.map_or(0, |n| cmp::min(n, n_remaining));
         let mut n50 = self.n50.map_or(0, |n| cmp::min(n, n_remaining));
 
-        let lazer = self.lazer.unwrap_or(true);
+        let lazer = self.difficulty.get_lazer();
 
         let (n_slider_ends, n_slider_ticks, max_slider_ends, max_slider_ticks) = if lazer {
             let n_slider_ends = self
@@ -627,7 +626,7 @@ impl<'map> OsuPerformance<'map> {
 
         let effective_miss_count = calculate_effective_misses(&attrs, &state);
 
-        let lazer = self.lazer.unwrap_or(true);
+        let lazer = self.difficulty.get_lazer();
 
         let (n_slider_ends, n_slider_ticks) = if lazer {
             (attrs.n_sliders, attrs.n_slider_ticks)
@@ -660,7 +659,6 @@ impl<'map> OsuPerformance<'map> {
             n50: None,
             misses: None,
             hitresult_priority: HitResultPriority::DEFAULT,
-            lazer: None,
         }
     }
 }

@@ -308,6 +308,19 @@ impl OsuSlider {
             .count()
     }
 
+    /// Counts both ticks and repeats
+    pub fn tick_count(&self) -> usize {
+        self.nested_objects
+            .iter()
+            .filter(|nested| {
+                matches!(
+                    nested.kind,
+                    NestedSliderObjectKind::Tick | NestedSliderObjectKind::Repeat
+                )
+            })
+            .count()
+    }
+
     pub fn tail(&self) -> Option<&NestedSliderObject> {
         self.nested_objects
             .iter()
