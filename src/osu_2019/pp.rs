@@ -30,7 +30,7 @@ use crate::{Beatmap, GameMods};
 /// ```
 #[derive(Clone, Debug)]
 pub struct OsuPP<'m> {
-    map: &'m Beatmap,
+    map: Option<&'m Beatmap>,
     attributes: Option<OsuDifficultyAttributes>,
     mods: GameMods,
     combo: Option<u32>,
@@ -45,9 +45,9 @@ pub struct OsuPP<'m> {
 impl<'m> OsuPP<'m> {
     /// Creates a new calculator for the given map.
     #[inline]
-    pub fn new(map: &'m Beatmap) -> Self {
+    pub fn from_map(map: &'m Beatmap) -> Self {
         Self {
-            map,
+            map: Some(map),
             attributes: None,
             mods: GameMods::default(),
             combo: None,
@@ -59,18 +59,20 @@ impl<'m> OsuPP<'m> {
         }
     }
 
-    /// [`OsuAttributeProvider`] is implemented by [`DifficultyAttributes`](crate::osu::DifficultyAttributes)
-    /// and by [`PpResult`](crate::PpResult) meaning you can give the
-    /// result of a star calculation or a pp calculation.
-    /// If you already calculated the attributes for the current map-mod combination,
-    /// be sure to put them in here so that they don't have to be recalculated.
+    /// Creates a new calculator for the given attributes.
     #[inline]
-    pub fn attributes(mut self, attributes: impl OsuAttributeProvider) -> Self {
-        if let Some(attributes) = attributes.attributes() {
-            self.attributes = Some(attributes);
+    pub fn from_attributes(attributes: OsuDifficultyAttributes) -> Self {
+        Self {
+            map: None,
+            attributes: Some(attributes),
+            mods: GameMods::default(),
+            combo: None,
+            acc: None,
+            n300: None,
+            n100: None,
+            n50: None,
+            n_misses: 0,
         }
-
-        self
     }
 
     /// Specify mods through their bit values.
@@ -126,9 +128,8 @@ impl<'m> OsuPP<'m> {
     /// Generate the hit results with respect to the given accuracy between `0` and `100`.
     ///
     /// Be sure to set `misses` beforehand!
-    /// In case of a partial play, be also sure to set `passed_objects` beforehand!
     pub fn accuracy(mut self, acc: f32) -> Self {
-        let n_objects = self.map.hit_objects.len() as u32;
+        let n_objects = self.n_objects();
 
         let acc = acc / 100.0;
 
@@ -187,7 +188,7 @@ impl<'m> OsuPP<'m> {
 
     fn assert_hitresults(&mut self) {
         if self.acc.is_none() {
-            let n_objects = self.map.hit_objects.len() as u32;
+            let n_objects = self.n_objects();
 
             let remaining = n_objects
                 .saturating_sub(self.n300.unwrap_or(0))
@@ -223,7 +224,7 @@ impl<'m> OsuPP<'m> {
     /// containing stars and other attributes.
     pub fn calculate(mut self) -> OsuPerformanceAttributes {
         if self.attributes.is_none() {
-            let attributes = stars(self.map, self.mods.clone());
+            let attributes = stars(self.map.unwrap(), self.mods.clone());
             self.attributes.replace(attributes);
         }
 
@@ -275,11 +276,11 @@ impl<'m> OsuPP<'m> {
             pp *= 1.025;
         }
 
-        if self.map.creator == "gwb" || self.map.creator == "Plasma" {
+        if difficulty.beatmap_creator == "gwb" || difficulty.beatmap_creator == "Plasma" {
             pp *= 0.9;
         }
 
-        pp *= match self.map.beatmap_id {
+        pp *= match difficulty.beatmap_id {
             // Louder than steel [ok this is epic]
             1808605 => 0.85,
 
@@ -317,10 +318,9 @@ impl<'m> OsuPP<'m> {
 
         OsuPerformanceAttributes {
             difficulty: self.attributes.unwrap(),
-            pp_acc: 0.0,
             pp_aim: aim_value as f64,
-            pp_flashlight: 0.0,
             pp_speed: speed_value as f64,
+            pp_acc: acc_value as f64,
             pp: pp as f64,
             effective_miss_count: effective_miss_count as f64,
         }
@@ -481,7 +481,7 @@ impl<'m> OsuPP<'m> {
 
     #[inline]
     fn total_hits(&self) -> u32 {
-        let n_objects = self.map.hit_objects.len() as u32;
+        let n_objects = self.n_objects();
 
         (self.n300.unwrap_or(0) + self.n100.unwrap_or(0) + self.n50.unwrap_or(0) + self.n_misses)
             .min(n_objects)
@@ -513,6 +513,16 @@ impl<'m> OsuPP<'m> {
 
         combo_based_miss_count = combo_based_miss_count.min(n100 + n50 + self.n_misses as f32);
         combo_based_miss_count.max(self.n_misses as f32)
+    }
+
+    #[inline]
+    fn n_objects(&self) -> u32 {
+        match self.attributes.as_ref() {
+            Some(attributes) => {
+                (attributes.n_circles + attributes.n_sliders + attributes.n_spinners) as u32
+            }
+            None => self.map.unwrap().hit_objects.len() as u32,
+        }
     }
 }
 

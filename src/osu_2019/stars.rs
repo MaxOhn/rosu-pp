@@ -29,6 +29,8 @@ pub fn stars(map: &Beatmap, mods: GameMods) -> OsuDifficultyAttributes {
         ar: map_attributes.ar,
         od: map_attributes.od,
         cs: map_attributes.cs,
+        beatmap_id: map.beatmap_id,
+        beatmap_creator: map.creator.clone(),
         ..Default::default()
     };
 
@@ -156,6 +158,8 @@ pub struct OsuDifficultyAttributes {
     pub max_combo: usize,
     pub aim_difficult_strain_count: f64,
     pub speed_difficult_strain_count: f64,
+    pub beatmap_id: i32,
+    pub beatmap_creator: String,
 }
 
 #[derive(Clone, Debug)]
@@ -164,7 +168,6 @@ pub struct OsuPerformanceAttributes {
     pub pp: f64,
     pub pp_acc: f64,
     pub pp_aim: f64,
-    pub pp_flashlight: f64,
     pub pp_speed: f64,
     pub effective_miss_count: f64,
 }
