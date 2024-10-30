@@ -623,9 +623,42 @@ impl<'map> OsuPerformance<'map> {
             MapOrAttrs::Attrs(attrs) => attrs,
         };
 
-        let effective_miss_count = calculate_effective_misses(&attrs, &state);
-
+        let mods = self.difficulty.get_mods();
         let lazer = self.difficulty.get_lazer();
+        let using_classic_slider_acc = mods.no_slider_head_acc(lazer);
+
+        let mut effective_miss_count = 0.0;
+
+        if attrs.n_sliders > 0 {
+            if using_classic_slider_acc {
+                // * Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
+                // * In classic scores we can't know the amount of dropped sliders so we estimate to 10% of all sliders on the map
+                let full_combo_threshold =
+                    f64::from(attrs.max_combo) - 0.1 * f64::from(attrs.n_sliders);
+
+                if f64::from(state.max_combo) < full_combo_threshold {
+                    effective_miss_count =
+                        full_combo_threshold / total_imperfect_hits(&state).max(1.0);
+                }
+
+                // * In classic scores there can't be more misses than a sum of all non-perfect judgements
+                effective_miss_count = effective_miss_count.min(total_imperfect_hits(&state));
+            } else {
+                let full_combo_threshold =
+                    f64::from(attrs.max_combo - n_slider_ends_dropped(&attrs, &state));
+
+                if f64::from(state.max_combo) < full_combo_threshold {
+                    effective_miss_count =
+                        full_combo_threshold / total_imperfect_hits(&state).max(1.0);
+                }
+
+                // * Combine regular misses with tick misses since tick misses break combo as well
+                effective_miss_count = effective_miss_count
+                    .min(f64::from(n_slider_tick_miss(&attrs, &state) + state.misses));
+            }
+        }
+
+        effective_miss_count = effective_miss_count.max(f64::from(state.misses));
 
         let (n_slider_ends, n_slider_ticks) = if lazer {
             (attrs.n_sliders, attrs.n_slider_ticks)
@@ -635,11 +668,11 @@ impl<'map> OsuPerformance<'map> {
 
         let inner = OsuPerformanceInner {
             attrs,
-            mods: self.difficulty.get_mods(),
+            mods,
             acc: state.accuracy(n_slider_ticks, n_slider_ends),
             state,
             effective_miss_count,
-            lazer,
+            using_classic_slider_acc,
         };
 
         inner.calculate()
@@ -677,13 +710,11 @@ struct OsuPerformanceInner<'mods> {
     acc: f64,
     state: OsuScoreState,
     effective_miss_count: f64,
-    lazer: bool,
+    using_classic_slider_acc: bool,
 }
 
 impl OsuPerformanceInner<'_> {
     fn calculate(mut self) -> OsuPerformanceAttributes {
-        let using_classic_slider_acc = self.mods.no_slider_head_acc(self.lazer);
-
         let total_hits = self.state.total_hits();
 
         if total_hits == 0 {
@@ -729,7 +760,7 @@ impl OsuPerformanceInner<'_> {
 
         let aim_value = self.compute_aim_value();
         let speed_value = self.compute_speed_value();
-        let acc_value = self.compute_accuracy_value(using_classic_slider_acc);
+        let acc_value = self.compute_accuracy_value();
         let flashlight_value = self.compute_flashlight_value();
 
         let pp = (aim_value.powf(1.1)
@@ -796,15 +827,27 @@ impl OsuPerformanceInner<'_> {
         let estimate_diff_sliders = f64::from(self.attrs.n_sliders) * 0.15;
 
         if self.attrs.n_sliders > 0 {
-            let estimate_slider_ends_dropped = f64::from(cmp::min(
-                self.state.n100 + self.state.n50 + self.state.misses,
-                self.attrs.max_combo.saturating_sub(self.state.max_combo),
-            ))
-            .clamp(0.0, estimate_diff_sliders);
-            let slider_nerf_factor = (1.0 - self.attrs.slider_factor)
-                * (1.0 - estimate_slider_ends_dropped / estimate_diff_sliders).powf(3.0)
-                + self.attrs.slider_factor;
+            let estimate_improperly_followed_difficult_sliders = if self.using_classic_slider_acc {
+                // * When the score is considered classic (regardless if it was made on old client or not) we consider all missing combo to be dropped difficult sliders
+                let maximum_possible_droppled_sliders = total_imperfect_hits(&self.state);
 
+                maximum_possible_droppled_sliders
+                    .min(f64::from(self.attrs.max_combo - self.state.max_combo))
+                    .clamp(0.0, estimate_diff_sliders)
+            } else {
+                // * We add tick misses here since they too mean that the player didn't follow the slider properly
+                // * We however aren't adding misses here because missing slider heads has a harsh penalty by itself and doesn't mean that the rest of the slider wasn't followed properly
+                (f64::from(
+                    n_slider_ends_dropped(&self.attrs, &self.state)
+                        + n_slider_tick_miss(&self.attrs, &self.state),
+                ))
+                .min(estimate_diff_sliders)
+            };
+
+            let slider_nerf_factor = (1.0 - self.attrs.slider_factor)
+                * (1.0 - estimate_improperly_followed_difficult_sliders / estimate_diff_sliders)
+                    .powf(3.0)
+                + self.attrs.slider_factor;
             aim_value *= slider_nerf_factor;
         }
 
@@ -886,7 +929,7 @@ impl OsuPerformanceInner<'_> {
         speed_value
     }
 
-    fn compute_accuracy_value(&self, using_classic_slider_acc: bool) -> f64 {
+    fn compute_accuracy_value(&self) -> f64 {
         if self.mods.rx() {
             return 0.0;
         }
@@ -895,7 +938,7 @@ impl OsuPerformanceInner<'_> {
         // * of the calculation we focus on hitting the timing hit window.
         let mut amount_hit_objects_with_acc = self.attrs.n_circles;
 
-        if !using_classic_slider_acc {
+        if !self.using_classic_slider_acc {
             amount_hit_objects_with_acc += self.attrs.n_sliders;
         }
 
@@ -992,23 +1035,16 @@ impl OsuPerformanceInner<'_> {
     }
 }
 
-fn calculate_effective_misses(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> f64 {
-    // * Guess the number of misses + slider breaks from combo
-    let mut combo_based_miss_count = 0.0;
+fn total_imperfect_hits(state: &OsuScoreState) -> f64 {
+    f64::from(state.n100 + state.n50 + state.misses)
+}
 
-    if attrs.n_sliders > 0 {
-        let full_combo_threshold = f64::from(attrs.max_combo) - 0.1 * f64::from(attrs.n_sliders);
+fn n_slider_ends_dropped(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
+    attrs.n_sliders - state.slider_end_hits
+}
 
-        if f64::from(state.max_combo) < full_combo_threshold {
-            combo_based_miss_count = full_combo_threshold / f64::from(state.max_combo).max(1.0);
-        }
-    }
-
-    // * Clamp miss count to maximum amount of possible breaks
-    combo_based_miss_count =
-        combo_based_miss_count.min(f64::from(state.n100 + state.n50 + state.misses));
-
-    combo_based_miss_count.max(f64::from(state.misses))
+fn n_slider_tick_miss(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
+    attrs.n_slider_ticks - state.slider_tick_hits
 }
 
 struct NoComboState {
