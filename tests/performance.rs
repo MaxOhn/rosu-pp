@@ -101,6 +101,7 @@ macro_rules! test_cases {
 
 #[test]
 fn basic_osu() {
+    #[cfg(target_os = "windows")]
     test_cases! {
         Osu: OSU {
             NM => {
@@ -155,6 +156,67 @@ fn basic_osu() {
                 pp: 469.3245236137446,
                 pp_acc: 107.54135869359516,
                 pp_aim: 110.10489751227146,
+                pp_flashlight: 171.62594459401154,
+                pp_speed: 71.4498451141828,
+                effective_miss_count: 0.0,
+            };
+        }
+    };
+    #[cfg(target_os = "linux")]
+    test_cases! {
+        Osu: OSU {
+            NM => {
+                pp: 272.6047426867276,
+                pp_acc: 97.62287463107766,
+                pp_aim: 99.37265186861426,
+                pp_flashlight: 0.0,
+                pp_speed: 64.48542022217285,
+                effective_miss_count: 0.0,
+            };
+            HD => {
+                pp: 299.17174736245363,
+                pp_acc: 105.43270460156388,
+                pp_aim: 110.10489751227142,
+                pp_flashlight: 0.0,
+                pp_speed: 71.4498451141828,
+                effective_miss_count: 0.0,
+            };
+            EZ HD => {
+                pp: 186.7137498214991,
+                pp_acc: 16.6270597231239,
+                pp_aim: 98.11121656070222,
+                pp_flashlight: 0.0,
+                pp_speed: 61.51901495973101,
+                effective_miss_count: 0.0,
+            };
+            HR => {
+                pp: 404.7030358947424,
+                pp_acc: 161.55575439788055,
+                pp_aim: 145.04665418031985,
+                pp_flashlight: 0.0,
+                pp_speed: 80.77088499277514,
+                effective_miss_count: 0.0,
+            };
+            DT => {
+                pp: 738.7899608061098,
+                pp_acc: 184.09450675506795,
+                pp_aim: 304.16666833057235,
+                pp_flashlight: 0.0,
+                pp_speed: 220.06297202966698,
+                effective_miss_count: 0.0,
+            };
+            FL => {
+                pp: 402.408877784248,
+                pp_acc: 99.57533212369923,
+                pp_aim: 99.37265186861426,
+                pp_flashlight: 132.29720631068272,
+                pp_speed: 64.48542022217285,
+                effective_miss_count: 0.0,
+            };
+            HD FL => {
+                pp: 469.3245236137446,
+                pp_acc: 107.54135869359516,
+                pp_aim: 110.10489751227142,
                 pp_flashlight: 171.62594459401154,
                 pp_speed: 71.4498451141828,
                 effective_miss_count: 0.0,

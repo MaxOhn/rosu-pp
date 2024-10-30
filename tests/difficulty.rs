@@ -125,6 +125,7 @@ macro_rules! test_cases {
 
 #[test]
 fn basic_osu() {
+    #[cfg(target_os = "windows")]
     test_cases! {
         Osu: OSU {
             NM => {
@@ -233,6 +234,119 @@ fn basic_osu() {
                 n_slider_ticks: 15,
                 n_spinners: 1,
                 stars: 7.167932950561898,
+                max_combo: 909,
+            };
+        }
+    };
+    #[cfg(target_os = "linux")]
+    test_cases! {
+        Osu: OSU {
+            NM => {
+                aim: 2.8811843667580206,
+                speed: 2.468469273849314,
+                flashlight: 2.287888783550428,
+                slider_factor: 0.9803293523973866,
+                speed_note_count: 204.88794724609374,
+                aim_difficult_strain_count: 106.63833474488393,
+                speed_difficult_strain_count: 79.9883004295862,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_slider_ticks: 15,
+                n_spinners: 1,
+                stars: 5.6436199897393005,
+                max_combo: 909,
+            };
+            HD => {
+                aim: 2.8811843667580206,
+                speed: 2.468469273849314,
+                flashlight: 2.605859779358901,
+                slider_factor: 0.9803293523973866,
+                speed_note_count: 204.88794724609374,
+                aim_difficult_strain_count: 106.63833474488393,
+                speed_difficult_strain_count: 79.9883004295862,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_slider_ticks: 15,
+                n_spinners: 1,
+                stars: 5.6436199897393005,
+                max_combo: 909,
+            };
+            HR => {
+                aim: 3.2515300463985666,
+                speed: 2.6323568908654615,
+                flashlight: 2.853761577136605,
+                slider_factor: 0.969089944826546,
+                speed_note_count: 178.52041495886283,
+                aim_difficult_strain_count: 108.03970474535397,
+                speed_difficult_strain_count: 73.27713411796513,
+                ar: 10.0,
+                od: 10.0,
+                hp: 7.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_slider_ticks: 15,
+                n_spinners: 1,
+                stars: 6.2433012533379415,
+                max_combo: 909,
+            };
+            DT => {
+                aim: 4.058080039906945,
+                speed: 3.570932204630734,
+                flashlight: 3.318209122186825,
+                slider_factor: 0.9777224379583133,
+                speed_note_count: 211.29204189490912,
+                aim_difficult_strain_count: 126.95613629755243,
+                speed_difficult_strain_count: 95.63810649133869,
+                ar: 10.53333346048991,
+                od: 10.311111238267687,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_slider_ticks: 15,
+                n_spinners: 1,
+                stars: 8.030649319285482,
+                max_combo: 909,
+            };
+            FL => {
+                aim: 2.8811843667580206,
+                speed: 2.468469273849314,
+                flashlight: 2.287888783550428,
+                slider_factor: 0.9803293523973866,
+                speed_note_count: 204.88794724609374,
+                aim_difficult_strain_count: 106.63833474488393,
+                speed_difficult_strain_count: 79.9883004295862,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_slider_ticks: 15,
+                n_spinners: 1,
+                stars: 6.858771801534423,
+                max_combo: 909,
+            };
+            HD FL => {
+                aim: 2.8811843667580206,
+                speed: 2.468469273849314,
+                flashlight: 2.605859779358901,
+                slider_factor: 0.9803293523973866,
+                speed_note_count: 204.88794724609374,
+                aim_difficult_strain_count: 106.63833474488393,
+                speed_difficult_strain_count: 79.9883004295862,
+                ar: 9.300000190734863,
+                od: 8.800000190734863,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
+                n_slider_ticks: 15,
+                n_spinners: 1,
+                stars: 7.167932950561899,
                 max_combo: 909,
             };
         }
