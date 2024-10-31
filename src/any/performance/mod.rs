@@ -316,6 +316,28 @@ impl<'map> Performance<'map> {
         }
     }
 
+    /// Specify the amount of hit slider ticks.
+    ///
+    /// Only relevant for osu!standard.
+    pub fn n_slider_ticks(self, n_slider_ticks: u32) -> Self {
+        if let Self::Osu(osu) = self {
+            Self::Osu(osu.n_slider_ticks(n_slider_ticks))
+        } else {
+            self
+        }
+    }
+
+    /// Specify the amount of hit slider ends.
+    ///
+    /// Only relevant for osu!standard.
+    pub fn n_slider_ends(self, n_slider_ends: u32) -> Self {
+        if let Self::Osu(osu) = self {
+            Self::Osu(osu.n_slider_ends(n_slider_ends))
+        } else {
+            self
+        }
+    }
+
     /// Specify the amount of 300s of a play.
     pub fn n300(self, n300: u32) -> Self {
         match self {
