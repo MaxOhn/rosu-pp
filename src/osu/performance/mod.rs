@@ -659,6 +659,7 @@ impl<'map> OsuPerformance<'map> {
         }
 
         effective_miss_count = effective_miss_count.max(f64::from(state.misses));
+        effective_miss_count = effective_miss_count.min(f64::from(state.total_hits()));
 
         let (n_slider_ends, n_slider_ticks) = if lazer {
             (attrs.n_sliders, attrs.n_slider_ticks)
