@@ -1040,11 +1040,11 @@ fn total_imperfect_hits(state: &OsuScoreState) -> f64 {
     f64::from(state.n100 + state.n50 + state.misses)
 }
 
-fn n_slider_ends_dropped(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
+const fn n_slider_ends_dropped(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
     attrs.n_sliders - state.slider_end_hits
 }
 
-fn n_slider_tick_miss(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
+const fn n_slider_tick_miss(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
     attrs.n_slider_ticks - state.slider_tick_hits
 }
 
