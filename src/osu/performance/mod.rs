@@ -638,7 +638,7 @@ impl<'map> OsuPerformance<'map> {
 
                 if f64::from(state.max_combo) < full_combo_threshold {
                     effective_miss_count =
-                        full_combo_threshold / total_imperfect_hits(&state).max(1.0);
+                        full_combo_threshold / f64::from(state.max_combo).max(1.0);
                 }
 
                 // * In classic scores there can't be more misses than a sum of all non-perfect judgements
@@ -649,7 +649,7 @@ impl<'map> OsuPerformance<'map> {
 
                 if f64::from(state.max_combo) < full_combo_threshold {
                     effective_miss_count =
-                        full_combo_threshold / total_imperfect_hits(&state).max(1.0);
+                        full_combo_threshold / f64::from(state.max_combo).max(1.0);
                 }
 
                 // * Combine regular misses with tick misses since tick misses break combo as well
