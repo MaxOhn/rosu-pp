@@ -627,7 +627,7 @@ impl<'map> OsuPerformance<'map> {
         let lazer = self.difficulty.get_lazer();
         let using_classic_slider_acc = mods.no_slider_head_acc(lazer);
 
-        let mut effective_miss_count = 0.0;
+        let mut effective_miss_count = f64::from(state.misses);
 
         if attrs.n_sliders > 0 {
             if using_classic_slider_acc {
