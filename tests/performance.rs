@@ -230,30 +230,30 @@ fn basic_taiko() {
     test_cases! {
         Taiko: TAIKO {
             NM => {
-                pp: 117.93083232512124,
+                pp: 114.68651694107942,
                 pp_acc: 67.10083752258917,
-                pp_difficulty: 43.804435430934774,
+                pp_difficulty: 40.6658183165898,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(148.44150180469418),
             };
             HD => {
-                pp: 127.99624094636974,
+                pp: 124.41592086295445,
                 pp_acc: 67.10083752258917,
-                pp_difficulty: 44.89954631670814,
+                pp_difficulty: 41.68246377450454,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(148.44150180469418),
             };
             HR => {
-                pp: 139.75239372681187,
+                pp: 138.3981102935321,
                 pp_acc: 82.52109686788792,
-                pp_difficulty: 48.75926757049594,
+                pp_difficulty: 47.44272798866182,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(122.99438720960376),
             };
             DT => {
-                pp: 220.51543873147975,
+                pp: 220.07140899937482,
                 pp_acc: 118.28107309573312,
-                pp_difficulty: 89.35584221033577,
+                pp_difficulty: 88.93091255724303,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(98.96100120312946),
             };
@@ -266,30 +266,30 @@ fn convert_taiko() {
     test_cases! {
         Taiko: OSU {
             NM => {
-                pp: 396.36982258196866,
-                pp_acc: 160.00481201044695,
-                pp_difficulty: 213.19920144243838,
+                pp: 353.6961706002712,
+                pp_acc: 155.09212159726567,
+                pp_difficulty: 178.19145253120928,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(85.75868894575865),
             };
             HD => {
-                pp: 426.0975592756163,
-                pp_acc: 160.00481201044695,
-                pp_difficulty: 213.19920144243838,
+                pp: 358.45704044422996,
+                pp_acc: 155.09212159726567,
+                pp_difficulty: 182.6462388444895,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(85.75868894575865),
             };
             HR => {
-                pp: 452.71458235192836,
-                pp_acc: 191.95668459371925,
-                pp_difficulty: 234.5205569790155,
+                pp: 405.57235351353773,
+                pp_acc: 186.06296332183615,
+                pp_difficulty: 196.1813610529617,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(72.67685680089848),
             };
             DT => {
-                pp: 739.7393581199891,
-                pp_acc: 280.8904545747157,
-                pp_difficulty: 415.0249135067657,
+                pp: 658.0214875413873,
+                pp_acc: 272.26616492989393,
+                pp_difficulty: 347.4712042359611,
                 effective_miss_count: 0.0,
                 estimated_unstable_rate: Some(57.17245929717244),
             };

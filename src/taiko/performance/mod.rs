@@ -416,12 +416,12 @@ impl TaikoPerformanceInner<'_> {
 
         let mut multiplier = 1.13;
 
-        if self.mods.hd() {
+        if self.mods.hd() && !self.attrs.is_convert {
             multiplier *= 1.075;
         }
 
         if self.mods.ez() {
-            multiplier *= 0.975;
+            multiplier *= 0.95;
         }
 
         let diff_value =
@@ -459,10 +459,10 @@ impl TaikoPerformanceInner<'_> {
         diff_value *= 0.986_f64.powf(effective_miss_count);
 
         if self.mods.ez() {
-            diff_value *= 0.985;
+            diff_value *= 0.9;
         }
 
-        if self.mods.hd() && !self.attrs.is_convert {
+        if self.mods.hd() {
             diff_value *= 1.025;
         }
 
@@ -471,11 +471,19 @@ impl TaikoPerformanceInner<'_> {
         }
 
         if self.mods.fl() {
-            diff_value *= 1.05 * len_bonus;
+            diff_value *=
+                (1.05 - (self.attrs.mono_stamina_factor / 50.0).min(1.0) * len_bonus).max(1.0);
         }
 
+        // * Scale accuracy more harshly on nearly-completely mono (single coloured) speed maps.
+        let acc_scaling_exp = f64::from(2) + self.attrs.mono_stamina_factor;
+        let acc_scaling_shift = f64::from(300) - f64::from(100) * self.attrs.mono_stamina_factor;
+
         diff_value
-            * (special_functions::erf(400.0 / (2.0_f64.sqrt() * estimated_unstable_rate))).powf(2.0)
+            * (special_functions::erf(
+                acc_scaling_shift / (2.0_f64.sqrt() * estimated_unstable_rate),
+            ))
+            .powf(acc_scaling_exp)
     }
 
     fn compute_accuracy_value(&self, estimated_unstable_rate: Option<f64>) -> f64 {

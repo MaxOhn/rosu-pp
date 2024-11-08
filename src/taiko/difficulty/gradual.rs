@@ -153,6 +153,8 @@ impl Iterator for TaikoGradualDifficulty {
                 Skill::new(&mut self.skills.rhythm, &self.diff_objects).process(&borrowed);
                 Skill::new(&mut self.skills.color, &self.diff_objects).process(&borrowed);
                 Skill::new(&mut self.skills.stamina, &self.diff_objects).process(&borrowed);
+                Skill::new(&mut self.skills.single_color_stamina, &self.diff_objects)
+                    .process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;
@@ -231,6 +233,8 @@ impl Iterator for TaikoGradualDifficulty {
         let mut rhythm = Skill::new(&mut self.skills.rhythm, &self.diff_objects);
         let mut color = Skill::new(&mut self.skills.color, &self.diff_objects);
         let mut stamina = Skill::new(&mut self.skills.stamina, &self.diff_objects);
+        let mut single_color_stamina =
+            Skill::new(&mut self.skills.single_color_stamina, &self.diff_objects);
 
         for _ in 0..take {
             loop {
@@ -239,6 +243,7 @@ impl Iterator for TaikoGradualDifficulty {
                 rhythm.process(&borrowed);
                 color.process(&borrowed);
                 stamina.process(&borrowed);
+                single_color_stamina.process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;

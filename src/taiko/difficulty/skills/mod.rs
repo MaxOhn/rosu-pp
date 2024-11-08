@@ -9,6 +9,7 @@ pub struct TaikoSkills {
     pub rhythm: Rhythm,
     pub color: Color,
     pub stamina: Stamina,
+    pub single_color_stamina: Stamina,
 }
 
 impl TaikoSkills {
@@ -16,7 +17,8 @@ impl TaikoSkills {
         Self {
             rhythm: Rhythm::default(),
             color: Color::default(),
-            stamina: Stamina::default(),
+            stamina: Stamina::new(false),
+            single_color_stamina: Stamina::new(true),
         }
     }
 }

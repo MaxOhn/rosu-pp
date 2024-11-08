@@ -142,11 +142,14 @@ impl DifficultyValues {
             let mut rhythm = Skill::new(&mut skills.rhythm, &diff_objects);
             let mut color = Skill::new(&mut skills.color, &diff_objects);
             let mut stamina = Skill::new(&mut skills.stamina, &diff_objects);
+            let mut single_color_stamina =
+                Skill::new(&mut skills.single_color_stamina, &diff_objects);
 
             for hit_object in diff_objects.iter().take(n_diff_objects) {
                 rhythm.process(&hit_object.get());
                 color.process(&hit_object.get());
                 stamina.process(&hit_object.get());
+                single_color_stamina.process(&hit_object.get());
             }
         }
 
@@ -157,15 +160,32 @@ impl DifficultyValues {
         let color_rating = skills.color.as_difficulty_value() * COLOR_SKILL_MULTIPLIER;
         let rhythm_rating = skills.rhythm.as_difficulty_value() * RHYTHM_SKILL_MULTIPLIER;
         let stamina_rating = skills.stamina.as_difficulty_value() * STAMINA_SKILL_MULTIPLIER;
+        let mono_stamina_rating =
+            skills.single_color_stamina.as_difficulty_value() * STAMINA_SKILL_MULTIPLIER;
+        let mono_stamina_factor = if stamina_rating.abs() >= f64::EPSILON {
+            (mono_stamina_rating / stamina_rating).powf(5.0)
+        } else {
+            1.0
+        };
         let combined_rating =
             combined_difficulty_value(skills.color, skills.rhythm, skills.stamina);
 
-        let star_rating = rescale(combined_rating * 1.4);
+        let mut star_rating = rescale(combined_rating * 1.4);
+
+        // * TODO: This is temporary measure as we don't detect abuse of multiple-input playstyles of converts within the current system.
+        if attrs.is_convert {
+            star_rating *= 0.925;
+            // * For maps with low colour variance and high stamina requirement, multiple inputs are more likely to be abused.
+            if color_rating < 2.0 && stamina_rating > 8.0 {
+                star_rating *= 0.80;
+            }
+        }
 
         attrs.stamina = stamina_rating;
         attrs.rhythm = rhythm_rating;
         attrs.color = color_rating;
         attrs.peak = combined_rating;
+        attrs.mono_stamina_factor = mono_stamina_factor;
         attrs.stars = star_rating;
     }
 
