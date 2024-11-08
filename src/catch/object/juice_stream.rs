@@ -23,7 +23,7 @@ impl<'a> JuiceStream<'a> {
     pub const BASE_SCORING_DIST: f64 = 100.0;
 
     pub fn new(
-        x: f32,
+        effective_x: f32,
         start_time: f64,
         slider: &'a Slider,
         converted: &CatchBeatmap<'_>,
@@ -122,7 +122,7 @@ impl<'a> JuiceStream<'a> {
             };
 
             let nested = NestedJuiceStreamObject {
-                pos: x + path.position_at(e.path_progress).x,
+                pos: effective_x + path.position_at(e.path_progress).x,
                 start_time: e.time,
                 kind,
             };

@@ -97,8 +97,9 @@ fn convert_object<'a>(
     let state = match h.kind {
         HitObjectKind::Circle => ObjectIterState::Fruit(Some(Fruit::new(count))),
         HitObjectKind::Slider(ref slider) => {
-            let x = h.pos.x;
-            let stream = JuiceStream::new(x, h.start_time, slider, converted, count, bufs);
+            let effective_x = h.pos.x.clamp(0.0, PLAYFIELD_WIDTH);
+            let stream =
+                JuiceStream::new(effective_x, h.start_time, slider, converted, count, bufs);
 
             ObjectIterState::JuiceStream(stream)
         }
