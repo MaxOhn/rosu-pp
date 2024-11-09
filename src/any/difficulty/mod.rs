@@ -1,7 +1,7 @@
 use std::{
     borrow::Cow,
     fmt::{Debug, Formatter, Result as FmtResult},
-    num::NonZeroU32,
+    num::NonZeroU64,
 };
 
 use rosu_map::section::general::GameMode;
@@ -51,12 +51,10 @@ pub struct Difficulty {
     /// Clock rate will be clamped internally between 0.01 and 100.0.
     ///
     /// Since its minimum value is 0.01, its bits are never zero.
-    /// Additionally, values between 0.01 and 100 are represented sufficiently
-    /// precise with 32 bits.
     ///
     /// This allows for an optimization to reduce the struct size by storing its
-    /// bits as a [`NonZeroU32`].
-    clock_rate: Option<NonZeroU32>,
+    /// bits as a [`NonZeroU64`].
+    clock_rate: Option<NonZeroU64>,
     ar: Option<ModsDependent>,
     cs: Option<ModsDependent>,
     hp: Option<ModsDependent>,
@@ -128,7 +126,7 @@ impl Difficulty {
         InspectDifficulty {
             mods,
             passed_objects,
-            clock_rate: clock_rate.map(non_zero_u32_to_f32).map(f64::from),
+            clock_rate: clock_rate.map(non_zero_u64_to_f64),
             ar,
             cs,
             hp,
@@ -171,11 +169,11 @@ impl Difficulty {
     /// | :-----: | :-----: |
     /// | 0.01    | 100     |
     pub fn clock_rate(self, clock_rate: f64) -> Self {
-        let clock_rate = (clock_rate as f32).clamp(0.01, 100.0).to_bits();
+        let clock_rate = clock_rate.clamp(0.01, 100.0).to_bits();
 
         // SAFETY: The minimum value is 0.01 so its bits can never be fully
         // zero.
-        let non_zero = unsafe { NonZeroU32::new_unchecked(clock_rate) };
+        let non_zero = unsafe { NonZeroU64::new_unchecked(clock_rate) };
 
         Self {
             clock_rate: Some(non_zero),
@@ -334,7 +332,7 @@ impl Difficulty {
     pub(crate) fn get_clock_rate(&self) -> f64 {
         let clock_rate = self
             .clock_rate
-            .map_or(self.mods.clock_rate(), non_zero_u32_to_f32);
+            .map_or(self.mods.clock_rate(), non_zero_u64_to_f64);
 
         f64::from(clock_rate)
     }
@@ -369,8 +367,8 @@ impl Difficulty {
     }
 }
 
-fn non_zero_u32_to_f32(n: NonZeroU32) -> f32 {
-    f32::from_bits(n.get())
+fn non_zero_u64_to_f64(n: NonZeroU64) -> f64 {
+    f64::from_bits(n.get())
 }
 
 impl Debug for Difficulty {
@@ -390,7 +388,7 @@ impl Debug for Difficulty {
         f.debug_struct("Difficulty")
             .field("mods", mods)
             .field("passed_objects", passed_objects)
-            .field("clock_rate", &clock_rate.map(non_zero_u32_to_f32))
+            .field("clock_rate", &clock_rate.map(non_zero_u64_to_f64))
             .field("ar", ar)
             .field("cs", cs)
             .field("hp", hp)

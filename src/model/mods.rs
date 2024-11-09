@@ -61,7 +61,7 @@ impl GameMods {
     ///
     /// In case of variable clock rates like for `WindUp`, this will return
     /// `1.0`.
-    pub(crate) fn clock_rate(&self) -> f32 {
+    pub(crate) fn clock_rate(&self) -> f64 {
         match self.inner {
             GameModsInner::Lazer(ref mods) => mods.clock_rate().unwrap_or(1.0),
             GameModsInner::Intermode(ref mods) => mods.legacy_clock_rate(),
@@ -105,7 +105,7 @@ macro_rules! impl_map_attr {
                 #[doc = "Check whether the mods specify a custom "]
                 #[doc = $s]
                 #[doc = "value."]
-                pub(crate) fn $fn(&self) -> Option<f32> {
+                pub(crate) fn $fn(&self) -> Option<f64> {
                     match self.inner {
                         GameModsInner::Lazer(ref mods) => mods.iter().find_map(|gamemod| match gamemod {
                             $( impl_map_attr!( @ $mode $field) => *$field, )*

@@ -417,9 +417,9 @@ impl ModsDependentKind {
         }
     }
 
-    fn value(&self, mods: &GameMods, mods_fn: impl Fn(&GameMods) -> Option<f32>) -> f32 {
+    fn value(&self, mods: &GameMods, mods_fn: impl Fn(&GameMods) -> Option<f64>) -> f32 {
         match self {
-            ModsDependentKind::Default(inner) => mods_fn(mods).unwrap_or(inner.value),
+            ModsDependentKind::Default(inner) => mods_fn(mods).map_or(inner.value, |n| n as f32),
             ModsDependentKind::Custom(inner) => inner.value,
         }
     }
