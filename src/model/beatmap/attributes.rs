@@ -227,10 +227,7 @@ impl BeatmapAttributesBuilder {
     /// Calculate the AR and OD hit windows.
     pub fn hit_windows(&self) -> HitWindows {
         let mods = &self.mods;
-
-        let clock_rate = self
-            .clock_rate
-            .unwrap_or_else(|| f64::from(mods.clock_rate()));
+        let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
 
         let ar_clock_rate = if self.ar.with_mods() { 1.0 } else { clock_rate };
         let od_clock_rate = if self.od.with_mods() { 1.0 } else { clock_rate };
@@ -312,9 +309,7 @@ impl BeatmapAttributesBuilder {
     /// Calculate the [`BeatmapAttributes`].
     pub fn build(&self) -> BeatmapAttributes {
         let mods = &self.mods;
-        let clock_rate = self
-            .clock_rate
-            .unwrap_or_else(|| f64::from(mods.clock_rate()));
+        let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
 
         // HP
         let mut hp = self.hp.value(mods, GameMods::hp);

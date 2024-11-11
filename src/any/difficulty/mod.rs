@@ -330,11 +330,8 @@ impl Difficulty {
     }
 
     pub(crate) fn get_clock_rate(&self) -> f64 {
-        let clock_rate = self
-            .clock_rate
-            .map_or(self.mods.clock_rate(), non_zero_u64_to_f64);
-
-        f64::from(clock_rate)
+        self.clock_rate
+            .map_or(self.mods.clock_rate(), non_zero_u64_to_f64)
     }
 
     pub(crate) fn get_passed_objects(&self) -> usize {
