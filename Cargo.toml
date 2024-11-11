@@ -20,7 +20,7 @@ tracing = ["rosu-map/tracing"]
 # rosu-map = { version = "0.1.2" }
 rosu-map = { git = "https://github.com/MaxOhn/rosu-map", branch = "pp-update" }
 # rosu-mods = { version = "0.1.0" }
-rosu-mods = { path = "../rosu-mods" }
+rosu-mods = { git = "https://github.com/MaxOhn/rosu-mods", branch = "main" }
 
 [dev-dependencies]
 proptest = "1.4.0"
