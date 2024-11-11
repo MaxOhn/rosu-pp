@@ -942,19 +942,22 @@ impl OsuPerformanceInner<'_> {
             amount_hit_objects_with_acc += self.attrs.n_sliders;
         }
 
-        let better_acc_percentage = if amount_hit_objects_with_acc > 0 {
-            let sub = self.state.total_hits() - amount_hit_objects_with_acc;
-
-            // * It is possible to reach a negative accuracy with this formula. Cap it at zero - zero points.
-            if self.state.n300 < sub {
-                0.0
-            } else {
-                f64::from((self.state.n300 - sub) * 6 + self.state.n100 * 2 + self.state.n50)
-                    / f64::from(amount_hit_objects_with_acc * 6)
-            }
+        let mut better_acc_percentage = if amount_hit_objects_with_acc > 0 {
+            f64::from(
+                (self.state.n300 as i32
+                    - (self.state.total_hits() as i32 - amount_hit_objects_with_acc as i32))
+                    * 6
+                    + self.state.n100 as i32 * 2
+                    + self.state.n50 as i32,
+            ) / f64::from(amount_hit_objects_with_acc * 6)
         } else {
             0.0
         };
+
+        // * It is possible to reach a negative accuracy with this formula. Cap it at zero - zero points.
+        if better_acc_percentage < 0.0 {
+            better_acc_percentage = 0.0;
+        }
 
         // * Lots of arbitrary values from testing.
         // * Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution.
