@@ -263,6 +263,7 @@ fn basic_taiko() {
 
 #[test]
 fn convert_taiko() {
+    #[cfg(target_os = "windows")]
     test_cases! {
         Taiko: OSU {
             NM => {
@@ -288,6 +289,39 @@ fn convert_taiko() {
             };
             DT => {
                 pp: 658.0214875413873,
+                pp_acc: 272.26616492989393,
+                pp_difficulty: 347.4712042359611,
+                effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(57.17245929717244),
+            };
+        }
+    }
+    #[cfg(target_os = "linux")]
+    test_cases! {
+        Taiko: OSU {
+            NM => {
+                pp: 353.6961706002712,
+                pp_acc: 155.09212159726567,
+                pp_difficulty: 178.19145253120928,
+                effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(85.75868894575865),
+            };
+            HD => {
+                pp: 358.45704044423
+                pp_acc: 155.09212159726567,
+                pp_difficulty: 182.6462388444895,
+                effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(85.75868894575865),
+            };
+            HR => {
+                pp: 405.57235351353773,
+                pp_acc: 186.06296332183615,
+                pp_difficulty: 196.1813610529617,
+                effective_miss_count: 0.0,
+                estimated_unstable_rate: Some(72.67685680089848),
+            };
+            DT => {
+                pp: 658.0214875413873
                 pp_acc: 272.26616492989393,
                 pp_difficulty: 347.4712042359611,
                 effective_miss_count: 0.0,
