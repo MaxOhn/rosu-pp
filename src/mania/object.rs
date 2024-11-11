@@ -47,6 +47,7 @@ impl ManiaObject {
                 let duration = (slider.span_count() as f64) * dist / velocity;
 
                 params.max_combo += (duration / 100.0) as u32;
+                params.n_hold_notes += 1;
 
                 Self {
                     start_time: h.start_time,
@@ -57,6 +58,7 @@ impl ManiaObject {
             HitObjectKind::Spinner(Spinner { duration })
             | HitObjectKind::Hold(HoldNote { duration }) => {
                 params.max_combo += (duration / 100.0) as u32;
+                params.n_hold_notes += 1;
 
                 Self {
                     start_time: h.start_time,
@@ -77,6 +79,7 @@ impl ManiaObject {
 pub struct ObjectParams<'a> {
     map: &'a Beatmap,
     max_combo: u32,
+    n_hold_notes: u32,
     curve_bufs: CurveBuffers,
 }
 
@@ -85,11 +88,16 @@ impl<'a> ObjectParams<'a> {
         Self {
             map,
             max_combo: 0,
+            n_hold_notes: 0,
             curve_bufs: CurveBuffers::default(),
         }
     }
 
-    pub fn into_max_combo(self) -> u32 {
+    pub fn max_combo(&self) -> u32 {
         self.max_combo
+    }
+
+    pub fn n_hold_notes(&self) -> u32 {
+        self.n_hold_notes
     }
 }

@@ -307,12 +307,12 @@ impl<'map> Performance<'map> {
     /// This affects internal accuracy calculation because lazer considers
     /// slider heads for accuracy whereas stable does not.
     ///
-    /// Only relevant for osu!standard.
+    /// Only relevant for osu!standard and osu!mania.
     pub fn lazer(self, lazer: bool) -> Self {
-        if let Self::Osu(osu) = self {
-            Self::Osu(osu.lazer(lazer))
-        } else {
-            self
+        match self {
+            Self::Osu(o) => Self::Osu(o.lazer(lazer)),
+            Self::Taiko(_) | Self::Catch(_) => self,
+            Self::Mania(m) => Self::Mania(m.lazer(lazer)),
         }
     }
 

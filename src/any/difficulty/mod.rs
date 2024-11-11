@@ -274,8 +274,6 @@ impl Difficulty {
     /// score.
     ///
     /// Defaults to `true`.
-    ///
-    /// Only relevant for osu!standard performance calculation.
     pub const fn lazer(mut self, lazer: bool) -> Self {
         self.lazer = Some(lazer);
 

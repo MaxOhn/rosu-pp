@@ -112,6 +112,7 @@ macro_rules! test_cases {
         stars: $stars:literal,
         hit_window: $hit_window:literal,
         n_objects: $n_objects:literal,
+        n_hold_notes: $n_hold_notes:literal,
         max_combo: $max_combo:literal,
         is_convert: $is_convert:literal,
     }) => {
@@ -119,6 +120,7 @@ macro_rules! test_cases {
             stars: $stars,
             hit_window: $hit_window,
             n_objects: $n_objects,
+            n_hold_notes: $n_hold_notes,
             max_combo: $max_combo,
             is_convert: $is_convert,
         }
@@ -531,6 +533,7 @@ fn basic_mania() {
                 stars: 3.358304846842773,
                 hit_window: 40.0,
                 n_objects: 594,
+                n_hold_notes: 121,
                 max_combo: 956,
                 is_convert: false,
             };
@@ -538,6 +541,7 @@ fn basic_mania() {
                 stars: 4.6072892053157295,
                 hit_window: 40.0,
                 n_objects: 594,
+                n_hold_notes: 121,
                 max_combo: 956,
                 is_convert: false,
             };
@@ -553,6 +557,7 @@ fn convert_mania() {
                 stars: 3.2033142085672255,
                 hit_window: 34.0,
                 n_objects: 1046,
+                n_hold_notes: 293,
                 max_combo: 1381,
                 is_convert: true,
             };
@@ -560,6 +565,7 @@ fn convert_mania() {
                 stars:  4.2934063021960185,
                 hit_window: 34.0,
                 n_objects: 1046,
+                n_hold_notes: 293,
                 max_combo: 1381,
                 is_convert: true,
             };

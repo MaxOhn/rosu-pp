@@ -35,6 +35,7 @@ pub fn difficulty(
         hit_window,
         max_combo: values.max_combo,
         n_objects,
+        n_hold_notes: values.n_hold_notes,
         is_convert: converted.is_convert,
     }
 }
@@ -42,6 +43,7 @@ pub fn difficulty(
 pub struct DifficultyValues {
     pub strain: Strain,
     pub max_combo: u32,
+    pub n_hold_notes: u32,
 }
 
 impl DifficultyValues {
@@ -71,7 +73,8 @@ impl DifficultyValues {
 
         Self {
             strain,
-            max_combo: params.into_max_combo(),
+            max_combo: params.max_combo(),
+            n_hold_notes: params.n_hold_notes(),
         }
     }
 
