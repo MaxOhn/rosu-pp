@@ -3,6 +3,7 @@ use rosu_map::section::{general::GameMode, hit_objects::CurveBuffers};
 use crate::model::{
     beatmap::{Beatmap, Converted},
     mode::ConvertStatus,
+    mods::Reflection,
 };
 
 use super::{
@@ -30,7 +31,7 @@ pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
 pub fn convert_objects(
     converted: &OsuBeatmap<'_>,
     scaling_factor: &ScalingFactor,
-    hr: bool,
+    reflection: Reflection,
     time_preempt: f64,
     mut take: usize,
     attrs: &mut OsuDifficultyAttributes,
@@ -63,12 +64,17 @@ pub fn convert_objects(
         })
         .collect();
 
-    if hr {
-        osu_objects
+    match reflection {
+        Reflection::None => osu_objects.iter_mut().for_each(OsuObject::finalize_nested),
+        Reflection::Vertical => osu_objects
             .iter_mut()
-            .for_each(OsuObject::reflect_vertically);
-    } else {
-        osu_objects.iter_mut().for_each(OsuObject::finalize_nested);
+            .for_each(OsuObject::reflect_vertically),
+        Reflection::Horizontal => osu_objects
+            .iter_mut()
+            .for_each(OsuObject::reflect_horizontally),
+        Reflection::Both => osu_objects
+            .iter_mut()
+            .for_each(OsuObject::reflect_both_axes),
     }
 
     let stack_threshold = time_preempt * f64::from(converted.stack_leniency);

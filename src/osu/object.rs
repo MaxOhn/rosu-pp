@@ -77,6 +77,46 @@ impl OsuObject {
         }
     }
 
+    pub fn reflect_horizontally(&mut self) {
+        fn reflect_x(x: &mut f32) {
+            *x = PLAYFIELD_BASE_SIZE.x - *x;
+        }
+
+        reflect_x(&mut self.pos.x);
+
+        if let OsuObjectKind::Slider(ref mut slider) = self.kind {
+            // Requires `stack_offset` so we can't add `h.pos` just yet
+            slider.lazy_end_pos.x = -slider.lazy_end_pos.x;
+
+            for nested in slider.nested_objects.iter_mut() {
+                let mut nested_pos = self.pos; // already reflected at this point
+                nested_pos += Pos::new(-nested.pos.x, nested.pos.y);
+                nested.pos = nested_pos;
+            }
+        }
+    }
+
+    pub fn reflect_both_axes(&mut self) {
+        fn reflect(pos: &mut Pos) {
+            pos.x = PLAYFIELD_BASE_SIZE.x - pos.x;
+            pos.y = PLAYFIELD_BASE_SIZE.y - pos.y;
+        }
+
+        reflect(&mut self.pos);
+
+        if let OsuObjectKind::Slider(ref mut slider) = self.kind {
+            // Requires `stack_offset` so we can't add `h.pos` just yet
+            slider.lazy_end_pos.x = -slider.lazy_end_pos.x;
+            slider.lazy_end_pos.y = -slider.lazy_end_pos.y;
+
+            for nested in slider.nested_objects.iter_mut() {
+                let mut nested_pos = self.pos; // already reflected at this point
+                nested_pos += Pos::new(-nested.pos.x, -nested.pos.y);
+                nested.pos = nested_pos;
+            }
+        }
+    }
+
     pub fn finalize_nested(&mut self) {
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
             for nested in slider.nested_objects.iter_mut() {

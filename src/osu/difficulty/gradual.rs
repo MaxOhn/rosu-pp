@@ -84,7 +84,7 @@ impl OsuGradualDifficulty {
         let osu_objects = convert_objects(
             converted,
             &scaling_factor,
-            mods.hr(),
+            mods.reflection(),
             time_preempt,
             converted.hit_objects.len(),
             &mut attrs,

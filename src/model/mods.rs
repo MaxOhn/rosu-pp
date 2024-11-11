@@ -179,7 +179,7 @@ impl_has_mod! {
 }
 
 impl GameMods {
-    pub fn no_slider_head_acc(&self, lazer: bool) -> bool {
+    pub(crate) fn no_slider_head_acc(&self, lazer: bool) -> bool {
         match self.inner {
             GameModsInner::Lazer(ref mods) => mods
                 .iter()
@@ -194,6 +194,42 @@ impl GameMods {
                 mods.contains(GameModIntermode::Classic) || !lazer
             }
             GameModsInner::Legacy(_) => !lazer,
+        }
+    }
+
+    pub(crate) fn reflection(&self) -> Reflection {
+        match self.inner {
+            GameModsInner::Lazer(ref mods) => {
+                if mods.contains_intermode(GameModIntermode::HardRock) {
+                    return Reflection::Vertical;
+                }
+
+                mods.iter()
+                    .find_map(|m| match m {
+                        GameMod::MirrorOsu(mirror) => Some(mirror),
+                        _ => None,
+                    })
+                    .map_or(Reflection::None, |mr| match mr.reflection.as_deref() {
+                        Some("Horizontal") | None => Reflection::Horizontal,
+                        Some("Vertical") => Reflection::Vertical,
+                        Some("Both") => Reflection::Both,
+                        Some(_) => Reflection::None,
+                    })
+            }
+            GameModsInner::Intermode(ref mods) => {
+                if mods.contains(GameModIntermode::HardRock) {
+                    Reflection::Vertical
+                } else {
+                    Reflection::None
+                }
+            }
+            GameModsInner::Legacy(mods) => {
+                if mods.contains(GameModsLegacy::HardRock) {
+                    Reflection::Vertical
+                } else {
+                    Reflection::None
+                }
+            }
         }
     }
 }
@@ -243,4 +279,12 @@ impl From<u32> for GameMods {
     fn from(bits: u32) -> Self {
         GameModsLegacy::from_bits(bits).into()
     }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Reflection {
+    None,
+    Vertical,
+    Horizontal,
+    Both,
 }

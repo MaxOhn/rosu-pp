@@ -114,7 +114,7 @@ impl DifficultyValues {
         let mut osu_objects = convert_objects(
             converted,
             &scaling_factor,
-            mods.hr(),
+            mods.reflection(),
             time_preempt,
             take,
             &mut attrs,
