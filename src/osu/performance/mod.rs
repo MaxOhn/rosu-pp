@@ -743,8 +743,8 @@ impl OsuPerformanceInner<'_> {
             // * this is well beyond currently maximum achievable OD which is 12.17 (DTx2 + DA with OD11)
             let (n100_mult, n50_mult) = if self.attrs.od > 0.0 {
                 (
-                    1.0 - (self.attrs.od / 13.33).powf(1.8),
-                    1.0 - (self.attrs.od / 13.33).powf(5.0),
+                    (1.0 - (self.attrs.od / 13.33).powf(1.8)).max(0.0),
+                    (1.0 - (self.attrs.od / 13.33).powf(5.0)).max(0.0),
                 )
             } else {
                 (1.0, 1.0)
@@ -753,8 +753,7 @@ impl OsuPerformanceInner<'_> {
             // * As we're adding Oks and Mehs to an approximated number of combo breaks the result can be
             // * higher than total hits in specific scenarios (which breaks some calculations) so we need to clamp it.
             self.effective_miss_count = (self.effective_miss_count
-                + f64::from(self.state.n100)
-                + n100_mult
+                + f64::from(self.state.n100) * n100_mult
                 + f64::from(self.state.n50) * n50_mult)
                 .min(total_hits);
         }
