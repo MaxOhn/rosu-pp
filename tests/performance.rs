@@ -18,14 +18,12 @@ macro_rules! test_cases {
             $( $key:ident: $value:expr $( , )? )*
         } ;)*
     } ) => {
-        let map = Beatmap::from_path(common::$path)
-            .unwrap()
-            .unchecked_into_converted();
+        let map = Beatmap::from_path(common::$path).unwrap();
 
         $(
             let mods = 0 $( + $mods )*;
             let (calc, expected) = test_cases!(@$mode { map, $( $key: $value, )* });
-            let actual = calc.mods(mods).calculate();
+            let actual = calc.mods(mods).calculate().unwrap();
             run(&actual, &expected, mods);
         )*
     };
@@ -39,7 +37,7 @@ macro_rules! test_cases {
         effective_miss_count: $effective_miss_count:expr,
     }) => {
         (
-            OsuPerformance::from($map.as_owned()).lazer(true),
+            OsuPerformance::from(&$map).lazer(true),
             OsuPerformanceAttributes {
                 pp: $pp,
                 pp_acc: $pp_acc,
@@ -60,7 +58,7 @@ macro_rules! test_cases {
         estimated_unstable_rate: $estimated_unstable_rate:expr,
     }) => {
         (
-            TaikoPerformance::from($map.as_owned()),
+            TaikoPerformance::from(&$map),
             TaikoPerformanceAttributes {
                 pp: $pp,
                 pp_acc: $pp_acc,
@@ -76,7 +74,7 @@ macro_rules! test_cases {
         pp: $pp:expr,
     }) => {
         (
-            CatchPerformance::from($map.as_owned()),
+            CatchPerformance::from(&$map),
             CatchPerformanceAttributes {
                 pp: $pp,
                 ..Default::default()
@@ -89,7 +87,7 @@ macro_rules! test_cases {
         pp_difficulty: $pp_difficulty:expr,
     }) => {
         (
-            ManiaPerformance::from($map.as_owned()),
+            ManiaPerformance::from(&$map),
             ManiaPerformanceAttributes {
                 pp: $pp,
                 pp_difficulty: $pp_difficulty,

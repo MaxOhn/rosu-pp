@@ -1,6 +1,8 @@
-use crate::{any::Difficulty, mania::difficulty::DifficultyValues};
+use rosu_map::section::general::GameMode;
 
-use super::convert::ManiaBeatmap;
+use crate::{
+    any::Difficulty, mania::difficulty::DifficultyValues, model::mode::ConvertError, Beatmap,
+};
 
 /// The result of calculating the strains on a osu!mania map.
 ///
@@ -16,10 +18,11 @@ impl ManiaStrains {
     pub const SECTION_LEN: f64 = 400.0;
 }
 
-pub fn strains(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> ManiaStrains {
-    let values = DifficultyValues::calculate(difficulty, converted);
+pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<ManiaStrains, ConvertError> {
+    let map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+    let values = DifficultyValues::calculate(difficulty, &map);
 
-    ManiaStrains {
+    Ok(ManiaStrains {
         strains: values.strain.get_curr_strain_peaks().into_vec(),
-    }
+    })
 }

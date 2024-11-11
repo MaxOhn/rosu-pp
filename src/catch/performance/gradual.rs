@@ -1,6 +1,7 @@
 use crate::{
-    catch::{CatchBeatmap, CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState},
-    Difficulty,
+    catch::{CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState},
+    model::mode::ConvertError,
+    Beatmap, Difficulty,
 };
 
 /// Gradually calculate the performance attributes of an osu!catch map.
@@ -90,10 +91,10 @@ pub struct CatchGradualPerformance {
 
 impl CatchGradualPerformance {
     /// Create a new gradual performance calculator for osu!catch maps.
-    pub fn new(difficulty: Difficulty, converted: &CatchBeatmap<'_>) -> Self {
-        let difficulty = CatchGradualDifficulty::new(difficulty, converted);
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
+        let difficulty = CatchGradualDifficulty::new(difficulty, map)?;
 
-        Self { difficulty }
+        Ok(Self { difficulty })
     }
 
     /// Process the next hit object and calculate the performance attributes
@@ -116,6 +117,7 @@ impl CatchGradualPerformance {
     ///
     /// Note that the count is zero-indexed, so `n=0` will process 1 object,
     /// `n=1` will process 2, and so on.
+    #[allow(clippy::missing_panics_doc)]
     pub fn nth(&mut self, state: CatchScoreState, n: usize) -> Option<CatchPerformanceAttributes> {
         let performance = self
             .difficulty
@@ -124,7 +126,8 @@ impl CatchGradualPerformance {
             .state(state)
             .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
-            .calculate();
+            .calculate()
+            .expect("no conversion required");
 
         Some(performance)
     }
@@ -144,15 +147,13 @@ mod tests {
 
     #[test]
     fn next_and_nth() {
-        let converted = Beatmap::from_path("./resources/2118524.osu")
-            .unwrap()
-            .unchecked_into_converted();
+        let map = Beatmap::from_path("./resources/2118524.osu").unwrap();
 
         let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = CatchGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_2nd = CatchGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_3rd = CatchGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual = CatchGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_2nd = CatchGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_3rd = CatchGradualPerformance::new(difficulty.clone(), &map).unwrap();
 
         let mut state = CatchScoreState::default();
 
@@ -176,12 +177,12 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let regular_calc = CatchPerformance::new(converted.as_owned())
+            let regular_calc = CatchPerformance::new(&map)
                 .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state.clone());
 
-            let expected = regular_calc.calculate();
+            let expected = regular_calc.calculate().unwrap();
 
             assert_eq!(next_gradual, expected);
         }

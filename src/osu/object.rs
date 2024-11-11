@@ -14,9 +14,10 @@ use crate::{
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
     },
     util::{get_precision_adjusted_beat_len, sort},
+    Beatmap,
 };
 
-use super::{convert::OsuBeatmap, PLAYFIELD_BASE_SIZE};
+use super::PLAYFIELD_BASE_SIZE;
 
 pub struct OsuObject {
     pub pos: Pos,
@@ -34,14 +35,14 @@ impl OsuObject {
 
     pub fn new(
         h: &HitObject,
-        converted: &OsuBeatmap<'_>,
+        map: &Beatmap,
         curve_bufs: &mut CurveBuffers,
         ticks_buf: &mut Vec<SliderEvent>,
     ) -> Self {
         let kind = match h.kind {
             HitObjectKind::Circle => OsuObjectKind::Circle,
             HitObjectKind::Slider(ref slider) => {
-                OsuObjectKind::Slider(OsuSlider::new(h, slider, converted, curve_bufs, ticks_buf))
+                OsuObjectKind::Slider(OsuSlider::new(h, slider, map, curve_bufs, ticks_buf))
             }
             HitObjectKind::Spinner(spinner) => OsuObjectKind::Spinner(spinner),
             HitObjectKind::Hold(HoldNote { duration }) => {
@@ -188,19 +189,19 @@ impl OsuSlider {
     fn new(
         h: &HitObject,
         slider: &Slider,
-        converted: &OsuBeatmap<'_>,
+        map: &Beatmap,
         curve_bufs: &mut CurveBuffers,
         ticks_buf: &mut Vec<SliderEvent>,
     ) -> Self {
         let start_time = h.start_time;
-        let slider_multiplier = converted.slider_multiplier;
-        let slider_tick_rate = converted.slider_tick_rate;
+        let slider_multiplier = map.slider_multiplier;
+        let slider_tick_rate = map.slider_tick_rate;
 
-        let beat_len = converted
+        let beat_len = map
             .timing_point_at(start_time)
             .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
 
-        let (slider_velocity, generate_ticks) = converted.difficulty_point_at(start_time).map_or(
+        let (slider_velocity, generate_ticks) = map.difficulty_point_at(start_time).map_or(
             (
                 DifficultyPoint::DEFAULT_SLIDER_VELOCITY,
                 DifficultyPoint::DEFAULT_GENERATE_TICKS,
@@ -221,7 +222,7 @@ impl OsuSlider {
         let duration = end_time - start_time;
         let span_duration = duration / span_count;
 
-        let tick_dist_multiplier = if converted.version < 8 {
+        let tick_dist_multiplier = if map.version < 8 {
             slider_velocity.recip()
         } else {
             1.0

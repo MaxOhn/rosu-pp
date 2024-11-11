@@ -2,11 +2,11 @@ use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
     model::{
-        beatmap::{Beatmap, Converted},
+        beatmap::Beatmap,
         hit_object::{HitObjectKind, HoldNote, Spinner},
-        mode::ConvertStatus,
     },
     util::{limited_queue::LimitedQueue, random::Random, sort},
+    GameMods,
 };
 
 use self::{
@@ -18,38 +18,13 @@ use self::{
     pattern_type::PatternType,
 };
 
-use super::Mania;
-
 mod pattern;
 mod pattern_generator;
 mod pattern_type;
 
-/// A [`Beatmap`] for [`Mania`] calculations.
-pub type ManiaBeatmap<'a> = Converted<'a, Mania>;
-
 const MAX_NOTES_FOR_DENSITY: usize = 7;
 
-pub const fn check_convert(map: &Beatmap) -> ConvertStatus {
-    match map.mode {
-        GameMode::Osu => ConvertStatus::Conversion,
-        GameMode::Mania => ConvertStatus::Noop,
-        GameMode::Taiko | GameMode::Catch => ConvertStatus::Incompatible,
-    }
-}
-
-pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
-    match map.mode {
-        GameMode::Osu => {
-            convert(map);
-
-            ConvertStatus::Conversion
-        }
-        GameMode::Mania => ConvertStatus::Noop,
-        GameMode::Taiko | GameMode::Catch => ConvertStatus::Incompatible,
-    }
-}
-
-fn convert(map: &mut Beatmap) {
+pub fn convert(map: &mut Beatmap, mods: &GameMods) {
     let seed = (map.hp + map.cs).round_ties_even() as i32 * 20
         + (map.od * 41.2) as i32
         + map.ar.round_ties_even() as i32;
@@ -226,11 +201,8 @@ mod tests {
 
     #[test]
     fn convert_mania() {
-        let converted = Beatmap::from_path("./resources/2785319.osu")
-            .unwrap()
-            .unchecked_into_converted::<Mania>();
-
-        let map = &converted;
+        let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
+        let map = map.convert(GameMode::Mania, &GameMods::default()).unwrap();
         assert!(map.is_convert);
 
         assert_eq!(map.mode, GameMode::Mania);

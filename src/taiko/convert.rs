@@ -4,43 +4,17 @@ use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
     model::{
-        beatmap::{Beatmap, Converted},
+        beatmap::Beatmap,
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
-        mode::ConvertStatus,
     },
     util::{float_ext::FloatExt, get_precision_adjusted_beat_len, sort::TandemSorter},
 };
 
-use super::Taiko;
-
-/// A [`Beatmap`] for [`Taiko`] calculations.
-pub type TaikoBeatmap<'a> = Converted<'a, Taiko>;
-
 const VELOCITY_MULTIPLIER: f32 = 1.4;
 const OSU_BASE_SCORING_DIST: f32 = 100.0;
 
-pub const fn check_convert(map: &Beatmap) -> ConvertStatus {
-    match map.mode {
-        GameMode::Osu => ConvertStatus::Conversion,
-        GameMode::Taiko => ConvertStatus::Noop,
-        GameMode::Catch | GameMode::Mania => ConvertStatus::Incompatible,
-    }
-}
-
-pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
-    match map.mode {
-        GameMode::Osu => {
-            convert(map);
-
-            ConvertStatus::Conversion
-        }
-        GameMode::Taiko => ConvertStatus::Noop,
-        GameMode::Catch | GameMode::Mania => ConvertStatus::Incompatible,
-    }
-}
-
-fn convert(map: &mut Beatmap) {
+pub fn convert(map: &mut Beatmap) {
     let mut new_objects = Vec::new();
     let mut new_sounds = Vec::new();
 

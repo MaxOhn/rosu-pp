@@ -1,14 +1,15 @@
+use rosu_map::section::general::GameMode;
+
 use crate::{
     model::{
         beatmap::Beatmap,
-        mode::{ConvertStatus, IGameMode},
+        mode::{ConvertError, IGameMode},
     },
-    Difficulty,
+    Difficulty, GameMods,
 };
 
 pub use self::{
     attributes::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
-    convert::ManiaBeatmap,
     difficulty::gradual::ManiaGradualDifficulty,
     performance::{gradual::ManiaGradualPerformance, ManiaPerformance},
     score_state::ManiaScoreState,
@@ -28,6 +29,13 @@ mod strains;
 /// [`GameMode::Mania`]: rosu_map::section::general::GameMode::Mania
 pub struct Mania;
 
+impl Mania {
+    pub(crate) fn convert(map: &mut Beatmap, mods: &GameMods) {
+        debug_assert!(!map.is_convert && map.mode == GameMode::Osu);
+        convert::convert(map, mods);
+    }
+}
+
 impl IGameMode for Mania {
     type DifficultyAttributes = ManiaDifficultyAttributes;
     type Strains = ManiaStrains;
@@ -35,40 +43,32 @@ impl IGameMode for Mania {
     type GradualDifficulty = ManiaGradualDifficulty;
     type GradualPerformance = ManiaGradualPerformance;
 
-    fn check_convert(map: &Beatmap) -> ConvertStatus {
-        convert::check_convert(map)
-    }
-
-    fn try_convert(map: &mut Beatmap) -> ConvertStatus {
-        convert::try_convert(map)
-    }
-
     fn difficulty(
         difficulty: &Difficulty,
-        converted: &ManiaBeatmap<'_>,
-    ) -> Self::DifficultyAttributes {
-        difficulty::difficulty(difficulty, converted)
+        map: &Beatmap,
+    ) -> Result<Self::DifficultyAttributes, ConvertError> {
+        difficulty::difficulty(difficulty, map)
     }
 
-    fn strains(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self::Strains {
-        strains::strains(difficulty, converted)
+    fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<Self::Strains, ConvertError> {
+        strains::strains(difficulty, map)
     }
 
-    fn performance(map: ManiaBeatmap<'_>) -> Self::Performance<'_> {
+    fn performance(map: &Beatmap) -> Self::Performance<'_> {
         ManiaPerformance::new(map)
     }
 
     fn gradual_difficulty(
         difficulty: Difficulty,
-        map: &ManiaBeatmap<'_>,
-    ) -> Self::GradualDifficulty {
+        map: &Beatmap,
+    ) -> Result<Self::GradualDifficulty, ConvertError> {
         ManiaGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
         difficulty: Difficulty,
-        map: &ManiaBeatmap<'_>,
-    ) -> Self::GradualPerformance {
+        map: &Beatmap,
+    ) -> Result<Self::GradualPerformance, ConvertError> {
         ManiaGradualPerformance::new(difficulty, map)
     }
 }

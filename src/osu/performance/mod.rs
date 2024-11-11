@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{borrow::Cow, cmp};
 
 use rosu_map::section::general::GameMode;
 
@@ -6,9 +6,10 @@ use crate::{
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance, Performance},
     catch::CatchPerformance,
     mania::ManiaPerformance,
-    model::mods::GameMods,
+    model::{mode::ConvertError, mods::GameMods},
     taiko::TaikoPerformance,
     util::{float_ext::FloatExt, map_or_attrs::MapOrAttrs},
+    Beatmap,
 };
 
 use super::{
@@ -43,7 +44,7 @@ impl<'map> OsuPerformance<'map> {
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`OsuDifficultyAttributes`]
     ///   or [`OsuPerformanceAttributes`])
-    /// - a beatmap ([`OsuBeatmap<'map>`])
+    /// - a [`Beatmap`] (by reference or value)
     ///
     /// If a map is given, difficulty attributes will need to be calculated
     /// internally which is a costly operation. Hence, passing attributes
@@ -52,21 +53,18 @@ impl<'map> OsuPerformance<'map> {
     /// However, when passing previously calculated attributes, make sure they
     /// have been calculated for the same map and [`Difficulty`] settings.
     /// Otherwise, the final attributes will be incorrect.
-    ///
-    /// [`OsuBeatmap<'map>`]: crate::osu::OsuBeatmap
     pub fn new(map_or_attrs: impl IntoModePerformance<'map, Osu>) -> Self {
         map_or_attrs.into_performance()
     }
 
     /// Try to create a new performance calculator for osu! maps.
     ///
-    /// Returns `None` if `map_or_attrs` does not belong to osu! e.g.
-    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
-    /// of a different mode.
+    /// Returns `None` if `map_or_attrs` does not belong to osu! i.e.
+    /// a [`DifficultyAttributes`] or [`PerformanceAttributes`] of a different
+    /// mode.
     ///
     /// See [`OsuPerformance::new`] for more information.
     ///
-    /// [`Converted`]: crate::model::beatmap::Converted
     /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
     /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
     pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
@@ -349,10 +347,10 @@ impl<'map> OsuPerformance<'map> {
 
     /// Create the [`OsuScoreState`] that will be used for performance calculation.
     #[allow(clippy::too_many_lines)]
-    pub fn generate_state(&mut self) -> OsuScoreState {
+    pub fn generate_state(&mut self) -> Result<OsuScoreState, ConvertError> {
         let attrs = match self.map_or_attrs {
             MapOrAttrs::Map(ref map) => {
-                let attrs = self.difficulty.with_mode().calculate(map);
+                let attrs = self.difficulty.calculate_for_mode::<Osu>(map)?;
 
                 self.map_or_attrs.insert_attrs(attrs)
             }
@@ -636,7 +634,7 @@ impl<'map> OsuPerformance<'map> {
         self.n50 = Some(n50);
         self.misses = Some(misses);
 
-        OsuScoreState {
+        Ok(OsuScoreState {
             max_combo,
             large_tick_hits,
             slider_end_hits,
@@ -644,16 +642,16 @@ impl<'map> OsuPerformance<'map> {
             n100,
             n50,
             misses,
-        }
+        })
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(mut self) -> OsuPerformanceAttributes {
-        let state = self.generate_state();
+    pub fn calculate(mut self) -> Result<OsuPerformanceAttributes, ConvertError> {
+        let state = self.generate_state()?;
 
         let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => self.difficulty.with_mode().calculate(map),
             MapOrAttrs::Attrs(attrs) => attrs,
+            MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Osu>(map)?,
         };
 
         let mods = self.difficulty.get_mods();
@@ -718,7 +716,7 @@ impl<'map> OsuPerformance<'map> {
             using_classic_slider_acc,
         };
 
-        inner.calculate()
+        Ok(inner.calculate())
     }
 
     pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Osu>) -> Self {
@@ -734,6 +732,33 @@ impl<'map> OsuPerformance<'map> {
             n50: None,
             misses: None,
             hitresult_priority: HitResultPriority::DEFAULT,
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    pub(crate) fn try_convert_map(
+        map_or_attrs: MapOrAttrs<'map, Osu>,
+        mode: GameMode,
+        mods: &GameMods,
+    ) -> Result<Cow<'map, Beatmap>, MapOrAttrs<'map, Osu>> {
+        let MapOrAttrs::Map(map) = map_or_attrs else {
+            return Err(map_or_attrs);
+        };
+
+        match map {
+            Cow::Borrowed(map) => match map.convert_ref(mode, mods) {
+                Ok(map) => Ok(map),
+                Err(_) => {
+                    return Err(MapOrAttrs::Map(Cow::Borrowed(map)));
+                }
+            },
+            Cow::Owned(mut map) => {
+                if map.convert_mut(mode, mods).is_err() {
+                    return Err(MapOrAttrs::Map(Cow::Owned(map)));
+                }
+
+                Ok(Cow::Owned(map))
+            }
         }
     }
 }
@@ -1147,7 +1172,7 @@ mod test {
 
     use crate::{
         any::{DifficultyAttributes, PerformanceAttributes},
-        taiko::{Taiko, TaikoDifficultyAttributes, TaikoPerformanceAttributes},
+        taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
         Beatmap,
     };
 
@@ -1166,8 +1191,8 @@ mod test {
     fn attrs() -> OsuDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = beatmap().unchecked_into_converted::<Osu>();
-                let attrs = Difficulty::new().with_mode().calculate(&converted);
+                let map = beatmap();
+                let attrs = Difficulty::new().calculate_for_mode::<Osu>(&map).unwrap();
 
                 assert_eq!(
                     (attrs.n_circles, attrs.n_sliders, attrs.n_spinners),
@@ -1382,8 +1407,8 @@ mod test {
                 state = state.misses(misses);
             }
 
-            let first = state.generate_state();
-            let state = state.generate_state();
+            let first = state.generate_state().unwrap();
+            let state = state.generate_state().unwrap();
             assert_eq!(first, state);
 
             let mut expected = brute_force_best(
@@ -1413,7 +1438,8 @@ mod test {
             .n100(20)
             .misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
-            .generate_state();
+            .generate_state()
+            .unwrap();
 
         let expected = OsuScoreState {
             max_combo: 500,
@@ -1437,7 +1463,8 @@ mod test {
             .n50(10)
             .misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
-            .generate_state();
+            .generate_state()
+            .unwrap();
 
         let expected = OsuScoreState {
             max_combo: 500,
@@ -1460,7 +1487,8 @@ mod test {
             .n50(10)
             .misses(2)
             .hitresult_priority(HitResultPriority::WorstCase)
-            .generate_state();
+            .generate_state()
+            .unwrap();
 
         let expected = OsuScoreState {
             max_combo: 500,
@@ -1485,7 +1513,8 @@ mod test {
             .n50(10)
             .misses(2)
             .hitresult_priority(HitResultPriority::WorstCase)
-            .generate_state();
+            .generate_state()
+            .unwrap();
 
         let expected = OsuScoreState {
             max_combo: 500,
@@ -1503,12 +1532,11 @@ mod test {
     #[test]
     fn create() {
         let mut map = beatmap();
-        let converted = map.unchecked_as_converted();
 
         let _ = OsuPerformance::new(OsuDifficultyAttributes::default());
         let _ = OsuPerformance::new(OsuPerformanceAttributes::default());
-        let _ = OsuPerformance::new(&converted);
-        let _ = OsuPerformance::new(converted.as_owned());
+        let _ = OsuPerformance::new(&map);
+        let _ = OsuPerformance::new(map.clone());
 
         let _ = OsuPerformance::try_new(OsuDifficultyAttributes::default()).unwrap();
         let _ = OsuPerformance::try_new(OsuPerformanceAttributes::default()).unwrap();
@@ -1519,19 +1547,19 @@ mod test {
             OsuPerformanceAttributes::default(),
         ))
         .unwrap();
-        let _ = OsuPerformance::try_new(&converted).unwrap();
-        let _ = OsuPerformance::try_new(converted.as_owned()).unwrap();
+        let _ = OsuPerformance::try_new(&map).unwrap();
+        let _ = OsuPerformance::try_new(map.clone()).unwrap();
 
         let _ = OsuPerformance::from(OsuDifficultyAttributes::default());
         let _ = OsuPerformance::from(OsuPerformanceAttributes::default());
-        let _ = OsuPerformance::from(&converted);
-        let _ = OsuPerformance::from(converted);
+        let _ = OsuPerformance::from(&map);
+        let _ = OsuPerformance::from(map.clone());
 
         let _ = OsuDifficultyAttributes::default().performance();
         let _ = OsuPerformanceAttributes::default().performance();
 
-        map.mode = GameMode::Taiko;
-        let converted = map.unchecked_as_converted::<Taiko>();
+        map.convert_mut(GameMode::Taiko, &GameMods::default())
+            .unwrap();
 
         assert!(OsuPerformance::try_new(TaikoDifficultyAttributes::default()).is_none());
         assert!(OsuPerformance::try_new(TaikoPerformanceAttributes::default()).is_none());
@@ -1543,7 +1571,7 @@ mod test {
             TaikoPerformanceAttributes::default()
         ))
         .is_none());
-        assert!(OsuPerformance::try_new(&converted).is_none());
-        assert!(OsuPerformance::try_new(converted).is_none());
+        assert!(OsuPerformance::try_new(&map).is_none());
+        assert!(OsuPerformance::try_new(map).is_none());
     }
 }

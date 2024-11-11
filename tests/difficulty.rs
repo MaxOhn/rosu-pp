@@ -18,14 +18,17 @@ macro_rules! test_cases {
             $( $key:ident: $value:literal $( , )? )*
         } $( ; )? )*
     } ) => {
-        let map = Beatmap::from_path(common::$path)
-            .unwrap()
-            .unchecked_into_converted::<$mode>();
+        let map = Beatmap::from_path(common::$path).unwrap();
 
         $(
             let mods = 0 $( + $mods )*;
             let expected = test_cases!(@$mode { $( $key: $value, )* });
-            let actual = Difficulty::new().mods(mods).with_mode().calculate(&map);
+
+            let actual = Difficulty::new()
+                .mods(mods)
+                .calculate_for_mode::<$mode>(&map)
+                .unwrap();
+
             run(&actual, &expected, mods);
         )*
     };

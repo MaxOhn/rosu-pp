@@ -1,7 +1,4 @@
-use crate::{
-    mania::{ManiaBeatmap, ManiaGradualDifficulty},
-    Difficulty,
-};
+use crate::{mania::ManiaGradualDifficulty, model::mode::ConvertError, Beatmap, Difficulty};
 
 use super::{ManiaPerformanceAttributes, ManiaScoreState};
 
@@ -75,10 +72,10 @@ pub struct ManiaGradualPerformance {
 
 impl ManiaGradualPerformance {
     /// Create a new gradual performance calculator for osu!mania maps.
-    pub fn new(difficulty: Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
-        let difficulty = ManiaGradualDifficulty::new(difficulty, converted);
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
+        let difficulty = ManiaGradualDifficulty::new(difficulty, map)?;
 
-        Self { difficulty }
+        Ok(Self { difficulty })
     }
 
     /// Process the next hit object and calculate the performance attributes
@@ -98,6 +95,7 @@ impl ManiaGradualPerformance {
     ///
     /// Note that the count is zero-indexed, so `n=0` will process 1 object,
     /// `n=1` will process 2, and so on.
+    #[allow(clippy::missing_panics_doc)]
     pub fn nth(&mut self, state: ManiaScoreState, n: usize) -> Option<ManiaPerformanceAttributes> {
         let performance = self
             .difficulty
@@ -106,7 +104,8 @@ impl ManiaGradualPerformance {
             .state(state)
             .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
-            .calculate();
+            .calculate()
+            .expect("no conversion required");
 
         Some(performance)
     }
@@ -120,34 +119,29 @@ impl ManiaGradualPerformance {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        mania::{Mania, ManiaPerformance},
-        Beatmap,
-    };
+    use crate::{mania::ManiaPerformance, Beatmap};
 
     use super::*;
 
     #[test]
     fn next_and_nth() {
-        let converted = Beatmap::from_path("./resources/1638954.osu")
-            .unwrap()
-            .unchecked_into_converted::<Mania>();
+        let map = Beatmap::from_path("./resources/1638954.osu").unwrap();
 
         let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = ManiaGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_2nd = ManiaGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_3rd = ManiaGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual = ManiaGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_2nd = ManiaGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_3rd = ManiaGradualPerformance::new(difficulty.clone(), &map).unwrap();
 
         let mut state = ManiaScoreState::default();
 
-        let hit_objects_len = converted.hit_objects.len();
+        let hit_objects_len = map.hit_objects.len();
 
         for i in 1.. {
             state.misses += 1;
 
             // Hold notes award two hitresults in lazer
-            if let Some(h) = converted.hit_objects.get(i - 1) {
+            if let Some(h) = map.hit_objects.get(i - 1) {
                 if !h.is_circle() {
                     state.n320 += 1;
                 }
@@ -170,15 +164,15 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let mut regular_calc = ManiaPerformance::new(converted.as_owned())
+            let mut regular_calc = ManiaPerformance::new(&map)
                 .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state.clone());
 
-            let regular_state = regular_calc.generate_state();
+            let regular_state = regular_calc.generate_state().unwrap();
             assert_eq!(state, regular_state);
 
-            let expected = regular_calc.calculate();
+            let expected = regular_calc.calculate().unwrap();
 
             assert_eq!(next_gradual, expected);
         }

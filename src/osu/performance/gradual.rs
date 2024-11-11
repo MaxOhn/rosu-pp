@@ -1,7 +1,4 @@
-use crate::{
-    osu::{OsuBeatmap, OsuGradualDifficulty},
-    Difficulty,
-};
+use crate::{model::mode::ConvertError, osu::OsuGradualDifficulty, Beatmap, Difficulty};
 
 use super::{OsuPerformanceAttributes, OsuScoreState};
 
@@ -86,11 +83,11 @@ pub struct OsuGradualPerformance {
 
 impl OsuGradualPerformance {
     /// Create a new gradual performance calculator for osu!standard maps.
-    pub fn new(difficulty: Difficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
         let lazer = difficulty.get_lazer();
-        let difficulty = OsuGradualDifficulty::new(difficulty, converted);
+        let difficulty = OsuGradualDifficulty::new(difficulty, map)?;
 
-        Self { lazer, difficulty }
+        Ok(Self { lazer, difficulty })
     }
 
     /// Process the next hit object and calculate the performance attributes
@@ -110,6 +107,7 @@ impl OsuGradualPerformance {
     ///
     /// Note that the count is zero-indexed, so `n=0` will process 1 object,
     /// `n=1` will process 2, and so on.
+    #[allow(clippy::missing_panics_doc)]
     pub fn nth(&mut self, state: OsuScoreState, n: usize) -> Option<OsuPerformanceAttributes> {
         let performance = self
             .difficulty
@@ -119,7 +117,8 @@ impl OsuGradualPerformance {
             .state(state)
             .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
-            .calculate();
+            .calculate()
+            .expect("no conversion required");
 
         Some(performance)
     }
@@ -133,28 +132,23 @@ impl OsuGradualPerformance {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        osu::{Osu, OsuPerformance},
-        Beatmap,
-    };
+    use crate::{osu::OsuPerformance, Beatmap};
 
     use super::*;
 
     #[test]
     fn next_and_nth() {
-        let converted = Beatmap::from_path("./resources/2785319.osu")
-            .unwrap()
-            .unchecked_into_converted::<Osu>();
+        let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 
         let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = OsuGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_2nd = OsuGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_3rd = OsuGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual = OsuGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_2nd = OsuGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_3rd = OsuGradualPerformance::new(difficulty.clone(), &map).unwrap();
 
         let mut state = OsuScoreState::default();
 
-        let hit_objects_len = converted.hit_objects.len();
+        let hit_objects_len = map.hit_objects.len();
 
         for i in 1.. {
             state.misses += 1;
@@ -176,15 +170,15 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let mut regular_calc = OsuPerformance::new(converted.as_owned())
+            let mut regular_calc = OsuPerformance::new(&map)
                 .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state);
 
-            let regular_state = regular_calc.generate_state();
+            let regular_state = regular_calc.generate_state().unwrap();
             assert_eq!(state, regular_state);
 
-            let expected = regular_calc.calculate();
+            let expected = regular_calc.calculate().unwrap();
 
             assert_eq!(next_gradual, expected);
         }

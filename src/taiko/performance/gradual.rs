@@ -1,6 +1,7 @@
 use crate::{
-    taiko::{difficulty::gradual::TaikoGradualDifficulty, TaikoBeatmap, TaikoScoreState},
-    Difficulty,
+    model::mode::ConvertError,
+    taiko::{difficulty::gradual::TaikoGradualDifficulty, TaikoScoreState},
+    Beatmap, Difficulty,
 };
 
 use super::TaikoPerformanceAttributes;
@@ -84,10 +85,10 @@ pub struct TaikoGradualPerformance {
 
 impl TaikoGradualPerformance {
     /// Create a new gradual performance calculator for osu!taiko maps.
-    pub fn new(difficulty: Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
-        let difficulty = TaikoGradualDifficulty::new(difficulty, converted);
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
+        let difficulty = TaikoGradualDifficulty::new(difficulty, map)?;
 
-        Self { difficulty }
+        Ok(Self { difficulty })
     }
 
     /// Process the next hit object and calculate the performance attributes
@@ -107,6 +108,7 @@ impl TaikoGradualPerformance {
     ///
     /// Note that the count is zero-indexed, so `n=0` will process 1 object,
     /// `n=1` will process 2, and so on.
+    #[allow(clippy::missing_panics_doc)]
     pub fn nth(&mut self, state: TaikoScoreState, n: usize) -> Option<TaikoPerformanceAttributes> {
         let performance = self
             .difficulty
@@ -115,7 +117,8 @@ impl TaikoGradualPerformance {
             .state(state)
             .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)
-            .calculate();
+            .calculate()
+            .expect("no conversion required");
 
         Some(performance)
     }
@@ -135,25 +138,19 @@ mod tests {
 
     #[test]
     fn next_and_nth() {
-        let converted = Beatmap::from_path("./resources/1028484.osu")
-            .unwrap()
-            .unchecked_into_converted();
+        let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
 
         let difficulty = Difficulty::new().mods(88); // HDHRDT
 
-        let mut gradual = TaikoGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_2nd = TaikoGradualPerformance::new(difficulty.clone(), &converted);
-        let mut gradual_3rd = TaikoGradualPerformance::new(difficulty.clone(), &converted);
+        let mut gradual = TaikoGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_2nd = TaikoGradualPerformance::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_3rd = TaikoGradualPerformance::new(difficulty.clone(), &map).unwrap();
 
         let mut state = TaikoScoreState::default();
 
-        let hit_objects_len = converted.hit_objects.len();
+        let hit_objects_len = map.hit_objects.len();
 
-        let n_hits = converted
-            .hit_objects
-            .iter()
-            .filter(|h| h.is_circle())
-            .count();
+        let n_hits = map.hit_objects.iter().filter(|h| h.is_circle()).count();
 
         for i in 1.. {
             state.misses += 1;
@@ -175,15 +172,15 @@ mod tests {
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
-            let mut regular_calc = TaikoPerformance::new(converted.as_owned())
+            let mut regular_calc = TaikoPerformance::new(&map)
                 .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
                 .state(state);
 
-            let regular_state = regular_calc.generate_state();
+            let regular_state = regular_calc.generate_state().unwrap();
             assert_eq!(state, regular_state);
 
-            let expected = regular_calc.calculate();
+            let expected = regular_calc.calculate().unwrap();
 
             assert_eq!(next_gradual, expected);
         }

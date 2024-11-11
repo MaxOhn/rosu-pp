@@ -159,10 +159,7 @@
 #[doc(inline)]
 pub use self::{
     any::{Difficulty, GradualDifficulty, GradualPerformance, Performance},
-    model::{
-        beatmap::{Beatmap, Converted},
-        mods::GameMods,
-    },
+    model::{beatmap::Beatmap, mods::GameMods},
 };
 
 /// Types for calculations of any mode.
