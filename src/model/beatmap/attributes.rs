@@ -105,8 +105,9 @@ impl BeatmapAttributesBuilder {
     pub fn map(self, map: &Beatmap) -> Self {
         Self {
             mode: map.mode,
-            ar: ModsDependentKind::Default(ModsDependent::new(map.ar)),
-            od: ModsDependentKind::Default(ModsDependent::new(map.od)),
+            // Clamping necessary to match lazer on maps like /b/4243836.
+            ar: ModsDependentKind::Default(ModsDependent::new(map.ar.clamp(0.0, 10.0))),
+            od: ModsDependentKind::Default(ModsDependent::new(map.od.clamp(0.0, 10.0))),
             cs: ModsDependentKind::Default(ModsDependent::new(map.cs)),
             hp: ModsDependentKind::Default(ModsDependent::new(map.hp)),
             is_convert: map.is_convert,
