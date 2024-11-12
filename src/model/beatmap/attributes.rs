@@ -109,9 +109,8 @@ impl BeatmapAttributesBuilder {
             od: ModsDependentKind::Default(ModsDependent::new(map.od)),
             cs: ModsDependentKind::Default(ModsDependent::new(map.cs)),
             hp: ModsDependentKind::Default(ModsDependent::new(map.hp)),
-            mods: GameMods::DEFAULT,
-            clock_rate: None,
             is_convert: map.is_convert,
+            ..self
         }
     }
 
