@@ -96,6 +96,60 @@ impl GameMods {
 
         custom_hardrock_offsets(self).unwrap_or_else(|| self.hr())
     }
+
+    pub(crate) fn no_slider_head_acc(&self, lazer: bool) -> bool {
+        match self.inner {
+            GameModsInner::Lazer(ref mods) => mods
+                .iter()
+                .find_map(|m| match m {
+                    GameMod::ClassicOsu(classic) => Some(classic),
+                    _ => None,
+                })
+                .map_or(!lazer, |classic| {
+                    classic.no_slider_head_accuracy.unwrap_or(true)
+                }),
+            GameModsInner::Intermode(ref mods) => {
+                mods.contains(GameModIntermode::Classic) || !lazer
+            }
+            GameModsInner::Legacy(_) => !lazer,
+        }
+    }
+
+    pub(crate) fn reflection(&self) -> Reflection {
+        match self.inner {
+            GameModsInner::Lazer(ref mods) => {
+                if mods.contains_intermode(GameModIntermode::HardRock) {
+                    return Reflection::Vertical;
+                }
+
+                mods.iter()
+                    .find_map(|m| match m {
+                        GameMod::MirrorOsu(mirror) => Some(mirror),
+                        _ => None,
+                    })
+                    .map_or(Reflection::None, |mr| match mr.reflection.as_deref() {
+                        None => Reflection::Horizontal,
+                        Some("1") => Reflection::Vertical,
+                        Some("2") => Reflection::Both,
+                        Some(_) => Reflection::None,
+                    })
+            }
+            GameModsInner::Intermode(ref mods) => {
+                if mods.contains(GameModIntermode::HardRock) {
+                    Reflection::Vertical
+                } else {
+                    Reflection::None
+                }
+            }
+            GameModsInner::Legacy(mods) => {
+                if mods.contains(GameModsLegacy::HardRock) {
+                    Reflection::Vertical
+                } else {
+                    Reflection::None
+                }
+            }
+        }
+    }
 }
 
 macro_rules! impl_map_attr {
@@ -176,62 +230,6 @@ impl_has_mod! {
     so: + SpunOut ["SpunOut"],
     bl: - Blinds ["Blinds"],
     tc: - Traceable ["Traceable"],
-}
-
-impl GameMods {
-    pub(crate) fn no_slider_head_acc(&self, lazer: bool) -> bool {
-        match self.inner {
-            GameModsInner::Lazer(ref mods) => mods
-                .iter()
-                .find_map(|m| match m {
-                    GameMod::ClassicOsu(classic) => Some(classic),
-                    _ => None,
-                })
-                .map_or(!lazer, |classic| {
-                    classic.no_slider_head_accuracy.unwrap_or(true)
-                }),
-            GameModsInner::Intermode(ref mods) => {
-                mods.contains(GameModIntermode::Classic) || !lazer
-            }
-            GameModsInner::Legacy(_) => !lazer,
-        }
-    }
-
-    pub(crate) fn reflection(&self) -> Reflection {
-        match self.inner {
-            GameModsInner::Lazer(ref mods) => {
-                if mods.contains_intermode(GameModIntermode::HardRock) {
-                    return Reflection::Vertical;
-                }
-
-                mods.iter()
-                    .find_map(|m| match m {
-                        GameMod::MirrorOsu(mirror) => Some(mirror),
-                        _ => None,
-                    })
-                    .map_or(Reflection::None, |mr| match mr.reflection.as_deref() {
-                        Some("Horizontal") | None => Reflection::Horizontal,
-                        Some("Vertical") => Reflection::Vertical,
-                        Some("Both") => Reflection::Both,
-                        Some(_) => Reflection::None,
-                    })
-            }
-            GameModsInner::Intermode(ref mods) => {
-                if mods.contains(GameModIntermode::HardRock) {
-                    Reflection::Vertical
-                } else {
-                    Reflection::None
-                }
-            }
-            GameModsInner::Legacy(mods) => {
-                if mods.contains(GameModsLegacy::HardRock) {
-                    Reflection::Vertical
-                } else {
-                    Reflection::None
-                }
-            }
-        }
-    }
 }
 
 impl Default for GameMods {
