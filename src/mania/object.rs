@@ -93,11 +93,11 @@ impl<'a> ObjectParams<'a> {
         }
     }
 
-    pub fn max_combo(&self) -> u32 {
+    pub const fn max_combo(&self) -> u32 {
         self.max_combo
     }
 
-    pub fn n_hold_notes(&self) -> u32 {
+    pub const fn n_hold_notes(&self) -> u32 {
         self.n_hold_notes
     }
 }
