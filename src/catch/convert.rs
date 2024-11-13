@@ -5,6 +5,7 @@ use crate::{
         beatmap::{Beatmap, Converted},
         hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
         mode::ConvertStatus,
+        mods::Reflection,
     },
     util::{float_ext::FloatExt, random::Random},
 };
@@ -50,6 +51,7 @@ pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
 pub fn convert_objects(
     converted: &CatchBeatmap<'_>,
     count: &mut ObjectCountBuilder,
+    reflection: Reflection,
     hr_offsets: bool,
     cs: f32,
 ) -> Vec<PalpableObject> {
@@ -80,6 +82,13 @@ pub fn convert_objects(
         );
 
         palpable_objects.extend(new_objects);
+    }
+
+    if let Reflection::Horizontal = reflection {
+        for h in palpable_objects.iter_mut() {
+            h.x = PLAYFIELD_WIDTH - h.x;
+            h.x_offset = -h.x_offset;
+        }
     }
 
     palpable_objects.sort_by(|a, b| a.start_time.total_cmp(&b.start_time));

@@ -124,15 +124,16 @@ impl GameMods {
 
                 mods.iter()
                     .find_map(|m| match m {
-                        GameMod::MirrorOsu(mirror) => Some(mirror),
+                        GameMod::MirrorOsu(mr) => match mr.reflection.as_deref() {
+                            None => Some(Reflection::Horizontal),
+                            Some("1") => Some(Reflection::Vertical),
+                            Some("2") => Some(Reflection::Both),
+                            Some(_) => Some(Reflection::None),
+                        },
+                        GameMod::MirrorCatch(_) => Some(Reflection::Horizontal),
                         _ => None,
                     })
-                    .map_or(Reflection::None, |mr| match mr.reflection.as_deref() {
-                        None => Reflection::Horizontal,
-                        Some("1") => Reflection::Vertical,
-                        Some("2") => Reflection::Both,
-                        Some(_) => Reflection::None,
-                    })
+                    .unwrap_or(Reflection::None)
             }
             GameModsInner::Intermode(ref mods) => {
                 if mods.contains(GameModIntermode::HardRock) {
