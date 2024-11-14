@@ -845,7 +845,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             difficulty,
             acc,
             combo: _,
-            slider_tick_hits: _,
+            large_tick_hits: _,
             slider_end_hits: _,
             n300,
             n100,

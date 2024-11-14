@@ -13,7 +13,7 @@ pub use self::{
     convert::OsuBeatmap,
     difficulty::gradual::OsuGradualDifficulty,
     performance::{gradual::OsuGradualPerformance, OsuPerformance},
-    score_state::OsuScoreState,
+    score_state::{OsuScoreOrigin, OsuScoreState},
     strains::OsuStrains,
 };
 

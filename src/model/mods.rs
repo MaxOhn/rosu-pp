@@ -102,12 +102,10 @@ impl GameMods {
             GameModsInner::Lazer(ref mods) => mods
                 .iter()
                 .find_map(|m| match m {
-                    GameMod::ClassicOsu(classic) => Some(classic),
+                    GameMod::ClassicOsu(cl) => Some(cl.no_slider_head_accuracy.unwrap_or(true)),
                     _ => None,
                 })
-                .map_or(!lazer, |classic| {
-                    classic.no_slider_head_accuracy.unwrap_or(true)
-                }),
+                .unwrap_or(!lazer),
             GameModsInner::Intermode(ref mods) => {
                 mods.contains(GameModIntermode::Classic) || !lazer
             }
@@ -230,6 +228,7 @@ impl_has_mod! {
     fl: + Flashlight ["Flashlight"],
     so: + SpunOut ["SpunOut"],
     bl: - Blinds ["Blinds"],
+    cl: - Classic ["Classic"],
     tc: - Traceable ["Traceable"],
 }
 

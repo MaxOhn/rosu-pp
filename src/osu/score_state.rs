@@ -4,10 +4,15 @@ pub struct OsuScoreState {
     /// Maximum combo that the score has had so far. **Not** the maximum
     /// possible combo of the map so far.
     pub max_combo: u32,
-    /// Amount of successfully hit slider ticks and repeat.
+    /// "Large tick" hits.
     ///
-    /// Only relevant for osu!lazer.
-    pub slider_tick_hits: u32,
+    /// The meaning depends on the kind of score:
+    /// - if set on osu!stable, this field is irrelevant and can be `0`
+    /// - if set on osu!lazer *without* `CL`, this field is the amount of hit
+    ///   slider ticks and repeats
+    /// - if set on osu!lazer *with* `CL`, this field is the amount of hit
+    ///   slider heads, ticks, and repeats
+    pub large_tick_hits: u32,
     /// Amount of successfully hit slider ends.
     ///
     /// Only relevant for osu!lazer.
@@ -27,7 +32,7 @@ impl OsuScoreState {
     pub const fn new() -> Self {
         Self {
             max_combo: 0,
-            slider_tick_hits: 0,
+            large_tick_hits: 0,
             slider_end_hits: 0,
             n300: 0,
             n100: 0,
@@ -42,37 +47,39 @@ impl OsuScoreState {
     }
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.
-    ///
-    /// `max_slider_ticks` and `max_slider_ends` are only relevant for
-    /// `osu!lazer` scores. Otherwise, they may be `0`.
-    pub fn accuracy(&self, max_slider_ticks: u32, max_slider_ends: u32) -> f64 {
-        if self.total_hits() + self.slider_tick_hits + self.slider_end_hits == 0 {
-            return 0.0;
+    pub fn accuracy(&self, origin: OsuScoreOrigin) -> f64 {
+        let mut numerator = 300 * self.n300 + 100 * self.n100 + 50 * self.n50;
+        let mut denominator = 300 * (self.n300 + self.n100 + self.n50 + self.misses);
+
+        match origin {
+            OsuScoreOrigin::Stable => {}
+            OsuScoreOrigin::LazerWithoutClassic {
+                max_large_ticks,
+                max_slider_ends,
+            } => {
+                let slider_end_hits = self.slider_end_hits.min(max_slider_ends);
+                let large_tick_hits = self.large_tick_hits.min(max_large_ticks);
+
+                numerator += 150 * slider_end_hits + 30 * large_tick_hits;
+                denominator += 150 * max_slider_ends + 30 * max_large_ticks;
+            }
+            OsuScoreOrigin::LazerWithClassic {
+                max_large_ticks,
+                max_slider_ends,
+            } => {
+                let large_tick_hits = self.large_tick_hits.min(max_large_ticks);
+                let slider_end_hits = self.slider_end_hits.min(max_slider_ends);
+
+                numerator += 30 * large_tick_hits + 10 * slider_end_hits;
+                denominator += 30 * max_large_ticks + 10 * max_slider_ends;
+            }
         }
 
-        debug_assert!(
-            self.slider_end_hits <= max_slider_ends,
-            "`self.slider_end_hits` must not be greater than `max_slider_ends`"
-        );
-        debug_assert!(
-            self.slider_tick_hits <= max_slider_ticks,
-            "`self.slider_tick_hits` must not be greater than `max_slider_ticks`"
-        );
-
-        let numerator = 300 * self.n300
-            + 100 * self.n100
-            + 50 * self.n50
-            + 150 * self.slider_end_hits
-            + 30 * self.slider_tick_hits;
-
-        let denominator = 300 * self.n300
-            + 300 * self.n100
-            + 300 * self.n50
-            + 300 * self.misses
-            + 150 * max_slider_ends
-            + 30 * max_slider_ticks;
-
-        f64::from(numerator) / f64::from(denominator)
+        if denominator == 0 {
+            0.0
+        } else {
+            f64::from(numerator) / f64::from(denominator)
+        }
     }
 }
 
@@ -80,4 +87,20 @@ impl Default for OsuScoreState {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum OsuScoreOrigin {
+    /// For scores set on osu!stable
+    Stable,
+    /// For scores set on osu!lazer without the `Classic` mod
+    LazerWithoutClassic {
+        max_large_ticks: u32,
+        max_slider_ends: u32,
+    },
+    /// For scores set on osu!lazer with the `Classic` mod
+    LazerWithClassic {
+        max_large_ticks: u32,
+        max_slider_ends: u32,
+    },
 }

@@ -15,10 +15,15 @@ pub struct ScoreState {
     ///
     /// Irrelevant for osu!mania.
     pub max_combo: u32,
-    /// Amount of successfully hit slider ticks and repeats.
+    /// "Large tick" hits for osu!standard.
     ///
-    /// Only relevant for osu!standard in lazer.
-    pub slider_tick_hits: u32,
+    /// The meaning depends on the kind of score:
+    /// - if set on osu!stable, this field is irrelevant and can be `0`
+    /// - if set on osu!lazer *without* `CL`, this field is the amount of hit
+    ///   slider ticks and repeats
+    /// - if set on osu!lazer *with* `CL`, this field is the amount of hit
+    ///   slider heads, ticks, and repeats
+    pub osu_large_tick_hits: u32,
     /// Amount of successfully hit slider ends.
     ///
     /// Only relevant for osu!standard in lazer.
@@ -43,7 +48,7 @@ impl ScoreState {
     pub const fn new() -> Self {
         Self {
             max_combo: 0,
-            slider_tick_hits: 0,
+            osu_large_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: 0,
             n_katu: 0,
@@ -76,7 +81,7 @@ impl From<ScoreState> for OsuScoreState {
     fn from(state: ScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
-            slider_tick_hits: state.slider_tick_hits,
+            large_tick_hits: state.osu_large_tick_hits,
             slider_end_hits: state.slider_end_hits,
             n300: state.n300,
             n100: state.n100,
@@ -127,7 +132,7 @@ impl From<OsuScoreState> for ScoreState {
     fn from(state: OsuScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
-            slider_tick_hits: state.slider_tick_hits,
+            osu_large_tick_hits: state.large_tick_hits,
             slider_end_hits: state.slider_end_hits,
             n_geki: 0,
             n_katu: 0,
@@ -143,7 +148,7 @@ impl From<TaikoScoreState> for ScoreState {
     fn from(state: TaikoScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
-            slider_tick_hits: 0,
+            osu_large_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: 0,
             n_katu: 0,
@@ -159,7 +164,7 @@ impl From<CatchScoreState> for ScoreState {
     fn from(state: CatchScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
-            slider_tick_hits: 0,
+            osu_large_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: 0,
             n_katu: state.tiny_droplet_misses,
@@ -175,7 +180,7 @@ impl From<ManiaScoreState> for ScoreState {
     fn from(state: ManiaScoreState) -> Self {
         Self {
             max_combo: 0,
-            slider_tick_hits: 0,
+            osu_large_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: state.n320,
             n_katu: state.n200,
