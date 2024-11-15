@@ -614,7 +614,9 @@ impl DecodeBeatmap for Beatmap {
             // filename
             match split.next() {
                 None | Some("") => {}
-                Some(_) => sound = HitSoundType::default(),
+                // Relevant maps:
+                //   - /b/244784 at 43374
+                Some(_) => sound &= !HitSoundType::NORMAL,
             }
 
             Ok(())
