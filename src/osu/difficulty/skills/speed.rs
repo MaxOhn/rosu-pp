@@ -189,7 +189,7 @@ impl SpeedEvaluator {
         let mut dist = if has_autopilot_mod {
             0.0
         } else {
-            Self::SINGLE_SPACING_THRESHOLD.min(travel_dist + osu_curr_obj.min_jump_dist)
+            travel_dist + osu_curr_obj.min_jump_dist
         };
 
         // * Cap distance at single_spacing_threshold
