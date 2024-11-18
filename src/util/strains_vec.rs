@@ -1,6 +1,6 @@
 pub use inner::*;
 
-#[cfg(feature = "compact_strains")]
+#[cfg(not(feature = "raw_strains"))]
 mod inner {
     use std::{iter::Copied, slice::Iter};
 
@@ -318,14 +318,14 @@ mod inner {
     }
 }
 
-#[cfg(not(feature = "compact_strains"))]
+#[cfg(feature = "raw_strains")]
 mod inner {
     use std::{
         iter::Copied,
         slice::{Iter, IterMut},
     };
 
-    /// Plain wrapper around `Vec<f64>` because the `compact_strains` feature
+    /// Plain wrapper around `Vec<f64>` because the `raw_strains` feature
     /// is disabled.
     #[derive(Clone)]
     pub struct StrainsVec {

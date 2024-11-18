@@ -1,8 +1,13 @@
+use std::{
+    error::Error,
+    fmt::{Display, Formatter, Result as FmtResult},
+};
+
 pub use rosu_map::section::general::GameMode;
 
 use crate::Difficulty;
 
-use super::beatmap::{Beatmap, Converted};
+use super::beatmap::Beatmap;
 
 /// A way to specify a gamemode at compile-time.
 ///
@@ -29,54 +34,58 @@ pub trait IGameMode: Sized {
     /// The type of a gradual performance calculator.
     type GradualPerformance;
 
-    /// Check whether the map's mode can be converted to the current type.
-    fn check_convert(map: &Beatmap) -> ConvertStatus;
+    /// Perform a difficulty calculation for a [`Beatmap`] and process the
+    /// final skill values.
+    fn difficulty(
+        difficulty: &Difficulty,
+        map: &Beatmap,
+    ) -> Result<Self::DifficultyAttributes, ConvertError>;
 
-    /// Attempt to convert a beatmap.
-    ///
-    /// In case [`ConvertStatus::Incompatible`] is returned, the map is not
-    /// modified.
-    fn try_convert(map: &mut Beatmap) -> ConvertStatus;
+    /// Perform a difficulty calculation for a [`Beatmap`] without processing
+    /// the final skill values.
+    fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<Self::Strains, ConvertError>;
 
-    /// Perform a difficulty calculation for a [`Converted`] beatmap and
-    /// process the final skill values.
-    fn difficulty(difficulty: &Difficulty, map: &Converted<'_, Self>)
-        -> Self::DifficultyAttributes;
+    /// Create a performance calculator for a [`Beatmap`].
+    fn performance(map: &Beatmap) -> Self::Performance<'_>;
 
-    /// Perform a difficulty calculation for a [`Converted`] beatmap without
-    /// processing the final skill values.
-    fn strains(difficulty: &Difficulty, map: &Converted<'_, Self>) -> Self::Strains;
-
-    /// Create a performance calculator for a [`Converted`] beatmap.
-    fn performance(map: Converted<'_, Self>) -> Self::Performance<'_>;
-
-    /// Create a gradual difficulty calculator for a [`Converted`] beatmap.
+    /// Create a gradual difficulty calculator for a [`Beatmap`].
     fn gradual_difficulty(
         difficulty: Difficulty,
-        map: &Converted<'_, Self>,
-    ) -> Self::GradualDifficulty;
+        map: &Beatmap,
+    ) -> Result<Self::GradualDifficulty, ConvertError>;
 
-    /// Create a gradual performance calculator for a [`Converted`] beatmap.
+    /// Create a gradual performance calculator for a [`Beatmap`].
     fn gradual_performance(
         difficulty: Difficulty,
-        map: &Converted<'_, Self>,
-    ) -> Self::GradualPerformance;
+        map: &Beatmap,
+    ) -> Result<Self::GradualPerformance, ConvertError>;
 }
 
-/// The status of a conversion through [`IGameMode::try_convert`].
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum ConvertStatus {
-    /// Conversion not necessary.
-    Noop,
-    /// Conversion possible.
-    Conversion,
-    /// Conversion not possible.
-    Incompatible,
+/// Error type when failing to convert a [`Beatmap`] from one [`GameMode`] to
+/// another.
+#[derive(Copy, Clone, Debug)]
+pub enum ConvertError {
+    /// Cannot convert an already converted map
+    AlreadyConverted,
+    /// Cannot convert from [`GameMode`] `from` to `to`
+    Convert { from: GameMode, to: GameMode },
 }
 
-impl ConvertStatus {
-    /// Whether this [`ConvertStatus`] represents a success.
-    pub const fn success(self) -> bool {
-        matches!(self, Self::Noop | Self::Conversion)
+impl Error for ConvertError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl Display for ConvertError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            ConvertError::AlreadyConverted => {
+                f.write_str("Cannot convert an already converted map")
+            }
+            ConvertError::Convert { from, to } => {
+                write!(f, "Cannot convert from {from:?} to {to:?}")
+            }
+        }
     }
 }

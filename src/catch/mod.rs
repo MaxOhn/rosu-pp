@@ -1,14 +1,15 @@
+use rosu_map::section::general::GameMode;
+
 use crate::{
     model::{
         beatmap::Beatmap,
-        mode::{ConvertStatus, IGameMode},
+        mode::{ConvertError, IGameMode},
     },
     Difficulty,
 };
 
 pub use self::{
     attributes::{CatchDifficultyAttributes, CatchPerformanceAttributes},
-    convert::CatchBeatmap,
     difficulty::gradual::CatchGradualDifficulty,
     performance::{gradual::CatchGradualPerformance, CatchPerformance},
     score_state::CatchScoreState,
@@ -31,6 +32,13 @@ const PLAYFIELD_WIDTH: f32 = 512.0;
 /// [`GameMode::Catch`]: rosu_map::section::general::GameMode::Catch
 pub struct Catch;
 
+impl Catch {
+    pub fn convert(map: &mut Beatmap) {
+        debug_assert!(!map.is_convert && map.mode == GameMode::Osu);
+        convert::convert(map);
+    }
+}
+
 impl IGameMode for Catch {
     type DifficultyAttributes = CatchDifficultyAttributes;
     type Strains = CatchStrains;
@@ -38,40 +46,32 @@ impl IGameMode for Catch {
     type GradualDifficulty = CatchGradualDifficulty;
     type GradualPerformance = CatchGradualPerformance;
 
-    fn check_convert(map: &Beatmap) -> ConvertStatus {
-        convert::check_convert(map)
-    }
-
-    fn try_convert(map: &mut Beatmap) -> ConvertStatus {
-        convert::try_convert(map)
-    }
-
     fn difficulty(
         difficulty: &Difficulty,
-        converted: &CatchBeatmap<'_>,
-    ) -> Self::DifficultyAttributes {
-        difficulty::difficulty(difficulty, converted)
+        map: &Beatmap,
+    ) -> Result<Self::DifficultyAttributes, ConvertError> {
+        difficulty::difficulty(difficulty, map)
     }
 
-    fn strains(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self::Strains {
-        strains::strains(difficulty, converted)
+    fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<Self::Strains, ConvertError> {
+        strains::strains(difficulty, map)
     }
 
-    fn performance(map: CatchBeatmap<'_>) -> Self::Performance<'_> {
+    fn performance(map: &Beatmap) -> Self::Performance<'_> {
         CatchPerformance::new(map)
     }
 
     fn gradual_difficulty(
         difficulty: Difficulty,
-        map: &CatchBeatmap<'_>,
-    ) -> Self::GradualDifficulty {
+        map: &Beatmap,
+    ) -> Result<Self::GradualDifficulty, ConvertError> {
         CatchGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
         difficulty: Difficulty,
-        map: &CatchBeatmap<'_>,
-    ) -> Self::GradualPerformance {
+        map: &Beatmap,
+    ) -> Result<Self::GradualPerformance, ConvertError> {
         CatchGradualPerformance::new(difficulty, map)
     }
 }

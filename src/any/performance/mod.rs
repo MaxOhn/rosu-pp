@@ -2,7 +2,7 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     catch::CatchPerformance, mania::ManiaPerformance, osu::OsuPerformance, taiko::TaikoPerformance,
-    Difficulty,
+    Difficulty, GameMods,
 };
 
 use self::into::IntoPerformance;
@@ -29,7 +29,7 @@ impl<'map> Performance<'map> {
     /// - previously calculated attributes ([`DifficultyAttributes`],
     ///   [`PerformanceAttributes`], or mode-specific attributes like
     ///   [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
-    /// - a beatmap ([`Beatmap`] or [`Converted<'_, M>`])
+    /// - a [`Beatmap`] (by reference or value)
     ///
     /// If a map is given, difficulty attributes will need to be calculated
     /// internally which is a costly operation. Hence, passing attributes
@@ -40,7 +40,6 @@ impl<'map> Performance<'map> {
     /// Otherwise, the final attributes will be incorrect.
     ///
     /// [`Beatmap`]: crate::model::beatmap::Beatmap
-    /// [`Converted<'_, M>`]: crate::model::beatmap::Converted
     /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
     /// [`TaikoDifficultyAttributes`]: crate::taiko::TaikoDifficultyAttributes
     /// [`ManiaPerformanceAttributes`]: crate::mania::ManiaPerformanceAttributes
@@ -50,12 +49,21 @@ impl<'map> Performance<'map> {
 
     /// Consume the performance calculator and calculate
     /// performance attributes for the given parameters.
+    #[allow(clippy::missing_panics_doc)]
     pub fn calculate(self) -> PerformanceAttributes {
         match self {
-            Self::Osu(o) => PerformanceAttributes::Osu(o.calculate()),
-            Self::Taiko(t) => PerformanceAttributes::Taiko(t.calculate()),
-            Self::Catch(f) => PerformanceAttributes::Catch(f.calculate()),
-            Self::Mania(m) => PerformanceAttributes::Mania(m.calculate()),
+            Self::Osu(o) => {
+                PerformanceAttributes::Osu(o.calculate().expect("no conversion required"))
+            }
+            Self::Taiko(t) => {
+                PerformanceAttributes::Taiko(t.calculate().expect("no conversion required"))
+            }
+            Self::Catch(f) => {
+                PerformanceAttributes::Catch(f.calculate().expect("no conversion required"))
+            }
+            Self::Mania(m) => {
+                PerformanceAttributes::Mania(m.calculate().expect("no conversion required"))
+            }
         }
     }
 
@@ -108,7 +116,7 @@ impl<'map> Performance<'map> {
     /// - [`&rosu_mods::GameModsIntermode`](rosu_mods::GameModsIntermode)
     ///
     /// See <https://github.com/ppy/osu-api/wiki#mods>
-    pub fn mods(self, mods: u32) -> Self {
+    pub fn mods(self, mods: impl Into<GameMods>) -> Self {
         match self {
             Self::Osu(o) => Self::Osu(o.mods(mods)),
             Self::Taiko(t) => Self::Taiko(t.mods(mods)),
@@ -404,12 +412,13 @@ impl<'map> Performance<'map> {
     }
 
     /// Create the [`ScoreState`] that will be used for performance calculation.
+    #[allow(clippy::missing_panics_doc)]
     pub fn generate_state(&mut self) -> ScoreState {
         match self {
-            Self::Osu(o) => o.generate_state().into(),
-            Self::Taiko(t) => t.generate_state().into(),
-            Self::Catch(f) => f.generate_state().into(),
-            Self::Mania(m) => m.generate_state().into(),
+            Self::Osu(o) => o.generate_state().expect("no conversion required").into(),
+            Self::Taiko(t) => t.generate_state().expect("no conversion required").into(),
+            Self::Catch(f) => f.generate_state().expect("no conversion required").into(),
+            Self::Mania(m) => m.generate_state().expect("no conversion required").into(),
         }
     }
 }
@@ -446,7 +455,7 @@ mod tests {
         catch::{CatchDifficultyAttributes, CatchPerformanceAttributes},
         mania::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
         osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
-        taiko::{Taiko, TaikoDifficultyAttributes, TaikoPerformanceAttributes},
+        taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
         Beatmap,
     };
 
@@ -455,10 +464,7 @@ mod tests {
     #[test]
     fn create() {
         let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
-        let converted = map.unchecked_as_converted::<Taiko>();
 
-        let _ = Performance::new(&converted);
-        let _ = Performance::new(converted.as_owned());
         let _ = Performance::new(&map);
         let _ = Performance::new(map.clone());
 
@@ -477,8 +483,6 @@ mod tests {
             TaikoPerformanceAttributes::default(),
         ));
 
-        let _ = Performance::from(&converted);
-        let _ = Performance::from(converted);
         let _ = Performance::from(&map);
         let _ = Performance::from(map);
 

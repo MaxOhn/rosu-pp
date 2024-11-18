@@ -1,13 +1,16 @@
 use std::cmp;
 
+use rosu_map::section::general::GameMode;
+
 use crate::{
     any::difficulty::skills::Skill,
     catch::{
         attributes::{GradualObjectCount, ObjectCountBuilder},
         convert::convert_objects,
-        CatchBeatmap, CatchDifficultyAttributes,
+        CatchDifficultyAttributes,
     },
-    Difficulty,
+    model::mode::ConvertError,
+    Beatmap, Difficulty,
 };
 
 use super::{
@@ -34,12 +37,10 @@ use super::{
 /// use akatsuki_pp::{Beatmap, Difficulty};
 /// use akatsuki_pp::catch::{Catch, CatchGradualDifficulty};
 ///
-/// let converted = Beatmap::from_path("./resources/2118524.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Catch>();
+/// let map = Beatmap::from_path("./resources/2118524.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = CatchGradualDifficulty::new(difficulty, &converted);
+/// let mut iter = CatchGradualDifficulty::new(difficulty, &map).unwrap();
 ///
 /// // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();
@@ -65,18 +66,20 @@ pub struct CatchGradualDifficulty {
 
 impl CatchGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!catch maps.
-    pub fn new(difficulty: Difficulty, converted: &CatchBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
+        let map = map.convert_ref(GameMode::Catch, difficulty.get_mods())?;
+
         let clock_rate = difficulty.get_clock_rate();
 
         let CatchDifficultySetup { map_attrs, attrs } =
-            CatchDifficultySetup::new(&difficulty, converted);
+            CatchDifficultySetup::new(&difficulty, &map);
 
         let hr_offsets = difficulty.get_hardrock_offsets();
         let reflection = difficulty.get_mods().reflection();
         let mut count = ObjectCountBuilder::new_gradual();
 
         let palpable_objects = convert_objects(
-            converted,
+            &map,
             &mut count,
             reflection,
             hr_offsets,
@@ -92,14 +95,14 @@ impl CatchGradualDifficulty {
         let count = count.into_gradual();
         let movement = Movement::new(clock_rate);
 
-        Self {
+        Ok(Self {
             idx: 0,
             difficulty,
             attrs,
             count,
             diff_objects,
             movement,
-        }
+        })
     }
 }
 
@@ -168,30 +171,26 @@ impl ExactSizeIterator for CatchGradualDifficulty {
 
 #[cfg(test)]
 mod tests {
-    use crate::Beatmap;
+    use crate::{catch::Catch, Beatmap};
 
     use super::*;
 
     #[test]
     fn empty() {
-        let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
-
-        let mut gradual = CatchGradualDifficulty::new(Difficulty::new(), &converted);
-
+        let map = Beatmap::from_bytes(&[]).unwrap();
+        let mut gradual = CatchGradualDifficulty::new(Difficulty::new(), &map).unwrap();
         assert!(gradual.next().is_none());
     }
 
     #[test]
     fn next_and_nth() {
-        let converted = Beatmap::from_path("./resources/2118524.osu")
-            .unwrap()
-            .unchecked_into_converted();
+        let map = Beatmap::from_path("./resources/2118524.osu").unwrap();
 
         let difficulty = Difficulty::new();
 
-        let mut gradual = CatchGradualDifficulty::new(difficulty.clone(), &converted);
-        let mut gradual_2nd = CatchGradualDifficulty::new(difficulty.clone(), &converted);
-        let mut gradual_3rd = CatchGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual = CatchGradualDifficulty::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_2nd = CatchGradualDifficulty::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_3rd = CatchGradualDifficulty::new(difficulty.clone(), &map).unwrap();
 
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {
@@ -214,8 +213,8 @@ mod tests {
             let expected = difficulty
                 .clone()
                 .passed_objects(i as u32)
-                .with_mode()
-                .calculate(&converted);
+                .calculate_for_mode::<Catch>(&map)
+                .unwrap();
 
             assert_eq!(next_gradual, expected);
         }

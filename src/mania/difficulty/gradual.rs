@@ -1,10 +1,12 @@
 use std::cmp;
 
+use rosu_map::section::general::GameMode;
+
 use crate::{
     any::difficulty::skills::Skill,
-    mania::{object::ObjectParams, ManiaBeatmap},
-    model::{beatmap::HitWindows, hit_object::HitObject},
-    Difficulty,
+    mania::object::ObjectParams,
+    model::{beatmap::HitWindows, hit_object::HitObject, mode::ConvertError},
+    Beatmap, Difficulty,
 };
 
 use super::{
@@ -27,12 +29,10 @@ use super::{
 /// use akatsuki_pp::{Beatmap, Difficulty};
 /// use akatsuki_pp::mania::ManiaGradualDifficulty;
 ///
-/// let converted = Beatmap::from_path("./resources/1638954.osu")
-///     .unwrap()
-///     .unchecked_into_converted();
+/// let map = Beatmap::from_path("./resources/1638954.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = ManiaGradualDifficulty::new(difficulty, &converted);
+/// let mut iter = ManiaGradualDifficulty::new(difficulty, &map).unwrap();
 ///
 /// // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();
@@ -65,18 +65,20 @@ struct NoteState {
 
 impl ManiaGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!mania maps.
-    pub fn new(difficulty: Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
+        let map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+
         let take = difficulty.get_passed_objects();
-        let total_columns = converted.cs.round_ties_even().max(1.0);
+        let total_columns = map.cs.round_ties_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(converted);
+        let mut params = ObjectParams::new(&map);
 
         let HitWindows {
             od_great: hit_window,
             ..
-        } = converted.attributes().difficulty(&difficulty).hit_windows();
+        } = map.attributes().difficulty(&difficulty).hit_windows();
 
-        let mania_objects = converted
+        let mania_objects = map
             .hit_objects
             .iter()
             .map(|h| ManiaObject::new(h, total_columns, &mut params))
@@ -88,13 +90,10 @@ impl ManiaGradualDifficulty {
 
         let mut note_state = NoteState::default();
 
-        let objects_is_circle: Box<[_]> = converted
-            .hit_objects
-            .iter()
-            .map(HitObject::is_circle)
-            .collect();
+        let objects_is_circle: Box<[_]> =
+            map.hit_objects.iter().map(HitObject::is_circle).collect();
 
-        if let Some(h) = converted.hit_objects.first() {
+        if let Some(h) = map.hit_objects.first() {
             let hit_object = ManiaObject::new(h, total_columns, &mut params);
 
             increment_combo_raw(
@@ -105,16 +104,16 @@ impl ManiaGradualDifficulty {
             );
         }
 
-        Self {
+        Ok(Self {
             idx: 0,
             difficulty,
             objects_is_circle,
-            is_convert: converted.is_convert,
+            is_convert: map.is_convert,
             strain,
             diff_objects,
             hit_window,
             note_state,
-        }
+        })
     }
 }
 
@@ -224,28 +223,22 @@ mod tests {
 
     #[test]
     fn empty() {
-        let converted = Beatmap::from_bytes(&[])
-            .unwrap()
-            .unchecked_into_converted::<Mania>();
-
-        let mut gradual = ManiaGradualDifficulty::new(Difficulty::new(), &converted);
-
+        let map = Beatmap::from_bytes(&[]).unwrap();
+        let mut gradual = ManiaGradualDifficulty::new(Difficulty::new(), &map).unwrap();
         assert!(gradual.next().is_none());
     }
 
     #[test]
     fn next_and_nth() {
-        let converted = Beatmap::from_path("./resources/1638954.osu")
-            .unwrap()
-            .unchecked_into_converted::<Mania>();
+        let map = Beatmap::from_path("./resources/1638954.osu").unwrap();
 
         let difficulty = Difficulty::new();
 
-        let mut gradual = ManiaGradualDifficulty::new(difficulty.clone(), &converted);
-        let mut gradual_2nd = ManiaGradualDifficulty::new(difficulty.clone(), &converted);
-        let mut gradual_3rd = ManiaGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual = ManiaGradualDifficulty::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_2nd = ManiaGradualDifficulty::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_3rd = ManiaGradualDifficulty::new(difficulty.clone(), &map).unwrap();
 
-        let hit_objects_len = converted.hit_objects.len();
+        let hit_objects_len = map.hit_objects.len();
 
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {
@@ -268,8 +261,8 @@ mod tests {
             let expected = difficulty
                 .clone()
                 .passed_objects(i as u32)
-                .with_mode()
-                .calculate(&converted);
+                .calculate_for_mode::<Mania>(&map)
+                .unwrap();
 
             assert_eq!(next_gradual, expected);
         }

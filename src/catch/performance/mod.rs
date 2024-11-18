@@ -1,8 +1,10 @@
 use std::cmp::{self, Ordering};
 
+use rosu_map::section::general::GameMode;
+
 use crate::{
     any::{Difficulty, IntoModePerformance, IntoPerformance},
-    model::mods::GameMods,
+    model::{mode::ConvertError, mods::GameMods},
     osu::OsuPerformance,
     util::map_or_attrs::MapOrAttrs,
     Performance,
@@ -37,7 +39,7 @@ impl<'map> CatchPerformance<'map> {
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`CatchDifficultyAttributes`]
     ///   or [`CatchPerformanceAttributes`])
-    /// - a beatmap ([`CatchBeatmap<'map>`])
+    /// - a [`Beatmap`] (by reference or value)
     ///
     /// If a map is given, difficulty attributes will need to be calculated
     /// internally which is a costly operation. Hence, passing attributes
@@ -47,20 +49,19 @@ impl<'map> CatchPerformance<'map> {
     /// have been calculated for the same map and [`Difficulty`] settings.
     /// Otherwise, the final attributes will be incorrect.
     ///
-    /// [`CatchBeatmap<'map>`]: crate::catch::CatchBeatmap
+    /// [`Beatmap`]: crate::model::beatmap::Beatmap
     pub fn new(map_or_attrs: impl IntoModePerformance<'map, Catch>) -> Self {
         map_or_attrs.into_performance()
     }
 
     /// Try to create a new performance calculator for osu!catch maps.
     ///
-    /// Returns `None` if `map_or_attrs` does not belong to osu!catch e.g.
-    /// a [`Converted`], [`DifficultyAttributes`], or [`PerformanceAttributes`]
-    /// of a different mode.
+    /// Returns `None` if `map_or_attrs` does not belong to osu!catch i.e.
+    /// a [`DifficultyAttributes`] or [`PerformanceAttributes`] of a different
+    /// mode.
     ///
     /// See [`CatchPerformance::new`] for more information.
     ///
-    /// [`Converted`]: crate::model::beatmap::Converted
     /// [`DifficultyAttributes`]: crate::any::DifficultyAttributes
     /// [`PerformanceAttributes`]: crate::any::PerformanceAttributes
     pub fn try_new(map_or_attrs: impl IntoPerformance<'map>) -> Option<Self> {
@@ -262,10 +263,10 @@ impl<'map> CatchPerformance<'map> {
 
     /// Create the [`CatchScoreState`] that will be used for performance calculation.
     #[allow(clippy::too_many_lines)]
-    pub fn generate_state(&mut self) -> CatchScoreState {
+    pub fn generate_state(&mut self) -> Result<CatchScoreState, ConvertError> {
         let attrs = match self.map_or_attrs {
             MapOrAttrs::Map(ref map) => {
-                let attrs = self.difficulty.with_mode().calculate(map);
+                let attrs = self.difficulty.calculate_for_mode::<Catch>(map)?;
 
                 self.map_or_attrs.insert_attrs(attrs)
             }
@@ -411,16 +412,16 @@ impl<'map> CatchPerformance<'map> {
         self.tiny_droplet_misses = Some(best_state.tiny_droplet_misses);
         self.misses = Some(best_state.misses);
 
-        best_state
+        Ok(best_state)
     }
 
     /// Calculate all performance related values, including pp and stars.
-    pub fn calculate(mut self) -> CatchPerformanceAttributes {
-        let state = self.generate_state();
+    pub fn calculate(mut self) -> Result<CatchPerformanceAttributes, ConvertError> {
+        let state = self.generate_state()?;
 
         let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => self.difficulty.with_mode().calculate(map),
             MapOrAttrs::Attrs(attrs) => attrs,
+            MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Catch>(map)?,
         };
 
         let inner = CatchPerformanceInner {
@@ -429,7 +430,7 @@ impl<'map> CatchPerformance<'map> {
             state,
         };
 
-        inner.calculate()
+        Ok(inner.calculate())
     }
 
     pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Catch>) -> Self {
@@ -456,14 +457,12 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
     /// if it was constructed through attributes or
     /// [`OsuPerformance::generate_state`] was called.
     fn try_from(mut osu: OsuPerformance<'map>) -> Result<Self, Self::Error> {
-        let MapOrAttrs::Map(converted) = osu.map_or_attrs else {
-            return Err(osu);
-        };
+        let mods = osu.difficulty.get_mods();
 
-        let map = match converted.try_convert() {
+        let map = match OsuPerformance::try_convert_map(osu.map_or_attrs, GameMode::Catch, mods) {
             Ok(map) => map,
-            Err(map) => {
-                osu.map_or_attrs = MapOrAttrs::Map(map);
+            Err(map_or_attrs) => {
+                osu.map_or_attrs = map_or_attrs;
 
                 return Err(osu);
             }
@@ -607,7 +606,7 @@ mod test {
 
     use crate::{
         any::{DifficultyAttributes, PerformanceAttributes},
-        osu::{Osu, OsuDifficultyAttributes, OsuPerformanceAttributes},
+        osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
         Beatmap,
     };
 
@@ -626,8 +625,8 @@ mod test {
     fn attrs() -> CatchDifficultyAttributes {
         ATTRS
             .get_or_init(|| {
-                let converted = beatmap().unchecked_into_converted::<Catch>();
-                let attrs = Difficulty::new().with_mode().calculate(&converted);
+                let map = beatmap();
+                let attrs = Difficulty::new().calculate_for_mode::<Catch>(&map).unwrap();
 
                 assert_eq!(N_FRUITS, attrs.n_fruits);
                 assert_eq!(N_DROPLETS, attrs.n_droplets);
@@ -782,8 +781,8 @@ mod test {
                 state = state.misses(misses);
             }
 
-            let first = state.generate_state();
-            let state = state.generate_state();
+            let first = state.generate_state().unwrap();
+            let state = state.generate_state().unwrap();
             assert_eq!(first, state);
 
             let expected = brute_force_best(
@@ -807,7 +806,8 @@ mod test {
             .tiny_droplets(N_TINY_DROPLETS - 50)
             .tiny_droplet_misses(20)
             .misses(2)
-            .generate_state();
+            .generate_state()
+            .unwrap();
 
         let expected = CatchScoreState {
             max_combo: N_FRUITS + N_DROPLETS - 2,
@@ -824,12 +824,11 @@ mod test {
     #[test]
     fn create() {
         let mut map = beatmap();
-        let converted = map.unchecked_as_converted();
 
         let _ = CatchPerformance::new(CatchDifficultyAttributes::default());
         let _ = CatchPerformance::new(CatchPerformanceAttributes::default());
-        let _ = CatchPerformance::new(&converted);
-        let _ = CatchPerformance::new(converted.as_owned());
+        let _ = CatchPerformance::new(&map);
+        let _ = CatchPerformance::new(map.clone());
 
         let _ = CatchPerformance::try_new(CatchDifficultyAttributes::default()).unwrap();
         let _ = CatchPerformance::try_new(CatchPerformanceAttributes::default()).unwrap();
@@ -841,19 +840,20 @@ mod test {
             CatchPerformanceAttributes::default(),
         ))
         .unwrap();
-        let _ = CatchPerformance::try_new(&converted).unwrap();
-        let _ = CatchPerformance::try_new(converted.as_owned()).unwrap();
+        let _ = CatchPerformance::try_new(&map).unwrap();
+        let _ = CatchPerformance::try_new(map.clone()).unwrap();
 
         let _ = CatchPerformance::from(CatchDifficultyAttributes::default());
         let _ = CatchPerformance::from(CatchPerformanceAttributes::default());
-        let _ = CatchPerformance::from(&converted);
-        let _ = CatchPerformance::from(converted);
+        let _ = CatchPerformance::from(&map);
+        let _ = CatchPerformance::from(map.clone());
 
         let _ = CatchDifficultyAttributes::default().performance();
         let _ = CatchPerformanceAttributes::default().performance();
 
-        map.mode = GameMode::Osu;
-        let converted = map.unchecked_as_converted::<Osu>();
+        assert!(map
+            .convert_mut(GameMode::Osu, &GameMods::default())
+            .is_err());
 
         assert!(CatchPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
         assert!(CatchPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
@@ -865,7 +865,5 @@ mod test {
             OsuPerformanceAttributes::default()
         ))
         .is_none());
-        assert!(CatchPerformance::try_new(&converted).is_none());
-        assert!(CatchPerformance::try_new(converted).is_none());
     }
 }

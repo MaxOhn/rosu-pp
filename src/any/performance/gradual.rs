@@ -1,15 +1,13 @@
-use std::borrow::Cow;
-
 use rosu_map::section::general::GameMode;
 
 use crate::{
     any::{PerformanceAttributes, ScoreState},
-    catch::{Catch, CatchBeatmap, CatchGradualPerformance},
-    mania::{Mania, ManiaBeatmap, ManiaGradualPerformance},
-    model::mode::IGameMode,
-    osu::{Osu, OsuBeatmap, OsuGradualPerformance},
-    taiko::{Taiko, TaikoBeatmap, TaikoGradualPerformance},
-    Beatmap, Converted, Difficulty,
+    catch::{Catch, CatchGradualPerformance},
+    mania::{Mania, ManiaGradualPerformance},
+    model::mode::{ConvertError, IGameMode},
+    osu::{Osu, OsuGradualPerformance},
+    taiko::{Taiko, TaikoGradualPerformance},
+    Beatmap, Difficulty,
 };
 
 /// Gradually calculate the performance attributes on maps of any mode.
@@ -100,38 +98,26 @@ pub enum GradualPerformance {
     Mania(ManiaGradualPerformance),
 }
 
-macro_rules! from_converted {
-    ( $fn:ident, $mode:ident, $converted:ident ) => {
-        #[doc = concat!("Create a [`GradualPerformance`] for a [`", stringify!($converted), "`]")]
-        pub fn $fn(difficulty: Difficulty, converted: &$converted<'_>) -> Self {
-            Self::$mode($mode::gradual_performance(difficulty, converted))
-        }
-    };
-}
-
 impl GradualPerformance {
     /// Create a [`GradualPerformance`] for a map of any mode.
+    #[allow(clippy::missing_panics_doc)]
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Self {
-        let map = Cow::Borrowed(map);
-
-        match map.mode {
-            GameMode::Osu => Self::Osu(Osu::gradual_performance(difficulty, &Converted::new(map))),
-            GameMode::Taiko => {
-                Self::Taiko(Taiko::gradual_performance(difficulty, &Converted::new(map)))
-            }
-            GameMode::Catch => {
-                Self::Catch(Catch::gradual_performance(difficulty, &Converted::new(map)))
-            }
-            GameMode::Mania => {
-                Self::Mania(Mania::gradual_performance(difficulty, &Converted::new(map)))
-            }
-        }
+        Self::new_with_mode(difficulty, map, map.mode).expect("no conversion required")
     }
 
-    from_converted!(from_osu_map, Osu, OsuBeatmap);
-    from_converted!(from_taiko_map, Taiko, TaikoBeatmap);
-    from_converted!(from_catch_map, Catch, CatchBeatmap);
-    from_converted!(from_mania_map, Mania, ManiaBeatmap);
+    /// Create a [`GradualPerformance`] for a [`Beatmap`] on a specific [`GameMode`].
+    pub fn new_with_mode(
+        difficulty: Difficulty,
+        map: &Beatmap,
+        mode: GameMode,
+    ) -> Result<Self, ConvertError> {
+        match mode {
+            GameMode::Osu => Osu::gradual_performance(difficulty, map).map(Self::Osu),
+            GameMode::Taiko => Taiko::gradual_performance(difficulty, map).map(Self::Taiko),
+            GameMode::Catch => Catch::gradual_performance(difficulty, map).map(Self::Catch),
+            GameMode::Mania => Mania::gradual_performance(difficulty, map).map(Self::Mania),
+        }
+    }
 
     /// Process the next hit object and calculate the performance attributes
     /// for the resulting score state.

@@ -2,7 +2,7 @@ use rosu_map::section::general::GameMode;
 
 use crate::{any::difficulty::ModsDependent, model::mods::GameMods, Difficulty};
 
-use super::{converted::Converted, Beatmap};
+use super::Beatmap;
 
 /// Summary struct for a [`Beatmap`]'s attributes.
 #[derive(Clone, Debug, PartialEq)]
@@ -368,12 +368,6 @@ impl BeatmapAttributesBuilder {
 impl From<&Beatmap> for BeatmapAttributesBuilder {
     fn from(map: &Beatmap) -> Self {
         Self::new().map(map)
-    }
-}
-
-impl<M> From<&Converted<'_, M>> for BeatmapAttributesBuilder {
-    fn from(converted: &Converted<'_, M>) -> Self {
-        Self::new().map(converted)
     }
 }
 

@@ -1,5 +1,6 @@
 use std::{cmp, pin::Pin};
 
+use rosu_map::section::general::GameMode;
 use skills::{
     flashlight::Flashlight,
     strain::{DifficultyValue, OsuStrainSkill, UsedOsuStrainSkills},
@@ -7,18 +8,19 @@ use skills::{
 
 use crate::{
     any::difficulty::{skills::Skill, Difficulty},
-    model::{beatmap::BeatmapAttributes, mods::GameMods},
+    model::{beatmap::BeatmapAttributes, mode::ConvertError, mods::GameMods},
     osu::{
         convert::convert_objects,
         difficulty::{object::OsuDifficultyObject, scaling_factor::ScalingFactor},
         object::OsuObject,
         performance::PERFORMANCE_BASE_MULTIPLIER,
     },
+    Beatmap,
 };
 
 use self::skills::OsuSkills;
 
-use super::{attributes::OsuDifficultyAttributes, convert::OsuBeatmap};
+use super::attributes::OsuDifficultyAttributes;
 
 pub mod gradual;
 mod object;
@@ -30,7 +32,12 @@ const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
 const HD_FADE_IN_DURATION_MULTIPLIER: f64 = 0.4;
 const HD_FADE_OUT_DURATION_MULTIPLIER: f64 = 0.3;
 
-pub fn difficulty(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> OsuDifficultyAttributes {
+pub fn difficulty(
+    difficulty: &Difficulty,
+    map: &Beatmap,
+) -> Result<OsuDifficultyAttributes, ConvertError> {
+    let map = map.convert_ref(GameMode::Osu, difficulty.get_mods())?;
+
     let DifficultyValues {
         skills:
             OsuSkills {
@@ -40,7 +47,7 @@ pub fn difficulty(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> OsuDif
                 flashlight,
             },
         mut attrs,
-    } = DifficultyValues::calculate(difficulty, converted);
+    } = DifficultyValues::calculate(difficulty, &map);
 
     let aim_difficulty_value = aim.difficulty_value();
     let aim_no_sliders_difficulty_value = aim_no_sliders.difficulty_value();
@@ -60,7 +67,7 @@ pub fn difficulty(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> OsuDif
         flashlight_difficulty_value,
     );
 
-    attrs
+    Ok(attrs)
 }
 
 pub struct OsuDifficultySetup {
@@ -71,9 +78,9 @@ pub struct OsuDifficultySetup {
 }
 
 impl OsuDifficultySetup {
-    pub fn new(difficulty: &Difficulty, converted: &OsuBeatmap) -> Self {
+    pub fn new(difficulty: &Difficulty, map: &Beatmap) -> Self {
         let clock_rate = difficulty.get_clock_rate();
-        let map_attrs = converted.attributes().difficulty(difficulty).build();
+        let map_attrs = map.attributes().difficulty(difficulty).build();
         let scaling_factor = ScalingFactor::new(map_attrs.cs);
 
         let attrs = OsuDifficultyAttributes {
@@ -100,7 +107,7 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &Difficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, map: &Beatmap) -> Self {
         let mods = difficulty.get_mods();
         let take = difficulty.get_passed_objects();
 
@@ -109,10 +116,10 @@ impl DifficultyValues {
             map_attrs,
             mut attrs,
             time_preempt,
-        } = OsuDifficultySetup::new(difficulty, converted);
+        } = OsuDifficultySetup::new(difficulty, map);
 
         let mut osu_objects = convert_objects(
-            converted,
+            map,
             &scaling_factor,
             mods.reflection(),
             time_preempt,
@@ -134,7 +141,7 @@ impl DifficultyValues {
             let mut flashlight = Skill::new(&mut skills.flashlight, &diff_objects);
 
             // The first hit object has no difficulty object
-            let take_diff_objects = cmp::min(converted.hit_objects.len(), take).saturating_sub(1);
+            let take_diff_objects = cmp::min(map.hit_objects.len(), take).saturating_sub(1);
 
             for hit_object in diff_objects.iter().take(take_diff_objects) {
                 aim.process(hit_object);

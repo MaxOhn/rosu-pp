@@ -1,16 +1,18 @@
+use rosu_map::section::general::GameMode;
+
 use crate::{
     any::difficulty::{skills::Skill, Difficulty},
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
-    model::beatmap::BeatmapAttributes,
+    model::{beatmap::BeatmapAttributes, mode::ConvertError},
+    Beatmap,
 };
 
 use self::skills::movement::Movement;
 
 use super::{
     attributes::{CatchDifficultyAttributes, ObjectCountBuilder},
-    convert::CatchBeatmap,
     object::palpable::PalpableObject,
 };
 
@@ -22,16 +24,18 @@ const DIFFICULTY_MULTIPLIER: f64 = 4.59;
 
 pub fn difficulty(
     difficulty: &Difficulty,
-    converted: &CatchBeatmap<'_>,
-) -> CatchDifficultyAttributes {
+    map: &Beatmap,
+) -> Result<CatchDifficultyAttributes, ConvertError> {
+    let map = map.convert_ref(GameMode::Catch, difficulty.get_mods())?;
+
     let DifficultyValues {
         movement,
         mut attrs,
-    } = DifficultyValues::calculate(difficulty, converted);
+    } = DifficultyValues::calculate(difficulty, &map);
 
     DifficultyValues::eval(&mut attrs, movement.difficulty_value());
 
-    attrs
+    Ok(attrs)
 }
 
 pub struct CatchDifficultySetup {
@@ -40,12 +44,12 @@ pub struct CatchDifficultySetup {
 }
 
 impl CatchDifficultySetup {
-    pub fn new(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
-        let map_attrs = converted.attributes().difficulty(difficulty).build();
+    pub fn new(difficulty: &Difficulty, map: &Beatmap) -> Self {
+        let map_attrs = map.attributes().difficulty(difficulty).build();
 
         let attrs = CatchDifficultyAttributes {
             ar: map_attrs.ar,
-            is_convert: converted.is_convert,
+            is_convert: map.is_convert,
             ..Default::default()
         };
 
@@ -59,26 +63,21 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, map: &Beatmap) -> Self {
         let take = difficulty.get_passed_objects();
         let clock_rate = difficulty.get_clock_rate();
 
         let CatchDifficultySetup {
             map_attrs,
             mut attrs,
-        } = CatchDifficultySetup::new(difficulty, converted);
+        } = CatchDifficultySetup::new(difficulty, map);
 
         let hr_offsets = difficulty.get_hardrock_offsets();
         let reflection = difficulty.get_mods().reflection();
         let mut count = ObjectCountBuilder::new_regular(take);
 
-        let palpable_objects = convert_objects(
-            converted,
-            &mut count,
-            reflection,
-            hr_offsets,
-            map_attrs.cs as f32,
-        );
+        let palpable_objects =
+            convert_objects(map, &mut count, reflection, hr_offsets, map_attrs.cs as f32);
 
         let diff_objects = Self::create_difficulty_objects(
             &map_attrs,

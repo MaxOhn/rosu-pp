@@ -1,6 +1,4 @@
-use akatsuki_pp::{
-    catch::Catch, mania::Mania, model::mode::GameMode, osu::Osu, taiko::Taiko, Beatmap,
-};
+use akatsuki_pp::{model::mode::GameMode, Beatmap, GameMods};
 
 use crate::common::assert_eq_float;
 
@@ -94,23 +92,23 @@ fn mania() {
 #[test]
 fn empty_osu() {
     let map = Beatmap::from_bytes(&[]).unwrap();
-    let _ = map.unchecked_as_converted::<Osu>();
+    let _ = map.convert(GameMode::Osu, &GameMods::default());
 }
 
 #[test]
 fn empty_taiko() {
     let map = Beatmap::from_bytes(&[]).unwrap();
-    let _ = map.unchecked_as_converted::<Taiko>();
+    let _ = map.convert(GameMode::Taiko, &GameMods::default());
 }
 
 #[test]
 fn empty_catch() {
     let map = Beatmap::from_bytes(&[]).unwrap();
-    let _ = map.unchecked_as_converted::<Catch>();
+    let _ = map.convert(GameMode::Catch, &GameMods::default());
 }
 
 #[test]
 fn empty_mania() {
     let map = Beatmap::from_bytes(&[]).unwrap();
-    let _ = map.unchecked_as_converted::<Mania>();
+    let _ = map.convert(GameMode::Mania, &GameMods::default());
 }

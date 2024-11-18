@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     fmt::{Debug, Formatter, Result as FmtResult},
     num::NonZeroU64,
 };
@@ -9,20 +8,14 @@ use rosu_map::section::general::GameMode;
 use crate::{
     catch::Catch,
     mania::Mania,
-    model::{
-        beatmap::{Beatmap, Converted},
-        mods::GameMods,
-    },
+    model::{beatmap::Beatmap, mode::ConvertError, mods::GameMods},
     osu::Osu,
     taiko::Taiko,
     GradualDifficulty, GradualPerformance,
 };
 
-use self::converted::ConvertedDifficulty;
-
 use super::{attributes::DifficultyAttributes, InspectDifficulty, Strains};
 
-pub mod converted;
 pub mod gradual;
 pub mod inspect;
 pub mod object;
@@ -98,14 +91,6 @@ impl Difficulty {
             hardrock_offsets: None,
             lazer: None,
         }
-    }
-
-    /// Use this [`Difficulty`] as a calculator for a specific [`IGameMode`].
-    ///
-    /// Note that [`ConvertedDifficulty`] won't allow to further customize
-    /// fields so be sure they're all set before converting to it.
-    pub const fn with_mode<M: IGameMode>(&self) -> ConvertedDifficulty<'_, M> {
-        ConvertedDifficulty::new(self)
     }
 
     /// Turn this [`Difficulty`] into a [`InspectDifficulty`] to inspect its
@@ -281,36 +266,58 @@ impl Difficulty {
     }
 
     /// Perform the difficulty calculation.
+    #[allow(clippy::missing_panics_doc)]
     pub fn calculate(&self, map: &Beatmap) -> DifficultyAttributes {
-        let map = Cow::Borrowed(map);
-
         match map.mode {
-            GameMode::Osu => DifficultyAttributes::Osu(Osu::difficulty(self, &Converted::new(map))),
-            GameMode::Taiko => {
-                DifficultyAttributes::Taiko(Taiko::difficulty(self, &Converted::new(map)))
-            }
-            GameMode::Catch => {
-                DifficultyAttributes::Catch(Catch::difficulty(self, &Converted::new(map)))
-            }
-            GameMode::Mania => {
-                DifficultyAttributes::Mania(Mania::difficulty(self, &Converted::new(map)))
-            }
+            GameMode::Osu => DifficultyAttributes::Osu(
+                Osu::difficulty(self, map).expect("no conversion required"),
+            ),
+            GameMode::Taiko => DifficultyAttributes::Taiko(
+                Taiko::difficulty(self, map).expect("no conversion required"),
+            ),
+            GameMode::Catch => DifficultyAttributes::Catch(
+                Catch::difficulty(self, map).expect("no conversion required"),
+            ),
+            GameMode::Mania => DifficultyAttributes::Mania(
+                Mania::difficulty(self, map).expect("no conversion required"),
+            ),
         }
+    }
+
+    /// Perform the difficulty calculation for a specific [`IGameMode`].
+    pub fn calculate_for_mode<M: IGameMode>(
+        &self,
+        map: &Beatmap,
+    ) -> Result<M::DifficultyAttributes, ConvertError> {
+        M::difficulty(self, map)
     }
 
     /// Perform the difficulty calculation but instead of evaluating the skill
     /// strains, return them as is.
     ///
     /// Suitable to plot the difficulty of a map over time.
+    #[allow(clippy::missing_panics_doc)]
     pub fn strains(&self, map: &Beatmap) -> Strains {
-        let map = Cow::Borrowed(map);
-
         match map.mode {
-            GameMode::Osu => Strains::Osu(Osu::strains(self, &Converted::new(map))),
-            GameMode::Taiko => Strains::Taiko(Taiko::strains(self, &Converted::new(map))),
-            GameMode::Catch => Strains::Catch(Catch::strains(self, &Converted::new(map))),
-            GameMode::Mania => Strains::Mania(Mania::strains(self, &Converted::new(map))),
+            GameMode::Osu => Strains::Osu(Osu::strains(self, map).expect("no conversion required")),
+            GameMode::Taiko => {
+                Strains::Taiko(Taiko::strains(self, map).expect("no conversion required"))
+            }
+            GameMode::Catch => {
+                Strains::Catch(Catch::strains(self, map).expect("no conversion required"))
+            }
+            GameMode::Mania => {
+                Strains::Mania(Mania::strains(self, map).expect("no conversion required"))
+            }
         }
+    }
+
+    /// Perform the strain calculation for a specific [`IGameMode`].
+    pub fn strains_for_mode<M: IGameMode>(
+        &self,
+        map: &Beatmap,
+    ) -> Result<M::Strains, ConvertError> {
+        M::strains(self, map)
     }
 
     /// Create a gradual difficulty calculator for a [`Beatmap`].
@@ -318,9 +325,25 @@ impl Difficulty {
         GradualDifficulty::new(self, map)
     }
 
+    /// Create a gradual difficulty calculator for a [`Beatmap`] on a specific [`IGameMode`].
+    pub fn gradual_difficulty_for_mode<M: IGameMode>(
+        self,
+        map: &Beatmap,
+    ) -> Result<M::GradualDifficulty, ConvertError> {
+        M::gradual_difficulty(self, map)
+    }
+
     /// Create a gradual performance calculator for a [`Beatmap`].
     pub fn gradual_performance(self, map: &Beatmap) -> GradualPerformance {
         GradualPerformance::new(self, map)
+    }
+
+    /// Create a gradual performance calculator for a [`Beatmap`] on a specific [`IGameMode`].
+    pub fn gradual_performance_for_mode<M: IGameMode>(
+        self,
+        map: &Beatmap,
+    ) -> Result<M::GradualPerformance, ConvertError> {
+        M::gradual_performance(self, map)
     }
 
     pub(crate) const fn get_mods(&self) -> &GameMods {

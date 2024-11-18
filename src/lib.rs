@@ -117,12 +117,12 @@
 //!
 //! ## Features
 //!
-//! | Flag              | Description                           | Dependencies
-//! | ----------------- | ------------------------------------- | ------------
-//! | `default`         | Enables the `compact_strains` feature |
-//! | `compact_strains` | Storing internal strain values in a plain Vec introduces an out-of-memory risk on maliciously long maps (see [/b/3739922](https://osu.ppy.sh/b/3739922)). This feature stores strains more compactly, but comes with a ~5% loss in performance. |
-//! | `sync`            | Some gradual calculation types can only be shared across threads if this feature is enabled. This adds a performance penalty so only enable this if really needed. |
-//! | `tracing`         | Any error encountered during beatmap decoding will be logged through `tracing::error`. If this feature is **not** enabled, errors will be ignored. | [`tracing`]
+//! | Flag          | Description         | Dependencies
+//! | ------------- | ------------------- | ------------
+//! | `default`     | No features enabled |
+//! | `raw_strains` | With this feature, internal strain values will be stored in a plain `Vec`. This introduces an out-of-memory risk on maliciously long maps (see [/b/3739922](https://osu.ppy.sh/b/3739922)), but comes with a ~5% gain in performance. |
+//! | `sync`        | Some gradual calculation types can only be shared across threads if this feature is enabled. This feature adds a small performance penalty. |
+//! | `tracing`     | Any error encountered during beatmap decoding will be logged through `tracing::error`. If this feature is **not** enabled, errors will be ignored. | [`tracing`]
 //!
 //! ## Bindings
 //!
@@ -159,10 +159,7 @@
 #[doc(inline)]
 pub use self::{
     any::{Difficulty, GradualDifficulty, GradualPerformance, Performance},
-    model::{
-        beatmap::{Beatmap, Converted},
-        mods::GameMods,
-    },
+    model::{beatmap::Beatmap, mods::GameMods},
 };
 
 /// Types for calculations of any mode.
