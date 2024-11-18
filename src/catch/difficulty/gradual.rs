@@ -37,12 +37,10 @@ use super::{
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::catch::{Catch, CatchGradualDifficulty};
 ///
-/// let converted = Beatmap::from_path("./resources/2118524.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Catch>();
+/// let map = Beatmap::from_path("./resources/2118524.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = CatchGradualDifficulty::new(difficulty, &converted);
+/// let mut iter = CatchGradualDifficulty::new(difficulty, &map).unwrap();
 ///
 /// // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();

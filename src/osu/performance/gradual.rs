@@ -20,12 +20,10 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::osu::{Osu, OsuGradualPerformance, OsuScoreState};
 ///
-/// let converted = Beatmap::from_path("./resources/2785319.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Osu>();
+/// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = OsuGradualPerformance::new(difficulty, &converted);
+/// let mut gradual = OsuGradualPerformance::new(difficulty, &map).unwrap();
 /// let mut state = OsuScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hits are 300s and there are no sliders for additional combo

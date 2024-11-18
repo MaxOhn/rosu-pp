@@ -35,12 +35,10 @@ use super::{
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::osu::{Osu, OsuGradualDifficulty};
 ///
-/// let converted = Beatmap::from_path("./resources/2785319.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Osu>();
+/// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = OsuGradualDifficulty::new(difficulty, &converted);
+/// let mut iter = OsuGradualDifficulty::new(difficulty, &map).unwrap();
 ///
 ///  // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();

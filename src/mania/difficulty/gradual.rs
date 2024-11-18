@@ -29,12 +29,10 @@ use super::{
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::mania::ManiaGradualDifficulty;
 ///
-/// let converted = Beatmap::from_path("./resources/1638954.osu")
-///     .unwrap()
-///     .unchecked_into_converted();
+/// let map = Beatmap::from_path("./resources/1638954.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = ManiaGradualDifficulty::new(difficulty, &converted);
+/// let mut iter = ManiaGradualDifficulty::new(difficulty, &map).unwrap();
 ///
 /// // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();

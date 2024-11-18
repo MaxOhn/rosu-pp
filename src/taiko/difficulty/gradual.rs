@@ -30,12 +30,10 @@ use super::{
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::taiko::{Taiko, TaikoGradualDifficulty};
 ///
-/// let converted = Beatmap::from_path("./resources/1028484.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Taiko>();
+/// let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = TaikoGradualDifficulty::new(difficulty, &converted);
+/// let mut iter = TaikoGradualDifficulty::new(difficulty, &map).unwrap();
 ///
 /// // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();

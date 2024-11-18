@@ -25,12 +25,10 @@ use crate::{
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::catch::{Catch, CatchGradualPerformance, CatchScoreState};
 ///
-/// let converted = Beatmap::from_path("./resources/2118524.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Catch>();
+/// let map = Beatmap::from_path("./resources/2118524.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = CatchGradualPerformance::new(difficulty, &converted);
+/// let mut gradual = CatchGradualPerformance::new(difficulty, &map).unwrap();
 /// let mut state = CatchScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are only fruits

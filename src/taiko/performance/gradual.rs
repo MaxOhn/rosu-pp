@@ -24,12 +24,10 @@ use super::TaikoPerformanceAttributes;
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::taiko::{Taiko, TaikoGradualPerformance, TaikoScoreState};
 ///
-/// let converted = Beatmap::from_path("./resources/1028484.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Taiko>();
+/// let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = TaikoGradualPerformance::new(difficulty, &converted);
+/// let mut gradual = TaikoGradualPerformance::new(difficulty, &map).unwrap();
 /// let mut state = TaikoScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 300s

@@ -20,12 +20,10 @@ use super::{ManiaPerformanceAttributes, ManiaScoreState};
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::mania::{Mania, ManiaGradualPerformance, ManiaScoreState};
 ///
-/// let converted = Beatmap::from_path("./resources/1638954.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Mania>();
+/// let map = Beatmap::from_path("./resources/1638954.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut gradual = ManiaGradualPerformance::new(difficulty, &converted);
+/// let mut gradual = ManiaGradualPerformance::new(difficulty, &map).unwrap();
 /// let mut state = ManiaScoreState::new(); // empty state, everything is on 0.
 ///
 /// // The first 10 hitresults are 320s
