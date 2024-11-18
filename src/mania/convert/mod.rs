@@ -31,7 +31,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
 
     let mut random = Random::new(seed);
 
-    map.cs = target_columns(map);
+    map.cs = target_columns(map, mods);
 
     let mut prev_note_times = LimitedQueue::<f64, MAX_NOTES_FOR_DENSITY>::new();
     let mut density = f64::from(i32::MAX);
@@ -160,7 +160,11 @@ impl Default for PrevValues {
     }
 }
 
-fn target_columns(map: &Beatmap) -> f32 {
+fn target_columns(map: &Beatmap, mods: &GameMods) -> f32 {
+    if let Some(keys) = mods.mania_keys() {
+        return keys;
+    }
+
     let rounded_cs = map.cs.round_ties_even();
     let rounded_od = map.od.round_ties_even();
 

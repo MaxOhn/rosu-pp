@@ -149,6 +149,84 @@ impl GameMods {
             }
         }
     }
+
+    pub(crate) fn mania_keys(&self) -> Option<f32> {
+        match self.inner {
+            GameModsInner::Lazer(ref mods) => {
+                if mods.contains_intermode(GameModIntermode::OneKey) {
+                    Some(1.0)
+                } else if mods.contains_intermode(GameModIntermode::TwoKeys) {
+                    Some(2.0)
+                } else if mods.contains_intermode(GameModIntermode::ThreeKeys) {
+                    Some(3.0)
+                } else if mods.contains_intermode(GameModIntermode::FourKeys) {
+                    Some(4.0)
+                } else if mods.contains_intermode(GameModIntermode::FiveKeys) {
+                    Some(5.0)
+                } else if mods.contains_intermode(GameModIntermode::SixKeys) {
+                    Some(6.0)
+                } else if mods.contains_intermode(GameModIntermode::SevenKeys) {
+                    Some(7.0)
+                } else if mods.contains_intermode(GameModIntermode::EightKeys) {
+                    Some(8.0)
+                } else if mods.contains_intermode(GameModIntermode::NineKeys) {
+                    Some(9.0)
+                } else if mods.contains_intermode(GameModIntermode::TenKeys) {
+                    Some(10.0)
+                } else {
+                    None
+                }
+            }
+            GameModsInner::Intermode(ref mods) => {
+                if mods.contains(GameModIntermode::OneKey) {
+                    Some(1.0)
+                } else if mods.contains(GameModIntermode::TwoKeys) {
+                    Some(2.0)
+                } else if mods.contains(GameModIntermode::ThreeKeys) {
+                    Some(3.0)
+                } else if mods.contains(GameModIntermode::FourKeys) {
+                    Some(4.0)
+                } else if mods.contains(GameModIntermode::FiveKeys) {
+                    Some(5.0)
+                } else if mods.contains(GameModIntermode::SixKeys) {
+                    Some(6.0)
+                } else if mods.contains(GameModIntermode::SevenKeys) {
+                    Some(7.0)
+                } else if mods.contains(GameModIntermode::EightKeys) {
+                    Some(8.0)
+                } else if mods.contains(GameModIntermode::NineKeys) {
+                    Some(9.0)
+                } else if mods.contains(GameModIntermode::TenKeys) {
+                    Some(10.0)
+                } else {
+                    None
+                }
+            }
+            GameModsInner::Legacy(ref mods) => {
+                if mods.contains(GameModsLegacy::Key1) {
+                    Some(1.0)
+                } else if mods.contains(GameModsLegacy::Key2) {
+                    Some(2.0)
+                } else if mods.contains(GameModsLegacy::Key3) {
+                    Some(3.0)
+                } else if mods.contains(GameModsLegacy::Key4) {
+                    Some(4.0)
+                } else if mods.contains(GameModsLegacy::Key5) {
+                    Some(5.0)
+                } else if mods.contains(GameModsLegacy::Key6) {
+                    Some(6.0)
+                } else if mods.contains(GameModsLegacy::Key7) {
+                    Some(7.0)
+                } else if mods.contains(GameModsLegacy::Key8) {
+                    Some(8.0)
+                } else if mods.contains(GameModsLegacy::Key9) {
+                    Some(9.0)
+                } else {
+                    None
+                }
+            }
+        }
+    }
 }
 
 macro_rules! impl_map_attr {
