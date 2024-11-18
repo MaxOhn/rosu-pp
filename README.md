@@ -11,14 +11,10 @@ with emphasis on a precise translation to Rust for the most [accurate results](#
 while also providing a significant [boost in performance](#speed).
 
 Last commits of the ported code:
-  - [osu!lazer] : `f08134f443b2cf255fd19c8bc3ef517b6a3bb8e3` (2024-09-23)
-  - [osu!tools] : `51965515eb4355fde0591728ef4d38eee119a964` (2024-09-01)
+  - [osu!lazer] : `8bd65d9938a10fc42e6409501b0282f0fa4a25ef` (2024-11-08)
+  - [osu!tools] : `89b8f3b1c2e4e5674004eac4723120e7d3aef997` (2024-11-03)
 
-News posts of the latest gamemode updates:
-  - osu: <https://osu.ppy.sh/home/news/2022-09-30-changes-to-osu-sr-and-pp>
-  - taiko: <https://osu.ppy.sh/home/news/2022-09-28-changes-to-osu-taiko-sr-and-pp>
-  - catch: <https://osu.ppy.sh/home/news/2020-05-14-osucatch-scoring-updates>
-  - mania: <https://osu.ppy.sh/home/news/2022-10-09-changes-to-osu-mania-sr-and-pp>
+News posts of the latest updates: <https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates>
 
 ### Usage
 
