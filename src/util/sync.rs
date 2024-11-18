@@ -137,7 +137,7 @@ impl<T: fmt::Debug> fmt::Debug for Weak<T> {
 }
 
 /// ```compile_fail
-/// use rosu_pp::{taiko::TaikoGradualDifficulty, Beatmap, Difficulty};
+/// use akatsuki_pp::{taiko::TaikoGradualDifficulty, Beatmap, Difficulty};
 ///
 /// let converted = Beatmap::from_bytes(&[]).unwrap().unchecked_into_converted();
 /// let difficulty = Difficulty::new();

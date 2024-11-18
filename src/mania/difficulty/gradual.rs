@@ -24,8 +24,8 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, Difficulty};
-/// use rosu_pp::mania::ManiaGradualDifficulty;
+/// use akatsuki_pp::{Beatmap, Difficulty};
+/// use akatsuki_pp::mania::ManiaGradualDifficulty;
 ///
 /// let converted = Beatmap::from_path("./resources/1638954.osu")
 ///     .unwrap()

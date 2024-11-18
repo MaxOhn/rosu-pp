@@ -23,7 +23,7 @@ use crate::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, GradualDifficulty, Difficulty};
+/// use akatsuki_pp::{Beatmap, GradualDifficulty, Difficulty};
 ///
 /// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 /// let difficulty = Difficulty::new().mods(64); // DT

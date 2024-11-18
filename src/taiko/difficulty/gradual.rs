@@ -26,8 +26,8 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, Difficulty};
-/// use rosu_pp::taiko::{Taiko, TaikoGradualDifficulty};
+/// use akatsuki_pp::{Beatmap, Difficulty};
+/// use akatsuki_pp::taiko::{Taiko, TaikoGradualDifficulty};
 ///
 /// let converted = Beatmap::from_path("./resources/1028484.osu")
 ///     .unwrap()

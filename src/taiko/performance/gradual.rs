@@ -20,8 +20,8 @@ use super::TaikoPerformanceAttributes;
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, Difficulty};
-/// use rosu_pp::taiko::{Taiko, TaikoGradualPerformance, TaikoScoreState};
+/// use akatsuki_pp::{Beatmap, Difficulty};
+/// use akatsuki_pp::taiko::{Taiko, TaikoGradualPerformance, TaikoScoreState};
 ///
 /// let converted = Beatmap::from_path("./resources/1028484.osu")
 ///     .unwrap()

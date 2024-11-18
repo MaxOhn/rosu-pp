@@ -1,12 +1,11 @@
 [package]
-name = "rosu-pp"
-version = "1.1.0"
+name = "akatsuki-pp"
+version = "1.1.2"
 edition = "2021"
-authors = ["MaxOhn <ohn.m@hotmail.de>"]
+authors = ["MaxOhn <ohn.m@hotmail.de>", "tsunyoku <tsunyoku@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/MaxOhn/rosu-pp"
-documentation = "https://docs.rs/rosu-pp/"
+repository = "https://github.com/osuAkatsuki/akatsuki-pp-rs"
 description = "Difficulty and performance calculation for osu!"
 keywords = ["osu", "pp", "stars", "performance", "difficulty"]
 

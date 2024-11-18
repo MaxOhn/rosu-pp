@@ -14,17 +14,17 @@
 //!
 //! ```
 //! // Decode the map
-//! let map = rosu_pp::Beatmap::from_path("./resources/2785319.osu").unwrap();
+//! let map = akatsuki_pp::Beatmap::from_path("./resources/2785319.osu").unwrap();
 //!
 //! // Calculate difficulty attributes
-//! let diff_attrs = rosu_pp::Difficulty::new()
+//! let diff_attrs = akatsuki_pp::Difficulty::new()
 //!     .mods(8 + 16) // HDHR
 //!     .calculate(&map);
 //!
 //! let stars = diff_attrs.stars();
 //!
 //! // Calculate performance attributes
-//! let perf_attrs = rosu_pp::Performance::new(diff_attrs)
+//! let perf_attrs = akatsuki_pp::Performance::new(diff_attrs)
 //!     // To speed up the calculation, we used the previous attributes.
 //!     // **Note** that this should only be done if the map and all difficulty
 //!     // settings stay the same, otherwise the final attributes will be incorrect!
@@ -55,7 +55,7 @@
 //! score state.
 //!
 //! ```
-//! use rosu_pp::{Beatmap, GradualPerformance, Difficulty, any::ScoreState};
+//! use akatsuki_pp::{Beatmap, GradualPerformance, Difficulty, any::ScoreState};
 //!
 //! let map = Beatmap::from_path("./resources/1028484.osu").unwrap();
 //!

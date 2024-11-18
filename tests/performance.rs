@@ -1,6 +1,6 @@
 use std::panic::{self, UnwindSafe};
 
-use rosu_pp::{
+use akatsuki_pp::{
     catch::{CatchPerformance, CatchPerformanceAttributes},
     mania::{ManiaPerformance, ManiaPerformanceAttributes},
     osu::{OsuPerformance, OsuPerformanceAttributes},

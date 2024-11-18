@@ -30,8 +30,8 @@ use super::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::{Beatmap, Difficulty};
-/// use rosu_pp::osu::{Osu, OsuGradualDifficulty};
+/// use akatsuki_pp::{Beatmap, Difficulty};
+/// use akatsuki_pp::osu::{Osu, OsuGradualDifficulty};
 ///
 /// let converted = Beatmap::from_path("./resources/2785319.osu")
 ///     .unwrap()

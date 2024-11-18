@@ -6,27 +6,27 @@ use crate::{Beatmap, GameMods};
 /// # Example
 ///
 /// ```
-/// # use rosu_pp::{OsuPP, Beatmap};
+/// # use akatsuki_pp::Beatmap;
+/// # use akatsuki_pp::osu_2019::OsuPP;
 /// # /*
 /// let map: Beatmap = ...
 /// # */
 /// # let map = Beatmap::default();
-/// let attrs = OsuPP::new(&map)
+/// let attrs = OsuPP::from_map(&map)
 ///     .mods(8 + 64) // HDDT
 ///     .combo(1234)
 ///     .misses(1)
 ///     .accuracy(98.5) // should be set last
 ///     .calculate();
 ///
-/// println!("PP: {} | Stars: {}", attrs.pp(), attrs.stars());
+/// println!("PP: {} | Stars: {}", attrs.pp, attrs.difficulty.stars);
 ///
-/// let next_result = OsuPP::new(&map)
-///     .attributes(attrs) // reusing previous results for performance
+/// let next_result = OsuPP::from_attributes(attrs.difficulty) // reusing previous results for performance
 ///     .mods(8 + 64)      // has to be the same to reuse attributes
 ///     .accuracy(99.5)
 ///     .calculate();
 ///
-/// println!("PP: {} | Stars: {}", next_result.pp(), next_result.stars());
+/// println!("PP: {} | Stars: {}", next_result.pp, next_result.difficulty.stars);
 /// ```
 #[derive(Clone, Debug)]
 pub struct OsuPP<'m> {

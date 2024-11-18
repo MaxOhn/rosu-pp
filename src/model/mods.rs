@@ -20,7 +20,7 @@ use rosu_mods::{
 /// # Example
 ///
 /// ```
-/// use rosu_pp::GameMods;
+/// use akatsuki_pp::GameMods;
 /// use rosu_mods::{GameModsIntermode, GameModsLegacy, GameMods as GameModsLazer};
 ///
 /// let int = GameMods::from(64 + 8);

@@ -1,4 +1,6 @@
-use rosu_pp::{catch::Catch, mania::Mania, model::mode::GameMode, osu::Osu, taiko::Taiko, Beatmap};
+use akatsuki_pp::{
+    catch::Catch, mania::Mania, model::mode::GameMode, osu::Osu, taiko::Taiko, Beatmap,
+};
 
 use crate::common::assert_eq_float;
 
