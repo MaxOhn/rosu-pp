@@ -61,7 +61,7 @@ impl GameMods {
     ///
     /// In case of variable clock rates like for `WindUp`, this will return
     /// `1.0`.
-    pub(crate) fn clock_rate(&self) -> f32 {
+    pub(crate) fn clock_rate(&self) -> f64 {
         match self.inner {
             GameModsInner::Lazer(ref mods) => mods.clock_rate().unwrap_or(1.0),
             GameModsInner::Intermode(ref mods) => mods.legacy_clock_rate(),
@@ -96,6 +96,59 @@ impl GameMods {
 
         custom_hardrock_offsets(self).unwrap_or_else(|| self.hr())
     }
+
+    pub(crate) fn no_slider_head_acc(&self, lazer: bool) -> bool {
+        match self.inner {
+            GameModsInner::Lazer(ref mods) => mods
+                .iter()
+                .find_map(|m| match m {
+                    GameMod::ClassicOsu(cl) => Some(cl.no_slider_head_accuracy.unwrap_or(true)),
+                    _ => None,
+                })
+                .unwrap_or(!lazer),
+            GameModsInner::Intermode(ref mods) => {
+                mods.contains(GameModIntermode::Classic) || !lazer
+            }
+            GameModsInner::Legacy(_) => !lazer,
+        }
+    }
+
+    pub(crate) fn reflection(&self) -> Reflection {
+        match self.inner {
+            GameModsInner::Lazer(ref mods) => {
+                if mods.contains_intermode(GameModIntermode::HardRock) {
+                    return Reflection::Vertical;
+                }
+
+                mods.iter()
+                    .find_map(|m| match m {
+                        GameMod::MirrorOsu(mr) => match mr.reflection.as_deref() {
+                            None => Some(Reflection::Horizontal),
+                            Some("1") => Some(Reflection::Vertical),
+                            Some("2") => Some(Reflection::Both),
+                            Some(_) => Some(Reflection::None),
+                        },
+                        GameMod::MirrorCatch(_) => Some(Reflection::Horizontal),
+                        _ => None,
+                    })
+                    .unwrap_or(Reflection::None)
+            }
+            GameModsInner::Intermode(ref mods) => {
+                if mods.contains(GameModIntermode::HardRock) {
+                    Reflection::Vertical
+                } else {
+                    Reflection::None
+                }
+            }
+            GameModsInner::Legacy(mods) => {
+                if mods.contains(GameModsLegacy::HardRock) {
+                    Reflection::Vertical
+                } else {
+                    Reflection::None
+                }
+            }
+        }
+    }
 }
 
 macro_rules! impl_map_attr {
@@ -105,7 +158,7 @@ macro_rules! impl_map_attr {
                 #[doc = "Check whether the mods specify a custom "]
                 #[doc = $s]
                 #[doc = "value."]
-                pub(crate) fn $fn(&self) -> Option<f32> {
+                pub(crate) fn $fn(&self) -> Option<f64> {
                     match self.inner {
                         GameModsInner::Lazer(ref mods) => mods.iter().find_map(|gamemod| match gamemod {
                             $( impl_map_attr!( @ $mode $field) => *$field, )*
@@ -175,6 +228,8 @@ impl_has_mod! {
     fl: + Flashlight ["Flashlight"],
     so: + SpunOut ["SpunOut"],
     bl: - Blinds ["Blinds"],
+    cl: - Classic ["Classic"],
+    tc: - Traceable ["Traceable"],
 }
 
 impl Default for GameMods {
@@ -222,4 +277,12 @@ impl From<u32> for GameMods {
     fn from(bits: u32) -> Self {
         GameModsLegacy::from_bits(bits).into()
     }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Reflection {
+    None,
+    Vertical,
+    Horizontal,
+    Both,
 }

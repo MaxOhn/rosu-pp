@@ -10,9 +10,7 @@ use crate::{
     util::strains_vec::StrainsVec,
 };
 
-use super::strain::OsuStrainSkill;
-
-const SKILL_MULTIPLIER: f64 = 0.052;
+const SKILL_MULTIPLIER: f64 = 0.05512;
 const STRAIN_DECAY_BASE: f64 = 0.15;
 
 pub struct Flashlight {
@@ -49,7 +47,11 @@ impl Flashlight {
     }
 
     fn static_difficulty_value(skill: StrainSkill) -> f64 {
-        skill.get_curr_strain_peaks().sum() * OsuStrainSkill::DIFFICULTY_MULTIPLER
+        skill.get_curr_strain_peaks().sum()
+    }
+
+    pub fn difficulty_to_performance(difficulty: f64) -> f64 {
+        25.0 * (difficulty).powf(2.0)
     }
 }
 

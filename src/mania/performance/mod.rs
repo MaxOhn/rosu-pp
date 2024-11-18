@@ -37,7 +37,7 @@ impl<'map> ManiaPerformance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`ManiaDifficultyAttributes`]
-    /// or [`ManiaPerformanceAttributes`])
+    ///   or [`ManiaPerformanceAttributes`])
     /// - a beatmap ([`ManiaBeatmap<'map>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated
@@ -169,6 +169,19 @@ impl<'map> ManiaPerformance<'map> {
         self
     }
 
+    /// Whether the calculated attributes belong to an osu!lazer or osu!stable
+    /// score.
+    ///
+    /// Defaults to `true`.
+    ///
+    /// This affects internal hitresult generation because lazer gives two
+    /// hitresults per hold note whereas stable only gives one.
+    pub fn lazer(mut self, lazer: bool) -> Self {
+        self.difficulty = self.difficulty.lazer(lazer);
+
+        self
+    }
+
     /// Specify the amount of 320s of a play.
     pub const fn n320(mut self, n320: u32) -> Self {
         self.n320 = Some(n320);
@@ -245,11 +258,16 @@ impl<'map> ManiaPerformance<'map> {
             MapOrAttrs::Attrs(ref attrs) => attrs,
         };
 
-        let n_objects = cmp::min(self.difficulty.get_passed_objects() as u32, attrs.n_objects);
+        let mut n_objects = cmp::min(self.difficulty.get_passed_objects() as u32, attrs.n_objects);
 
         let priority = self.hitresult_priority;
 
         let misses = self.misses.map_or(0, |n| cmp::min(n, n_objects));
+
+        if self.difficulty.get_lazer() {
+            n_objects += attrs.n_hold_notes;
+        }
+
         let n_remaining = n_objects - misses;
 
         let mut n320 = self.n320.map_or(0, |n| cmp::min(n, n_remaining));
@@ -827,6 +845,8 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             difficulty,
             acc,
             combo: _,
+            large_tick_hits: _,
+            slider_end_hits: _,
             n300,
             n100,
             n50,
@@ -863,9 +883,7 @@ struct ManiaPerformanceInner<'mods> {
 
 impl ManiaPerformanceInner<'_> {
     fn calculate(self) -> ManiaPerformanceAttributes {
-        // * Arbitrary initial value for scaling pp in order to standardize distributions across game modes.
-        // * The specific number has no intrinsic meaning and can be adjusted as needed.
-        let mut multiplier = 8.0;
+        let mut multiplier = 1.0;
 
         if self.mods.nf() {
             multiplier *= 0.75;
@@ -887,7 +905,7 @@ impl ManiaPerformanceInner<'_> {
 
     fn compute_difficulty_value(&self) -> f64 {
         // * Star rating to pp curve
-        (self.attrs.stars - 0.15).max(0.05).powf(2.2)
+        8.0 * (self.attrs.stars - 0.15).max(0.05).powf(2.2)
              // * From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
              * (5.0 * self.calculate_custom_accuracy() - 4.0).max(0.0)
              // * Length bonus, capped at 1500 notes
@@ -950,6 +968,7 @@ mod tests {
     static ATTRS: OnceLock<ManiaDifficultyAttributes> = OnceLock::new();
 
     const N_OBJECTS: u32 = 594;
+    const N_HOLD_NOTES: u32 = 121;
 
     fn beatmap() -> Beatmap {
         Beatmap::from_path("./resources/1638954.osu").unwrap()
@@ -962,6 +981,14 @@ mod tests {
                 let attrs = Difficulty::new().with_mode().calculate(&converted);
 
                 assert_eq!(N_OBJECTS, converted.hit_objects.len() as u32);
+                assert_eq!(
+                    N_HOLD_NOTES,
+                    converted
+                        .hit_objects
+                        .iter()
+                        .filter(|h| !h.is_circle())
+                        .count() as u32
+                );
 
                 attrs
             })
@@ -975,6 +1002,7 @@ mod tests {
     /// that it doesn't run unreasonably long.
     #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
     fn brute_force_best(
+        lazer: bool,
         acc: f64,
         n320: Option<u32>,
         n300: Option<u32>,
@@ -994,7 +1022,11 @@ mod tests {
         let mut best_dist = f64::INFINITY;
         let mut best_custom_acc = 0.0;
 
-        let n_remaining = N_OBJECTS - misses;
+        let mut n_remaining = N_OBJECTS - misses;
+
+        if lazer {
+            n_remaining += N_HOLD_NOTES;
+        }
 
         let multiple_given = (usize::from(n320.is_some())
             + usize::from(n300.is_some())
@@ -1003,17 +1035,23 @@ mod tests {
             + usize::from(n50.is_some()))
             > 1;
 
-        let max_left = N_OBJECTS
+        let mut n_objects = N_OBJECTS;
+
+        if lazer {
+            n_objects += N_HOLD_NOTES;
+        }
+
+        let max_left = n_objects
             .saturating_sub(n200.unwrap_or(0) + n100.unwrap_or(0) + n50.unwrap_or(0) + misses);
 
         let min_n3x0 = cmp::min(
             max_left,
-            (acc * f64::from(3 * N_OBJECTS) - f64::from(2 * n_remaining)).floor() as u32,
+            (acc * f64::from(3 * n_objects) - f64::from(2 * n_remaining)).floor() as u32,
         );
 
         let max_n3x0 = cmp::min(
             max_left,
-            ((acc * f64::from(6 * N_OBJECTS) - f64::from(n_remaining)) / 5.0).ceil() as u32,
+            ((acc * f64::from(6 * n_objects) - f64::from(n_remaining)) / 5.0).ceil() as u32,
         );
 
         let (min_n3x0, max_n3x0) = match (n320, n300) {
@@ -1086,9 +1124,9 @@ mod tests {
                     let curr_dist = (acc - curr_acc).abs();
 
                     let curr_custom_acc =
-                        custom_accuracy(new320, new300, new200, new100, new50, N_OBJECTS);
+                        custom_accuracy(new320, new300, new200, new100, new50, n_objects);
 
-                    match curr_dist.partial_cmp(&best_dist).expect("non-NaN") {
+                    match curr_dist.total_cmp(&best_dist) {
                         Ordering::Less => {
                             best_dist = curr_dist;
                             best_custom_acc = curr_custom_acc;
@@ -1194,13 +1232,14 @@ mod tests {
 
         #[test]
         fn mania_hitresults(
-            acc in 0.0..=1.0,
-            n320 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
-            n300 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
-            n200 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
-            n100 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
-            n50 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + 10),
-            n_misses in prop::option::weighted(0.15, 0_u32..=N_OBJECTS + 10),
+            lazer in prop::bool::ANY,
+            acc in 0.0_f64..=1.0,
+            n320 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + N_HOLD_NOTES + 10),
+            n300 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + N_HOLD_NOTES + 10),
+            n200 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + N_HOLD_NOTES + 10),
+            n100 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + N_HOLD_NOTES + 10),
+            n50 in prop::option::weighted(0.10, 0_u32..=N_OBJECTS + N_HOLD_NOTES + 10),
+            n_misses in prop::option::weighted(0.15, 0_u32..=N_OBJECTS + N_HOLD_NOTES + 10),
             best_case in prop::bool::ANY,
         ) {
             let priority = if best_case {
@@ -1211,6 +1250,7 @@ mod tests {
 
             let mut state = ManiaPerformance::from(attrs())
                 .accuracy(acc * 100.0)
+                .lazer(lazer)
                 .hitresult_priority(priority);
 
             if let Some(n320) = n320 {
@@ -1242,6 +1282,7 @@ mod tests {
             assert_eq!(first, state);
 
             let expected = brute_force_best(
+                lazer,
                 acc,
                 n320,
                 n300,
@@ -1259,6 +1300,7 @@ mod tests {
     #[test]
     fn hitresults_n320_misses_best() {
         let state = ManiaPerformance::from(attrs())
+            .lazer(false)
             .n320(500)
             .misses(2)
             .hitresult_priority(HitResultPriority::BestCase)
@@ -1279,6 +1321,7 @@ mod tests {
     #[test]
     fn hitresults_n100_n50_misses_worst() {
         let state = ManiaPerformance::from(attrs())
+            .lazer(false)
             .n100(200)
             .n50(50)
             .misses(2)

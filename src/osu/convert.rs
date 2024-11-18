@@ -3,6 +3,7 @@ use rosu_map::section::{general::GameMode, hit_objects::CurveBuffers};
 use crate::model::{
     beatmap::{Beatmap, Converted},
     mode::ConvertStatus,
+    mods::Reflection,
 };
 
 use super::{
@@ -30,7 +31,7 @@ pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
 pub fn convert_objects(
     converted: &OsuBeatmap<'_>,
     scaling_factor: &ScalingFactor,
-    hr: bool,
+    reflection: Reflection,
     time_preempt: f64,
     mut take: usize,
     attrs: &mut OsuDifficultyAttributes,
@@ -55,6 +56,7 @@ pub fn convert_objects(
                 OsuObjectKind::Circle => attrs.n_circles += 1,
                 OsuObjectKind::Slider(ref slider) => {
                     attrs.n_sliders += 1;
+                    attrs.n_slider_ticks += slider.tick_count() as u32;
                     attrs.max_combo += slider.nested_objects.len() as u32;
                 }
                 OsuObjectKind::Spinner(_) => attrs.n_spinners += 1,
@@ -62,12 +64,17 @@ pub fn convert_objects(
         })
         .collect();
 
-    if hr {
-        osu_objects
+    match reflection {
+        Reflection::None => osu_objects.iter_mut().for_each(OsuObject::finalize_nested),
+        Reflection::Vertical => osu_objects
             .iter_mut()
-            .for_each(OsuObject::reflect_vertically);
-    } else {
-        osu_objects.iter_mut().for_each(OsuObject::finalize_tail);
+            .for_each(OsuObject::reflect_vertically),
+        Reflection::Horizontal => osu_objects
+            .iter_mut()
+            .for_each(OsuObject::reflect_horizontally),
+        Reflection::Both => osu_objects
+            .iter_mut()
+            .for_each(OsuObject::reflect_both_axes),
     }
 
     let stack_threshold = time_preempt * f64::from(converted.stack_leniency);
@@ -246,13 +253,20 @@ fn old_stacking(hit_objects: &mut [OsuObject], stack_threshold: f64) {
                 break;
             }
 
+            // * Note the use of `StartTime` in the code below doesn't match stable's use of `EndTime`.
+            // * This is because in the stable implementation, `UpdateCalculations` is not called on the inner-loop hitobject (j)
+            // * and therefore it does not have a correct `EndTime`, but instead the default of `EndTime = StartTime`.
+            // *
+            // * Effects of this can be seen on https://osu.ppy.sh/beatmapsets/243#osu/1146 at sliders around 86647 ms, where
+            // * if we use `EndTime` here it would result in unexpected stacking.
+
             if hit_objects[j].pos.distance(hit_objects[i].pos) < STACK_DISTANCE {
                 hit_objects[i].stack_height += 1;
-                start_time = hit_objects[j].end_time();
+                start_time = hit_objects[j].start_time;
             } else if hit_objects[j].pos.distance(pos2) < STACK_DISTANCE {
                 slider_stack += 1;
                 hit_objects[j].stack_height -= slider_stack;
-                start_time = hit_objects[j].end_time();
+                start_time = hit_objects[j].start_time;
             }
         }
     }

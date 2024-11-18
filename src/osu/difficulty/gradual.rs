@@ -84,7 +84,7 @@ impl OsuGradualDifficulty {
         let osu_objects = convert_objects(
             converted,
             &scaling_factor,
-            mods.hr(),
+            mods.reflection(),
             time_preempt,
             converted.hit_objects.len(),
             &mut attrs,
@@ -92,6 +92,7 @@ impl OsuGradualDifficulty {
 
         attrs.n_circles = 0;
         attrs.n_sliders = 0;
+        attrs.n_slider_ticks = 0;
         attrs.n_spinners = 0;
         attrs.max_combo = 0;
 
@@ -128,6 +129,7 @@ impl OsuGradualDifficulty {
             OsuObjectKind::Circle => attrs.n_circles += 1,
             OsuObjectKind::Slider(slider) => {
                 attrs.n_sliders += 1;
+                attrs.n_slider_ticks += slider.tick_count() as u32;
                 attrs.max_combo += slider.nested_objects.len() as u32;
             }
             OsuObjectKind::Spinner { .. } => attrs.n_spinners += 1,
@@ -178,9 +180,9 @@ impl Iterator for OsuGradualDifficulty {
         DifficultyValues::eval(
             &mut attrs,
             self.difficulty.get_mods(),
-            aim_difficulty_value,
-            aim_no_sliders_difficulty_value,
-            speed_difficulty_value,
+            &aim_difficulty_value,
+            &aim_no_sliders_difficulty_value,
+            &speed_difficulty_value,
             speed_relevant_note_count,
             flashlight_difficulty_value,
         );

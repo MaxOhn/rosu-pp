@@ -1,15 +1,17 @@
 use std::vec::Drain;
 
-use rosu_map::section::hit_objects::{
-    CurveBuffers, PathControlPoint, SliderEvent, SliderEventType, SliderEventsIter,
+use rosu_map::section::{
+    general::GameMode,
+    hit_objects::{CurveBuffers, PathControlPoint, SliderEvent, SliderEventType, SliderEventsIter},
 };
 
 use crate::{
-    catch::{attributes::ObjectCountBuilder, convert::CatchBeatmap, PLAYFIELD_WIDTH},
+    catch::{attributes::ObjectCountBuilder, convert::CatchBeatmap},
     model::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::Slider,
     },
+    util::get_precision_adjusted_beat_len,
 };
 
 pub struct JuiceStream<'a> {
@@ -21,7 +23,7 @@ impl<'a> JuiceStream<'a> {
     pub const BASE_SCORING_DIST: f64 = 100.0;
 
     pub fn new(
-        x: f32,
+        effective_x: f32,
         start_time: f64,
         slider: &'a Slider,
         converted: &CatchBeatmap<'_>,
@@ -41,14 +43,19 @@ impl<'a> JuiceStream<'a> {
                 point.slider_velocity
             });
 
-        let path = slider.curve(&mut bufs.curve);
+        let path = slider.curve(GameMode::Catch, &mut bufs.curve);
 
-        let velocity_factor = JuiceStream::BASE_SCORING_DIST * slider_multiplier / beat_len;
-        let velocity = velocity_factor * slider_velocity;
-        let tick_dist_factor =
-            JuiceStream::BASE_SCORING_DIST * slider_multiplier / slider_tick_rate;
+        let velocity = JuiceStream::BASE_SCORING_DIST * slider_multiplier
+            / get_precision_adjusted_beat_len(slider_velocity, beat_len);
+        let scoring_dist = velocity * beat_len;
 
-        let tick_dist = tick_dist_factor * slider_velocity;
+        let tick_dist_multiplier = if converted.version < 8 {
+            slider_velocity.recip()
+        } else {
+            1.0
+        };
+
+        let tick_dist = scoring_dist / slider_tick_rate * tick_dist_multiplier;
 
         let span_count = slider.span_count() as f64;
         let duration = span_count * path.dist() / velocity;
@@ -69,7 +76,7 @@ impl<'a> JuiceStream<'a> {
         for e in events {
             if let Some(last_event_time) = last_event_time {
                 let mut tiny_droplets = 0;
-                let since_last_tick = e.time - last_event_time;
+                let since_last_tick = f64::from(e.time as i32 - last_event_time as i32);
 
                 if since_last_tick > 80.0 {
                     let mut time_between_tiny = since_last_tick;
@@ -115,7 +122,7 @@ impl<'a> JuiceStream<'a> {
             };
 
             let nested = NestedJuiceStreamObject {
-                pos: Self::clamp_to_playfield(x + path.position_at(e.path_progress).x),
+                pos: effective_x + path.position_at(e.path_progress).x,
                 start_time: e.time,
                 kind,
             };
@@ -128,18 +135,16 @@ impl<'a> JuiceStream<'a> {
             nested_objects: bufs.nested_objects.drain(..),
         }
     }
-
-    pub fn clamp_to_playfield(value: f32) -> f32 {
-        value.clamp(0.0, PLAYFIELD_WIDTH)
-    }
 }
 
+#[derive(Debug)]
 pub struct NestedJuiceStreamObject {
     pub pos: f32,
     pub start_time: f64,
     pub kind: NestedJuiceStreamObjectKind,
 }
 
+#[derive(Debug)]
 pub enum NestedJuiceStreamObjectKind {
     Fruit,
     Droplet,

@@ -72,9 +72,16 @@ impl CatchGradualDifficulty {
             CatchDifficultySetup::new(&difficulty, converted);
 
         let hr_offsets = difficulty.get_hardrock_offsets();
+        let reflection = difficulty.get_mods().reflection();
         let mut count = ObjectCountBuilder::new_gradual();
-        let palpable_objects =
-            convert_objects(converted, &mut count, hr_offsets, map_attrs.cs as f32);
+
+        let palpable_objects = convert_objects(
+            converted,
+            &mut count,
+            reflection,
+            hr_offsets,
+            map_attrs.cs as f32,
+        );
 
         let diff_objects = DifficultyValues::create_difficulty_objects(
             &map_attrs,

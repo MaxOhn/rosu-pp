@@ -9,6 +9,8 @@ pub struct ManiaDifficultyAttributes {
     pub hit_window: f64,
     /// The amount of hitobjects in the map.
     pub n_objects: u32,
+    /// The amount of hold notes in the map.
+    pub n_hold_notes: u32,
     /// The maximum achievable combo.
     pub max_combo: u32,
     /// Whether the [`Beatmap`] was a convert i.e. an osu!standard map.

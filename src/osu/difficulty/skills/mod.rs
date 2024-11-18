@@ -26,7 +26,7 @@ impl OsuSkills {
         map_attrs: &BeatmapAttributes,
         time_preempt: f64,
     ) -> Self {
-        let hit_window = 2.0 * map_attrs.hit_windows.od;
+        let hit_window = 2.0 * map_attrs.hit_windows.od_great;
 
         // * Preempt time can go below 450ms. Normally, this is achieved via the DT mod
         // * which uniformly speeds up all animations game wide regardless of AR.

@@ -1,5 +1,10 @@
+use std::borrow::Cow;
+
 use rosu_map::{
-    section::hit_objects::{CurveBuffers, SliderEvent, SliderEventType, SliderEventsIter},
+    section::{
+        general::GameMode,
+        hit_objects::{CurveBuffers, SliderEvent, SliderEventType, SliderEventsIter},
+    },
     util::Pos,
 };
 
@@ -8,7 +13,7 @@ use crate::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
     },
-    util::sort,
+    util::{get_precision_adjusted_beat_len, sort},
 };
 
 use super::{convert::OsuBeatmap, PLAYFIELD_BASE_SIZE};
@@ -64,33 +69,58 @@ impl OsuObject {
             // Requires `stack_offset` so we can't add `h.pos` just yet
             slider.lazy_end_pos.y = -slider.lazy_end_pos.y;
 
-            let mut nested_iter = slider.nested_objects.iter_mut();
-
-            // Since the tail is handled differently but it's not necessarily
-            // the last object, we first search for it, and then handle the
-            // other nested objects
-            for nested in nested_iter.by_ref().rev() {
-                if let NestedSliderObjectKind::Tail = nested.kind {
-                    let mut tail_pos = self.pos; // already reflected at this point
-                    tail_pos += Pos::new(nested.pos.x, -nested.pos.y);
-                    nested.pos = tail_pos;
-
-                    break;
-                }
-
-                reflect_y(&mut nested.pos.y);
-            }
-
-            for nested in nested_iter {
-                reflect_y(&mut nested.pos.y);
+            for nested in slider.nested_objects.iter_mut() {
+                let mut nested_pos = self.pos; // already reflected at this point
+                nested_pos += Pos::new(nested.pos.x, -nested.pos.y);
+                nested.pos = nested_pos;
             }
         }
     }
 
-    pub fn finalize_tail(&mut self) {
+    pub fn reflect_horizontally(&mut self) {
+        fn reflect_x(x: &mut f32) {
+            *x = PLAYFIELD_BASE_SIZE.x - *x;
+        }
+
+        reflect_x(&mut self.pos.x);
+
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            if let Some(tail) = slider.tail_mut() {
-                tail.pos += self.pos;
+            // Requires `stack_offset` so we can't add `h.pos` just yet
+            slider.lazy_end_pos.x = -slider.lazy_end_pos.x;
+
+            for nested in slider.nested_objects.iter_mut() {
+                let mut nested_pos = self.pos; // already reflected at this point
+                nested_pos += Pos::new(-nested.pos.x, nested.pos.y);
+                nested.pos = nested_pos;
+            }
+        }
+    }
+
+    pub fn reflect_both_axes(&mut self) {
+        fn reflect(pos: &mut Pos) {
+            pos.x = PLAYFIELD_BASE_SIZE.x - pos.x;
+            pos.y = PLAYFIELD_BASE_SIZE.y - pos.y;
+        }
+
+        reflect(&mut self.pos);
+
+        if let OsuObjectKind::Slider(ref mut slider) = self.kind {
+            // Requires `stack_offset` so we can't add `h.pos` just yet
+            slider.lazy_end_pos.x = -slider.lazy_end_pos.x;
+            slider.lazy_end_pos.y = -slider.lazy_end_pos.y;
+
+            for nested in slider.nested_objects.iter_mut() {
+                let mut nested_pos = self.pos; // already reflected at this point
+                nested_pos += Pos::new(-nested.pos.x, -nested.pos.y);
+                nested.pos = nested_pos;
+            }
+        }
+    }
+
+    pub fn finalize_nested(&mut self) {
+        if let OsuObjectKind::Slider(ref mut slider) = self.kind {
+            for nested in slider.nested_objects.iter_mut() {
+                nested.pos += self.pos;
             }
         }
     }
@@ -120,15 +150,10 @@ impl OsuObject {
         self.end_pos() + self.stack_offset
     }
 
-    pub fn lazy_travel_time(&self) -> f64 {
+    pub const fn lazy_travel_time(&self) -> f64 {
         match self.kind {
             OsuObjectKind::Circle | OsuObjectKind::Spinner(_) => 0.0,
-            OsuObjectKind::Slider(ref slider) => slider
-                .nested_objects
-                // Here we really want the last nested object which is not
-                // necessarily the tail
-                .last()
-                .map_or(0.0, |nested| nested.start_time - self.start_time),
+            OsuObjectKind::Slider(ref slider) => slider.lazy_travel_time,
         }
     }
 
@@ -155,6 +180,7 @@ pub struct OsuSlider {
     pub end_time: f64,
     pub lazy_end_pos: Pos,
     pub lazy_travel_dist: f32,
+    pub lazy_travel_time: f64,
     pub nested_objects: Vec<NestedSliderObject>,
 }
 
@@ -182,13 +208,13 @@ impl OsuSlider {
             |point| (point.slider_velocity, point.generate_ticks),
         );
 
-        let path = slider.curve(curve_bufs);
+        let path = slider.curve(GameMode::Osu, curve_bufs);
 
         let span_count = slider.span_count() as f64;
 
-        let scoring_dist =
-            f64::from(OsuObject::BASE_SCORING_DIST) * slider_multiplier * slider_velocity;
-        let velocity = scoring_dist / beat_len;
+        let velocity = f64::from(OsuObject::BASE_SCORING_DIST) * slider_multiplier
+            / get_precision_adjusted_beat_len(slider_velocity, beat_len);
+        let scoring_dist = velocity * beat_len;
 
         let end_time = start_time + span_count * path.dist() / velocity;
 
@@ -235,21 +261,21 @@ impl OsuSlider {
             .filter_map(|e| {
                 let obj = match e.kind {
                     SliderEventType::Tick => NestedSliderObject {
-                        pos: h.pos + path.position_at(e.path_progress),
+                        pos: path.position_at(e.path_progress),
                         start_time: e.time,
                         kind: NestedSliderObjectKind::Tick,
                     },
                     SliderEventType::Repeat => NestedSliderObject {
-                        pos: h.pos + path.position_at(e.path_progress),
+                        pos: path.position_at(e.path_progress),
                         start_time: start_time + f64::from(e.span_idx + 1) * span_duration,
                         kind: NestedSliderObjectKind::Repeat,
                     },
-                    SliderEventType::LastTick => NestedSliderObject {
+                    SliderEventType::Tail => NestedSliderObject {
                         pos: end_path_pos, // no `h.pos` yet to keep order of float operations
                         start_time: e.time,
                         kind: NestedSliderObjectKind::Tail,
                     },
-                    SliderEventType::Head | SliderEventType::Tail => return None,
+                    SliderEventType::Head | SliderEventType::LastTick => return None,
                 };
 
                 Some(obj)
@@ -260,9 +286,8 @@ impl OsuSlider {
             a.start_time.total_cmp(&b.start_time)
         });
 
-        let lazy_travel_time = nested_objects
-            .last()
-            .map_or(0.0, |nested| nested.start_time - h.start_time);
+        let mut nested = Cow::Borrowed(nested_objects.as_slice());
+        let lazy_travel_time = OsuSlider::lazy_travel_time(start_time, duration, &mut nested);
 
         let mut end_time_min = lazy_travel_time / span_duration;
 
@@ -278,14 +303,61 @@ impl OsuSlider {
             end_time,
             lazy_end_pos,
             lazy_travel_dist: 0.0,
+            lazy_travel_time,
             nested_objects,
         }
+    }
+
+    pub fn lazy_travel_time(
+        start_time: f64,
+        duration: f64,
+        nested_objects: &mut Cow<'_, [NestedSliderObject]>,
+    ) -> f64 {
+        const TAIL_LENIENCY: f64 = -36.0;
+
+        let mut tracking_end_time =
+            (start_time + duration + TAIL_LENIENCY).max(start_time + duration / 2.0);
+
+        let last_real_tick = nested_objects
+            .iter()
+            .enumerate()
+            .rfind(|(_, nested)| nested.is_tick());
+
+        if let Some((idx, last_real_tick)) =
+            last_real_tick.filter(|(_, tick)| tick.start_time > tracking_end_time)
+        {
+            tracking_end_time = last_real_tick.start_time;
+
+            // * When the last tick falls after the tracking end time, we need to re-sort the nested objects
+            // * based on time. This creates a somewhat weird ordering which is counter to how a user would
+            // * understand the slider, but allows a zero-diff with known diffcalc output.
+            // *
+            // * To reiterate, this is definitely not correct from a difficulty calculation perspective
+            // * and should be revisited at a later date (likely by replacing this whole code with the commented
+            // * version above).
+            nested_objects.to_mut()[idx..].rotate_left(1);
+        }
+
+        tracking_end_time - start_time
     }
 
     pub fn repeat_count(&self) -> usize {
         self.nested_objects
             .iter()
             .filter(|nested| matches!(nested.kind, NestedSliderObjectKind::Repeat))
+            .count()
+    }
+
+    /// Counts both ticks and repeats
+    pub fn tick_count(&self) -> usize {
+        self.nested_objects
+            .iter()
+            .filter(|nested| {
+                matches!(
+                    nested.kind,
+                    NestedSliderObjectKind::Tick | NestedSliderObjectKind::Repeat
+                )
+            })
             .count()
     }
 
@@ -296,16 +368,9 @@ impl OsuSlider {
             // short and fast buzz sliders (/b/1001757)
             .rfind(|nested| matches!(nested.kind, NestedSliderObjectKind::Tail))
     }
-
-    fn tail_mut(&mut self) -> Option<&mut NestedSliderObject> {
-        self.nested_objects
-            .iter_mut()
-            // The tail is not necessarily the last nested object, e.g. on very
-            // short and fast buzz sliders (/b/1001757)
-            .rfind(|nested| matches!(nested.kind, NestedSliderObjectKind::Tail))
-    }
 }
 
+#[derive(Clone, Debug)]
 pub struct NestedSliderObject {
     pub pos: Pos,
     pub start_time: f64,
@@ -316,8 +381,13 @@ impl NestedSliderObject {
     pub const fn is_repeat(&self) -> bool {
         matches!(self.kind, NestedSliderObjectKind::Repeat)
     }
+
+    pub const fn is_tick(&self) -> bool {
+        matches!(self.kind, NestedSliderObjectKind::Tick)
+    }
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum NestedSliderObjectKind {
     Repeat,
     Tail,

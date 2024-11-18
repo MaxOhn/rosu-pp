@@ -1,24 +1,34 @@
 use crate::{
     any::difficulty::{
         object::IDifficultyObject,
-        skills::{strain_decay, ISkill, Skill, StrainDecaySkill},
+        skills::{strain_decay, ISkill, Skill, StrainDecaySkill, StrainSkill},
     },
     taiko::{
         difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
         object::HitType,
     },
-    util::strains_vec::StrainsVec,
+    util::{strains_vec::StrainsVec, sync::Weak},
 };
 
 const SKILL_MULTIPLIER: f64 = 1.1;
 const STRAIN_DECAY_BASE: f64 = 0.4;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Stamina {
-    inner: StrainDecaySkill,
+    inner: StrainSkill,
+    single_color: bool,
+    curr_strain: f64,
 }
 
 impl Stamina {
+    pub fn new(single_color: bool) -> Self {
+        Self {
+            inner: StrainSkill::default(),
+            single_color,
+            curr_strain: 0.0,
+        }
+    }
+
     pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
@@ -36,6 +46,10 @@ impl ISkill for Stamina {
 
 impl Skill<'_, Stamina> {
     fn calculate_initial_strain(&mut self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
+        if self.inner.single_color {
+            return 0.0;
+        }
+
         let prev_start_time = curr
             .previous(0, &self.diff_objects.objects)
             .map_or(0.0, |prev| prev.get().start_time);
@@ -44,27 +58,27 @@ impl Skill<'_, Stamina> {
     }
 
     const fn curr_strain(&self) -> f64 {
-        self.inner.inner.curr_strain
+        self.inner.curr_strain
     }
 
     fn curr_strain_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.curr_strain
+        &mut self.inner.curr_strain
     }
 
     const fn curr_section_peak(&self) -> f64 {
-        self.inner.inner.inner.curr_section_peak
+        self.inner.inner.curr_section_peak
     }
 
     fn curr_section_peak_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_peak
+        &mut self.inner.inner.curr_section_peak
     }
 
     const fn curr_section_end(&self) -> f64 {
-        self.inner.inner.inner.curr_section_end
+        self.inner.inner.curr_section_end
     }
 
     fn curr_section_end_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_end
+        &mut self.inner.inner.curr_section_end
     }
 
     pub fn process(&mut self, curr: &TaikoDifficultyObject) {
@@ -86,13 +100,30 @@ impl Skill<'_, Stamina> {
 
     fn strain_value_at(&mut self, curr: &TaikoDifficultyObject) -> f64 {
         *self.curr_strain_mut() *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
-        *self.curr_strain_mut() += self.strain_value_of(curr) * SKILL_MULTIPLIER;
+        *self.curr_strain_mut() +=
+            StaminaEvaluator::evaluate_diff_of(curr, self.diff_objects) * SKILL_MULTIPLIER;
 
-        self.curr_strain()
-    }
+        // Safely prevents previous strains from shifting as new notes are added.
+        let index = curr
+            .color
+            .mono_streak
+            .as_ref()
+            .and_then(Weak::upgrade)
+            .and_then(|mono| {
+                mono.get().hit_objects.iter().position(|h| {
+                    let Some(h) = h.upgrade() else { return false };
+                    let h = h.get();
 
-    fn strain_value_of(&self, curr: &TaikoDifficultyObject) -> f64 {
-        StaminaEvaluator::evaluate_diff_of(curr, self.diff_objects)
+                    h.idx == curr.idx
+                })
+            })
+            .unwrap_or(0);
+
+        if self.inner.single_color {
+            self.curr_strain() / (1.0 + ((-(index as isize - 10)) as f64 / 2.0).exp())
+        } else {
+            self.curr_strain()
+        }
     }
 }
 
@@ -100,12 +131,33 @@ struct StaminaEvaluator;
 
 impl StaminaEvaluator {
     fn speed_bonus(mut interval: f64) -> f64 {
-        // * Cap to 600bpm 1/4, 25ms note interval, 50ms key interval
-        // * Interval will be capped at a very small value to avoid infinite/negative speed bonuses.
-        // * TODO - This is a temporary measure as we need to implement methods of detecting playstyle-abuse of SpeedBonus.
-        interval = interval.max(50.0);
+        // * Interval is capped at a very small value to prevent infinite values.
+        interval = interval.max(1.0);
 
         30.0 / interval
+    }
+
+    fn available_fingers_for(
+        hit_object: &TaikoDifficultyObject,
+        hit_objects: &TaikoDifficultyObjects,
+    ) -> usize {
+        let prev_color_change = hit_object.color.previous_color_change(hit_objects);
+
+        if prev_color_change
+            .is_some_and(|change| hit_object.start_time - change.get().start_time < 300.0)
+        {
+            return 2;
+        }
+
+        let next_color_change = hit_object.color.next_color_change(hit_objects);
+
+        if next_color_change
+            .is_some_and(|change| change.get().start_time - hit_object.start_time < 300.0)
+        {
+            return 2;
+        }
+
+        4
     }
 
     fn evaluate_diff_of(curr: &TaikoDifficultyObject, hit_objects: &TaikoDifficultyObjects) -> f64 {
@@ -113,15 +165,19 @@ impl StaminaEvaluator {
             return 0.0;
         }
 
-        // * Find the previous hit object hit by the current key, which is two notes of the same colour prior.
+        // * Find the previous hit object hit by the current finger, which is n notes prior, n being the number of
+        // * available fingers.
         let taiko_curr = curr;
-        let key_prev = hit_objects.previous_mono(taiko_curr, 1);
+        let key_prev = hit_objects.previous_mono(
+            taiko_curr,
+            Self::available_fingers_for(taiko_curr, hit_objects) - 1,
+        );
 
         if let Some(key_prev) = key_prev {
             // * Add a base strain to all objects
             0.5 + Self::speed_bonus(taiko_curr.start_time - key_prev.get().start_time)
         } else {
-            // * There is no previous hit object hit by the current key
+            // * There is no previous hit object hit by the current finger
             0.0
         }
     }

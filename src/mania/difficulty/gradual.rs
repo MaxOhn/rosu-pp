@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     object::ManiaDifficultyObject, skills::strain::Strain, DifficultyValues,
-    ManiaDifficultyAttributes, ManiaObject, STAR_SCALING_FACTOR,
+    ManiaDifficultyAttributes, ManiaObject, DIFFICULTY_MULTIPLIER,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!mania map.
@@ -54,7 +54,13 @@ pub struct ManiaGradualDifficulty {
     strain: Strain,
     diff_objects: Box<[ManiaDifficultyObject]>,
     hit_window: f64,
+    note_state: NoteState,
+}
+
+#[derive(Default)]
+struct NoteState {
     curr_combo: u32,
+    n_hold_notes: u32,
 }
 
 impl ManiaGradualDifficulty {
@@ -65,8 +71,10 @@ impl ManiaGradualDifficulty {
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(converted);
 
-        let HitWindows { od: hit_window, .. } =
-            converted.attributes().difficulty(&difficulty).hit_windows();
+        let HitWindows {
+            od_great: hit_window,
+            ..
+        } = converted.attributes().difficulty(&difficulty).hit_windows();
 
         let mania_objects = converted
             .hit_objects
@@ -78,7 +86,7 @@ impl ManiaGradualDifficulty {
 
         let strain = Strain::new(total_columns as usize);
 
-        let mut curr_combo = 0;
+        let mut note_state = NoteState::default();
 
         let objects_is_circle: Box<[_]> = converted
             .hit_objects
@@ -93,7 +101,7 @@ impl ManiaGradualDifficulty {
                 objects_is_circle[0],
                 hit_object.start_time,
                 hit_object.end_time,
-                &mut curr_combo,
+                &mut note_state,
             );
         }
 
@@ -105,7 +113,7 @@ impl ManiaGradualDifficulty {
             strain,
             diff_objects,
             hit_window,
-            curr_combo,
+            note_state,
         }
     }
 }
@@ -126,7 +134,7 @@ impl Iterator for ManiaGradualDifficulty {
             increment_combo(
                 is_circle,
                 curr,
-                &mut self.curr_combo,
+                &mut self.note_state,
                 self.difficulty.get_clock_rate(),
             );
         } else if self.objects_is_circle.is_empty() {
@@ -136,10 +144,11 @@ impl Iterator for ManiaGradualDifficulty {
         self.idx += 1;
 
         Some(ManiaDifficultyAttributes {
-            stars: self.strain.as_difficulty_value() * STAR_SCALING_FACTOR,
+            stars: self.strain.as_difficulty_value() * DIFFICULTY_MULTIPLIER,
             hit_window: self.hit_window,
-            max_combo: self.curr_combo,
+            max_combo: self.note_state.curr_combo,
             n_objects: self.idx as u32,
+            n_hold_notes: self.note_state.n_hold_notes,
             is_convert: self.is_convert,
         })
     }
@@ -169,7 +178,7 @@ impl Iterator for ManiaGradualDifficulty {
         let clock_rate = self.difficulty.get_clock_rate();
 
         for (curr, is_circle) in skip_iter.take(take) {
-            increment_combo(*is_circle, curr, &mut self.curr_combo, clock_rate);
+            increment_combo(*is_circle, curr, &mut self.note_state, clock_rate);
             strain.process(curr);
             self.idx += 1;
         }
@@ -187,22 +196,23 @@ impl ExactSizeIterator for ManiaGradualDifficulty {
 fn increment_combo(
     is_circle: bool,
     diff_obj: &ManiaDifficultyObject,
-    curr_combo: &mut u32,
+    state: &mut NoteState,
     clock_rate: f64,
 ) {
     increment_combo_raw(
         is_circle,
         diff_obj.start_time * clock_rate,
         diff_obj.end_time * clock_rate,
-        curr_combo,
+        state,
     );
 }
 
-fn increment_combo_raw(is_circle: bool, start_time: f64, end_time: f64, curr_combo: &mut u32) {
+fn increment_combo_raw(is_circle: bool, start_time: f64, end_time: f64, state: &mut NoteState) {
     if is_circle {
-        *curr_combo += 1;
+        state.curr_combo += 1;
     } else {
-        *curr_combo += 1 + ((end_time - start_time) / 100.0) as u32;
+        state.curr_combo += 1 + ((end_time - start_time) / 100.0) as u32;
+        state.n_hold_notes += 1;
     }
 }
 

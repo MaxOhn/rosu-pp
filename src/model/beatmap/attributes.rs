@@ -27,7 +27,11 @@ pub struct HitWindows {
     /// Hit window for approach rate i.e. `TimePreempt` in milliseconds.
     pub ar: f64,
     /// Hit window for overall difficulty i.e. time to hit a 300 ("Great") in milliseconds.
-    pub od: f64,
+    pub od_great: f64,
+    /// Hit window for overall difficulty i.e. time to hit a 100 ("Ok") in milliseconds.
+    ///
+    /// `None` for osu!mania.
+    pub od_ok: Option<f64>,
 }
 
 /// A builder for [`BeatmapAttributes`] and [`HitWindows`].
@@ -44,15 +48,43 @@ pub struct BeatmapAttributesBuilder {
     clock_rate: Option<f64>,
 }
 
+struct GameModeHitWindows {
+    min: f64,
+    avg: f64,
+    max: f64,
+}
+
+const OSU_GREAT: GameModeHitWindows = GameModeHitWindows {
+    min: 80.0,
+    avg: 50.0,
+    max: 20.0,
+};
+
+const OSU_OK: GameModeHitWindows = GameModeHitWindows {
+    min: 140.0,
+    avg: 100.0,
+    max: 60.0,
+};
+
+const TAIKO_GREAT: GameModeHitWindows = GameModeHitWindows {
+    min: 50.0,
+    avg: 35.0,
+    max: 20.0,
+};
+
+const TAIKO_OK: GameModeHitWindows = GameModeHitWindows {
+    min: 120.0,
+    avg: 80.0,
+    max: 50.0,
+};
+
+const AR_WINDOWS: GameModeHitWindows = GameModeHitWindows {
+    min: 1800.0,
+    avg: 1200.0,
+    max: 450.0,
+};
+
 impl BeatmapAttributesBuilder {
-    const OSU_MIN: f64 = 80.0;
-    const OSU_AVG: f64 = 50.0;
-    const OSU_MAX: f64 = 20.0;
-
-    const TAIKO_MIN: f64 = 50.0;
-    const TAIKO_AVG: f64 = 35.0;
-    const TAIKO_MAX: f64 = 20.0;
-
     /// Create a new [`BeatmapAttributesBuilder`].
     ///
     /// The mode will be `GameMode::Osu` and attributes are set to `5.0`.
@@ -73,13 +105,13 @@ impl BeatmapAttributesBuilder {
     pub fn map(self, map: &Beatmap) -> Self {
         Self {
             mode: map.mode,
-            ar: ModsDependentKind::Default(ModsDependent::new(map.ar)),
-            od: ModsDependentKind::Default(ModsDependent::new(map.od)),
+            // Clamping necessary to match lazer on maps like /b/4243836.
+            ar: ModsDependentKind::Default(ModsDependent::new(map.ar.clamp(0.0, 10.0))),
+            od: ModsDependentKind::Default(ModsDependent::new(map.od.clamp(0.0, 10.0))),
             cs: ModsDependentKind::Default(ModsDependent::new(map.cs)),
             hp: ModsDependentKind::Default(ModsDependent::new(map.hp)),
-            mods: GameMods::DEFAULT,
-            clock_rate: None,
             is_convert: map.is_convert,
+            ..self
         }
     }
 
@@ -195,10 +227,7 @@ impl BeatmapAttributesBuilder {
     /// Calculate the AR and OD hit windows.
     pub fn hit_windows(&self) -> HitWindows {
         let mods = &self.mods;
-
-        let clock_rate = self
-            .clock_rate
-            .unwrap_or_else(|| f64::from(mods.clock_rate()));
+        let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
 
         let ar_clock_rate = if self.ar.with_mods() { 1.0 } else { clock_rate };
         let od_clock_rate = if self.od.with_mods() { 1.0 } else { clock_rate };
@@ -219,10 +248,10 @@ impl BeatmapAttributesBuilder {
             mod_mult(self.ar.value(mods, GameMods::ar))
         };
 
-        let preempt = difficulty_range(f64::from(raw_ar), 1800.0, 1200.0, 450.0) / ar_clock_rate;
+        let preempt = difficulty_range(f64::from(raw_ar), AR_WINDOWS) / ar_clock_rate;
 
         // OD
-        let hit_window = match self.mode {
+        let (great, ok) = match self.mode {
             GameMode::Osu | GameMode::Catch => {
                 let raw_od = if self.od.with_mods() {
                     self.od.value(mods, GameMods::od)
@@ -230,12 +259,10 @@ impl BeatmapAttributesBuilder {
                     mod_mult(self.od.value(mods, GameMods::od))
                 };
 
-                difficulty_range(
-                    f64::from(raw_od),
-                    Self::OSU_MIN,
-                    Self::OSU_AVG,
-                    Self::OSU_MAX,
-                ) / od_clock_rate
+                let great = difficulty_range(f64::from(raw_od), OSU_GREAT) / od_clock_rate;
+                let ok = difficulty_range(f64::from(raw_od), OSU_OK) / od_clock_rate;
+
+                (great, Some(ok))
             }
             GameMode::Taiko => {
                 let raw_od = if self.od.with_mods() {
@@ -244,14 +271,10 @@ impl BeatmapAttributesBuilder {
                     mod_mult(self.od.value(mods, GameMods::od))
                 };
 
-                let diff_range = difficulty_range(
-                    f64::from(raw_od),
-                    Self::TAIKO_MIN,
-                    Self::TAIKO_AVG,
-                    Self::TAIKO_MAX,
-                );
+                let great = difficulty_range(f64::from(raw_od), TAIKO_GREAT) / od_clock_rate;
+                let ok = difficulty_range(f64::from(raw_od), TAIKO_OK) / od_clock_rate;
 
-                diff_range / od_clock_rate
+                (great, Some(ok))
             }
             GameMode::Mania => {
                 let mut value = if !self.is_convert {
@@ -270,22 +293,23 @@ impl BeatmapAttributesBuilder {
                     }
                 }
 
-                ((f64::from(value) * od_clock_rate).floor() / od_clock_rate).ceil()
+                let great = ((f64::from(value) * od_clock_rate).floor() / od_clock_rate).ceil();
+
+                (great, None)
             }
         };
 
         HitWindows {
             ar: preempt,
-            od: hit_window,
+            od_great: great,
+            od_ok: ok,
         }
     }
 
     /// Calculate the [`BeatmapAttributes`].
     pub fn build(&self) -> BeatmapAttributes {
         let mods = &self.mods;
-        let clock_rate = self
-            .clock_rate
-            .unwrap_or_else(|| f64::from(mods.clock_rate()));
+        let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
 
         // HP
         let mut hp = self.hp.value(mods, GameMods::hp);
@@ -308,7 +332,11 @@ impl BeatmapAttributesBuilder {
         }
 
         let hit_windows = self.hit_windows();
-        let HitWindows { ar, od } = hit_windows;
+        let HitWindows {
+            ar,
+            od_great,
+            od_ok: _,
+        } = hit_windows;
 
         // AR
         let ar = if ar > 1200.0 {
@@ -319,8 +347,10 @@ impl BeatmapAttributesBuilder {
 
         // OD
         let od = match self.mode {
-            GameMode::Osu => (Self::OSU_MIN - od) / 6.0,
-            GameMode::Taiko => (Self::TAIKO_MIN - od) / (Self::TAIKO_MIN - Self::TAIKO_AVG) * 5.0,
+            GameMode::Osu => (OSU_GREAT.min - od_great) / 6.0,
+            GameMode::Taiko => {
+                (TAIKO_GREAT.min - od_great) / (TAIKO_GREAT.min - TAIKO_GREAT.avg) * 5.0
+            }
             GameMode::Catch | GameMode::Mania => f64::from(self.od.value(mods, GameMods::od)),
         };
 
@@ -347,7 +377,11 @@ impl<M> From<&Converted<'_, M>> for BeatmapAttributesBuilder {
     }
 }
 
-fn difficulty_range(difficulty: f64, min: f64, mid: f64, max: f64) -> f64 {
+// False positive? Value looks consumed to me...
+#[allow(clippy::needless_pass_by_value)]
+fn difficulty_range(difficulty: f64, windows: GameModeHitWindows) -> f64 {
+    let GameModeHitWindows { min, avg: mid, max } = windows;
+
     if difficulty > 5.0 {
         mid + (max - mid) * (difficulty - 5.0) / 5.0
     } else if difficulty < 5.0 {
@@ -378,9 +412,9 @@ impl ModsDependentKind {
         }
     }
 
-    fn value(&self, mods: &GameMods, mods_fn: impl Fn(&GameMods) -> Option<f32>) -> f32 {
+    fn value(&self, mods: &GameMods, mods_fn: impl Fn(&GameMods) -> Option<f64>) -> f32 {
         match self {
-            ModsDependentKind::Default(inner) => mods_fn(mods).unwrap_or(inner.value),
+            ModsDependentKind::Default(inner) => mods_fn(mods).map_or(inner.value, |n| n as f32),
             ModsDependentKind::Custom(inner) => inner.value,
         }
     }
@@ -388,13 +422,18 @@ impl ModsDependentKind {
 
 #[cfg(test)]
 mod tests {
-    use rosu_mods::{generated_mods::DifficultyAdjustOsu, GameMod, GameMods};
+    #![allow(clippy::float_cmp)]
+
+    use rosu_mods::{
+        generated_mods::{DifficultyAdjustOsu, DoubleTimeCatch, DoubleTimeOsu, HiddenOsu},
+        GameMod, GameMods,
+    };
 
     use super::*;
 
     #[test]
     fn default_ar() {
-        let gamemod = GameMod::HiddenOsu(Default::default());
+        let gamemod = GameMod::HiddenOsu(HiddenOsu::default());
         let diff = Difficulty::new().mods(GameMods::from(gamemod));
         let attrs = BeatmapAttributesBuilder::new().difficulty(&diff).build();
 
@@ -403,7 +442,7 @@ mod tests {
 
     #[test]
     fn custom_ar_without_mods() {
-        let gamemod = GameMod::DoubleTimeOsu(Default::default());
+        let gamemod = GameMod::DoubleTimeOsu(DoubleTimeOsu::default());
         let diff = Difficulty::new().mods(GameMods::from(gamemod));
         let attrs = BeatmapAttributesBuilder::new()
             .ar(8.5, false)
@@ -415,7 +454,7 @@ mod tests {
 
     #[test]
     fn custom_ar_with_mods() {
-        let gamemod = GameMod::DoubleTimeOsu(Default::default());
+        let gamemod = GameMod::DoubleTimeOsu(DoubleTimeOsu::default());
         let diff = Difficulty::new().mods(GameMods::from(gamemod));
         let attrs = BeatmapAttributesBuilder::new()
             .ar(8.5, true)
@@ -428,10 +467,10 @@ mod tests {
     #[test]
     fn custom_mods_ar() {
         let mut mods = GameMods::new();
-        mods.insert(GameMod::DoubleTimeCatch(Default::default()));
+        mods.insert(GameMod::DoubleTimeCatch(DoubleTimeCatch::default()));
         mods.insert(GameMod::DifficultyAdjustOsu(DifficultyAdjustOsu {
             approach_rate: Some(7.0),
-            ..Default::default()
+            ..DifficultyAdjustOsu::default()
         }));
         let diff = Difficulty::new().mods(mods);
         let attrs = BeatmapAttributesBuilder::new().difficulty(&diff).build();
@@ -442,10 +481,10 @@ mod tests {
     #[test]
     fn custom_ar_custom_mods_ar_without_mods() {
         let mut mods = GameMods::new();
-        mods.insert(GameMod::DoubleTimeCatch(Default::default()));
+        mods.insert(GameMod::DoubleTimeCatch(DoubleTimeCatch::default()));
         mods.insert(GameMod::DifficultyAdjustOsu(DifficultyAdjustOsu {
             approach_rate: Some(9.0),
-            ..Default::default()
+            ..DifficultyAdjustOsu::default()
         }));
 
         let diff = Difficulty::new().mods(mods).ar(8.5, false);
@@ -457,10 +496,10 @@ mod tests {
     #[test]
     fn custom_ar_custom_mods_ar_with_mods() {
         let mut mods = GameMods::new();
-        mods.insert(GameMod::DoubleTimeCatch(Default::default()));
+        mods.insert(GameMod::DoubleTimeCatch(DoubleTimeCatch::default()));
         mods.insert(GameMod::DifficultyAdjustOsu(DifficultyAdjustOsu {
             approach_rate: Some(9.0),
-            ..Default::default()
+            ..DifficultyAdjustOsu::default()
         }));
 
         let diff = Difficulty::new().mods(mods).ar(8.5, true);

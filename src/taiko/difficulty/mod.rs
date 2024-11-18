@@ -1,16 +1,19 @@
+use std::cmp;
+
 use crate::{
+    any::difficulty::skills::Skill,
+    model::beatmap::HitWindows,
     taiko::{
         difficulty::{
             color::preprocessor::ColorDifficultyPreprocessor,
             object::{TaikoDifficultyObject, TaikoDifficultyObjects},
-            skills::peaks::PeaksSkill,
         },
         object::TaikoObject,
     },
     Difficulty,
 };
 
-use self::skills::peaks::Peaks;
+use self::skills::{color::Color, rhythm::Rhythm, stamina::Stamina, TaikoSkills};
 
 use super::{attributes::TaikoDifficultyAttributes, convert::TaikoBeatmap};
 
@@ -20,41 +23,85 @@ mod object;
 mod rhythm;
 mod skills;
 
-const DIFFICULTY_MULTIPLIER: f64 = 1.35;
+const DIFFICULTY_MULTIPLIER: f64 = 0.084_375;
+const RHYTHM_SKILL_MULTIPLIER: f64 = 0.2 * DIFFICULTY_MULTIPLIER;
+const COLOR_SKILL_MULTIPLIER: f64 = 0.375 * DIFFICULTY_MULTIPLIER;
+const STAMINA_SKILL_MULTIPLIER: f64 = 0.375 * DIFFICULTY_MULTIPLIER;
 
 pub fn difficulty(
     difficulty: &Difficulty,
     converted: &TaikoBeatmap<'_>,
 ) -> TaikoDifficultyAttributes {
-    let hit_window = converted
-        .attributes()
-        .difficulty(difficulty)
-        .hit_windows()
-        .od;
+    let HitWindows {
+        od_great,
+        od_ok,
+        ar: _,
+    } = converted.attributes().difficulty(difficulty).hit_windows();
 
-    let DifficultyValues { peaks, max_combo } = DifficultyValues::calculate(difficulty, converted);
+    let DifficultyValues { skills, max_combo } = DifficultyValues::calculate(difficulty, converted);
 
     let mut attrs = TaikoDifficultyAttributes {
-        hit_window,
+        great_hit_window: od_great,
+        ok_hit_window: od_ok.unwrap_or(0.0),
         max_combo,
         is_convert: converted.is_convert,
         ..Default::default()
     };
 
-    let color_rating = peaks.color_difficulty_value();
-    let rhythm_rating = peaks.rhythm_difficulty_value();
-    let stamina_rating = peaks.stamina_difficulty_value();
-    let combined_rating = peaks.difficulty_value();
-
-    DifficultyValues::eval(
-        &mut attrs,
-        color_rating,
-        rhythm_rating,
-        stamina_rating,
-        combined_rating,
-    );
+    DifficultyValues::eval(&mut attrs, skills);
 
     attrs
+}
+
+fn combined_difficulty_value(color: Color, rhythm: Rhythm, stamina: Stamina) -> f64 {
+    fn norm(p: f64, values: [f64; 2]) -> f64 {
+        values
+            .into_iter()
+            .fold(0.0, |sum, x| sum + x.powf(p))
+            .powf(p.recip())
+    }
+
+    let color_peaks = color.get_curr_strain_peaks();
+    let rhythm_peaks = rhythm.get_curr_strain_peaks();
+    let stamina_peaks = stamina.get_curr_strain_peaks();
+
+    let cap = cmp::min(
+        cmp::min(color_peaks.len(), rhythm_peaks.len()),
+        stamina_peaks.len(),
+    );
+    let mut peaks = Vec::with_capacity(cap);
+
+    let iter = color_peaks
+        .iter()
+        .zip(rhythm_peaks.iter())
+        .zip(stamina_peaks.iter());
+
+    for ((mut color_peak, mut rhythm_peak), mut stamina_peak) in iter {
+        color_peak *= COLOR_SKILL_MULTIPLIER;
+        rhythm_peak *= RHYTHM_SKILL_MULTIPLIER;
+        stamina_peak *= STAMINA_SKILL_MULTIPLIER;
+
+        let mut peak = norm(1.5, [color_peak, stamina_peak]);
+        peak = norm(2.0, [peak, rhythm_peak]);
+
+        // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+        // * These sections will not contribute to the difficulty.
+        if peak > 0.0 {
+            peaks.push(peak);
+        }
+    }
+
+    let mut difficulty = 0.0;
+    let mut weight = 1.0;
+
+    peaks.sort_by(|a, b| b.total_cmp(a));
+
+    for strain in peaks {
+        difficulty += strain * weight;
+        weight *= 0.9;
+    }
+
+    difficulty
 }
 
 fn rescale(stars: f64) -> f64 {
@@ -66,7 +113,7 @@ fn rescale(stars: f64) -> f64 {
 }
 
 pub struct DifficultyValues {
-    pub peaks: Peaks,
+    pub skills: TaikoSkills,
     pub max_combo: u32,
 }
 
@@ -89,42 +136,48 @@ impl DifficultyValues {
         // The first two hit objects have no difficulty object
         n_diff_objects = n_diff_objects.saturating_sub(2);
 
-        let mut peaks = Peaks::new();
+        let mut skills = TaikoSkills::new();
 
         {
-            let mut peaks = PeaksSkill::new(&mut peaks, &diff_objects);
+            let mut rhythm = Skill::new(&mut skills.rhythm, &diff_objects);
+            let mut color = Skill::new(&mut skills.color, &diff_objects);
+            let mut stamina = Skill::new(&mut skills.stamina, &diff_objects);
+            let mut single_color_stamina =
+                Skill::new(&mut skills.single_color_stamina, &diff_objects);
 
             for hit_object in diff_objects.iter().take(n_diff_objects) {
-                peaks.process(&hit_object.get());
+                rhythm.process(&hit_object.get());
+                color.process(&hit_object.get());
+                stamina.process(&hit_object.get());
+                single_color_stamina.process(&hit_object.get());
             }
         }
 
-        Self { peaks, max_combo }
+        Self { skills, max_combo }
     }
 
-    pub fn eval(
-        attrs: &mut TaikoDifficultyAttributes,
-        color_difficulty_value: f64,
-        rhythm_difficulty_value: f64,
-        stamina_difficulty_value: f64,
-        peaks_difficulty_value: f64,
-    ) {
-        let color_rating = color_difficulty_value * DIFFICULTY_MULTIPLIER;
-        let rhythm_rating = rhythm_difficulty_value * DIFFICULTY_MULTIPLIER;
-        let stamina_rating = stamina_difficulty_value * DIFFICULTY_MULTIPLIER;
-        let combined_rating = peaks_difficulty_value * DIFFICULTY_MULTIPLIER;
+    pub fn eval(attrs: &mut TaikoDifficultyAttributes, skills: TaikoSkills) {
+        let color_rating = skills.color.as_difficulty_value() * COLOR_SKILL_MULTIPLIER;
+        let rhythm_rating = skills.rhythm.as_difficulty_value() * RHYTHM_SKILL_MULTIPLIER;
+        let stamina_rating = skills.stamina.as_difficulty_value() * STAMINA_SKILL_MULTIPLIER;
+        let mono_stamina_rating =
+            skills.single_color_stamina.as_difficulty_value() * STAMINA_SKILL_MULTIPLIER;
+        let mono_stamina_factor = if stamina_rating.abs() >= f64::EPSILON {
+            (mono_stamina_rating / stamina_rating).powf(5.0)
+        } else {
+            1.0
+        };
+        let combined_rating =
+            combined_difficulty_value(skills.color, skills.rhythm, skills.stamina);
 
         let mut star_rating = rescale(combined_rating * 1.4);
 
-        // * TODO: This is temporary measure as we don't detect abuse of multiple-input
-        // * playstyles of converts within the current system.
+        // * TODO: This is temporary measure as we don't detect abuse of multiple-input playstyles of converts within the current system.
         if attrs.is_convert {
             star_rating *= 0.925;
-
-            // * For maps with low colour variance and high stamina requirement,
-            // * multiple inputs are more likely to be abused.
+            // * For maps with low colour variance and high stamina requirement, multiple inputs are more likely to be abused.
             if color_rating < 2.0 && stamina_rating > 8.0 {
-                star_rating *= 0.8;
+                star_rating *= 0.80;
             }
         }
 
@@ -132,6 +185,7 @@ impl DifficultyValues {
         attrs.rhythm = rhythm_rating;
         attrs.color = color_rating;
         attrs.peak = combined_rating;
+        attrs.mono_stamina_factor = mono_stamina_factor;
         attrs.stars = star_rating;
     }
 

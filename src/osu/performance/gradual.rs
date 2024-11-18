@@ -80,15 +80,17 @@ use super::{OsuPerformanceAttributes, OsuScoreState};
 /// [`next`]: OsuGradualPerformance::next
 /// [`nth`]: OsuGradualPerformance::nth
 pub struct OsuGradualPerformance {
+    lazer: bool,
     difficulty: OsuGradualDifficulty,
 }
 
 impl OsuGradualPerformance {
     /// Create a new gradual performance calculator for osu!standard maps.
     pub fn new(difficulty: Difficulty, converted: &OsuBeatmap<'_>) -> Self {
+        let lazer = difficulty.get_lazer();
         let difficulty = OsuGradualDifficulty::new(difficulty, converted);
 
-        Self { difficulty }
+        Self { lazer, difficulty }
     }
 
     /// Process the next hit object and calculate the performance attributes
@@ -113,6 +115,7 @@ impl OsuGradualPerformance {
             .difficulty
             .nth(n)?
             .performance()
+            .lazer(self.lazer)
             .state(state)
             .difficulty(self.difficulty.difficulty.clone())
             .passed_objects(self.difficulty.idx as u32)

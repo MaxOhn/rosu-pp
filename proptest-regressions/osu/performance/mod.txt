@@ -12,3 +12,6 @@ cc e5a861f6c665dd09e46423e71d7596edf98897d4130d3144aa6f5be580f31a8b # shrinks to
 cc 2cd5c105bcca0b4255afccc15bee3894b06bd20ac3f5c5d3b785f7e0ef99df46 # shrinks to acc = 0.0, combo = None, n300 = Some(0), n100 = None, n50 = Some(479), n_misses = Some(123), best_case = false
 cc 2cba8a76243aac7233e9207a3162aaa1f08f933c0cb3a2ac79580ece3a7329fc # shrinks to acc = 0.0, n300 = Some(0), n100 = Some(0), n50 = Some(0), n_misses = None, best_case = false
 cc e93787ad8a849ec6d05750c8d09494b8f5a9fa785f843d9a8e2db986c0b32645 # shrinks to acc = 0.0, n300 = None, n100 = None, n50 = None, n_misses = Some(602), best_case = false
+cc a53cb48861126aa63be54606f9a770db5eae95242c9a9d75cf1fd101cfb21729 # shrinks to lazer = true, acc = 0.5679586776392227, n_slider_ticks = None, n_slider_ends = None, n300 = None, n100 = None, n50 = Some(0), n_misses = None, best_case = false
+cc cacb94cb2a61cf05e7083e332b378290a6267a499bf30821228bc0ae4dfe46f6 # shrinks to lazer = true, acc = 0.5270982297689498, n_slider_ticks = None, n_slider_ends = None, n300 = Some(70), n100 = None, n50 = None, n_misses = None, best_case = false
+cc 5679a686382f641f1fa3407a6e19e1caa0adff27e42c397778a2d178361719a3 # shrinks to lazer = true, classic = false, acc = 0.4911232243285752, large_tick_hits = None, slider_end_hits = Some(0), n300 = None, n100 = None, n50 = None, n_misses = None, best_case = false

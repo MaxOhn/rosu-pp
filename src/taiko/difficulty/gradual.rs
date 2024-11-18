@@ -1,6 +1,7 @@
 use std::{cmp, mem, slice::Iter};
 
 use crate::{
+    any::difficulty::skills::Skill,
     model::{beatmap::HitWindows, hit_object::HitObject},
     taiko::TaikoBeatmap,
     util::sync::RefCount,
@@ -9,7 +10,7 @@ use crate::{
 
 use super::{
     object::{TaikoDifficultyObject, TaikoDifficultyObjects},
-    skills::peaks::{Peaks, PeaksSkill},
+    skills::TaikoSkills,
     DifficultyValues, TaikoDifficultyAttributes,
 };
 
@@ -53,7 +54,7 @@ pub struct TaikoGradualDifficulty {
     attrs: TaikoDifficultyAttributes,
     diff_objects: TaikoDifficultyObjects,
     diff_objects_iter: Iter<'static, RefCount<TaikoDifficultyObject>>,
-    peaks: Peaks,
+    skills: TaikoSkills,
     total_hits: usize,
     first_combos: FirstTwoCombos,
 }
@@ -82,8 +83,11 @@ impl TaikoGradualDifficulty {
             (Some(true), Some(true)) => FirstTwoCombos::Both,
         };
 
-        let HitWindows { od: hit_window, .. } =
-            converted.attributes().difficulty(&difficulty).hit_windows();
+        let HitWindows {
+            od_great,
+            od_ok,
+            ar: _,
+        } = converted.attributes().difficulty(&difficulty).hit_windows();
 
         let mut n_diff_objects = 0;
         let mut max_combo = 0;
@@ -96,10 +100,11 @@ impl TaikoGradualDifficulty {
             &mut n_diff_objects,
         );
 
-        let peaks = Peaks::new();
+        let skills = TaikoSkills::new();
 
         let attrs = TaikoDifficultyAttributes {
-            hit_window,
+            great_hit_window: od_great,
+            ok_hit_window: od_ok.unwrap_or(0.0),
             is_convert: converted.is_convert,
             ..Default::default()
         };
@@ -117,7 +122,7 @@ impl TaikoGradualDifficulty {
             difficulty,
             diff_objects,
             diff_objects_iter,
-            peaks,
+            skills,
             attrs,
             total_hits,
             first_combos,
@@ -144,7 +149,12 @@ impl Iterator for TaikoGradualDifficulty {
             loop {
                 let curr = self.diff_objects_iter.next()?;
                 let borrowed = curr.get();
-                PeaksSkill::new(&mut self.peaks, &self.diff_objects).process(&borrowed);
+
+                Skill::new(&mut self.skills.rhythm, &self.diff_objects).process(&borrowed);
+                Skill::new(&mut self.skills.color, &self.diff_objects).process(&borrowed);
+                Skill::new(&mut self.skills.stamina, &self.diff_objects).process(&borrowed);
+                Skill::new(&mut self.skills.single_color_stamina, &self.diff_objects)
+                    .process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;
@@ -166,14 +176,9 @@ impl Iterator for TaikoGradualDifficulty {
 
         self.idx += 1;
 
-        let color = self.peaks.color_difficulty_value();
-        let rhythm = self.peaks.rhythm_difficulty_value();
-        let stamina = self.peaks.stamina_difficulty_value();
-        let combined = self.peaks.clone().difficulty_value();
-
         let mut attrs = self.attrs.clone();
 
-        DifficultyValues::eval(&mut attrs, color, rhythm, stamina, combined);
+        DifficultyValues::eval(&mut attrs, self.skills.clone());
 
         Some(attrs)
     }
@@ -225,13 +230,20 @@ impl Iterator for TaikoGradualDifficulty {
             }
         }
 
-        let mut peaks = PeaksSkill::new(&mut self.peaks, &self.diff_objects);
+        let mut rhythm = Skill::new(&mut self.skills.rhythm, &self.diff_objects);
+        let mut color = Skill::new(&mut self.skills.color, &self.diff_objects);
+        let mut stamina = Skill::new(&mut self.skills.stamina, &self.diff_objects);
+        let mut single_color_stamina =
+            Skill::new(&mut self.skills.single_color_stamina, &self.diff_objects);
 
         for _ in 0..take {
             loop {
                 let curr = self.diff_objects_iter.next()?;
                 let borrowed = curr.get();
-                peaks.process(&borrowed);
+                rhythm.process(&borrowed);
+                color.process(&borrowed);
+                stamina.process(&borrowed);
+                single_color_stamina.process(&borrowed);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;

@@ -26,7 +26,6 @@ macro_rules! new_fn {
 
 impl TandemSorter {
     new_fn!(new_stable: <[_]>::sort_by);
-    new_fn!(new_unstable: super::csharp);
 
     /// Sort the given slice based on the internal ordering.
     pub fn sort<T>(&mut self, slice: &mut [T]) {
@@ -57,35 +56,6 @@ impl TandemSorter {
         }
 
         self.should_reset = true;
-    }
-
-    /// Unsort the given slice based on the internal ordering.
-    pub fn unsort<T>(mut self, slice: &mut [T]) {
-        if self.should_reset {
-            self.toggle_marks();
-            self.should_reset = false;
-        }
-
-        for i in 0..self.indices.len() {
-            let i_idx = self.indices[i];
-
-            if Self::idx_is_marked(i_idx) {
-                continue;
-            }
-
-            let mut j = i;
-            let mut j_idx = i_idx;
-
-            while j != j_idx {
-                self.indices[j] = Self::toggle_mark_idx(j_idx);
-                self.indices.swap(j, j_idx);
-                slice.swap(j, j_idx);
-                j = self.indices[j];
-                j_idx = self.indices[j];
-            }
-
-            self.indices[j] = Self::toggle_mark_idx(j_idx);
-        }
     }
 
     fn toggle_marks(&mut self) {
@@ -119,15 +89,10 @@ mod tests {
             let mut expected_sorted = actual.clone();
             expected_sorted.sort_unstable();
 
-            let expected_unsorted = actual.clone();
-
-            let mut sorter = TandemSorter::new_unstable(&actual, u8::cmp);
+            let mut sorter = TandemSorter::new_stable(&actual, u8::cmp);
 
             sorter.sort(&mut actual);
             assert_eq!(actual, expected_sorted);
-
-            sorter.unsort(&mut actual);
-            assert_eq!(actual, expected_unsorted);
         }
     }
 }

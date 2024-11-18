@@ -27,8 +27,8 @@ impl<'map> Performance<'map> {
     ///
     /// The argument `map_or_attrs` must be either
     /// - previously calculated attributes ([`DifficultyAttributes`],
-    /// [`PerformanceAttributes`], or mode-specific attributes like
-    /// [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
+    ///   [`PerformanceAttributes`], or mode-specific attributes like
+    ///   [`TaikoDifficultyAttributes`], [`ManiaPerformanceAttributes`], ...)
     /// - a beatmap ([`Beatmap`] or [`Converted<'_, M>`])
     ///
     /// If a map is given, difficulty attributes will need to be calculated
@@ -296,6 +296,55 @@ impl<'map> Performance<'map> {
             Self::Taiko(t) => Self::Taiko(t.hitresult_priority(priority)),
             Self::Catch(_) => self,
             Self::Mania(m) => Self::Mania(m.hitresult_priority(priority)),
+        }
+    }
+
+    /// Whether the calculated attributes belong to an osu!lazer or osu!stable
+    /// score.
+    ///
+    /// Defaults to `true`.
+    ///
+    /// This affects internal accuracy calculation because lazer considers
+    /// slider heads for accuracy whereas stable does not.
+    ///
+    /// Only relevant for osu!standard and osu!mania.
+    pub fn lazer(self, lazer: bool) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.lazer(lazer)),
+            Self::Taiko(_) | Self::Catch(_) => self,
+            Self::Mania(m) => Self::Mania(m.lazer(lazer)),
+        }
+    }
+
+    /// Specify the amount of "large tick" hits.
+    ///
+    /// Only relevant for osu!standard.
+    ///
+    /// The meaning depends on the kind of score:
+    /// - if set on osu!stable, this value is irrelevant and can be `0`
+    /// - if set on osu!lazer *without* `CL`, this value is the amount of hit
+    ///   slider ticks and repeats
+    /// - if set on osu!lazer *with* `CL`, this value is the amount of hit
+    ///   slider heads, ticks, and repeats
+    pub fn large_tick_hits(self, large_tick_hits: u32) -> Self {
+        if let Self::Osu(osu) = self {
+            Self::Osu(osu.large_tick_hits(large_tick_hits))
+        } else {
+            self
+        }
+    }
+
+    /// Specify the amount of hit slider ends.
+    ///
+    /// Only relevant for osu!standard.
+    ///
+    /// osu! calls this value "slider tail hits" without the classic
+    /// mod and "small tick hits" with the classic mod.
+    pub fn n_slider_ends(self, n_slider_ends: u32) -> Self {
+        if let Self::Osu(osu) = self {
+            Self::Osu(osu.n_slider_ends(n_slider_ends))
+        } else {
+            self
         }
     }
 

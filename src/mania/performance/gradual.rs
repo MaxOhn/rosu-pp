@@ -146,6 +146,13 @@ mod tests {
         for i in 1.. {
             state.misses += 1;
 
+            // Hold notes award two hitresults in lazer
+            if let Some(h) = converted.hit_objects.get(i - 1) {
+                if !h.is_circle() {
+                    state.n320 += 1;
+                }
+            }
+
             let Some(next_gradual) = gradual.next(state.clone()) else {
                 assert_eq!(i, hit_objects_len + 1);
                 assert!(gradual_2nd.last(state.clone()).is_some() || hit_objects_len % 2 == 0);
