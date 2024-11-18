@@ -1,11 +1,9 @@
-use std::borrow::Cow;
-
 use rosu_map::section::general::GameMode;
 
 use crate::{
     any::{DifficultyAttributes, PerformanceAttributes},
     model::mode::IGameMode,
-    Beatmap, Converted, Performance,
+    Beatmap, Performance,
 };
 
 /// Turning a type into the generic [`IGameMode`]'s performance calculator.
@@ -31,18 +29,6 @@ macro_rules! impl_from_mode {
                 () => { crate::$module::$mode };
             }
 
-            impl<'map> IntoModePerformance<'map, mode!()> for Converted<'map, mode!()> {
-                fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
-                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.into())
-                }
-            }
-
-            impl<'map> IntoModePerformance<'map, mode!()> for &'map Converted<'_, mode!()> {
-                fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
-                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.as_owned().into())
-                }
-            }
-
             impl<'map> IntoModePerformance<'map, mode!()> for crate::$module::$diff {
                 fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
                     <mode!() as IGameMode>::Performance::from_map_or_attrs(self.into())
@@ -52,22 +38,6 @@ macro_rules! impl_from_mode {
             impl<'map> IntoModePerformance<'map, mode!()> for crate::$module::$perf {
                 fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
                     <mode!() as IGameMode>::Performance::from_map_or_attrs(self.difficulty.into())
-                }
-            }
-
-            impl<'map> IntoPerformance<'map> for Converted<'map, mode!()> {
-                fn into_performance(self) -> Performance<'map> {
-                    Performance::$mode(
-                        <Self as IntoModePerformance<'map, mode!()>>::into_performance(self)
-                    )
-                }
-            }
-
-            impl<'map> IntoPerformance<'map> for &'map Converted<'_, mode!()> {
-                fn into_performance(self) -> Performance<'map> {
-                    Performance::$mode(
-                        <Self as IntoModePerformance<'map, mode!()>>::into_performance(self)
-                    )
                 }
             }
 
@@ -84,6 +54,18 @@ macro_rules! impl_from_mode {
                     Performance::$mode(
                         <Self as IntoModePerformance<'a, mode!()>>::into_performance(self)
                     )
+                }
+            }
+
+            impl<'map> IntoModePerformance<'map, mode!()> for &'map Beatmap {
+                fn into_performance(self) -> <mode!() as IGameMode>::Performance<'map> {
+                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.into())
+                }
+            }
+
+            impl<'a> IntoModePerformance<'a, mode!()> for Beatmap {
+                fn into_performance(self) -> <mode!() as IGameMode>::Performance<'a> {
+                    <mode!() as IGameMode>::Performance::from_map_or_attrs(self.into())
                 }
             }
         )*
@@ -115,22 +97,23 @@ impl_from_mode!(
 
 impl<'a> IntoPerformance<'a> for Beatmap {
     fn into_performance(self) -> Performance<'a> {
-        map_to_performance(self.mode, Cow::Owned(self))
+        match self.mode {
+            GameMode::Osu => Performance::Osu(self.into()),
+            GameMode::Taiko => Performance::Taiko(self.into()),
+            GameMode::Catch => Performance::Catch(self.into()),
+            GameMode::Mania => Performance::Mania(self.into()),
+        }
     }
 }
 
 impl<'map> IntoPerformance<'map> for &'map Beatmap {
     fn into_performance(self) -> Performance<'map> {
-        map_to_performance(self.mode, Cow::Borrowed(self))
-    }
-}
-
-fn map_to_performance(mode: GameMode, map: Cow<'_, Beatmap>) -> Performance<'_> {
-    match mode {
-        GameMode::Osu => Performance::Osu(Converted::new(map).into()),
-        GameMode::Taiko => Performance::Taiko(Converted::new(map).into()),
-        GameMode::Catch => Performance::Catch(Converted::new(map).into()),
-        GameMode::Mania => Performance::Mania(Converted::new(map).into()),
+        match self.mode {
+            GameMode::Osu => Performance::Osu(self.into()),
+            GameMode::Taiko => Performance::Taiko(self.into()),
+            GameMode::Catch => Performance::Catch(self.into()),
+            GameMode::Mania => Performance::Mania(self.into()),
+        }
     }
 }
 

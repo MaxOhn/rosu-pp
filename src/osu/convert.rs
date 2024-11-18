@@ -1,35 +1,15 @@
-use rosu_map::section::{general::GameMode, hit_objects::CurveBuffers};
+use rosu_map::section::hit_objects::CurveBuffers;
 
-use crate::model::{
-    beatmap::{Beatmap, Converted},
-    mode::ConvertStatus,
-    mods::Reflection,
-};
+use crate::model::{beatmap::Beatmap, mods::Reflection};
 
 use super::{
     attributes::OsuDifficultyAttributes,
     difficulty::scaling_factor::ScalingFactor,
     object::{NestedSliderObjectKind, OsuObject, OsuObjectKind},
-    Osu,
 };
 
-/// A [`Beatmap`] for [`Osu`] calculations.
-pub type OsuBeatmap<'a> = Converted<'a, Osu>;
-
-pub fn check_convert(map: &Beatmap) -> ConvertStatus {
-    if map.mode == GameMode::Osu {
-        ConvertStatus::Noop
-    } else {
-        ConvertStatus::Incompatible
-    }
-}
-
-pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
-    check_convert(map)
-}
-
 pub fn convert_objects(
-    converted: &OsuBeatmap<'_>,
+    map: &Beatmap,
     scaling_factor: &ScalingFactor,
     reflection: Reflection,
     time_preempt: f64,
@@ -40,10 +20,10 @@ pub fn convert_objects(
     // mean=5.16 | median=4
     let mut ticks_buf = Vec::new();
 
-    let mut osu_objects: Box<[_]> = converted
+    let mut osu_objects: Box<[_]> = map
         .hit_objects
         .iter()
-        .map(|h| OsuObject::new(h, converted, &mut curve_bufs, &mut ticks_buf))
+        .map(|h| OsuObject::new(h, map, &mut curve_bufs, &mut ticks_buf))
         .inspect(|h| {
             if take == 0 {
                 return;
@@ -77,9 +57,9 @@ pub fn convert_objects(
             .for_each(OsuObject::reflect_both_axes),
     }
 
-    let stack_threshold = time_preempt * f64::from(converted.stack_leniency);
+    let stack_threshold = time_preempt * f64::from(map.stack_leniency);
 
-    if converted.version >= 6 {
+    if map.version >= 6 {
         stacking(&mut osu_objects, stack_threshold);
     } else {
         old_stacking(&mut osu_objects, stack_threshold);

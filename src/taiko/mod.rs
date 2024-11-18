@@ -1,14 +1,15 @@
+use rosu_map::section::general::GameMode;
+
 use crate::{
     model::{
         beatmap::Beatmap,
-        mode::{ConvertStatus, IGameMode},
+        mode::{ConvertError, IGameMode},
     },
     Difficulty,
 };
 
 pub use self::{
     attributes::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
-    convert::TaikoBeatmap,
     difficulty::gradual::TaikoGradualDifficulty,
     performance::{gradual::TaikoGradualPerformance, TaikoPerformance},
     score_state::TaikoScoreState,
@@ -28,6 +29,13 @@ mod strains;
 /// [`GameMode::Taiko`]: rosu_map::section::general::GameMode::Taiko
 pub struct Taiko;
 
+impl Taiko {
+    pub fn convert(map: &mut Beatmap) {
+        debug_assert!(!map.is_convert && map.mode == GameMode::Osu);
+        convert::convert(map);
+    }
+}
+
 impl IGameMode for Taiko {
     type DifficultyAttributes = TaikoDifficultyAttributes;
     type Strains = TaikoStrains;
@@ -35,40 +43,32 @@ impl IGameMode for Taiko {
     type GradualDifficulty = TaikoGradualDifficulty;
     type GradualPerformance = TaikoGradualPerformance;
 
-    fn check_convert(map: &Beatmap) -> ConvertStatus {
-        convert::check_convert(map)
-    }
-
-    fn try_convert(map: &mut Beatmap) -> ConvertStatus {
-        convert::try_convert(map)
-    }
-
     fn difficulty(
         difficulty: &Difficulty,
-        converted: &TaikoBeatmap<'_>,
-    ) -> Self::DifficultyAttributes {
-        difficulty::difficulty(difficulty, converted)
+        map: &Beatmap,
+    ) -> Result<Self::DifficultyAttributes, ConvertError> {
+        difficulty::difficulty(difficulty, map)
     }
 
-    fn strains(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self::Strains {
-        strains::strains(difficulty, converted)
+    fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<Self::Strains, ConvertError> {
+        strains::strains(difficulty, map)
     }
 
-    fn performance(map: TaikoBeatmap<'_>) -> Self::Performance<'_> {
+    fn performance(map: &Beatmap) -> Self::Performance<'_> {
         TaikoPerformance::new(map)
     }
 
     fn gradual_difficulty(
         difficulty: Difficulty,
-        map: &TaikoBeatmap<'_>,
-    ) -> Self::GradualDifficulty {
+        map: &Beatmap,
+    ) -> Result<Self::GradualDifficulty, ConvertError> {
         TaikoGradualDifficulty::new(difficulty, map)
     }
 
     fn gradual_performance(
         difficulty: Difficulty,
-        map: &TaikoBeatmap<'_>,
-    ) -> Self::GradualPerformance {
+        map: &Beatmap,
+    ) -> Result<Self::GradualPerformance, ConvertError> {
         TaikoGradualPerformance::new(difficulty, map)
     }
 }

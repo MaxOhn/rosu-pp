@@ -1,4 +1,4 @@
-use std::{io, path::Path, str::FromStr};
+use std::{borrow::Cow, io, path::Path, str::FromStr};
 
 use rosu_map::{
     section::{general::GameMode, hit_objects::hit_samples::HitSoundType},
@@ -8,13 +8,12 @@ use rosu_map::{
 pub use rosu_map::section::events::BreakPeriod;
 
 use crate::{
-    catch::Catch, mania::Mania, osu::Osu, taiko::Taiko, Difficulty, GradualDifficulty,
+    catch::Catch, mania::Mania, taiko::Taiko, Difficulty, GameMods, GradualDifficulty,
     GradualPerformance, Performance,
 };
 
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
-    converted::Converted,
     decode::{BeatmapState, ParseBeatmapError},
 };
 
@@ -24,12 +23,11 @@ use super::{
         TimingPoint,
     },
     hit_object::HitObject,
-    mode::{ConvertStatus, IGameMode},
+    mode::ConvertError,
 };
 
 mod attributes;
 mod bpm;
-mod converted;
 mod decode;
 
 /// All beatmap data that is relevant for difficulty and performance
@@ -122,75 +120,67 @@ impl Beatmap {
         self.breaks.iter().map(BreakPeriod::duration).sum()
     }
 
-    /// Convert a [`&mut Beatmap`] to the specified mode with an argument
-    /// instead of a generic parameter.
-    ///
-    /// [`&mut Beatmap`]: Beatmap
-    pub fn convert_in_place(&mut self, mode: GameMode) -> ConvertStatus {
-        match mode {
-            GameMode::Osu => Osu::try_convert(self),
-            GameMode::Taiko => Taiko::try_convert(self),
-            GameMode::Catch => Catch::try_convert(self),
-            GameMode::Mania => Mania::try_convert(self),
-        }
+    /// Attempt to convert a [`Beatmap`] to the specified mode.
+    pub fn convert(mut self, mode: GameMode, mods: &GameMods) -> Result<Self, ConvertError> {
+        self.convert_mut(mode, mods)?;
+
+        Ok(self)
     }
 
     /// Attempt to convert a [`&Beatmap`] to the specified mode.
     ///
-    /// If the conversion is incompatible, `None` is returned.
-    ///
     /// [`&Beatmap`]: Beatmap
-    pub fn try_as_converted<M: IGameMode>(&self) -> Option<Converted<'_, M>> {
-        Converted::try_from_ref(self)
-    }
+    pub fn convert_ref(
+        &self,
+        mode: GameMode,
+        mods: &GameMods,
+    ) -> Result<Cow<'_, Self>, ConvertError> {
+        if self.mode == mode {
+            return Ok(Cow::Borrowed(self));
+        } else if self.is_convert {
+            return Err(ConvertError::AlreadyConverted);
+        } else if self.mode != GameMode::Osu {
+            return Err(ConvertError::Convert {
+                from: self.mode,
+                to: mode,
+            });
+        }
 
-    /// Convert a [`&Beatmap`] to the specified mode.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the conversion is incompatible.
-    ///
-    /// [`&Beatmap`]: Beatmap
-    pub fn unchecked_as_converted<M: IGameMode>(&self) -> Converted<'_, M> {
-        Converted::unchecked_from_ref(self)
+        let mut map = self.to_owned();
+
+        match mode {
+            GameMode::Taiko => Taiko::convert(&mut map),
+            GameMode::Catch => Catch::convert(&mut map),
+            GameMode::Mania => Mania::convert(&mut map, mods),
+            GameMode::Osu => unreachable!(),
+        };
+
+        Ok(Cow::Owned(map))
     }
 
     /// Attempt to convert a [`&mut Beatmap`] to the specified mode.
     ///
-    /// If the conversion is incompatible, `None` is returned.
-    ///
     /// [`&mut Beatmap`]: Beatmap
-    pub fn try_as_converted_mut<M: IGameMode>(&mut self) -> Option<Converted<'_, M>> {
-        Converted::try_from_mut(self)
-    }
+    pub fn convert_mut(&mut self, mode: GameMode, mods: &GameMods) -> Result<(), ConvertError> {
+        if self.mode == mode {
+            return Ok(());
+        } else if self.is_convert {
+            return Err(ConvertError::AlreadyConverted);
+        } else if self.mode != GameMode::Osu {
+            return Err(ConvertError::Convert {
+                from: self.mode,
+                to: mode,
+            });
+        }
 
-    /// Convert a [`&mut Beatmap`] to the specified mode.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the conversion is incompatible.
-    ///
-    /// [`&mut Beatmap`]: Beatmap
-    pub fn unchecked_as_converted_mut<M: IGameMode>(&mut self) -> Converted<'_, M> {
-        Converted::unchecked_from_mut(self)
-    }
+        match mode {
+            GameMode::Taiko => Taiko::convert(self),
+            GameMode::Catch => Catch::convert(self),
+            GameMode::Mania => Mania::convert(self, mods),
+            GameMode::Osu => unreachable!(),
+        }
 
-    /// Attempt to convert a [`Beatmap`] to the specified mode.
-    ///
-    /// If the conversion is incompatible the [`Beatmap`] will be returned
-    /// unchanged as `Err`.
-    #[allow(clippy::result_large_err)]
-    pub fn try_into_converted<'a, M: IGameMode>(self) -> Result<Converted<'a, M>, Self> {
-        Converted::try_from_owned(self)
-    }
-
-    /// Convert a [`Beatmap`] to the specified mode.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the conversion is incompatible.
-    pub fn unchecked_into_converted<'a, M: IGameMode>(self) -> Converted<'a, M> {
-        Converted::unchecked_from_owned(self)
+        Ok(())
     }
 }
 

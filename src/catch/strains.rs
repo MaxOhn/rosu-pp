@@ -1,6 +1,8 @@
-use crate::{any::Difficulty, catch::difficulty::DifficultyValues};
+use rosu_map::section::general::GameMode;
 
-use super::convert::CatchBeatmap;
+use crate::{
+    any::Difficulty, catch::difficulty::DifficultyValues, model::mode::ConvertError, Beatmap,
+};
 
 /// The result of calculating the strains on a osu!catch map.
 ///
@@ -16,10 +18,11 @@ impl CatchStrains {
     pub const SECTION_LEN: f64 = 750.0;
 }
 
-pub fn strains(difficulty: &Difficulty, converted: &CatchBeatmap<'_>) -> CatchStrains {
-    let DifficultyValues { movement, .. } = DifficultyValues::calculate(difficulty, converted);
+pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<CatchStrains, ConvertError> {
+    let map = map.convert_ref(GameMode::Catch, difficulty.get_mods())?;
+    let DifficultyValues { movement, .. } = DifficultyValues::calculate(difficulty, &map);
 
-    CatchStrains {
+    Ok(CatchStrains {
         movement: movement.get_curr_strain_peaks().into_vec(),
-    }
+    })
 }

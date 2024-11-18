@@ -1,6 +1,6 @@
-use crate::{taiko::difficulty::DifficultyValues, Difficulty};
+use rosu_map::section::general::GameMode;
 
-use super::convert::TaikoBeatmap;
+use crate::{model::mode::ConvertError, taiko::difficulty::DifficultyValues, Beatmap, Difficulty};
 
 /// The result of calculating the strains on a osu!taiko map.
 ///
@@ -20,12 +20,13 @@ impl TaikoStrains {
     pub const SECTION_LEN: f64 = 400.0;
 }
 
-pub fn strains(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> TaikoStrains {
-    let values = DifficultyValues::calculate(difficulty, converted);
+pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<TaikoStrains, ConvertError> {
+    let map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
+    let values = DifficultyValues::calculate(difficulty, &map);
 
-    TaikoStrains {
+    Ok(TaikoStrains {
         color: values.skills.color.get_curr_strain_peaks().into_vec(),
         rhythm: values.skills.rhythm.get_curr_strain_peaks().into_vec(),
         stamina: values.skills.stamina.get_curr_strain_peaks().into_vec(),
-    }
+    })
 }

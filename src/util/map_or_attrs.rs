@@ -1,9 +1,12 @@
-use std::fmt::{Debug, Formatter, Result as FmtResult};
+use std::{
+    borrow::Cow,
+    fmt::{Debug, Formatter, Result as FmtResult},
+};
 
-use crate::model::{beatmap::Converted, mode::IGameMode};
+use crate::{model::mode::IGameMode, Beatmap};
 
 pub enum MapOrAttrs<'map, M: IGameMode> {
-    Map(Converted<'map, M>),
+    Map(Cow<'map, Beatmap>),
     Attrs(M::DifficultyAttributes),
 }
 
@@ -69,9 +72,15 @@ where
     }
 }
 
-impl<'map, M: IGameMode> From<Converted<'map, M>> for MapOrAttrs<'map, M> {
-    fn from(converted: Converted<'map, M>) -> Self {
-        Self::Map(converted)
+impl<'map, M: IGameMode> From<&'map Beatmap> for MapOrAttrs<'map, M> {
+    fn from(map: &'map Beatmap) -> Self {
+        Self::Map(Cow::Borrowed(map))
+    }
+}
+
+impl<M: IGameMode> From<Beatmap> for MapOrAttrs<'_, M> {
+    fn from(map: Beatmap) -> Self {
+        Self::Map(Cow::Owned(map))
     }
 }
 

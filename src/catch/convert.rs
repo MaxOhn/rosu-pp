@@ -2,9 +2,8 @@ use rosu_map::section::{general::GameMode, hit_objects::CurveBuffers};
 
 use crate::{
     model::{
-        beatmap::{Beatmap, Converted},
+        beatmap::Beatmap,
         hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
-        mode::ConvertStatus,
         mods::Reflection,
     },
     util::{float_ext::FloatExt, random::Random},
@@ -19,37 +18,18 @@ use super::{
         juice_stream::{JuiceStream, JuiceStreamBufs, NestedJuiceStreamObjectKind},
         palpable::PalpableObject,
     },
-    Catch, PLAYFIELD_WIDTH,
+    PLAYFIELD_WIDTH,
 };
 
 const RNG_SEED: i32 = 1337;
 
-/// A [`Beatmap`] for [`Catch`] calculations.
-pub type CatchBeatmap<'a> = Converted<'a, Catch>;
-
-pub const fn check_convert(map: &Beatmap) -> ConvertStatus {
-    match map.mode {
-        GameMode::Osu => ConvertStatus::Conversion,
-        GameMode::Catch => ConvertStatus::Noop,
-        GameMode::Taiko | GameMode::Mania => ConvertStatus::Incompatible,
-    }
-}
-
-pub fn try_convert(map: &mut Beatmap) -> ConvertStatus {
-    match map.mode {
-        GameMode::Osu => {
-            map.mode = GameMode::Catch;
-            map.is_convert = true;
-
-            ConvertStatus::Conversion
-        }
-        GameMode::Catch => ConvertStatus::Noop,
-        GameMode::Taiko | GameMode::Mania => ConvertStatus::Incompatible,
-    }
+pub fn convert(map: &mut Beatmap) {
+    map.mode = GameMode::Catch;
+    map.is_convert = true;
 }
 
 pub fn convert_objects(
-    converted: &CatchBeatmap<'_>,
+    map: &Beatmap,
     count: &mut ObjectCountBuilder,
     reflection: Reflection,
     hr_offsets: bool,
@@ -70,8 +50,8 @@ pub fn convert_objects(
     let mut last_pos = None;
     let mut last_start_time = 0.0;
 
-    for h in converted.hit_objects.iter() {
-        let mut new_objects = convert_object(h, converted, count, &mut bufs);
+    for h in map.hit_objects.iter() {
+        let mut new_objects = convert_object(h, map, count, &mut bufs);
 
         apply_pos_offset(
             &mut new_objects,
@@ -99,7 +79,7 @@ pub fn convert_objects(
 
 fn convert_object<'a>(
     h: &'a HitObject,
-    converted: &CatchBeatmap<'_>,
+    map: &Beatmap,
     count: &mut ObjectCountBuilder,
     bufs: &'a mut JuiceStreamBufs,
 ) -> ObjectIter<'a> {
@@ -107,8 +87,7 @@ fn convert_object<'a>(
         HitObjectKind::Circle => ObjectIterState::Fruit(Some(Fruit::new(count))),
         HitObjectKind::Slider(ref slider) => {
             let effective_x = h.pos.x.clamp(0.0, PLAYFIELD_WIDTH);
-            let stream =
-                JuiceStream::new(effective_x, h.start_time, slider, converted, count, bufs);
+            let stream = JuiceStream::new(effective_x, h.start_time, slider, map, count, bufs);
 
             ObjectIterState::JuiceStream(stream)
         }

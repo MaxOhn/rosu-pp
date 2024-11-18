@@ -6,12 +6,13 @@ use rosu_map::section::{
 };
 
 use crate::{
-    catch::{attributes::ObjectCountBuilder, convert::CatchBeatmap},
+    catch::attributes::ObjectCountBuilder,
     model::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::Slider,
     },
     util::get_precision_adjusted_beat_len,
+    Beatmap,
 };
 
 pub struct JuiceStream<'a> {
@@ -26,18 +27,18 @@ impl<'a> JuiceStream<'a> {
         effective_x: f32,
         start_time: f64,
         slider: &'a Slider,
-        converted: &CatchBeatmap<'_>,
+        map: &Beatmap,
         count: &mut ObjectCountBuilder,
         bufs: &'a mut JuiceStreamBufs,
     ) -> Self {
-        let slider_multiplier = converted.slider_multiplier;
-        let slider_tick_rate = converted.slider_tick_rate;
+        let slider_multiplier = map.slider_multiplier;
+        let slider_tick_rate = map.slider_tick_rate;
 
-        let beat_len = converted
+        let beat_len = map
             .timing_point_at(start_time)
             .map_or(TimingPoint::DEFAULT_BEAT_LEN, |point| point.beat_len);
 
-        let slider_velocity = converted
+        let slider_velocity = map
             .difficulty_point_at(start_time)
             .map_or(DifficultyPoint::DEFAULT_SLIDER_VELOCITY, |point| {
                 point.slider_velocity
@@ -49,7 +50,7 @@ impl<'a> JuiceStream<'a> {
             / get_precision_adjusted_beat_len(slider_velocity, beat_len);
         let scoring_dist = velocity * beat_len;
 
-        let tick_dist_multiplier = if converted.version < 8 {
+        let tick_dist_multiplier = if map.version < 8 {
             slider_velocity.recip()
         } else {
             1.0

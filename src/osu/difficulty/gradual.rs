@@ -1,13 +1,15 @@
 use std::{cmp, mem};
 
+use rosu_map::section::general::GameMode;
+
 use crate::{
     any::difficulty::skills::Skill,
+    model::mode::ConvertError,
     osu::{
         convert::convert_objects,
         object::{OsuObject, OsuObjectKind},
-        OsuBeatmap,
     },
-    Difficulty,
+    Beatmap, Difficulty,
 };
 
 use self::osu_objects::OsuObjects;
@@ -33,12 +35,10 @@ use super::{
 /// use rosu_pp::{Beatmap, Difficulty};
 /// use rosu_pp::osu::{Osu, OsuGradualDifficulty};
 ///
-/// let converted = Beatmap::from_path("./resources/2785319.osu")
-///     .unwrap()
-///     .unchecked_into_converted::<Osu>();
+/// let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 ///
 /// let difficulty = Difficulty::new().mods(64); // DT
-/// let mut iter = OsuGradualDifficulty::new(difficulty, &converted);
+/// let mut iter = OsuGradualDifficulty::new(difficulty, &map).unwrap();
 ///
 ///  // the difficulty of the map after the first hit object
 /// let attrs1 = iter.next();
@@ -71,22 +71,23 @@ struct NotClonable;
 
 impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
-    pub fn new(difficulty: Difficulty, converted: &OsuBeatmap<'_>) -> Self {
+    pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
         let mods = difficulty.get_mods();
+        let map = map.convert_ref(GameMode::Osu, mods)?;
 
         let OsuDifficultySetup {
             scaling_factor,
             map_attrs,
             mut attrs,
             time_preempt,
-        } = OsuDifficultySetup::new(&difficulty, converted);
+        } = OsuDifficultySetup::new(&difficulty, &map);
 
         let osu_objects = convert_objects(
-            converted,
+            &map,
             &scaling_factor,
             mods.reflection(),
             time_preempt,
-            converted.hit_objects.len(),
+            map.hit_objects.len(),
             &mut attrs,
         );
 
@@ -111,7 +112,7 @@ impl OsuGradualDifficulty {
         let skills = OsuSkills::new(mods, &scaling_factor, &map_attrs, time_preempt);
         let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
 
-        Self {
+        Ok(Self {
             idx: 0,
             difficulty,
             attrs,
@@ -119,7 +120,7 @@ impl OsuGradualDifficulty {
             diff_objects,
             osu_objects,
             _not_clonable: NotClonable,
-        }
+        })
     }
 
     fn increment_combo(h: &OsuObject, attrs: &mut OsuDifficultyAttributes) {
@@ -265,28 +266,22 @@ mod tests {
 
     #[test]
     fn empty() {
-        let converted = Beatmap::from_bytes(&[])
-            .unwrap()
-            .unchecked_into_converted::<Osu>();
-
-        let mut gradual = OsuGradualDifficulty::new(Difficulty::new(), &converted);
-
+        let map = Beatmap::from_bytes(&[]).unwrap();
+        let mut gradual = OsuGradualDifficulty::new(Difficulty::new(), &map).unwrap();
         assert!(gradual.next().is_none());
     }
 
     #[test]
     fn next_and_nth() {
-        let converted = Beatmap::from_path("./resources/2785319.osu")
-            .unwrap()
-            .unchecked_into_converted::<Osu>();
+        let map = Beatmap::from_path("./resources/2785319.osu").unwrap();
 
         let difficulty = Difficulty::new();
 
-        let mut gradual = OsuGradualDifficulty::new(difficulty.clone(), &converted);
-        let mut gradual_2nd = OsuGradualDifficulty::new(difficulty.clone(), &converted);
-        let mut gradual_3rd = OsuGradualDifficulty::new(difficulty.clone(), &converted);
+        let mut gradual = OsuGradualDifficulty::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_2nd = OsuGradualDifficulty::new(difficulty.clone(), &map).unwrap();
+        let mut gradual_3rd = OsuGradualDifficulty::new(difficulty.clone(), &map).unwrap();
 
-        let hit_objects_len = converted.hit_objects.len();
+        let hit_objects_len = map.hit_objects.len();
 
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {
@@ -309,8 +304,8 @@ mod tests {
             let expected = difficulty
                 .clone()
                 .passed_objects(i as u32)
-                .with_mode()
-                .calculate(&converted);
+                .calculate_for_mode::<Osu>(&map)
+                .unwrap();
 
             assert_eq!(next_gradual, expected);
         }

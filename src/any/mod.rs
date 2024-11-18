@@ -1,8 +1,7 @@
 pub use self::{
     attributes::{DifficultyAttributes, PerformanceAttributes},
     difficulty::{
-        converted::ConvertedDifficulty, gradual::GradualDifficulty, inspect::InspectDifficulty,
-        Difficulty, ModsDependent,
+        gradual::GradualDifficulty, inspect::InspectDifficulty, Difficulty, ModsDependent,
     },
     performance::{
         gradual::GradualPerformance,

@@ -1,14 +1,18 @@
 use std::cmp;
 
+use rosu_map::section::general::GameMode;
+
 use crate::{
     any::difficulty::{skills::Skill, Difficulty},
     mania::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},
     },
+    model::mode::ConvertError,
+    Beatmap,
 };
 
-use super::{attributes::ManiaDifficultyAttributes, convert::ManiaBeatmap};
+use super::attributes::ManiaDifficultyAttributes;
 
 pub mod gradual;
 mod object;
@@ -18,26 +22,28 @@ const DIFFICULTY_MULTIPLIER: f64 = 0.018;
 
 pub fn difficulty(
     difficulty: &Difficulty,
-    converted: &ManiaBeatmap<'_>,
-) -> ManiaDifficultyAttributes {
-    let n_objects = cmp::min(difficulty.get_passed_objects(), converted.hit_objects.len()) as u32;
+    map: &Beatmap,
+) -> Result<ManiaDifficultyAttributes, ConvertError> {
+    let map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
 
-    let values = DifficultyValues::calculate(difficulty, converted);
+    let n_objects = cmp::min(difficulty.get_passed_objects(), map.hit_objects.len()) as u32;
 
-    let hit_window = converted
+    let values = DifficultyValues::calculate(difficulty, &map);
+
+    let hit_window = map
         .attributes()
         .difficulty(difficulty)
         .hit_windows()
         .od_great;
 
-    ManiaDifficultyAttributes {
+    Ok(ManiaDifficultyAttributes {
         stars: values.strain.difficulty_value() * DIFFICULTY_MULTIPLIER,
         hit_window,
         max_combo: values.max_combo,
         n_objects,
         n_hold_notes: values.n_hold_notes,
-        is_convert: converted.is_convert,
-    }
+        is_convert: map.is_convert,
+    })
 }
 
 pub struct DifficultyValues {
@@ -47,13 +53,13 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &Difficulty, converted: &ManiaBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, map: &Beatmap) -> Self {
         let take = difficulty.get_passed_objects();
-        let total_columns = converted.cs.round_ties_even().max(1.0);
+        let total_columns = map.cs.round_ties_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(converted);
+        let mut params = ObjectParams::new(map);
 
-        let mania_objects = converted
+        let mania_objects = map
             .hit_objects
             .iter()
             .map(|h| ManiaObject::new(h, total_columns, &mut params))

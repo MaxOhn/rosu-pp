@@ -1,8 +1,10 @@
 use std::cmp;
 
+use rosu_map::section::general::GameMode;
+
 use crate::{
     any::difficulty::skills::Skill,
-    model::beatmap::HitWindows,
+    model::{beatmap::HitWindows, mode::ConvertError},
     taiko::{
         difficulty::{
             color::preprocessor::ColorDifficultyPreprocessor,
@@ -10,12 +12,12 @@ use crate::{
         },
         object::TaikoObject,
     },
-    Difficulty,
+    Beatmap, Difficulty,
 };
 
 use self::skills::{color::Color, rhythm::Rhythm, stamina::Stamina, TaikoSkills};
 
-use super::{attributes::TaikoDifficultyAttributes, convert::TaikoBeatmap};
+use super::attributes::TaikoDifficultyAttributes;
 
 mod color;
 pub mod gradual;
@@ -30,27 +32,29 @@ const STAMINA_SKILL_MULTIPLIER: f64 = 0.375 * DIFFICULTY_MULTIPLIER;
 
 pub fn difficulty(
     difficulty: &Difficulty,
-    converted: &TaikoBeatmap<'_>,
-) -> TaikoDifficultyAttributes {
+    map: &Beatmap,
+) -> Result<TaikoDifficultyAttributes, ConvertError> {
+    let map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
+
     let HitWindows {
         od_great,
         od_ok,
         ar: _,
-    } = converted.attributes().difficulty(difficulty).hit_windows();
+    } = map.attributes().difficulty(difficulty).hit_windows();
 
-    let DifficultyValues { skills, max_combo } = DifficultyValues::calculate(difficulty, converted);
+    let DifficultyValues { skills, max_combo } = DifficultyValues::calculate(difficulty, &map);
 
     let mut attrs = TaikoDifficultyAttributes {
         great_hit_window: od_great,
         ok_hit_window: od_ok.unwrap_or(0.0),
         max_combo,
-        is_convert: converted.is_convert,
+        is_convert: map.is_convert,
         ..Default::default()
     };
 
     DifficultyValues::eval(&mut attrs, skills);
 
-    attrs
+    Ok(attrs)
 }
 
 fn combined_difficulty_value(color: Color, rhythm: Rhythm, stamina: Stamina) -> f64 {
@@ -118,7 +122,7 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &Difficulty, converted: &TaikoBeatmap<'_>) -> Self {
+    pub fn calculate(difficulty: &Difficulty, converted: &Beatmap) -> Self {
         let take = difficulty.get_passed_objects();
         let clock_rate = difficulty.get_clock_rate();
 
@@ -190,7 +194,7 @@ impl DifficultyValues {
     }
 
     pub fn create_difficulty_objects(
-        converted: &TaikoBeatmap<'_>,
+        converted: &Beatmap,
         take: u32,
         clock_rate: f64,
         max_combo: &mut u32,
