@@ -53,7 +53,7 @@ impl OsuScoreState {
 
         match origin {
             OsuScoreOrigin::Stable => {}
-            OsuScoreOrigin::LazerWithoutClassic {
+            OsuScoreOrigin::WithSliderAcc {
                 max_large_ticks,
                 max_slider_ends,
             } => {
@@ -63,7 +63,7 @@ impl OsuScoreState {
                 numerator += 150 * slider_end_hits + 30 * large_tick_hits;
                 denominator += 150 * max_slider_ends + 30 * max_large_ticks;
             }
-            OsuScoreOrigin::LazerWithClassic {
+            OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks,
                 max_slider_ends,
             } => {
@@ -94,13 +94,13 @@ impl Default for OsuScoreState {
 pub enum OsuScoreOrigin {
     /// For scores set on osu!stable
     Stable,
-    /// For scores set on osu!lazer without the `Classic` mod
-    LazerWithoutClassic {
+    /// For scores set on osu!lazer with slider accuracy
+    WithSliderAcc {
         max_large_ticks: u32,
         max_slider_ends: u32,
     },
-    /// For scores set on osu!lazer with the `Classic` mod
-    LazerWithClassic {
+    /// For scores set on osu!lazer without slider accuracy
+    WithoutSliderAcc {
         max_large_ticks: u32,
         max_slider_ends: u32,
     },

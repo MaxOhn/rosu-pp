@@ -306,7 +306,6 @@ impl_has_mod! {
     fl: + Flashlight ["Flashlight"],
     so: + SpunOut ["SpunOut"],
     bl: - Blinds ["Blinds"],
-    cl: - Classic ["Classic"],
     tc: - Traceable ["Traceable"],
 }
 
