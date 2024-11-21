@@ -310,7 +310,6 @@ impl_has_mod! {
     ht: + HalfTime ["HalfTime"],
     ap: + Autopilot ["Autopilot"],
     bl: - Blinds ["Blinds"],
-    cl: - Classic ["Classic"],
     tc: - Traceable ["Traceable"],
 }
 

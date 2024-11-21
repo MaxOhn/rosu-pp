@@ -371,13 +371,13 @@ impl<'map> OsuPerformance<'map> {
         let mut n100 = self.n100.map_or(0, |n| cmp::min(n, n_remaining));
         let mut n50 = self.n50.map_or(0, |n| cmp::min(n, n_remaining));
 
-        let classic = self.difficulty.get_mods().cl();
         let lazer = self.difficulty.get_lazer();
+        let using_classic_slider_acc = self.difficulty.get_mods().no_slider_head_acc(lazer);
 
-        let (origin, slider_end_hits, large_tick_hits) = match (lazer, classic) {
+        let (origin, slider_end_hits, large_tick_hits) = match (lazer, using_classic_slider_acc) {
             (false, _) => (OsuScoreOrigin::Stable, 0, 0),
             (true, false) => {
-                let origin = OsuScoreOrigin::LazerWithoutClassic {
+                let origin = OsuScoreOrigin::WithSliderAcc {
                     max_large_ticks: attrs.n_slider_ticks,
                     max_slider_ends: attrs.n_sliders,
                 };
@@ -393,7 +393,7 @@ impl<'map> OsuPerformance<'map> {
                 (origin, slider_end_hits, large_tick_hits)
             }
             (true, true) => {
-                let origin = OsuScoreOrigin::LazerWithClassic {
+                let origin = OsuScoreOrigin::WithoutSliderAcc {
                     max_large_ticks: attrs.n_sliders + attrs.n_slider_ticks,
                     max_slider_ends: attrs.n_sliders,
                 };
@@ -414,14 +414,14 @@ impl<'map> OsuPerformance<'map> {
 
         let (slider_acc_value, max_slider_acc_value) = match origin {
             OsuScoreOrigin::Stable => (0, 0),
-            OsuScoreOrigin::LazerWithoutClassic {
+            OsuScoreOrigin::WithSliderAcc {
                 max_large_ticks,
                 max_slider_ends,
             } => (
                 150 * slider_end_hits + 30 * large_tick_hits,
                 150 * max_slider_ends + 30 * max_large_ticks,
             ),
-            OsuScoreOrigin::LazerWithClassic {
+            OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks,
                 max_slider_ends,
             } => (
@@ -656,7 +656,6 @@ impl<'map> OsuPerformance<'map> {
 
         let mods = self.difficulty.get_mods();
         let lazer = self.difficulty.get_lazer();
-        let classic = mods.cl();
         let using_classic_slider_acc = mods.no_slider_head_acc(lazer);
 
         let mut effective_miss_count = f64::from(state.misses);
@@ -693,13 +692,13 @@ impl<'map> OsuPerformance<'map> {
         effective_miss_count = effective_miss_count.max(f64::from(state.misses));
         effective_miss_count = effective_miss_count.min(f64::from(state.total_hits()));
 
-        let origin = match (lazer, classic) {
+        let origin = match (lazer, using_classic_slider_acc) {
             (false, _) => OsuScoreOrigin::Stable,
-            (true, false) => OsuScoreOrigin::LazerWithoutClassic {
+            (true, false) => OsuScoreOrigin::WithSliderAcc {
                 max_large_ticks: attrs.n_slider_ticks,
                 max_slider_ends: attrs.n_sliders,
             },
-            (true, true) => OsuScoreOrigin::LazerWithClassic {
+            (true, true) => OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks: attrs.n_sliders + attrs.n_slider_ticks,
                 max_slider_ends: attrs.n_sliders,
             },
@@ -1139,7 +1138,7 @@ impl NoComboState {
 
         match origin {
             OsuScoreOrigin::Stable => {}
-            OsuScoreOrigin::LazerWithoutClassic {
+            OsuScoreOrigin::WithSliderAcc {
                 max_large_ticks,
                 max_slider_ends,
             } => {
@@ -1149,7 +1148,7 @@ impl NoComboState {
                 numerator += 150 * slider_end_hits + 30 * large_tick_hits;
                 denominator += 150 * max_slider_ends + 30 * max_large_ticks;
             }
-            OsuScoreOrigin::LazerWithClassic {
+            OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks,
                 max_slider_ends,
             } => {
@@ -1238,7 +1237,7 @@ mod test {
         let (origin, slider_end_hits, large_tick_hits) = match (lazer, classic) {
             (false, _) => (OsuScoreOrigin::Stable, 0, 0),
             (true, false) => {
-                let origin = OsuScoreOrigin::LazerWithoutClassic {
+                let origin = OsuScoreOrigin::WithSliderAcc {
                     max_large_ticks: N_SLIDER_TICKS,
                     max_slider_ends: N_SLIDERS,
                 };
@@ -1251,7 +1250,7 @@ mod test {
                 (origin, slider_end_hits, large_tick_hits)
             }
             (true, true) => {
-                let origin = OsuScoreOrigin::LazerWithClassic {
+                let origin = OsuScoreOrigin::WithoutSliderAcc {
                     max_large_ticks: N_SLIDERS + N_SLIDER_TICKS,
                     max_slider_ends: N_SLIDERS,
                 };
