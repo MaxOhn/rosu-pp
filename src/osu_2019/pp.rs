@@ -40,6 +40,8 @@ pub struct OsuPP<'m> {
     n100: Option<u32>,
     n50: Option<u32>,
     n_misses: u32,
+
+    passed_objects: Option<u32>,
 }
 
 impl<'m> OsuPP<'m> {
@@ -56,6 +58,7 @@ impl<'m> OsuPP<'m> {
             n100: None,
             n50: None,
             n_misses: 0,
+            passed_objects: None,
         }
     }
 
@@ -72,6 +75,7 @@ impl<'m> OsuPP<'m> {
             n100: None,
             n50: None,
             n_misses: 0,
+            passed_objects: None,
         }
     }
 
@@ -121,6 +125,13 @@ impl<'m> OsuPP<'m> {
     #[inline]
     pub fn misses(mut self, n_misses: u32) -> Self {
         self.n_misses = n_misses;
+
+        self
+    }
+
+    #[inline]
+    pub fn passed_objects(mut self, passed_objects: u32) -> Self {
+        self.passed_objects = self.passed_objects.replace(passed_objects);
 
         self
     }
@@ -224,7 +235,7 @@ impl<'m> OsuPP<'m> {
     /// containing stars and other attributes.
     pub fn calculate(mut self) -> OsuPerformanceAttributes {
         if self.attributes.is_none() {
-            let attributes = stars(self.map.unwrap(), self.mods.clone());
+            let attributes = stars(self.map.unwrap(), self.mods.clone(), self.passed_objects);
             self.attributes.replace(attributes);
         }
 
@@ -517,6 +528,10 @@ impl<'m> OsuPP<'m> {
 
     #[inline]
     fn n_objects(&self) -> u32 {
+        if let Some(passed_objects) = self.passed_objects {
+            return passed_objects;
+        }
+
         match self.attributes.as_ref() {
             Some(attributes) => {
                 (attributes.n_circles + attributes.n_sliders + attributes.n_spinners) as u32
