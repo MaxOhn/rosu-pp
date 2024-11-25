@@ -27,8 +27,15 @@ pub struct OsuDifficultyAttributes {
     pub n_circles: u32,
     /// The amount of sliders.
     pub n_sliders: u32,
-    /// The amount of slider ticks and repeat points.
-    pub n_slider_ticks: u32,
+    /// The amount of "large ticks".
+    ///
+    /// The meaning depends on the kind of score:
+    /// - if set on osu!stable, this value is irrelevant
+    /// - if set on osu!lazer *without* `CL`, this value is the amount of
+    ///   slider ticks and repeats
+    /// - if set on osu!lazer *with* `CL`, this value is the amount of slider
+    ///   heads, ticks, and repeats
+    pub n_large_ticks: u32,
     /// The amount of spinners.
     pub n_spinners: u32,
     /// The final star rating

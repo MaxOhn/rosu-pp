@@ -173,8 +173,8 @@ impl<'map> OsuPerformance<'map> {
     ///   slider ticks and repeats
     /// - if set on osu!lazer *with* `CL`, this value is the amount of hit
     ///   slider heads, ticks, and repeats
-    pub const fn large_tick_hits(mut self, large_tick_hits: u32) -> Self {
-        self.large_tick_hits = Some(large_tick_hits);
+    pub const fn n_large_ticks(mut self, n_large_ticks: u32) -> Self {
+        self.large_tick_hits = Some(n_large_ticks);
 
         self
     }
@@ -378,7 +378,7 @@ impl<'map> OsuPerformance<'map> {
             (false, _) => (OsuScoreOrigin::Stable, 0, 0),
             (true, false) => {
                 let origin = OsuScoreOrigin::WithSliderAcc {
-                    max_large_ticks: attrs.n_slider_ticks,
+                    max_large_ticks: attrs.n_large_ticks,
                     max_slider_ends: attrs.n_sliders,
                 };
 
@@ -388,13 +388,13 @@ impl<'map> OsuPerformance<'map> {
 
                 let large_tick_hits = self
                     .large_tick_hits
-                    .map_or(attrs.n_slider_ticks, |n| cmp::min(n, attrs.n_slider_ticks));
+                    .map_or(attrs.n_large_ticks, |n| cmp::min(n, attrs.n_large_ticks));
 
                 (origin, slider_end_hits, large_tick_hits)
             }
             (true, true) => {
                 let origin = OsuScoreOrigin::WithoutSliderAcc {
-                    max_large_ticks: attrs.n_sliders + attrs.n_slider_ticks,
+                    max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
                     max_slider_ends: attrs.n_sliders,
                 };
 
@@ -404,8 +404,8 @@ impl<'map> OsuPerformance<'map> {
 
                 let large_tick_hits = self
                     .large_tick_hits
-                    .map_or(attrs.n_sliders + attrs.n_slider_ticks, |n| {
-                        cmp::min(n, attrs.n_sliders + attrs.n_slider_ticks)
+                    .map_or(attrs.n_sliders + attrs.n_large_ticks, |n| {
+                        cmp::min(n, attrs.n_sliders + attrs.n_large_ticks)
                     });
 
                 (origin, slider_end_hits, large_tick_hits)
@@ -685,7 +685,7 @@ impl<'map> OsuPerformance<'map> {
 
                 // * Combine regular misses with tick misses since tick misses break combo as well
                 effective_miss_count = effective_miss_count
-                    .min(f64::from(n_slider_tick_miss(&attrs, &state) + state.misses));
+                    .min(f64::from(n_large_tick_miss(&attrs, &state) + state.misses));
             }
         }
 
@@ -695,11 +695,11 @@ impl<'map> OsuPerformance<'map> {
         let origin = match (lazer, using_classic_slider_acc) {
             (false, _) => OsuScoreOrigin::Stable,
             (true, false) => OsuScoreOrigin::WithSliderAcc {
-                max_large_ticks: attrs.n_slider_ticks,
+                max_large_ticks: attrs.n_large_ticks,
                 max_slider_ends: attrs.n_sliders,
             },
             (true, true) => OsuScoreOrigin::WithoutSliderAcc {
-                max_large_ticks: attrs.n_sliders + attrs.n_slider_ticks,
+                max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
                 max_slider_ends: attrs.n_sliders,
             },
         };
@@ -905,7 +905,7 @@ impl OsuPerformanceInner<'_> {
                 // * We however aren't adding misses here because missing slider heads has a harsh penalty by itself and doesn't mean that the rest of the slider wasn't followed properly
                 (f64::from(
                     n_slider_ends_dropped(&self.attrs, &self.state)
-                        + n_slider_tick_miss(&self.attrs, &self.state),
+                        + n_large_tick_miss(&self.attrs, &self.state),
                 ))
                 .min(estimate_diff_sliders)
             };
@@ -1112,8 +1112,8 @@ const fn n_slider_ends_dropped(attrs: &OsuDifficultyAttributes, state: &OsuScore
     attrs.n_sliders - state.slider_end_hits
 }
 
-const fn n_slider_tick_miss(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
-    attrs.n_slider_ticks - state.large_tick_hits
+const fn n_large_tick_miss(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
+    attrs.n_large_ticks - state.large_tick_hits
 }
 
 struct NoComboState {
@@ -1202,7 +1202,7 @@ mod test {
                     N_OBJECTS,
                 );
                 assert_eq!(attrs.n_sliders, N_SLIDERS);
-                assert_eq!(attrs.n_slider_ticks, N_SLIDER_TICKS);
+                assert_eq!(attrs.n_large_ticks, N_SLIDER_TICKS);
 
                 attrs
             })
@@ -1383,7 +1383,7 @@ mod test {
             }
 
             if let Some(large_tick_hits) = large_tick_hits {
-                state = state.large_tick_hits(large_tick_hits);
+                state = state.n_large_ticks(large_tick_hits);
             }
 
             if let Some(n_slider_ends) = slider_end_hits {
