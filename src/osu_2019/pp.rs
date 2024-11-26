@@ -287,46 +287,6 @@ impl<'m> OsuPP<'m> {
             pp *= 1.025;
         }
 
-        if difficulty.beatmap_creator == "gwb" || difficulty.beatmap_creator == "Plasma" {
-            pp *= 0.9;
-        }
-
-        pp *= match difficulty.beatmap_id {
-            // Louder than steel [ok this is epic]
-            1808605 => 0.85,
-
-            // over the top [Above the stars]
-            1821147 => 0.70,
-
-            // Just press F [Parkour's ok this is epic]
-            1844776 => 0.64,
-
-            // Hardware Store [skyapple mode]
-            1777768 => 0.90,
-
-            // Akatsuki compilation [ok this is akatsuki]
-            1962833 => {
-                pp *= 0.885;
-
-                if self.mods.dt() {
-                    0.83
-                } else {
-                    1.0
-                }
-            }
-
-            // Songs Compilation [Marathon]
-            2403677 => 0.85,
-
-            // Songs Compilation [Remembrance]
-            2174272 => 0.85,
-
-            // Apocalypse 1992 [Universal Annihilation]
-            2382377 => 0.85,
-
-            _ => 1.0,
-        };
-
         OsuPerformanceAttributes {
             difficulty: self.attributes.unwrap(),
             pp_aim: aim_value as f64,
