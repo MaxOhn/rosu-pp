@@ -272,20 +272,11 @@ impl<'m> OsuPP<'m> {
             }
         }
 
-        let nodt_bonus = match !(self.mods.dt() || self.mods.nc() || self.mods.ht()) {
-            true => 1.02,
-            false => 1.0,
-        };
-
-        let mut pp = (aim_value.powf(1.185 * nodt_bonus)
+        let pp = (aim_value.powf(1.185)
             + speed_value.powf(0.83 * acc_depression)
-            + acc_value.powf(1.14 * nodt_bonus))
+            + acc_value.powf(1.14))
         .powf(1.0 / 1.1)
             * multiplier;
-
-        if self.mods.dt() && self.mods.hr() {
-            pp *= 1.025;
-        }
 
         OsuPerformanceAttributes {
             difficulty: self.attributes.unwrap(),
@@ -347,17 +338,6 @@ impl<'m> OsuPP<'m> {
                     * 0.25
                     * ((total_hits - 200.0) / 300.0).min(1.0)
                 + (total_hits > 500.0) as u8 as f32 * (total_hits - 500.0) / 1600.0;
-        }
-
-        // EZ bonus
-        if self.mods.ez() {
-            let mut base_buff = 1.08_f32;
-
-            if attributes.ar <= 8.0 {
-                base_buff += (7.0 - attributes.ar as f32) / 100.0;
-            }
-
-            aim_value *= base_buff;
         }
 
         // Scale with accuracy
