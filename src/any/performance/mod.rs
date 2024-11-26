@@ -336,7 +336,7 @@ impl<'map> Performance<'map> {
     ///   slider heads, ticks, and repeats
     pub fn large_tick_hits(self, large_tick_hits: u32) -> Self {
         if let Self::Osu(osu) = self {
-            Self::Osu(osu.large_tick_hits(large_tick_hits))
+            Self::Osu(osu.n_large_ticks(large_tick_hits))
         } else {
             self
         }

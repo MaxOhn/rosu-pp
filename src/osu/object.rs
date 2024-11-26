@@ -350,7 +350,7 @@ impl OsuSlider {
     }
 
     /// Counts both ticks and repeats
-    pub fn tick_count(&self) -> usize {
+    pub fn large_tick_count(&self) -> usize {
         self.nested_objects
             .iter()
             .filter(|nested| {

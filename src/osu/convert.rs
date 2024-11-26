@@ -36,7 +36,7 @@ pub fn convert_objects(
                 OsuObjectKind::Circle => attrs.n_circles += 1,
                 OsuObjectKind::Slider(ref slider) => {
                     attrs.n_sliders += 1;
-                    attrs.n_slider_ticks += slider.tick_count() as u32;
+                    attrs.n_large_ticks += slider.large_tick_count() as u32;
                     attrs.max_combo += slider.nested_objects.len() as u32;
                 }
                 OsuObjectKind::Spinner(_) => attrs.n_spinners += 1,
