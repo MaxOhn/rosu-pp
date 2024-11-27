@@ -13,6 +13,8 @@ pub struct TaikoStrains {
     pub rhythm: Vec<f64>,
     /// Strain peaks of the stamina skill.
     pub stamina: Vec<f64>,
+    /// Strain peaks of the single color stamina skill.
+    pub single_color_stamina: Vec<f64>,
 }
 
 impl TaikoStrains {
@@ -28,5 +30,10 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<TaikoStrains, C
         color: values.skills.color.get_curr_strain_peaks().into_vec(),
         rhythm: values.skills.rhythm.get_curr_strain_peaks().into_vec(),
         stamina: values.skills.stamina.get_curr_strain_peaks().into_vec(),
+        single_color_stamina: values
+            .skills
+            .single_color_stamina
+            .get_curr_strain_peaks()
+            .into_vec(),
     })
 }
