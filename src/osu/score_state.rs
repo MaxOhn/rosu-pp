@@ -1,5 +1,5 @@
 /// Aggregation for a score's current state.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OsuScoreState {
     /// Maximum combo that the score has had so far. **Not** the maximum
     /// possible combo of the map so far.
@@ -12,7 +12,16 @@ pub struct OsuScoreState {
     ///   slider ticks and repeats
     /// - if set on osu!lazer *with* `CL`, this field is the amount of hit
     ///   slider heads, ticks, and repeats
+    ///
+    /// Only relevant for osu!lazer.
     pub large_tick_hits: u32,
+    /// "Small ticks" hits.
+    ///
+    /// These are essentially the slider end hits for lazer scores without
+    /// slider accuracy.
+    ///
+    /// Only relevant for osu!lazer.
+    pub small_tick_hits: u32,
     /// Amount of successfully hit slider ends.
     ///
     /// Only relevant for osu!lazer.
@@ -33,6 +42,7 @@ impl OsuScoreState {
         Self {
             max_combo: 0,
             large_tick_hits: 0,
+            small_tick_hits: 0,
             slider_end_hits: 0,
             n300: 0,
             n100: 0,
@@ -65,13 +75,13 @@ impl OsuScoreState {
             }
             OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks,
-                max_slider_ends,
+                max_small_ticks,
             } => {
                 let large_tick_hits = self.large_tick_hits.min(max_large_ticks);
-                let slider_end_hits = self.slider_end_hits.min(max_slider_ends);
+                let small_tick_hits = self.small_tick_hits.min(max_small_ticks);
 
-                numerator += 30 * large_tick_hits + 10 * slider_end_hits;
-                denominator += 30 * max_large_ticks + 10 * max_slider_ends;
+                numerator += 30 * large_tick_hits + 10 * small_tick_hits;
+                denominator += 30 * max_large_ticks + 10 * max_small_ticks;
             }
         }
 
@@ -102,6 +112,6 @@ pub enum OsuScoreOrigin {
     /// For scores set on osu!lazer without slider accuracy
     WithoutSliderAcc {
         max_large_ticks: u32,
-        max_slider_ends: u32,
+        max_small_ticks: u32,
     },
 }

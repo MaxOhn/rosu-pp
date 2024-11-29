@@ -151,30 +151,30 @@ mod tests {
         for i in 1.. {
             state.misses += 1;
 
-            let Some(next_gradual) = gradual.next(state) else {
+            let Some(next_gradual) = gradual.next(state.clone()) else {
                 assert_eq!(i, hit_objects_len + 1);
-                assert!(gradual_2nd.last(state).is_some() || hit_objects_len % 2 == 0);
-                assert!(gradual_3rd.last(state).is_some() || hit_objects_len % 3 == 0);
+                assert!(gradual_2nd.last(state.clone()).is_some() || hit_objects_len % 2 == 0);
+                assert!(gradual_3rd.last(state.clone()).is_some() || hit_objects_len % 3 == 0);
                 break;
             };
 
             if i % 2 == 0 {
-                let next_gradual_2nd = gradual_2nd.nth(state, 1).unwrap();
+                let next_gradual_2nd = gradual_2nd.nth(state.clone(), 1).unwrap();
                 assert_eq!(next_gradual, next_gradual_2nd);
             }
 
             if i % 3 == 0 {
-                let next_gradual_3rd = gradual_3rd.nth(state, 2).unwrap();
+                let next_gradual_3rd = gradual_3rd.nth(state.clone(), 2).unwrap();
                 assert_eq!(next_gradual, next_gradual_3rd);
             }
 
             let mut regular_calc = OsuPerformance::new(&map)
                 .difficulty(difficulty.clone())
                 .passed_objects(i as u32)
-                .state(state);
+                .state(state.clone());
 
             let regular_state = regular_calc.generate_state().unwrap();
-            assert_eq!(state, regular_state);
+            assert_eq!(state.clone(), regular_state);
 
             let expected = regular_calc.calculate().unwrap();
 

@@ -474,6 +474,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
             acc,
             combo,
             large_tick_hits: _,
+            small_tick_hits: _,
             slider_end_hits: _,
             n300,
             n100,
