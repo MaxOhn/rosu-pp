@@ -182,7 +182,8 @@ impl<'map> OsuPerformance<'map> {
 
     /// Specify the amount of "small tick" hits.
     ///
-    /// Only relevant for osu!lazer scores without slider accuracy.
+    /// Only relevant for osu!lazer scores without slider accuracy. In that
+    /// case, this value is the amount of slider tail hits.
     pub const fn small_tick_hits(mut self, small_tick_hits: u32) -> Self {
         self.small_tick_hits = Some(small_tick_hits);
 
