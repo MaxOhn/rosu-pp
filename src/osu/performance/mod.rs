@@ -30,6 +30,7 @@ pub struct OsuPerformance<'map> {
     pub(crate) acc: Option<f64>,
     pub(crate) combo: Option<u32>,
     pub(crate) large_tick_hits: Option<u32>,
+    pub(crate) small_tick_hits: Option<u32>,
     pub(crate) slider_end_hits: Option<u32>,
     pub(crate) n300: Option<u32>,
     pub(crate) n100: Option<u32>,
@@ -173,20 +174,27 @@ impl<'map> OsuPerformance<'map> {
     ///   slider ticks and repeats
     /// - if set on osu!lazer *with* `CL`, this value is the amount of hit
     ///   slider heads, ticks, and repeats
-    pub const fn n_large_ticks(mut self, n_large_ticks: u32) -> Self {
-        self.large_tick_hits = Some(n_large_ticks);
+    pub const fn large_tick_hits(mut self, large_tick_hits: u32) -> Self {
+        self.large_tick_hits = Some(large_tick_hits);
+
+        self
+    }
+
+    /// Specify the amount of "small tick" hits.
+    ///
+    /// Only relevant for osu!lazer scores without slider accuracy. In that
+    /// case, this value is the amount of slider tail hits.
+    pub const fn small_tick_hits(mut self, small_tick_hits: u32) -> Self {
+        self.small_tick_hits = Some(small_tick_hits);
 
         self
     }
 
     /// Specify the amount of hit slider ends.
     ///
-    /// Only relevant for osu!lazer.
-    ///
-    /// osu! calls this value "slider tail hits" without the classic
-    /// mod and "small tick hits" with the classic mod.
-    pub const fn n_slider_ends(mut self, n_slider_ends: u32) -> Self {
-        self.slider_end_hits = Some(n_slider_ends);
+    /// Only relevant for osu!lazer scores with slider accuracy.
+    pub const fn slider_end_hits(mut self, slider_end_hits: u32) -> Self {
+        self.slider_end_hits = Some(slider_end_hits);
 
         self
     }
@@ -319,6 +327,7 @@ impl<'map> OsuPerformance<'map> {
         let OsuScoreState {
             max_combo,
             large_tick_hits,
+            small_tick_hits,
             slider_end_hits,
             n300,
             n100,
@@ -328,6 +337,7 @@ impl<'map> OsuPerformance<'map> {
 
         self.combo = Some(max_combo);
         self.large_tick_hits = Some(large_tick_hits);
+        self.small_tick_hits = Some(small_tick_hits);
         self.slider_end_hits = Some(slider_end_hits);
         self.n300 = Some(n300);
         self.n100 = Some(n100);
@@ -374,43 +384,44 @@ impl<'map> OsuPerformance<'map> {
         let lazer = self.difficulty.get_lazer();
         let using_classic_slider_acc = self.difficulty.get_mods().no_slider_head_acc(lazer);
 
-        let (origin, slider_end_hits, large_tick_hits) = match (lazer, using_classic_slider_acc) {
-            (false, _) => (OsuScoreOrigin::Stable, 0, 0),
-            (true, false) => {
-                let origin = OsuScoreOrigin::WithSliderAcc {
-                    max_large_ticks: attrs.n_large_ticks,
-                    max_slider_ends: attrs.n_sliders,
-                };
+        let (origin, slider_end_hits, large_tick_hits, small_tick_hits) =
+            match (lazer, using_classic_slider_acc) {
+                (false, _) => (OsuScoreOrigin::Stable, 0, 0, 0),
+                (true, false) => {
+                    let origin = OsuScoreOrigin::WithSliderAcc {
+                        max_large_ticks: attrs.n_large_ticks,
+                        max_slider_ends: attrs.n_sliders,
+                    };
 
-                let slider_end_hits = self
-                    .slider_end_hits
-                    .map_or(attrs.n_sliders, |n| cmp::min(n, attrs.n_sliders));
+                    let slider_end_hits = self
+                        .slider_end_hits
+                        .map_or(attrs.n_sliders, |n| cmp::min(n, attrs.n_sliders));
 
-                let large_tick_hits = self
-                    .large_tick_hits
-                    .map_or(attrs.n_large_ticks, |n| cmp::min(n, attrs.n_large_ticks));
+                    let large_tick_hits = self
+                        .large_tick_hits
+                        .map_or(attrs.n_large_ticks, |n| cmp::min(n, attrs.n_large_ticks));
 
-                (origin, slider_end_hits, large_tick_hits)
-            }
-            (true, true) => {
-                let origin = OsuScoreOrigin::WithoutSliderAcc {
-                    max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
-                    max_slider_ends: attrs.n_sliders,
-                };
+                    (origin, slider_end_hits, large_tick_hits, 0)
+                }
+                (true, true) => {
+                    let origin = OsuScoreOrigin::WithoutSliderAcc {
+                        max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
+                        max_small_ticks: attrs.n_sliders,
+                    };
 
-                let slider_end_hits = self
-                    .slider_end_hits
-                    .map_or(attrs.n_sliders, |n| cmp::min(n, attrs.n_sliders));
+                    let small_tick_hits = self
+                        .small_tick_hits
+                        .map_or(attrs.n_sliders, |n| cmp::min(n, attrs.n_sliders));
 
-                let large_tick_hits = self
-                    .large_tick_hits
-                    .map_or(attrs.n_sliders + attrs.n_large_ticks, |n| {
-                        cmp::min(n, attrs.n_sliders + attrs.n_large_ticks)
-                    });
+                    let large_tick_hits = self
+                        .large_tick_hits
+                        .map_or(attrs.n_sliders + attrs.n_large_ticks, |n| {
+                            cmp::min(n, attrs.n_sliders + attrs.n_large_ticks)
+                        });
 
-                (origin, slider_end_hits, large_tick_hits)
-            }
-        };
+                    (origin, 0, large_tick_hits, small_tick_hits)
+                }
+            };
 
         let (slider_acc_value, max_slider_acc_value) = match origin {
             OsuScoreOrigin::Stable => (0, 0),
@@ -423,10 +434,10 @@ impl<'map> OsuPerformance<'map> {
             ),
             OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks,
-                max_slider_ends,
+                max_small_ticks,
             } => (
-                30 * large_tick_hits + 10 * slider_end_hits,
-                30 * max_large_ticks + 10 * max_slider_ends,
+                30 * large_tick_hits + 10 * small_tick_hits,
+                30 * max_large_ticks + 10 * max_small_ticks,
             ),
         };
 
@@ -466,6 +477,7 @@ impl<'map> OsuPerformance<'map> {
                             n50: new50,
                             misses,
                             large_tick_hits,
+                            small_tick_hits,
                             slider_end_hits,
                         };
 
@@ -499,6 +511,7 @@ impl<'map> OsuPerformance<'map> {
                             n50: new50,
                             misses,
                             large_tick_hits,
+                            small_tick_hits,
                             slider_end_hits,
                         };
 
@@ -533,6 +546,7 @@ impl<'map> OsuPerformance<'map> {
                             n50,
                             misses,
                             large_tick_hits,
+                            small_tick_hits,
                             slider_end_hits,
                         };
 
@@ -569,6 +583,7 @@ impl<'map> OsuPerformance<'map> {
                                 n50: new50,
                                 misses,
                                 large_tick_hits,
+                                small_tick_hits,
                                 slider_end_hits,
                             };
 
@@ -629,6 +644,7 @@ impl<'map> OsuPerformance<'map> {
         self.combo = Some(max_combo);
         self.slider_end_hits = Some(slider_end_hits);
         self.large_tick_hits = Some(large_tick_hits);
+        self.small_tick_hits = Some(small_tick_hits);
         self.n300 = Some(n300);
         self.n100 = Some(n100);
         self.n50 = Some(n50);
@@ -637,6 +653,7 @@ impl<'map> OsuPerformance<'map> {
         Ok(OsuScoreState {
             max_combo,
             large_tick_hits,
+            small_tick_hits,
             slider_end_hits,
             n300,
             n100,
@@ -700,7 +717,7 @@ impl<'map> OsuPerformance<'map> {
             },
             (true, true) => OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
-                max_slider_ends: attrs.n_sliders,
+                max_small_ticks: attrs.n_sliders,
             },
         };
 
@@ -725,6 +742,7 @@ impl<'map> OsuPerformance<'map> {
             acc: None,
             combo: None,
             large_tick_hits: None,
+            small_tick_hits: None,
             slider_end_hits: None,
             n300: None,
             n100: None,
@@ -1122,6 +1140,7 @@ struct NoComboState {
     n50: u32,
     misses: u32,
     large_tick_hits: u32,
+    small_tick_hits: u32,
     slider_end_hits: u32,
 }
 
@@ -1144,13 +1163,13 @@ impl NoComboState {
             }
             OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks,
-                max_slider_ends,
+                max_small_ticks,
             } => {
                 let large_tick_hits = self.large_tick_hits.min(max_large_ticks);
-                let slider_end_hits = self.slider_end_hits.min(max_slider_ends);
+                let small_tick_hits = self.small_tick_hits.min(max_small_ticks);
 
-                numerator += 30 * large_tick_hits + 10 * slider_end_hits;
-                denominator += 30 * max_large_ticks + 10 * max_slider_ends;
+                numerator += 30 * large_tick_hits + 10 * small_tick_hits;
+                denominator += 30 * max_large_ticks + 10 * max_small_ticks;
             }
         }
 
@@ -1228,8 +1247,8 @@ mod test {
     ) -> OsuScoreState {
         let misses = cmp::min(misses, N_OBJECTS);
 
-        let (origin, slider_end_hits, large_tick_hits) = match (lazer, classic) {
-            (false, _) => (OsuScoreOrigin::Stable, 0, 0),
+        let (origin, slider_end_hits, large_tick_hits, small_tick_hits) = match (lazer, classic) {
+            (false, _) => (OsuScoreOrigin::Stable, 0, 0, 0),
             (true, false) => {
                 let origin = OsuScoreOrigin::WithSliderAcc {
                     max_large_ticks: N_SLIDER_TICKS,
@@ -1241,21 +1260,21 @@ mod test {
                 let large_tick_hits =
                     large_tick_hits.map_or(N_SLIDER_TICKS, |n| cmp::min(n, N_SLIDER_TICKS));
 
-                (origin, slider_end_hits, large_tick_hits)
+                (origin, slider_end_hits, large_tick_hits, 0)
             }
             (true, true) => {
                 let origin = OsuScoreOrigin::WithoutSliderAcc {
                     max_large_ticks: N_SLIDERS + N_SLIDER_TICKS,
-                    max_slider_ends: N_SLIDERS,
+                    max_small_ticks: N_SLIDERS,
                 };
 
-                let slider_end_hits = slider_end_hits.map_or(N_SLIDERS, |n| cmp::min(n, N_SLIDERS));
+                let small_tick_hits = slider_end_hits.map_or(N_SLIDERS, |n| cmp::min(n, N_SLIDERS));
 
                 let large_tick_hits = large_tick_hits.map_or(N_SLIDERS + N_SLIDER_TICKS, |n| {
                     cmp::min(n, N_SLIDERS + N_SLIDER_TICKS)
                 });
 
-                (origin, slider_end_hits, large_tick_hits)
+                (origin, 0, large_tick_hits, small_tick_hits)
             }
         };
 
@@ -1263,6 +1282,7 @@ mod test {
             misses,
             slider_end_hits,
             large_tick_hits,
+            small_tick_hits,
             ..Default::default()
         };
 
@@ -1304,6 +1324,7 @@ mod test {
                     n50: new50,
                     misses,
                     large_tick_hits,
+                    small_tick_hits,
                     slider_end_hits,
                 };
 
@@ -1383,11 +1404,12 @@ mod test {
             }
 
             if let Some(large_tick_hits) = large_tick_hits {
-                state = state.n_large_ticks(large_tick_hits);
+                state = state.large_tick_hits(large_tick_hits);
             }
 
-            if let Some(n_slider_ends) = slider_end_hits {
-                state = state.n_slider_ends(n_slider_ends);
+            if let Some(slider_end_hits) = slider_end_hits {
+                state = state.slider_end_hits(slider_end_hits);
+                state = state.small_tick_hits(slider_end_hits);
             }
 
             if let Some(n300) = n300 {
@@ -1443,6 +1465,7 @@ mod test {
         let expected = OsuScoreState {
             max_combo: 500,
             large_tick_hits: N_SLIDER_TICKS,
+            small_tick_hits: 0,
             slider_end_hits: N_SLIDERS,
             n300: 300,
             n100: 20,
@@ -1468,6 +1491,7 @@ mod test {
         let expected = OsuScoreState {
             max_combo: 500,
             large_tick_hits: 0,
+            small_tick_hits: 0,
             slider_end_hits: 0,
             n300: 300,
             n100: 289,
@@ -1492,6 +1516,7 @@ mod test {
         let expected = OsuScoreState {
             max_combo: 500,
             large_tick_hits: N_SLIDER_TICKS,
+            small_tick_hits: 0,
             slider_end_hits: N_SLIDERS,
             n300: 0,
             n100: 589,
@@ -1518,6 +1543,7 @@ mod test {
         let expected = OsuScoreState {
             max_combo: 500,
             large_tick_hits: 0,
+            small_tick_hits: 0,
             slider_end_hits: 0,
             n300: 300,
             n100: 50,

@@ -336,7 +336,19 @@ impl<'map> Performance<'map> {
     ///   slider heads, ticks, and repeats
     pub fn large_tick_hits(self, large_tick_hits: u32) -> Self {
         if let Self::Osu(osu) = self {
-            Self::Osu(osu.n_large_ticks(large_tick_hits))
+            Self::Osu(osu.large_tick_hits(large_tick_hits))
+        } else {
+            self
+        }
+    }
+
+    /// Specify the amount of "small tick" hits.
+    ///
+    /// Only relevant for osu!standard lazer scores without slider accuracy. In
+    /// that case, this value is the amount of slider tail hits.
+    pub fn small_ticks_hits(self, small_tick_hits: u32) -> Self {
+        if let Self::Osu(osu) = self {
+            Self::Osu(osu.small_tick_hits(small_tick_hits))
         } else {
             self
         }
@@ -344,13 +356,10 @@ impl<'map> Performance<'map> {
 
     /// Specify the amount of hit slider ends.
     ///
-    /// Only relevant for osu!standard.
-    ///
-    /// osu! calls this value "slider tail hits" without the classic
-    /// mod and "small tick hits" with the classic mod.
-    pub fn n_slider_ends(self, n_slider_ends: u32) -> Self {
+    /// Only relevant for osu!standard lazer scores with slider accuracy.
+    pub fn slider_end_hits(self, slider_end_hits: u32) -> Self {
         if let Self::Osu(osu) = self {
-            Self::Osu(osu.n_slider_ends(n_slider_ends))
+            Self::Osu(osu.slider_end_hits(slider_end_hits))
         } else {
             self
         }

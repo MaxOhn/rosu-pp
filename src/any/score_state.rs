@@ -23,7 +23,16 @@ pub struct ScoreState {
     ///   slider ticks and repeats
     /// - if set on osu!lazer *with* `CL`, this field is the amount of hit
     ///   slider heads, ticks, and repeats
+    ///
+    /// Only relevant for osu!lazer.
     pub osu_large_tick_hits: u32,
+    /// "Small ticks" hits for osu!standard.
+    ///
+    /// These are essentially the slider end hits for lazer scores without
+    /// slider accuracy.
+    ///
+    /// Only relevant for osu!lazer.
+    pub osu_small_tick_hits: u32,
     /// Amount of successfully hit slider ends.
     ///
     /// Only relevant for osu!standard in lazer.
@@ -49,6 +58,7 @@ impl ScoreState {
         Self {
             max_combo: 0,
             osu_large_tick_hits: 0,
+            osu_small_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: 0,
             n_katu: 0,
@@ -82,6 +92,7 @@ impl From<ScoreState> for OsuScoreState {
         Self {
             max_combo: state.max_combo,
             large_tick_hits: state.osu_large_tick_hits,
+            small_tick_hits: state.osu_small_tick_hits,
             slider_end_hits: state.slider_end_hits,
             n300: state.n300,
             n100: state.n100,
@@ -133,6 +144,7 @@ impl From<OsuScoreState> for ScoreState {
         Self {
             max_combo: state.max_combo,
             osu_large_tick_hits: state.large_tick_hits,
+            osu_small_tick_hits: state.small_tick_hits,
             slider_end_hits: state.slider_end_hits,
             n_geki: 0,
             n_katu: 0,
@@ -149,6 +161,7 @@ impl From<TaikoScoreState> for ScoreState {
         Self {
             max_combo: state.max_combo,
             osu_large_tick_hits: 0,
+            osu_small_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: 0,
             n_katu: 0,
@@ -165,6 +178,7 @@ impl From<CatchScoreState> for ScoreState {
         Self {
             max_combo: state.max_combo,
             osu_large_tick_hits: 0,
+            osu_small_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: 0,
             n_katu: state.tiny_droplet_misses,
@@ -181,6 +195,7 @@ impl From<ManiaScoreState> for ScoreState {
         Self {
             max_combo: 0,
             osu_large_tick_hits: 0,
+            osu_small_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: state.n320,
             n_katu: state.n200,
