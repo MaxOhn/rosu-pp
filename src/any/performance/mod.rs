@@ -346,7 +346,7 @@ impl<'map> Performance<'map> {
     ///
     /// Only relevant for osu!standard lazer scores without slider accuracy. In
     /// that case, this value is the amount of slider tail hits.
-    pub fn small_ticks_hits(self, small_tick_hits: u32) -> Self {
+    pub fn small_tick_hits(self, small_tick_hits: u32) -> Self {
         if let Self::Osu(osu) = self {
             Self::Osu(osu.small_tick_hits(small_tick_hits))
         } else {
