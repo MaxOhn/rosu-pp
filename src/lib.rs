@@ -104,15 +104,14 @@
 //!
 //! Results of a rudimentary [benchmark] of osu!lazer and rosu-pp:
 //! ```txt
-//! osu!lazer:
-//! Decoding maps:            Median: 378.10ms | Mean: 381.47ms
-//! Calculating difficulties: Median: 588.89ms | Mean: 597.11ms
-//! Calculating performances: Median: 315.90µs | Mean: 310.60µs
+//! Decoding maps:            Median: 325.18ms | Mean: 325.50ms
+//! Calculating difficulties: Median: 568.63ms | Mean: 575.97ms
+//! Calculating performances: Median: 256.00µs | Mean: 240.40µs
 //!
 //! rosu-pp:
-//! Decoding maps:            Median: 46.94ms | Mean: 47.21ms
-//! Calculating difficulties: Median: 72.90ms | Mean: 73.13ms
-//! Calculating performances: Median: 44.13µs | Mean: 45.53µs
+//! Decoding maps:            Median: 46.03ms | Mean: 47.13ms
+//! Calculating difficulties: Median: 82.11ms | Mean: 84.27ms
+//! Calculating performances: Median: 40.57µs | Mean: 43.41µs
 //! ```
 //!
 //! ## Features
