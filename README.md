@@ -91,14 +91,14 @@ println!("PP: {}", attrs.pp());
 
 ### Accuracy
 
-`rosu-pp` was tested against all current beatmaps on multiple mod combinations and delivered
+`rosu-pp` was tested against millions of real scores and delivered
 values that matched osu!lazer perfectly down to the last decimal place.
 
 However, there is one small caveat: the values are only this precise on debug mode.
 On release mode, Rust's compiler performs optimizations that produce the tiniest discrepancies
-due to floating point inaccuracies which can cascade into larger differences in the end.
-With this in mind, `rosu-pp` is still as accurate as can be without targeting the
-.NET compiler itself. Realistically, the inaccuracies in release mode are negligibly small.
+due to floating point inaccuracies. With this in mind, `rosu-pp` is still as accurate as can
+be without targeting the .NET compiler itself.
+Realistically, the inaccuracies in release mode are negligibly small.
 
 ### Speed
 
