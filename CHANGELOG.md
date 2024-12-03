@@ -1,4 +1,4 @@
-## Upcoming
+# v2.0.0 (2024-12-03)
 
 Updated all modes' difficulty and performance calculation. See osu!'s newspost for more info: <https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates>
 
@@ -30,6 +30,8 @@ Updated all modes' difficulty and performance calculation. See osu!'s newspost f
     - Renamed `TaikoDifficultyAttributes::hit_window` to `great_hit_window`
   - The method `OsuScoreState::accuracy` now takes an `OsuScoreOrigin` as argument
   - Bumped both the dependencies `rosu-map` and `rosu-mods` to their version `0.2`
+  - The `compact_strains` feature has been removed. Instead, there now is a `raw_strains` feature
+    which is *not* enabled by default.
 
 - __Additions:__
   - osu!standard and osu!mania performance calculation now differs between lazer and stable so there
@@ -37,7 +39,7 @@ Updated all modes' difficulty and performance calculation. See osu!'s newspost f
   - Added the methods `large_tick_hits`, `small_tickhits`, and `slider_end_hits` for `OsuPerformance` and
     `Performance`. These are important to be specified for lazer scores.
 
-# v1.1.0 (2024-07-10)
+## v1.1.0 (2024-07-10)
 
 - __Additions:__
   - Mods no longer need to be specified through their legacy bitflags. Instead, [`rosu-mods`] is being used to accept any type that's convertible into the new `rosu-pp` type "`GameMods`". Currently, those types are:
