@@ -1,3 +1,42 @@
+## Upcoming
+
+Updated all modes' difficulty and performance calculation. See osu!'s newspost for more info: <https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates>
+
+- __Breaking changes:__
+  - Removed the `Converted` type. Only using `Beatmap` now.
+  - Converting a `Beatmap` is now done through the methods `convert`, `convert_ref`, or `convert_mut`
+  - Replaced `Difficulty::with_mode` with the methods `Difficulty::*_for_mode` to calculate for a specific mode
+  - Multiple methods are now fallible with the error type `ConvertError` in case the given beatmap
+    had to be converted but conversion failed. These methods include:
+      - `[Mode]Performance::generate_state`
+      - `[Mode]Performance::calculate`
+      - `[Mode]GradualDifficulty::new`
+      - `[Mode]GradualPerformance::new`
+  - `OsuScoreState` no longer implements `Copy` and now has the additional fields `large_tick_hits`, 
+    `small_tick_hits`, and `slider_end_hits` which are important to specify for lazer scores.
+    Similarly, `ScoreState` has the additional fields `osu_large_tick_hits`, `osu_small_tick_hits`,
+    and `slider_end_hits`.
+  - Removed the trait methods `check_convert` and `try_convert` from `IGameMode`
+  - The field `HitWindows::od` has been renamed to `od_great` and the field `HitWindows::od_ok` has been added
+  - Added the field `TaikoStrains::single_color_stamina`
+  - Added multiple fields to difficulty and performance attribute types:
+    - `ManiaDifficultyAttributes::n_hold_notes`
+    - `OsuDifficultyAttributes::aim_difficult_strain_count`
+    - `OsuDifficultyAttributes::speed_difficult_strain_count`
+    - `OsuDifficultyAttributes::n_large_ticks`
+    - `TaikoPerformanceAttributes::estimated_unstable_rate`
+    - `TaikoDifficultyAttributes::mono_stamina_factor`
+    - `TaikoDifficultyAttributes::ok_hit_window`
+    - Renamed `TaikoDifficultyAttributes::hit_window` to `great_hit_window`
+  - The method `OsuScoreState::accuracy` now takes an `OsuScoreOrigin` as argument
+  - Bumped both the dependencies `rosu-map` and `rosu-mods` to their version `0.2`
+
+- __Additions:__
+  - osu!standard and osu!mania performance calculation now differs between lazer and stable so there
+    are methods like `OsuPerformance::lazer`, `Difficulty::lazer`, ... to specify a boolean. **Defaults to `true`**
+  - Added the methods `large_tick_hits`, `small_tickhits`, and `slider_end_hits` for `OsuPerformance` and
+    `Performance`. These are important to be specified for lazer scores.
+
 # v1.1.0 (2024-07-10)
 
 - __Additions:__
