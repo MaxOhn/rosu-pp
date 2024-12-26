@@ -925,7 +925,7 @@ impl OsuPerformanceInner<'_> {
                     n_slider_ends_dropped(&self.attrs, &self.state)
                         + n_large_tick_miss(&self.attrs, &self.state),
                 ))
-                .min(estimate_diff_sliders)
+                .clamp(0.0, estimate_diff_sliders)
             };
 
             let slider_nerf_factor = (1.0 - self.attrs.slider_factor)

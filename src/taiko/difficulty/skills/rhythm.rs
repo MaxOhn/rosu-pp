@@ -150,6 +150,7 @@ impl Rhythm {
         self.inner
             .clone()
             .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
+            .difficulty_value()
     }
 }
 

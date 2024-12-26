@@ -1,3 +1,4 @@
+pub mod difficulty;
 pub mod float_ext;
 pub mod limited_queue;
 pub mod map_or_attrs;

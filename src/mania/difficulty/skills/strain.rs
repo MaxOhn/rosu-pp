@@ -4,7 +4,7 @@ use crate::{
         skills::{strain_decay, ISkill, Skill, StrainDecaySkill},
     },
     mania::difficulty::object::ManiaDifficultyObject,
-    util::strains_vec::StrainsVec,
+    util::{difficulty::logistic, strains_vec::StrainsVec},
 };
 
 const INDIVIDUAL_DECAY_BASE: f64 = 0.125;
@@ -53,7 +53,9 @@ impl Strain {
     }
 
     fn static_difficulty_value(skill: StrainDecaySkill) -> f64 {
-        skill.difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
+        skill
+            .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
+            .difficulty_value()
     }
 
     const fn curr_strain(&self) -> f64 {
@@ -110,7 +112,7 @@ impl Strain {
         // * 0.0 +--------+-+---------------> Release Difference / ms
         // *         release_threshold
         if is_overlapping {
-            hold_addition = (1.0 + (0.27 * (RELEASE_THRESHOLD - closest_end_time)).exp()).recip();
+            hold_addition = logistic(closest_end_time, RELEASE_THRESHOLD, 0.27, None);
         }
 
         // * Decay and increase individualStrains in own column

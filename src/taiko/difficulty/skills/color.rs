@@ -13,6 +13,7 @@ use crate::{
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     },
     util::{
+        difficulty::logistic_exp,
         strains_vec::StrainsVec,
         sync::{RefCount, Weak},
     },
@@ -54,6 +55,7 @@ impl Color {
         self.inner
             .clone()
             .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
+            .difficulty_value()
     }
 }
 
@@ -107,12 +109,6 @@ impl Skill<'_, Color> {
 struct ColorEvaluator;
 
 impl ColorEvaluator {
-    fn sigmoid(val: f64, center: f64, width: f64, middle: f64, height: f64) -> f64 {
-        let sigmoid = (E * -(val - center) / width).tanh();
-
-        sigmoid * (height / 2.0) + middle
-    }
-
     fn evaluate_diff_of_mono_streak(mono_streak: &RefCount<MonoStreak>) -> f64 {
         let mono_streak = mono_streak.get();
 
@@ -123,7 +119,7 @@ impl ColorEvaluator {
             .as_ref()
             .map_or(1.0, Self::evaluate_diff_of_alternating_mono_pattern);
 
-        Self::sigmoid(mono_streak.idx as f64, 2.0, 2.0, 0.5, 1.0) * parent_eval * 0.5
+        logistic_exp(E * mono_streak.idx as f64 - 2.0 * E, None) * parent_eval * 0.5
     }
 
     fn evaluate_diff_of_alternating_mono_pattern(
@@ -138,7 +134,7 @@ impl ColorEvaluator {
             .as_ref()
             .map_or(1.0, Self::evaluate_diff_of_repeating_hit_patterns);
 
-        Self::sigmoid(alternating_mono_pattern.idx as f64, 2.0, 2.0, 0.5, 1.0) * parent_eval
+        logistic_exp(E * alternating_mono_pattern.idx as f64 - 2.0 * E, None) * parent_eval
     }
 
     fn evaluate_diff_of_repeating_hit_patterns(
@@ -146,7 +142,7 @@ impl ColorEvaluator {
     ) -> f64 {
         let repetition_interval = repeating_hit_patterns.get().repetition_interval as f64;
 
-        2.0 * (1.0 - Self::sigmoid(repetition_interval, 2.0, 2.0, 0.5, 1.0))
+        2.0 * (1.0 - logistic_exp(E * repetition_interval - 2.0 * E, None))
     }
 
     fn evaluate_diff_of(hit_object: &TaikoDifficultyObject) -> f64 {

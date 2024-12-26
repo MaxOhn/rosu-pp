@@ -1,13 +1,13 @@
 use std::{cmp, pin::Pin};
 
 use rosu_map::section::general::GameMode;
-use skills::{
-    flashlight::Flashlight,
-    strain::{DifficultyValue, OsuStrainSkill, UsedOsuStrainSkills},
-};
+use skills::{flashlight::Flashlight, strain::OsuStrainSkill};
 
 use crate::{
-    any::difficulty::{skills::Skill, Difficulty},
+    any::difficulty::{
+        skills::{DifficultyValue, Skill, UsedStrainSkills},
+        Difficulty,
+    },
     model::{beatmap::BeatmapAttributes, mode::ConvertError, mods::GameMods},
     osu::{
         convert::convert_objects,
@@ -158,9 +158,9 @@ impl DifficultyValues {
     pub fn eval(
         attrs: &mut OsuDifficultyAttributes,
         mods: &GameMods,
-        aim: &UsedOsuStrainSkills<DifficultyValue>,
-        aim_no_sliders: &UsedOsuStrainSkills<DifficultyValue>,
-        speed: &UsedOsuStrainSkills<DifficultyValue>,
+        aim: &UsedStrainSkills<DifficultyValue>,
+        aim_no_sliders: &UsedStrainSkills<DifficultyValue>,
+        speed: &UsedStrainSkills<DifficultyValue>,
         speed_relevant_note_count: f64,
         flashlight_difficulty_value: f64,
     ) {
@@ -176,8 +176,8 @@ impl DifficultyValues {
             1.0
         };
 
-        let aim_difficult_strain_count = aim.count_difficult_strains();
-        let speed_difficult_strain_count = speed.count_difficult_strains();
+        let aim_difficult_strain_count = aim.count_top_weighted_strains();
+        let speed_difficult_strain_count = speed.count_top_weighted_strains();
 
         if mods.td() {
             aim_rating = aim_rating.powf(0.8);

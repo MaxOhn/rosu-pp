@@ -123,7 +123,7 @@ impl Movement {
     }
 
     fn static_difficulty_value(skill: StrainDecaySkill) -> f64 {
-        skill.difficulty_value(DECAY_WEIGHT)
+        skill.difficulty_value(DECAY_WEIGHT).difficulty_value()
     }
 }
 

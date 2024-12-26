@@ -30,13 +30,14 @@ impl Stamina {
     }
 
     pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks()
+        self.inner.get_curr_strain_peaks().into_strains()
     }
 
     pub fn as_difficulty_value(&self) -> f64 {
         self.inner
             .clone()
             .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
+            .difficulty_value()
     }
 }
 

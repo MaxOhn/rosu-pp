@@ -3,13 +3,13 @@ use std::f64::consts::{FRAC_PI_2, PI};
 use crate::{
     any::difficulty::{
         object::IDifficultyObject,
-        skills::{strain_decay, ISkill, Skill},
+        skills::{strain_decay, DifficultyValue, ISkill, Skill, UsedStrainSkills},
     },
     osu::difficulty::object::OsuDifficultyObject,
-    util::{float_ext::FloatExt, strains_vec::StrainsVec},
+    util::{difficulty::milliseconds_to_bpm, float_ext::FloatExt, strains_vec::StrainsVec},
 };
 
-use super::strain::{DifficultyValue, OsuStrainSkill, UsedOsuStrainSkills};
+use super::strain::OsuStrainSkill;
 
 const SKILL_MULTIPLIER: f64 = 25.18;
 const STRAIN_DECAY_BASE: f64 = 0.15;
@@ -31,20 +31,20 @@ impl Aim {
     }
 
     pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks().strains()
+        self.inner.inner.get_curr_strain_peaks().into_strains()
     }
 
-    pub fn difficulty_value(self) -> UsedOsuStrainSkills<DifficultyValue> {
+    pub fn difficulty_value(self) -> UsedStrainSkills<DifficultyValue> {
         Self::static_difficulty_value(self.inner)
     }
 
     /// Use [`difficulty_value`] instead whenever possible because
     /// [`as_difficulty_value`] clones internally.
-    pub fn as_difficulty_value(&self) -> UsedOsuStrainSkills<DifficultyValue> {
+    pub fn as_difficulty_value(&self) -> UsedStrainSkills<DifficultyValue> {
         Self::static_difficulty_value(self.inner.clone())
     }
 
-    fn static_difficulty_value(skill: OsuStrainSkill) -> UsedOsuStrainSkills<DifficultyValue> {
+    fn static_difficulty_value(skill: OsuStrainSkill) -> UsedStrainSkills<DifficultyValue> {
         skill.difficulty_value(
             OsuStrainSkill::REDUCED_SECTION_COUNT,
             OsuStrainSkill::REDUCED_STRAIN_BASELINE,
@@ -95,8 +95,9 @@ impl<'a> Skill<'a, Aim> {
             *self.curr_section_end_mut() += OsuStrainSkill::SECTION_LEN;
         }
 
-        let strain_value_at = self.strain_value_at(curr);
-        *self.curr_section_peak_mut() = strain_value_at.max(self.curr_section_peak());
+        let strain = self.strain_value_at(curr);
+        *self.curr_section_peak_mut() = strain.max(self.curr_section_peak());
+        self.inner.inner.inner.object_strains.push(strain);
     }
 
     fn strain_value_at(&mut self, curr: &'a OsuDifficultyObject<'a>) -> f64 {
@@ -104,7 +105,6 @@ impl<'a> Skill<'a, Aim> {
         self.inner.curr_strain +=
             AimEvaluator::evaluate_diff_of(curr, self.diff_objects, self.inner.with_sliders)
                 * SKILL_MULTIPLIER;
-        self.inner.inner.object_strains.push(self.inner.curr_strain);
 
         self.inner.curr_strain
     }
@@ -132,6 +132,9 @@ impl AimEvaluator {
         else {
             return 0.0;
         };
+
+        const RADIUS: i32 = OsuDifficultyObject::NORMALIZED_RADIUS;
+        const DIAMETER: i32 = OsuDifficultyObject::NORMALIZED_DIAMETER;
 
         // * Calculate the velocity to the current hitobject, which starts
         // * with a base distance / time assuming the last object is a hitcircle.
@@ -183,24 +186,26 @@ impl AimEvaluator {
                 acute_angle_bonus = Self::calc_acute_angle_bonus(curr_angle);
 
                 // * Only buff deltaTime exceeding 300 bpm 1/2.
-                if osu_curr_obj.strain_time > 100.0 {
+                if milliseconds_to_bpm(osu_curr_obj.strain_time, Some(2)) < 300.0 {
                     acute_angle_bonus = 0.0;
                 } else {
                     let base1 =
                         (FRAC_PI_2 * ((100.0 - osu_curr_obj.strain_time) / 25.0).min(1.0)).sin();
 
                     let base2 = (FRAC_PI_2
-                        * ((osu_curr_obj.lazy_jump_dist).clamp(50.0, 100.0) - 50.0)
-                        / 50.0)
-                        .sin();
+                        * ((osu_curr_obj.lazy_jump_dist)
+                            .clamp(f64::from(RADIUS), f64::from(DIAMETER))
+                            - f64::from(RADIUS))
+                        / f64::from(RADIUS))
+                    .sin();
 
                     // * Multiply by previous angle, we don't want to buff unless this is a wiggle type pattern.
                     acute_angle_bonus *= Self::calc_acute_angle_bonus(last_angle)
                     // * The maximum velocity we buff is equal to 125 / strainTime
-                        * angle_bonus.min(125.0 / osu_curr_obj.strain_time)
+                        * angle_bonus.min(f64::from(DIAMETER) * 1.25 / osu_curr_obj.strain_time)
                         // * scale buff from 150 bpm 1/4 to 200 bpm 1/4
                         * base1.powf(2.0)
-                         // * Buff distance exceeding 50 (radius) up to 100 (diameter).
+                         // * Buff distance exceeding radius up to diameter.
                         * base2.powf(2.0);
                 }
 
@@ -231,8 +236,9 @@ impl AimEvaluator {
             let dist_ratio = dist_ratio_base.powf(2.0);
 
             // * Reward for % distance up to 125 / strainTime for overlaps where velocity is still changing.
-            let overlap_vel_buff = (125.0 / osu_curr_obj.strain_time.min(osu_last_obj.strain_time))
-                .min((prev_vel - curr_vel).abs());
+            let overlap_vel_buff = (f64::from(DIAMETER) * 1.25
+                / osu_curr_obj.strain_time.min(osu_last_obj.strain_time))
+            .min((prev_vel - curr_vel).abs());
 
             vel_change_bonus = overlap_vel_buff * dist_ratio;
 

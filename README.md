@@ -11,7 +11,7 @@ with emphasis on a precise translation to Rust for the most [accurate results](#
 while also providing a significant [boost in performance](#speed).
 
 Last commits of the ported code:
-  - [osu!lazer] : `8bd65d9938a10fc42e6409501b0282f0fa4a25ef` (2024-11-08)
+  - [osu!lazer] : `62e536baf6e9f464e8a355d9491f2ac84b21b7b0` (2024-12-24)
   - [osu!tools] : `89b8f3b1c2e4e5674004eac4723120e7d3aef997` (2024-11-03)
 
 News posts of the latest updates: <https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates>

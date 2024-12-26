@@ -1,4 +1,4 @@
-use crate::util::strains_vec::StrainsVec;
+use crate::util::{float_ext::FloatExt, strains_vec::StrainsVec};
 
 pub fn strain_decay(ms: f64, strain_decay_base: f64) -> f64 {
     strain_decay_base.powf(ms / 1000.0)
@@ -30,6 +30,13 @@ pub struct StrainSkill {
     pub curr_section_peak: f64,
     pub curr_section_end: f64,
     pub strain_peaks: StrainsVec,
+    // * Store individual strains
+    // Note: osu!lazer pushes the current strain on each `StrainSkill.process`
+    // call for all implementors of `StrainSkill` which is overkill for us
+    // considering `object_strains` is only relevant for osu!standard's aim and
+    // speed skills so we only use it for those. This does warrant greater care
+    // in case of future changes.
+    pub object_strains: Vec<f64>, // TODO: should this use `StrainsVec`?
 }
 
 impl Default for StrainSkill {
@@ -39,6 +46,8 @@ impl Default for StrainSkill {
             curr_section_end: 0.0,
             // mean=386.81 | median=279
             strain_peaks: StrainsVec::with_capacity(256),
+            // averages not checked but 256 should be decent
+            object_strains: Vec::with_capacity(256),
         }
     }
 }
@@ -55,25 +64,81 @@ impl StrainSkill {
         self.curr_section_peak = initial_strain;
     }
 
-    pub fn get_curr_strain_peaks(self) -> StrainsVec {
+    pub fn get_curr_strain_peaks(self) -> UsedStrainSkills<StrainsVec> {
         let mut strain_peaks = self.strain_peaks;
         strain_peaks.push(self.curr_section_peak);
 
-        strain_peaks
+        UsedStrainSkills {
+            value: strain_peaks,
+            object_strains: self.object_strains,
+        }
     }
 
-    pub fn difficulty_value(self, decay_weight: f64) -> f64 {
+    pub fn difficulty_value(self, decay_weight: f64) -> UsedStrainSkills<DifficultyValue> {
         let mut difficulty = 0.0;
         let mut weight = 1.0;
 
-        let mut peaks = self.get_curr_strain_peaks();
+        let UsedStrainSkills {
+            value: mut peaks,
+            object_strains,
+        } = self.get_curr_strain_peaks();
 
         for strain in peaks.sorted_non_zero_iter() {
             difficulty += strain * weight;
             weight *= decay_weight;
         }
 
-        difficulty
+        UsedStrainSkills {
+            value: DifficultyValue(difficulty),
+            object_strains,
+        }
+    }
+}
+
+/// The method [`StrainSkills::get_curr_strain_peaks`] requires ownership of
+/// [`StrainSkill`] as to not clone the inner strains. That means the field
+/// `StrainSkills::object_strains` won't be accessible anymore.
+///
+/// To handle this, we make [`StrainSkills::get_curr_strain_peaks`] return
+/// a [`UsedStrainSkills`] which contains the processed value, as well as the
+/// object strains.
+///
+/// The same goes for [`StrainSkills::difficulty_value`].
+pub struct UsedStrainSkills<T> {
+    pub value: T,
+    pub object_strains: Vec<f64>,
+}
+
+pub struct DifficultyValue(pub f64);
+
+impl UsedStrainSkills<DifficultyValue> {
+    pub const fn difficulty_value(&self) -> f64 {
+        self.value.0
+    }
+
+    pub fn count_top_weighted_strains(&self) -> f64 {
+        if self.object_strains.is_empty() {
+            return 0.0;
+        }
+
+        // * What would the top strain be if all strain values were identical
+        let consistent_top_strain = self.value.0 / 10.0;
+
+        if consistent_top_strain.eq(0.0) {
+            return self.object_strains.len() as f64;
+        }
+
+        // * Use a weighted sum of all strains. Constants are arbitrary and give nice values.
+        self.object_strains
+            .iter()
+            .map(|s| 1.1 / (1.0 + (-10.0 * f64::exp(s / consistent_top_strain - 0.88))))
+            .sum()
+    }
+}
+
+impl UsedStrainSkills<StrainsVec> {
+    pub fn into_strains(self) -> StrainsVec {
+        self.value
     }
 }
 
@@ -96,10 +161,10 @@ impl StrainDecaySkill {
     }
 
     pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks()
+        self.inner.get_curr_strain_peaks().value
     }
 
-    pub fn difficulty_value(self, decay_weight: f64) -> f64 {
+    pub fn difficulty_value(self, decay_weight: f64) -> UsedStrainSkills<DifficultyValue> {
         self.inner.difficulty_value(decay_weight)
     }
 }

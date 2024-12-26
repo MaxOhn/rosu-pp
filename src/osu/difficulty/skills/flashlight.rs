@@ -33,7 +33,7 @@ impl Flashlight {
     }
 
     pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks()
+        self.inner.get_curr_strain_peaks().into_strains()
     }
 
     pub fn difficulty_value(self) -> f64 {
@@ -47,7 +47,7 @@ impl Flashlight {
     }
 
     fn static_difficulty_value(skill: StrainSkill) -> f64 {
-        skill.get_curr_strain_peaks().sum()
+        skill.get_curr_strain_peaks().into_strains().sum()
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {
