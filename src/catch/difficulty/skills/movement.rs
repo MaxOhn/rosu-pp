@@ -131,7 +131,7 @@ impl ISkill for Movement {
     type DifficultyObjects<'a> = [CatchDifficultyObject];
 }
 
-impl<'a> Skill<'a, Movement> {
+impl Skill<'_, Movement> {
     fn calculate_initial_strain(&mut self, time: f64, curr: &CatchDifficultyObject) -> f64 {
         let prev_start_time = curr
             .previous(0, self.diff_objects)

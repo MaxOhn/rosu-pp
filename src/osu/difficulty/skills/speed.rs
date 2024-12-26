@@ -135,9 +135,7 @@ impl<'a> Skill<'a, Speed> {
         self.inner.curr_rhythm =
             RhythmEvaluator::evaluate_diff_of(curr, self.diff_objects, self.inner.hit_window);
 
-        let total_strain = self.inner.curr_strain * self.inner.curr_rhythm;
-
-        total_strain
+        self.inner.curr_strain * self.inner.curr_rhythm
     }
 }
 

@@ -151,7 +151,7 @@ mod inner {
         }
     }
 
-    impl<'a> Iterator for StrainsIter<'a> {
+    impl Iterator for StrainsIter<'_> {
         type Item = f64;
 
         fn next(&mut self) -> Option<Self::Item> {
@@ -219,14 +219,14 @@ mod inner {
                 }
             }
 
-            pub fn is_zero(self) -> bool {
+            pub const fn is_zero(self) -> bool {
                 unsafe { self.value.is_sign_negative() }
             }
 
             // Requiring `self` as a reference improves ergonomics for passing this
             // method as argument to higher-order functions.
             #[allow(clippy::trivially_copy_pass_by_ref)]
-            pub fn is_value(&self) -> bool {
+            pub const fn is_value(&self) -> bool {
                 !self.is_zero()
             }
 

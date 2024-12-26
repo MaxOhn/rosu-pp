@@ -10,7 +10,7 @@ pub enum MapOrAttrs<'map, M: IGameMode> {
     Attrs(M::DifficultyAttributes),
 }
 
-impl<'map, M: IGameMode> MapOrAttrs<'map, M> {
+impl<M: IGameMode> MapOrAttrs<'_, M> {
     /// Return a mutable reference to the attributes.
     ///
     /// If `self` is of variant `Map`, store `attrs` in `self`, and return a

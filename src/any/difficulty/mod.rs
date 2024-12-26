@@ -385,7 +385,7 @@ impl Difficulty {
     }
 }
 
-fn non_zero_u64_to_f64(n: NonZeroU64) -> f64 {
+const fn non_zero_u64_to_f64(n: NonZeroU64) -> f64 {
     f64::from_bits(n.get())
 }
 

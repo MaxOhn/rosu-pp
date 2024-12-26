@@ -1,16 +1,8 @@
 use crate::any::difficulty::skills::{DifficultyValue, StrainSkill, UsedStrainSkills};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct OsuStrainSkill {
     pub inner: StrainSkill,
-}
-
-impl Default for OsuStrainSkill {
-    fn default() -> Self {
-        Self {
-            inner: StrainSkill::default(),
-        }
-    }
 }
 
 impl OsuStrainSkill {

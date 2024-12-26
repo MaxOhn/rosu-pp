@@ -133,7 +133,9 @@ impl AimEvaluator {
             return 0.0;
         };
 
+        #[allow(clippy::items_after_statements)]
         const RADIUS: i32 = OsuDifficultyObject::NORMALIZED_RADIUS;
+        #[allow(clippy::items_after_statements)]
         const DIAMETER: i32 = OsuDifficultyObject::NORMALIZED_DIAMETER;
 
         // * Calculate the velocity to the current hitobject, which starts

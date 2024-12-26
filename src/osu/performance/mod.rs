@@ -765,9 +765,7 @@ impl<'map> OsuPerformance<'map> {
         match map {
             Cow::Borrowed(map) => match map.convert_ref(mode, mods) {
                 Ok(map) => Ok(map),
-                Err(_) => {
-                    return Err(MapOrAttrs::Map(Cow::Borrowed(map)));
-                }
+                Err(_) => Err(MapOrAttrs::Map(Cow::Borrowed(map))),
             },
             Cow::Owned(mut map) => {
                 if map.convert_mut(mode, mods).is_err() {
