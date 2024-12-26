@@ -73,7 +73,7 @@ impl Speed {
                     .object_strains
                     .iter()
                     .fold(0.0, |sum, strain| {
-                        sum + (1.0 + (-(strain / max_strain * 12.0 - 6.0)).exp()).recip()
+                        sum + (1.0 + f64::exp(-(strain / max_strain * 12.0 - 6.0))).recip()
                     })
             })
     }

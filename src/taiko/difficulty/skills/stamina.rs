@@ -121,7 +121,7 @@ impl Skill<'_, Stamina> {
             .unwrap_or(0);
 
         if self.inner.single_color {
-            self.curr_strain() / (1.0 + ((-(index as isize - 10)) as f64 / 2.0).exp())
+            self.curr_strain() / (1.0 + f64::exp((-(index as isize - 10)) as f64 / 2.0))
         } else {
             self.curr_strain()
         }

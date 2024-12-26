@@ -195,7 +195,7 @@ fn erf_imp(z: f64, mut invert: bool) -> f64 {
             )
         };
 
-        let g = (-z * z).exp() / z;
+        let g = f64::exp(-z * z) / z;
 
         (g * b) + (g * r)
     } else {
