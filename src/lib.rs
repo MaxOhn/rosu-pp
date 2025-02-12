@@ -104,6 +104,7 @@
 //!
 //! Results of a rudimentary [benchmark] of osu!lazer and rosu-pp:
 //! ```txt
+//! osu!lazer:
 //! Decoding maps:            Median: 325.18ms | Mean: 325.50ms
 //! Calculating difficulties: Median: 568.63ms | Mean: 575.97ms
 //! Calculating performances: Median: 256.00µs | Mean: 240.40µs
