@@ -10,4 +10,5 @@ pub mod hit_object;
 /// Gamemode related types.
 pub mod mode;
 
-pub(crate) mod mods;
+/// Gamemods related types.
+pub mod mods;
