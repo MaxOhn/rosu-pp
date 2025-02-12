@@ -149,7 +149,7 @@ impl ColorDifficultyPreprocessor {
 
             let mut is_coupled = data
                 .get(2)
-                .map_or(false, |other| data[0].get().is_repetition_of(&other.get()));
+                .is_some_and(|other| data[0].get().is_repetition_of(&other.get()));
 
             if is_coupled {
                 while is_coupled {
@@ -160,7 +160,7 @@ impl ColorDifficultyPreprocessor {
 
                     is_coupled = data
                         .get(2)
-                        .map_or(false, |other| data[0].get().is_repetition_of(&other.get()));
+                        .is_some_and(|other| data[0].get().is_repetition_of(&other.get()));
                 }
 
                 for front in data.drain(..2) {

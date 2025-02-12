@@ -1277,10 +1277,10 @@ mod test {
         };
 
         let mut best_state = OsuScoreState {
-            misses,
-            slider_end_hits,
             large_tick_hits,
             small_tick_hits,
+            slider_end_hits,
+            misses,
             ..Default::default()
         };
 

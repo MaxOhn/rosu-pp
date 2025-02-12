@@ -801,7 +801,9 @@ mod test {
         let _ = TaikoDifficultyAttributes::default().performance();
         let _ = TaikoPerformanceAttributes::default().performance();
 
-        assert!(map.convert_mut(GameMode::Osu, &Default::default()).is_err());
+        assert!(map
+            .convert_mut(GameMode::Osu, &GameMods::default())
+            .is_err());
 
         assert!(TaikoPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
         assert!(TaikoPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
