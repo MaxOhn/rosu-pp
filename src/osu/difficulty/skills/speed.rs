@@ -10,11 +10,12 @@ use crate::{
         difficulty::{bpm_to_milliseconds, logistic, milliseconds_to_bpm},
         strains_vec::StrainsVec,
     },
+    GameMods,
 };
 
 use super::strain::OsuStrainSkill;
 
-const SKILL_MULTIPLIER: f64 = 1.430;
+const SKILL_MULTIPLIER: f64 = 1.46;
 const STRAIN_DECAY_BASE: f64 = 0.3;
 
 const REDUCED_SECTION_COUNT: usize = 5;
@@ -24,15 +25,17 @@ pub struct Speed {
     curr_strain: f64,
     curr_rhythm: f64,
     hit_window: f64,
+    has_autopilot_mod: bool,
     inner: OsuStrainSkill,
 }
 
 impl Speed {
-    pub fn new(hit_window: f64) -> Self {
+    pub fn new(mods: &GameMods, hit_window: f64) -> Self {
         Self {
             curr_strain: 0.0,
             curr_rhythm: 0.0,
             hit_window,
+            has_autopilot_mod: mods.ap(),
             inner: OsuStrainSkill::default(),
         }
     }
@@ -129,9 +132,12 @@ impl<'a> Skill<'a, Speed> {
 
     fn strain_value_at(&mut self, curr: &'a OsuDifficultyObject<'a>) -> f64 {
         self.inner.curr_strain *= strain_decay(curr.strain_time, STRAIN_DECAY_BASE);
-        self.inner.curr_strain +=
-            SpeedEvaluator::evaluate_diff_of(curr, self.diff_objects, self.inner.hit_window)
-                * SKILL_MULTIPLIER;
+        self.inner.curr_strain += SpeedEvaluator::evaluate_diff_of(
+            curr,
+            self.diff_objects,
+            self.inner.hit_window,
+            self.inner.has_autopilot_mod,
+        ) * SKILL_MULTIPLIER;
         self.inner.curr_rhythm =
             RhythmEvaluator::evaluate_diff_of(curr, self.diff_objects, self.inner.hit_window);
 
@@ -145,12 +151,13 @@ impl SpeedEvaluator {
     const SINGLE_SPACING_THRESHOLD: f64 = OsuDifficultyObject::NORMALIZED_DIAMETER as f64 * 1.25; // 1.25 circlers distance between centers
     const MIN_SPEED_BONUS: f64 = 200.0; // 200 BPM 1/4th
     const SPEED_BALANCING_FACTOR: f64 = 40.0;
-    const DIST_MULTIPLIER: f64 = 0.94;
+    const DIST_MULTIPLIER: f64 = 0.9;
 
     fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
         hit_window: f64,
+        autopilot: bool,
     ) -> f64 {
         if curr.base.is_spinner() {
             return 0.0;
@@ -189,7 +196,12 @@ impl SpeedEvaluator {
         dist = Self::SINGLE_SPACING_THRESHOLD.min(dist);
 
         // * Max distance bonus is 1 * `distance_multiplier` at single_spacing_threshold
-        let dist_bonus = (dist / Self::SINGLE_SPACING_THRESHOLD).powf(3.95) * Self::DIST_MULTIPLIER;
+        let mut dist_bonus =
+            (dist / Self::SINGLE_SPACING_THRESHOLD).powf(3.95) * Self::DIST_MULTIPLIER;
+
+        if autopilot {
+            dist_bonus = 0.0;
+        }
 
         // * Base difficulty with all bonuses
         let difficulty = (1.0 + speed_bonus + dist_bonus) * 1000.0 / strain_time;

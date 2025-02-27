@@ -117,19 +117,23 @@ impl UsedStrainSkills<DifficultyValue> {
     }
 
     pub fn count_top_weighted_strains(&self) -> f64 {
-        if self.object_strains.is_empty() {
+        Self::static_count_top_weighted_strains(&self.object_strains, self.value.0)
+    }
+
+    pub fn static_count_top_weighted_strains(object_strains: &[f64], difficulty_value: f64) -> f64 {
+        if object_strains.is_empty() {
             return 0.0;
         }
 
         // * What would the top strain be if all strain values were identical
-        let consistent_top_strain = self.value.0 / 10.0;
+        let consistent_top_strain = difficulty_value / 10.0;
 
         if consistent_top_strain.eq(0.0) {
-            return self.object_strains.len() as f64;
+            return object_strains.len() as f64;
         }
 
         // * Use a weighted sum of all strains. Constants are arbitrary and give nice values.
-        self.object_strains
+        object_strains
             .iter()
             .map(|s| 1.1 / (1.0 + (-10.0 * f64::exp(s / consistent_top_strain - 0.88))))
             .sum()

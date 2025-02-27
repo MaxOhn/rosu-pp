@@ -1,7 +1,7 @@
 use std::{cmp, pin::Pin};
 
 use rosu_map::section::general::GameMode;
-use skills::{flashlight::Flashlight, strain::OsuStrainSkill};
+use skills::{aim::AimResidue, flashlight::Flashlight, strain::OsuStrainSkill};
 
 use crate::{
     any::difficulty::{
@@ -86,7 +86,9 @@ impl OsuDifficultySetup {
         let attrs = OsuDifficultyAttributes {
             ar: map_attrs.ar,
             hp: map_attrs.hp,
-            od: map_attrs.od,
+            great_hit_window: map_attrs.hit_windows.od_great,
+            ok_hit_window: map_attrs.hit_windows.od_ok.unwrap_or(0.0),
+            meh_hit_window: map_attrs.hit_windows.od_meh.unwrap_or(0.0),
             ..Default::default()
         };
 
@@ -158,17 +160,18 @@ impl DifficultyValues {
     pub fn eval(
         attrs: &mut OsuDifficultyAttributes,
         mods: &GameMods,
-        aim: &UsedStrainSkills<DifficultyValue>,
-        aim_no_sliders: &UsedStrainSkills<DifficultyValue>,
+        aim: &UsedStrainSkills<AimResidue>,
+        aim_without_sliders: &UsedStrainSkills<AimResidue>,
         speed: &UsedStrainSkills<DifficultyValue>,
         speed_relevant_note_count: f64,
         flashlight_difficulty_value: f64,
     ) {
         let mut aim_rating = aim.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
+        let aim_difficult_strain_count = aim.count_top_weighted_strains();
+        let difficult_sliders = aim.get_difficult_sliders();
+
         let aim_rating_no_sliders =
-            aim_no_sliders.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-        let mut speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
-        let mut flashlight_rating = flashlight_difficulty_value.sqrt() * DIFFICULTY_MULTIPLIER;
+            aim_without_sliders.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
 
         let slider_factor = if aim_rating > 0.0 {
             aim_rating_no_sliders / aim_rating
@@ -176,8 +179,10 @@ impl DifficultyValues {
             1.0
         };
 
-        let aim_difficult_strain_count = aim.count_top_weighted_strains();
+        let mut speed_rating = speed.difficulty_value().sqrt() * DIFFICULTY_MULTIPLIER;
         let speed_difficult_strain_count = speed.count_top_weighted_strains();
+
+        let mut flashlight_rating = flashlight_difficulty_value.sqrt() * DIFFICULTY_MULTIPLIER;
 
         if mods.td() {
             aim_rating = aim_rating.powf(0.8);
@@ -188,6 +193,10 @@ impl DifficultyValues {
             aim_rating *= 0.9;
             speed_rating = 0.0;
             flashlight_rating *= 0.7;
+        } else if mods.ap() {
+            speed_rating *= 0.5;
+            aim_rating = 0.0;
+            flashlight_rating *= 0.4;
         }
 
         let base_aim_performance = OsuStrainSkill::difficulty_to_performance(aim_rating);
@@ -213,6 +222,7 @@ impl DifficultyValues {
         };
 
         attrs.aim = aim_rating;
+        attrs.aim_difficult_slider_count = difficult_sliders;
         attrs.speed = speed_rating;
         attrs.flashlight = flashlight_rating;
         attrs.slider_factor = slider_factor;

@@ -1,4 +1,4 @@
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::f64::consts::FRAC_PI_2;
 
 use crate::{
     any::difficulty::{
@@ -6,26 +6,32 @@ use crate::{
         skills::{strain_decay, DifficultyValue, ISkill, Skill, UsedStrainSkills},
     },
     osu::difficulty::object::OsuDifficultyObject,
-    util::{difficulty::milliseconds_to_bpm, float_ext::FloatExt, strains_vec::StrainsVec},
+    util::{
+        difficulty::{milliseconds_to_bpm, reverse_lerp, smootherstep, smoothstep},
+        float_ext::FloatExt,
+        strains_vec::StrainsVec,
+    },
 };
 
 use super::strain::OsuStrainSkill;
 
-const SKILL_MULTIPLIER: f64 = 25.18;
+const SKILL_MULTIPLIER: f64 = 25.6;
 const STRAIN_DECAY_BASE: f64 = 0.15;
 
 #[derive(Clone)]
 pub struct Aim {
-    with_sliders: bool,
+    include_sliders: bool,
     curr_strain: f64,
+    slider_strains: Vec<f64>, // TODO: use StrainVec?
     inner: OsuStrainSkill,
 }
 
 impl Aim {
-    pub fn new(with_sliders: bool) -> Self {
+    pub fn new(include_sliders: bool) -> Self {
         Self {
-            with_sliders,
+            include_sliders,
             curr_strain: 0.0,
+            slider_strains: Vec::with_capacity(64), // TODO: check default
             inner: OsuStrainSkill::default(),
         }
     }
@@ -34,22 +40,74 @@ impl Aim {
         self.inner.inner.get_curr_strain_peaks().into_strains()
     }
 
-    pub fn difficulty_value(self) -> UsedStrainSkills<DifficultyValue> {
-        Self::static_difficulty_value(self.inner)
+    pub fn difficulty_value(self) -> UsedStrainSkills<AimResidue> {
+        Self::static_difficulty_value(self.inner, self.slider_strains)
     }
 
     /// Use [`difficulty_value`] instead whenever possible because
     /// [`as_difficulty_value`] clones internally.
-    pub fn as_difficulty_value(&self) -> UsedStrainSkills<DifficultyValue> {
-        Self::static_difficulty_value(self.inner.clone())
+    pub fn as_difficulty_value(&self) -> UsedStrainSkills<AimResidue> {
+        Self::static_difficulty_value(self.inner.clone(), self.slider_strains.clone())
     }
 
-    fn static_difficulty_value(skill: OsuStrainSkill) -> UsedStrainSkills<DifficultyValue> {
-        skill.difficulty_value(
+    fn static_difficulty_value(
+        skill: OsuStrainSkill,
+        slider_strains: Vec<f64>,
+    ) -> UsedStrainSkills<AimResidue> {
+        let used = skill.difficulty_value(
             OsuStrainSkill::REDUCED_SECTION_COUNT,
             OsuStrainSkill::REDUCED_STRAIN_BASELINE,
             OsuStrainSkill::DECAY_WEIGHT,
+        );
+
+        UsedStrainSkills {
+            value: AimResidue {
+                difficulty_value: used.value.0,
+                slider_strains,
+            },
+            object_strains: used.object_strains,
+        }
+    }
+}
+
+pub(crate) struct AimResidue {
+    difficulty_value: f64,
+    slider_strains: Vec<f64>,
+}
+
+impl UsedStrainSkills<AimResidue> {
+    pub const fn difficulty_value(&self) -> f64 {
+        self.value.difficulty_value
+    }
+
+    pub fn count_top_weighted_strains(&self) -> f64 {
+        UsedStrainSkills::<DifficultyValue>::static_count_top_weighted_strains(
+            &self.object_strains,
+            self.value.difficulty_value,
         )
+    }
+
+    pub fn get_difficult_sliders(&self) -> f64 {
+        if self.value.slider_strains.is_empty() {
+            return 0.0;
+        }
+
+        let max_slider_strain = self
+            .value
+            .slider_strains
+            .iter()
+            .fold(0.0, |max, next| f64::max(max, *next));
+
+        if max_slider_strain.eq(0.0) {
+            return 0.0;
+        }
+
+        self.value
+            .slider_strains
+            .iter()
+            .copied()
+            .map(|strain| 1.0 / (1.0 + f64::exp(-(strain / max_slider_strain * 12.0 - 6.0))))
+            .sum()
     }
 }
 
@@ -103,8 +161,12 @@ impl<'a> Skill<'a, Aim> {
     fn strain_value_at(&mut self, curr: &'a OsuDifficultyObject<'a>) -> f64 {
         self.inner.curr_strain *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
         self.inner.curr_strain +=
-            AimEvaluator::evaluate_diff_of(curr, self.diff_objects, self.inner.with_sliders)
+            AimEvaluator::evaluate_diff_of(curr, self.diff_objects, self.inner.include_sliders)
                 * SKILL_MULTIPLIER;
+
+        if curr.base.is_slider() {
+            self.inner.slider_strains.push(self.inner.curr_strain);
+        }
 
         self.inner.curr_strain
     }
@@ -114,9 +176,10 @@ struct AimEvaluator;
 
 impl AimEvaluator {
     const WIDE_ANGLE_MULTIPLIER: f64 = 1.5;
-    const ACUTE_ANGLE_MULTIPLIER: f64 = 1.95;
+    const ACUTE_ANGLE_MULTIPLIER: f64 = 2.6;
     const SLIDER_MULTIPLIER: f64 = 1.35;
     const VELOCITY_CHANGE_MULTIPLIER: f64 = 0.75;
+    const WIGGLE_MULTIPLIER: f64 = 1.02;
 
     fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
@@ -168,6 +231,7 @@ impl AimEvaluator {
         let mut acute_angle_bonus = 0.0;
         let mut slider_bonus = 0.0;
         let mut vel_change_bonus = 0.0;
+        let mut wiggle_bonus = 0.0;
 
         // * Start strain with regular velocity.
         let mut aim_strain = curr_vel;
@@ -176,51 +240,75 @@ impl AimEvaluator {
         if osu_curr_obj.strain_time.max(osu_last_obj.strain_time)
             < 1.25 * osu_curr_obj.strain_time.min(osu_last_obj.strain_time)
         {
-            if let Some(((curr_angle, last_angle), last_last_angle)) = osu_curr_obj
-                .angle
-                .zip(osu_last_obj.angle)
-                .zip(osu_last_last_obj.angle)
-            {
+            if let Some((curr_angle, last_angle)) = osu_curr_obj.angle.zip(osu_last_obj.angle) {
                 // * Rewarding angles, take the smaller velocity as base.
                 let angle_bonus = curr_vel.min(prev_vel);
 
                 wide_angle_bonus = Self::calc_wide_angle_bonus(curr_angle);
                 acute_angle_bonus = Self::calc_acute_angle_bonus(curr_angle);
 
-                // * Only buff deltaTime exceeding 300 bpm 1/2.
-                if milliseconds_to_bpm(osu_curr_obj.strain_time, Some(2)) < 300.0 {
-                    acute_angle_bonus = 0.0;
-                } else {
-                    let base1 =
-                        (FRAC_PI_2 * ((100.0 - osu_curr_obj.strain_time) / 25.0).min(1.0)).sin();
-
-                    let base2 = (FRAC_PI_2
-                        * ((osu_curr_obj.lazy_jump_dist)
-                            .clamp(f64::from(RADIUS), f64::from(DIAMETER))
-                            - f64::from(RADIUS))
-                        / f64::from(RADIUS))
-                    .sin();
-
-                    // * Multiply by previous angle, we don't want to buff unless this is a wiggle type pattern.
-                    acute_angle_bonus *= Self::calc_acute_angle_bonus(last_angle)
-                    // * The maximum velocity we buff is equal to 125 / strainTime
-                        * angle_bonus.min(f64::from(DIAMETER) * 1.25 / osu_curr_obj.strain_time)
-                        // * scale buff from 150 bpm 1/4 to 200 bpm 1/4
-                        * base1.powf(2.0)
-                         // * Buff distance exceeding radius up to diameter.
-                        * base2.powf(2.0);
-                }
-
-                // * Penalize wide angles if they're repeated, reducing the penalty as the lastAngle gets more acute.
-                wide_angle_bonus *= angle_bonus
-                    * (1.0
-                        - wide_angle_bonus.min(Self::calc_wide_angle_bonus(last_angle).powf(3.0)));
-                // * Penalize acute angles if they're repeated, reducing the penalty as the lastLastAngle gets more obtuse.
-                acute_angle_bonus *= 0.5
-                    + 0.5
+                // * Penalize angle repetition.
+                wide_angle_bonus *= 1.0
+                    - f64::min(
+                        wide_angle_bonus,
+                        f64::powf(Self::calc_wide_angle_bonus(last_angle), 3.0),
+                    );
+                acute_angle_bonus *= 0.08
+                    + 0.92
                         * (1.0
-                            - acute_angle_bonus
-                                .min(Self::calc_acute_angle_bonus(last_last_angle).powf(3.0)));
+                            - f64::min(
+                                acute_angle_bonus,
+                                f64::powf(Self::calc_acute_angle_bonus(last_angle), 3.0),
+                            ));
+
+                // * Apply full wide angle bonus for distance more than one diameter
+                wide_angle_bonus *= angle_bonus
+                    * smootherstep(osu_curr_obj.lazy_jump_dist, 0.0, f64::from(DIAMETER));
+
+                // * Apply acute angle bonus for BPM above 300 1/2 and distance more than one diameter
+                acute_angle_bonus *= angle_bonus
+                    * smootherstep(
+                        milliseconds_to_bpm(osu_curr_obj.strain_time, Some(2)),
+                        300.0,
+                        400.0,
+                    )
+                    * smootherstep(
+                        osu_curr_obj.lazy_jump_dist,
+                        f64::from(DIAMETER),
+                        f64::from(DIAMETER * 2),
+                    );
+
+                // * Apply wiggle bonus for jumps that are [radius, 3*diameter] in distance, with < 110 angle
+                // * https://www.desmos.com/calculator/dp0v0nvowc
+                wiggle_bonus = angle_bonus
+                    * smootherstep(
+                        osu_curr_obj.lazy_jump_dist,
+                        f64::from(RADIUS),
+                        f64::from(DIAMETER),
+                    )
+                    * f64::powf(
+                        reverse_lerp(
+                            osu_curr_obj.lazy_jump_dist,
+                            f64::from(DIAMETER * 3),
+                            f64::from(DIAMETER),
+                        ),
+                        1.8,
+                    )
+                    * smootherstep(curr_angle, f64::to_radians(110.0), f64::to_radians(60.0))
+                    * smootherstep(
+                        osu_last_obj.lazy_jump_dist,
+                        f64::from(RADIUS),
+                        f64::from(DIAMETER),
+                    )
+                    * f64::powf(
+                        reverse_lerp(
+                            osu_last_obj.lazy_jump_dist,
+                            f64::from(DIAMETER * 3),
+                            f64::from(DIAMETER),
+                        ),
+                        1.8,
+                    )
+                    * smootherstep(last_angle, f64::to_radians(110.0), f64::to_radians(60.0));
             }
         }
 
@@ -255,6 +343,8 @@ impl AimEvaluator {
             slider_bonus = osu_last_obj.travel_dist / osu_last_obj.travel_time;
         }
 
+        aim_strain += wiggle_bonus * Self::WIGGLE_MULTIPLIER;
+
         // * Add in acute angle bonus or wide angle bonus + velocity change bonus, whichever is larger.
         aim_strain += (acute_angle_bonus * Self::ACUTE_ANGLE_MULTIPLIER).max(
             wide_angle_bonus * Self::WIDE_ANGLE_MULTIPLIER
@@ -270,12 +360,10 @@ impl AimEvaluator {
     }
 
     fn calc_wide_angle_bonus(angle: f64) -> f64 {
-        (3.0 / 4.0 * ((5.0 / 6.0 * PI).min(angle.max(PI / 6.0)) - PI / 6.0))
-            .sin()
-            .powf(2.0)
+        smoothstep(angle, f64::to_radians(40.0), f64::to_radians(140.0))
     }
 
     fn calc_acute_angle_bonus(angle: f64) -> f64 {
-        1.0 - Self::calc_wide_angle_bonus(angle)
+        smoothstep(angle, f64::to_radians(140.0), f64::to_radians(40.0))
     }
 }

@@ -87,6 +87,7 @@ impl TaikoGradualDifficulty {
         let HitWindows {
             od_great,
             od_ok,
+            od_meh: _,
             ar: _,
         } = map.attributes().difficulty(&difficulty).hit_windows();
 

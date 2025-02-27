@@ -4,6 +4,9 @@ pub trait FloatExt: Sized {
 
     /// `self != other`
     fn not_eq(self, other: Self) -> bool;
+
+    /// Performs a linear interpolation between two values based on the given weight.
+    fn lerp(value1: Self, value2: Self, amount: Self) -> Self;
 }
 
 macro_rules! impl_float_ext {
@@ -15,6 +18,11 @@ macro_rules! impl_float_ext {
 
             fn not_eq(self, other: Self) -> bool {
                 (self - other).abs() >= <$ty>::EPSILON
+            }
+
+            // <https://github.com/dotnet/runtime/blob/1d1bf92fcf43aa6981804dc53c5174445069c9e4/src/libraries/System.Private.CoreLib/src/System/Double.cs#L841>
+            fn lerp(value1: Self, value2: Self, amount: Self) -> Self {
+                (value1 * (1.0 - amount)) + (value2 * amount)
             }
         }
     };

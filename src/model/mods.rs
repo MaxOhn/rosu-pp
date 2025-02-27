@@ -301,6 +301,7 @@ impl_has_mod! {
     rx: + Relax ["Relax"],
     fl: + Flashlight ["Flashlight"],
     so: + SpunOut ["SpunOut"],
+    ap: + Autopilot ["Autopilot"],
     bl: - Blinds ["Blinds"],
     tc: - Traceable ["Traceable"],
 }

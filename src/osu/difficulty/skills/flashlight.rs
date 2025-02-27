@@ -164,13 +164,14 @@ impl FlashlightEvaluator {
                 break;
             };
 
+            cumulative_strain_time += last_obj.strain_time;
+
             let curr_hit_obj = curr_obj.base;
 
             if !curr_obj.base.is_spinner() {
                 let jump_dist = f64::from(
                     (osu_hit_obj.stacked_pos() - curr_hit_obj.stacked_end_pos()).length(),
                 );
-                cumulative_strain_time += last_obj.strain_time;
 
                 // * We want to nerf objects that can be easily seen within the Flashlight circle radius.
                 if i == 0 {

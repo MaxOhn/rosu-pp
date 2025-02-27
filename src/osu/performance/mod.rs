@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp};
+use std::{borrow::Cow, cmp, f64::consts::PI};
 
 use rosu_map::section::general::GameMode;
 
@@ -8,7 +8,12 @@ use crate::{
     mania::ManiaPerformance,
     model::{mode::ConvertError, mods::GameMods},
     taiko::TaikoPerformance,
-    util::{float_ext::FloatExt, map_or_attrs::MapOrAttrs},
+    util::{
+        difficulty::reverse_lerp,
+        float_ext::FloatExt,
+        map_or_attrs::MapOrAttrs,
+        special_functions::{erf, erf_inv},
+    },
     Beatmap,
 };
 
@@ -820,13 +825,15 @@ impl OsuPerformanceInner<'_> {
         }
 
         if self.mods.rx() {
+            let od = self.attrs.od();
+
             // * https://www.desmos.com/calculator/bc9eybdthb
             // * we use OD13.3 as maximum since it's the value at which great hitwidow becomes 0
             // * this is well beyond currently maximum achievable OD which is 12.17 (DTx2 + DA with OD11)
-            let (n100_mult, n50_mult) = if self.attrs.od > 0.0 {
+            let (n100_mult, n50_mult) = if od > 0.0 {
                 (
-                    (1.0 - (self.attrs.od / 13.33).powf(1.8)).max(0.0),
-                    (1.0 - (self.attrs.od / 13.33).powf(5.0)).max(0.0),
+                    (1.0 - (od / 13.33).powf(1.8)).max(0.0),
+                    (1.0 - (od / 13.33).powf(5.0)).max(0.0),
                 )
             } else {
                 (1.0, 1.0)
@@ -840,8 +847,10 @@ impl OsuPerformanceInner<'_> {
                 .min(total_hits);
         }
 
+        let speed_deviation = self.calculate_speed_deviation();
+
         let aim_value = self.compute_aim_value();
-        let speed_value = self.compute_speed_value();
+        let speed_value = self.compute_speed_value(speed_deviation);
         let acc_value = self.compute_accuracy_value();
         let flashlight_value = self.compute_flashlight_value();
 
@@ -860,11 +869,56 @@ impl OsuPerformanceInner<'_> {
             pp_speed: speed_value,
             pp,
             effective_miss_count: self.effective_miss_count,
+            speed_deviation,
         }
     }
 
     fn compute_aim_value(&self) -> f64 {
-        let mut aim_value = OsuStrainSkill::difficulty_to_performance(self.attrs.aim);
+        if self.mods.ap() {
+            return 0.0;
+        }
+
+        let mut aim_difficulty = self.attrs.aim;
+
+        if self.attrs.n_sliders > 0 && self.attrs.aim_difficult_slider_count > 0.0 {
+            let estimate_improperly_followed_difficult_sliders = if self.using_classic_slider_acc {
+                // * When the score is considered classic (regardless if it was made on old client or not)
+                // * we consider all missing combo to be dropped difficult sliders
+                let maximum_possible_dropped_sliders = total_imperfect_hits(&self.state);
+
+                f64::clamp(
+                    f64::min(
+                        maximum_possible_dropped_sliders,
+                        f64::from(self.attrs.max_combo - self.state.max_combo),
+                    ),
+                    0.0,
+                    self.attrs.aim_difficult_slider_count,
+                )
+            } else {
+                // * We add tick misses here since they too mean that the player didn't follow the slider properly
+                // * We however aren't adding misses here because missing slider heads has a harsh penalty
+                // * by itself and doesn't mean that the rest of the slider wasn't followed properly
+                f64::clamp(
+                    f64::from(
+                        n_slider_ends_dropped(&self.attrs, &self.state)
+                            + n_large_tick_miss(&self.attrs, &self.state),
+                    ),
+                    0.0,
+                    self.attrs.aim_difficult_slider_count,
+                )
+            };
+
+            let slider_nerf_factor = (1.0 - self.attrs.slider_factor)
+                * f64::powf(
+                    1.0 - estimate_improperly_followed_difficult_sliders
+                        / self.attrs.aim_difficult_slider_count,
+                    3.0,
+                )
+                + self.attrs.slider_factor;
+            aim_difficulty *= slider_nerf_factor;
+        }
+
+        let mut aim_value = OsuStrainSkill::difficulty_to_performance(aim_difficulty);
 
         let total_hits = self.total_hits();
 
@@ -905,45 +959,17 @@ impl OsuPerformanceInner<'_> {
             aim_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
         }
 
-        // * We assume 15% of sliders in a map are difficult since there's no way to tell from the performance calculator.
-        let estimate_diff_sliders = f64::from(self.attrs.n_sliders) * 0.15;
-
-        if self.attrs.n_sliders > 0 {
-            let estimate_improperly_followed_difficult_sliders = if self.using_classic_slider_acc {
-                // * When the score is considered classic (regardless if it was made on old client or not) we consider all missing combo to be dropped difficult sliders
-                let maximum_possible_droppled_sliders = total_imperfect_hits(&self.state);
-
-                maximum_possible_droppled_sliders
-                    .min(f64::from(self.attrs.max_combo - self.state.max_combo))
-                    .clamp(0.0, estimate_diff_sliders)
-            } else {
-                // * We add tick misses here since they too mean that the player didn't follow the slider properly
-                // * We however aren't adding misses here because missing slider heads has a harsh penalty by itself and doesn't mean that the rest of the slider wasn't followed properly
-                (f64::from(
-                    n_slider_ends_dropped(&self.attrs, &self.state)
-                        + n_large_tick_miss(&self.attrs, &self.state),
-                ))
-                .clamp(0.0, estimate_diff_sliders)
-            };
-
-            let slider_nerf_factor = (1.0 - self.attrs.slider_factor)
-                * (1.0 - estimate_improperly_followed_difficult_sliders / estimate_diff_sliders)
-                    .powf(3.0)
-                + self.attrs.slider_factor;
-            aim_value *= slider_nerf_factor;
-        }
-
         aim_value *= self.acc;
         // * It is important to consider accuracy difficulty when scaling with accuracy.
-        aim_value *= 0.98 + self.attrs.od.powf(2.0) / 2500.0;
+        aim_value *= 0.98 + f64::powf(f64::max(0.0, self.attrs.od()), 2.0) / 2500.0;
 
         aim_value
     }
 
-    fn compute_speed_value(&self) -> f64 {
-        if self.mods.rx() {
+    fn compute_speed_value(&self, speed_deviation: Option<f64>) -> f64 {
+        let Some(speed_deviation) = speed_deviation.filter(|_| !self.mods.rx()) else {
             return 0.0;
-        }
+        };
 
         let mut speed_value = OsuStrainSkill::difficulty_to_performance(self.attrs.speed);
 
@@ -962,7 +988,9 @@ impl OsuPerformanceInner<'_> {
             );
         }
 
-        let ar_factor = if self.attrs.ar > 10.33 {
+        let ar_factor = if self.mods.ap() {
+            0.0
+        } else if self.attrs.ar > 10.33 {
             0.3 * (self.attrs.ar - 10.33)
         } else {
             0.0
@@ -981,8 +1009,11 @@ impl OsuPerformanceInner<'_> {
             speed_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
         }
 
+        let speed_high_deviation_mult = self.calculate_speed_high_deviation_nerf(speed_deviation);
+        speed_value *= speed_high_deviation_mult;
+
         // * Calculate accuracy assuming the worst case scenario
-        let relevant_total_diff = total_hits - self.attrs.speed_note_count;
+        let relevant_total_diff = f64::max(0.0, total_hits - self.attrs.speed_note_count);
         let relevant_n300 = (f64::from(self.state.n300) - relevant_total_diff).max(0.0);
         let relevant_n100 = (f64::from(self.state.n100)
             - (relevant_total_diff - f64::from(self.state.n300)).max(0.0))
@@ -998,15 +1029,11 @@ impl OsuPerformanceInner<'_> {
                 / (self.attrs.speed_note_count * 6.0)
         };
 
-        // * Scale the speed value with accuracy and OD.
-        speed_value *= (0.95 + self.attrs.od * self.attrs.od / 750.0)
-            * ((self.acc + relevant_acc) / 2.0).powf((14.5 - self.attrs.od) / 2.0);
+        let od = self.attrs.od();
 
-        // * Scale the speed value with # of 50s to punish doubletapping.
-        speed_value *= 0.99_f64.powf(
-            f64::from(u8::from(f64::from(self.state.n50) >= total_hits / 500.0))
-                * (f64::from(self.state.n50) - total_hits / 500.0),
-        );
+        // * Scale the speed value with accuracy and OD.
+        speed_value *= (0.95 + f64::powf(f64::max(0.0, od), 2.0) / 750.0)
+            * f64::powf((self.acc + relevant_acc) / 2.0, (14.5 - od) / 2.0);
 
         speed_value
     }
@@ -1027,7 +1054,10 @@ impl OsuPerformanceInner<'_> {
         let mut better_acc_percentage = if amount_hit_objects_with_acc > 0 {
             f64::from(
                 (self.state.n300 as i32
-                    - (self.state.total_hits() as i32 - amount_hit_objects_with_acc as i32))
+                    - (i32::max(
+                        self.state.total_hits() as i32 - amount_hit_objects_with_acc as i32,
+                        0,
+                    )))
                     * 6
                     + self.state.n100 as i32 * 2
                     + self.state.n50 as i32,
@@ -1044,7 +1074,7 @@ impl OsuPerformanceInner<'_> {
         // * Lots of arbitrary values from testing.
         // * Considering to use derivation from perfect accuracy in a probabilistic manner - assume normal distribution.
         let mut acc_value =
-            1.52163_f64.powf(self.attrs.od) * better_acc_percentage.powf(24.0) * 2.83;
+            1.52163_f64.powf(self.attrs.od()) * better_acc_percentage.powf(24.0) * 2.83;
 
         // * Bonus for many hitcircles - it's harder to keep good accuracy up for longer.
         acc_value *= (f64::from(amount_hit_objects_with_acc) / 1000.0)
@@ -1094,9 +1124,134 @@ impl OsuPerformanceInner<'_> {
         // * Scale the flashlight value with accuracy _slightly_.
         flashlight_value *= 0.5 + self.acc / 2.0;
         // * It is important to also consider accuracy difficulty when doing that.
-        flashlight_value *= 0.98 + self.attrs.od.powf(2.0) / 2500.0;
+        flashlight_value *= 0.98 + f64::powf(f64::max(0.0, self.attrs.od()), 2.0) / 2500.0;
 
         flashlight_value
+    }
+
+    fn calculate_speed_deviation(&self) -> Option<f64> {
+        if total_successful_hits(&self.state) == 0 {
+            return None;
+        }
+
+        // * Calculate accuracy assuming the worst case scenario
+        let mut speed_note_count = self.attrs.speed_note_count;
+        speed_note_count +=
+            (f64::from(self.state.total_hits()) - self.attrs.speed_note_count) * 0.1;
+
+        // * Assume worst case: all mistakes were on speed notes
+        let relevant_count_miss = f64::min(f64::from(self.state.misses), speed_note_count);
+        let relevant_count_meh = f64::min(
+            f64::from(self.state.n50),
+            speed_note_count - relevant_count_miss,
+        );
+        let relevant_count_ok = f64::min(
+            f64::from(self.state.n100),
+            speed_note_count - relevant_count_miss - relevant_count_meh,
+        );
+        let relevant_count_great = f64::max(
+            0.0,
+            speed_note_count - relevant_count_miss - relevant_count_meh - relevant_count_ok,
+        );
+
+        self.calculate_deviation(
+            relevant_count_great,
+            relevant_count_ok,
+            relevant_count_meh,
+            relevant_count_miss,
+        )
+    }
+
+    fn calculate_deviation(
+        &self,
+        relevant_count_great: f64,
+        relevant_count_ok: f64,
+        relevant_count_meh: f64,
+        relevant_count_miss: f64,
+    ) -> Option<f64> {
+        if relevant_count_great + relevant_count_ok + relevant_count_meh <= 0.0 {
+            return None;
+        }
+
+        let object_count =
+            relevant_count_great + relevant_count_ok + relevant_count_meh + relevant_count_miss;
+
+        // * The probability that a player hits a circle is unknown, but we can estimate it to be
+        // * the number of greats on circles divided by the number of circles, and then add one
+        // * to the number of circles as a bias correction.
+
+        let n = f64::max(1.0, object_count - relevant_count_miss - relevant_count_meh);
+
+        const Z: f64 = 2.32634787404; // * 99% critical value for the normal distribution (one-tailed).
+
+        // * Proportion of greats hit on circles, ignoring misses and 50s.
+        let p = relevant_count_great / n;
+
+        // * We can be 99% confident that p is at least this value.
+        let p_lower_bound = (n * p + Z * Z / 2.0) / (n + Z * Z)
+            - Z / f64::sqrt(n + Z * Z) * (n * p * (1.0 - p) + Z * Z / 4.0);
+
+        let great_hit_window: f64 = self.attrs.great_hit_window;
+        let ok_hit_window: f64 = self.attrs.ok_hit_window;
+        let meh_hit_window: f64 = self.attrs.meh_hit_window;
+
+        // * Compute the deviation assuming greats and oks are normally distributed, and mehs are uniformly distributed.
+        // * Begin with greats and oks first. Ignoring mehs, we can be 99% confident that the deviation is not higher than:
+        let mut deviation = great_hit_window / (f64::sqrt(2.0) * erf_inv(p_lower_bound));
+
+        let random_value = f64::sqrt(2.0 / PI)
+            * ok_hit_window
+            * f64::exp(-0.5 * f64::powf(ok_hit_window / deviation, 2.0))
+            / (deviation * erf(ok_hit_window / (f64::sqrt(2.0) * deviation)));
+
+        deviation *= f64::sqrt(1.0 - random_value);
+
+        // * Value deviation approach as greatCount approaches 0
+        let limit_value = ok_hit_window / f64::sqrt(3.0);
+
+        // * If precision is not enough to compute true deviation - use limit value
+        if p_lower_bound.eq(0.0) || random_value >= 1.0 || deviation > limit_value {
+            deviation = limit_value;
+        }
+
+        // * Then compute the variance for mehs.
+        let meh_variance = (meh_hit_window * meh_hit_window
+            + ok_hit_window * meh_hit_window
+            + ok_hit_window * ok_hit_window)
+            / 3.0;
+
+        // * Find the total deviation.
+        let deviation = f64::sqrt(
+            ((relevant_count_great + relevant_count_ok) * f64::powf(deviation, 2.0)
+                + relevant_count_meh * meh_variance)
+                / (relevant_count_great + relevant_count_ok + relevant_count_meh),
+        );
+
+        Some(deviation)
+    }
+
+    fn calculate_speed_high_deviation_nerf(&self, speed_deviation: f64) -> f64 {
+        let speed_value = OsuStrainSkill::difficulty_to_performance(self.attrs.speed);
+
+        // * Decides a point where the PP value achieved compared to the speed deviation is assumed to be tapped improperly. Any PP above this point is considered "excess" speed difficulty.
+        // * This is used to cause PP above the cutoff to scale logarithmically towards the original speed value thus nerfing the value.
+        let excess_speed_difficulty_cutoff = 100.0 + 220.0 * f64::powf(22.0 / speed_deviation, 6.5);
+
+        if speed_value <= excess_speed_difficulty_cutoff {
+            return 1.0;
+        }
+
+        const SCALE: f64 = 50.0;
+
+        let mut adjusted_speed_value = SCALE
+            * (f64::ln((speed_value - excess_speed_difficulty_cutoff) / SCALE + 1.0)
+                + excess_speed_difficulty_cutoff / SCALE);
+
+        // * 220 UR and less are considered tapped correctly to ensure that normal scores will be punished as little as possible
+        let lerp = 1.0 - reverse_lerp(speed_deviation, 22.0, 27.0);
+        adjusted_speed_value = f64::lerp(adjusted_speed_value, speed_value, lerp);
+
+        adjusted_speed_value / speed_value
     }
 
     // * Miss penalty assumes that a player will miss on the hardest parts of a map,
@@ -1118,6 +1273,10 @@ impl OsuPerformanceInner<'_> {
     const fn total_hits(&self) -> f64 {
         self.state.total_hits() as f64
     }
+}
+
+fn total_successful_hits(state: &OsuScoreState) -> u32 {
+    state.n300 + state.n100 + state.n50
 }
 
 fn total_imperfect_hits(state: &OsuScoreState) -> f64 {
