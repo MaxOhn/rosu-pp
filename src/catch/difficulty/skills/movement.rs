@@ -4,7 +4,7 @@ use crate::{
         skills::{strain_decay, ISkill, Skill, StrainDecaySkill},
     },
     catch::difficulty::object::CatchDifficultyObject,
-    util::strains_vec::StrainsVec,
+    util::{float_ext::FloatExt, strains_vec::StrainsVec},
 };
 
 const ABSOLUTE_PLAYER_POSITIONING_ERROR: f32 = 16.0;
@@ -20,19 +20,25 @@ const SECTION_LEN: f64 = 750.0;
 
 pub struct Movement {
     inner: StrainDecaySkill,
+    half_catcher_width: f32,
     last_player_pos: Option<f32>,
     last_dist_moved: f32,
+    last_exact_dist_moved: f32,
     last_strain_time: f64,
+    is_in_buzz_section: bool,
     clock_rate: f64,
 }
 
 impl Movement {
-    pub fn new(clock_rate: f64) -> Self {
+    pub fn new(clock_rate: f64, half_catcher_width: f32) -> Self {
         Self {
             inner: StrainDecaySkill::default(),
+            half_catcher_width,
             last_player_pos: None,
             last_dist_moved: 0.0,
+            last_exact_dist_moved: 0.0,
             last_strain_time: 0.0,
+            is_in_buzz_section: false,
             clock_rate,
         }
     }
@@ -60,6 +66,9 @@ impl Movement {
             last_player_pos.clamp(curr.normalized_pos - term, curr.normalized_pos + term);
 
         let dist_moved = player_pos - last_player_pos;
+
+        // * For the exact position we consider that the catcher is in the correct position for both objects
+        let exact_dist_moved = curr.normalized_pos - last_player_pos;
 
         let weighted_strain_time = curr.strain_time + 13.0 + (3.0 / self.clock_rate);
 
@@ -101,9 +110,27 @@ impl Movement {
                     * ((curr.strain_time * self.clock_rate).min(265.0) / 265.0).powf(1.5);
         }
 
+        // * There is an edge case where horizontal back and forth sliders create "buzz" patterns which are repeated "movements" with a distance lower than
+        // * the platter's width but high enough to be considered a movement due to the absolute_player_positioning_error and normalized_hitobject_radius offsets
+        // * We are detecting this exact scenario. The first back and forth is counted but all subsequent ones are nullified.
+        // * To achieve that, we need to store the exact distances (distance ignoring absolute_player_positioning_error and normalized_hitobject_radius)
+        if exact_dist_moved.abs() <= self.half_catcher_width * 2.0
+            && exact_dist_moved.eq(-self.last_exact_dist_moved)
+            && curr.strain_time.eq(self.last_strain_time)
+        {
+            if self.is_in_buzz_section {
+                dist_addition = 0.0;
+            } else {
+                self.is_in_buzz_section = true;
+            }
+        } else {
+            self.is_in_buzz_section = false;
+        }
+
         self.last_player_pos = Some(player_pos);
         self.last_dist_moved = dist_moved;
         self.last_strain_time = curr.strain_time;
+        self.last_exact_dist_moved = exact_dist_moved;
 
         dist_addition / weighted_strain_time
     }

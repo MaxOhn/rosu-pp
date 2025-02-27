@@ -6,6 +6,7 @@ use crate::{
     any::difficulty::skills::Skill,
     catch::{
         attributes::{GradualObjectCount, ObjectCountBuilder},
+        catcher::Catcher,
         convert::convert_objects,
         CatchDifficultyAttributes,
     },
@@ -86,14 +87,17 @@ impl CatchGradualDifficulty {
             map_attrs.cs as f32,
         );
 
+        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs as f32) * 0.5;
+        half_catcher_width *= 1.0 - ((map_attrs.cs as f32 - 5.5).max(0.0) * 0.0625);
+
         let diff_objects = DifficultyValues::create_difficulty_objects(
-            &map_attrs,
             clock_rate,
+            half_catcher_width,
             palpable_objects.iter(),
         );
 
         let count = count.into_gradual();
-        let movement = Movement::new(clock_rate);
+        let movement = Movement::new(clock_rate, half_catcher_width);
 
         Ok(Self {
             idx: 0,
