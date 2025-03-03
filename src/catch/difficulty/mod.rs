@@ -1,7 +1,7 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::{skills::Skill, Difficulty},
+    any::difficulty::{skills::StrainSkill, Difficulty},
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
@@ -33,7 +33,7 @@ pub fn difficulty(
         mut attrs,
     } = DifficultyValues::calculate(difficulty, &map);
 
-    DifficultyValues::eval(&mut attrs, movement.difficulty_value());
+    DifficultyValues::eval(&mut attrs, movement.into_difficulty_value());
 
     Ok(attrs)
 }
@@ -88,14 +88,10 @@ impl DifficultyValues {
             palpable_objects.iter().take(take),
         );
 
-        let mut movement = Movement::new(clock_rate, half_catcher_width);
+        let mut movement = Movement::new(half_catcher_width, clock_rate);
 
-        {
-            let mut movement = Skill::new(&mut movement, &diff_objects);
-
-            for curr in diff_objects.iter() {
-                movement.process(curr);
-            }
+        for curr in diff_objects.iter() {
+            movement.process(curr, &diff_objects);
         }
 
         attrs.set_object_count(&count.into_regular());

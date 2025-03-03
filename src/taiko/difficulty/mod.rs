@@ -2,9 +2,10 @@ use std::cmp;
 
 use rhythm::preprocessor::RhythmDifficultyPreprocessor;
 use rosu_map::section::general::GameMode;
+use skills::{color::Color, reading::Reading, rhythm::Rhythm, stamina::Stamina};
 
 use crate::{
-    any::difficulty::skills::Skill,
+    any::difficulty::skills::StrainSkill,
     model::{beatmap::HitWindows, mode::ConvertError},
     taiko::{
         difficulty::{
@@ -65,25 +66,21 @@ pub fn difficulty(
     Ok(attrs)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn combined_difficulty_value(
-    skills: TaikoSkills,
+    rhythm: Rhythm,
+    reading: Reading,
+    color: Color,
+    stamina: Stamina,
     is_relax: bool,
     is_convert: bool,
     pattern_multiplier: f64,
     strain_length_bonus: f64,
 ) -> f64 {
-    let TaikoSkills {
-        rhythm,
-        reading,
-        color,
-        stamina,
-        single_color_stamina: _,
-    } = skills;
-
-    let rhythm_peaks = rhythm.get_curr_strain_peaks();
-    let reading_peaks = reading.get_curr_strain_peaks();
-    let color_peaks = color.get_curr_strain_peaks();
-    let stamina_peaks = stamina.get_curr_strain_peaks();
+    let rhythm_peaks = rhythm.into_current_strain_peaks();
+    let reading_peaks = reading.into_current_strain_peaks();
+    let color_peaks = color.into_current_strain_peaks();
+    let stamina_peaks = stamina.into_current_strain_peaks();
 
     let cap = cmp::min(
         cmp::min(color_peaks.len(), rhythm_peaks.len()),
@@ -92,10 +89,10 @@ fn combined_difficulty_value(
     let mut peaks = Vec::with_capacity(cap);
 
     let iter = rhythm_peaks
-        .iter()
-        .zip(reading_peaks.iter())
-        .zip(color_peaks.iter())
-        .zip(stamina_peaks.iter());
+        .into_iter()
+        .zip(reading_peaks)
+        .zip(color_peaks)
+        .zip(stamina_peaks);
 
     for (((mut rhythm_peak, mut reading_peak), mut color_peak), mut stamina_peak) in iter {
         rhythm_peak *= RHYTHM_SKILL_MULTIPLIER * pattern_multiplier;
@@ -175,49 +172,49 @@ impl DifficultyValues {
 
         let mut skills = TaikoSkills::new(great_hit_window, converted.is_convert);
 
-        {
-            let mut rhythm = Skill::new(&mut skills.rhythm, &diff_objects);
-            let mut reading = Skill::new(&mut skills.reading, &diff_objects);
-            let mut color = Skill::new(&mut skills.color, &diff_objects);
-            let mut stamina = Skill::new(&mut skills.stamina, &diff_objects);
-            let mut single_color_stamina =
-                Skill::new(&mut skills.single_color_stamina, &diff_objects);
-
-            for hit_object in diff_objects.iter().take(n_diff_objects) {
-                rhythm.process(&hit_object.get());
-                reading.process(&hit_object.get());
-                color.process(&hit_object.get());
-                stamina.process(&hit_object.get());
-                single_color_stamina.process(&hit_object.get());
-            }
+        for hit_object in diff_objects.iter().take(n_diff_objects) {
+            skills.rhythm.process(&hit_object.get(), &diff_objects);
+            skills.reading.process(&hit_object.get(), &diff_objects);
+            skills.color.process(&hit_object.get(), &diff_objects);
+            skills.stamina.process(&hit_object.get(), &diff_objects);
+            skills
+                .single_color_stamina
+                .process(&hit_object.get(), &diff_objects);
         }
 
         Self { skills, max_combo }
     }
 
     pub fn eval(attrs: &mut TaikoDifficultyAttributes, skills: TaikoSkills, is_relax: bool) {
-        let used_rhythm = skills.rhythm.as_difficulty_value();
-        let used_color = skills.color.as_difficulty_value();
-        let used_stamina = skills.stamina.as_difficulty_value();
+        let TaikoSkills {
+            rhythm,
+            reading,
+            color,
+            stamina,
+            single_color_stamina,
+        } = skills;
 
-        let rhythm_rating = used_rhythm.difficulty_value() * RHYTHM_SKILL_MULTIPLIER;
-        let reading_rating = skills.reading.as_difficulty_value() * READING_SKILL_MULTIPLIER;
-        let color_rating = used_color.difficulty_value() * COLOR_SKILL_MULTIPLIER;
-        let stamina_rating = used_stamina.difficulty_value() * STAMINA_SKILL_MULTIPLIER;
-        let mono_stamina_rating = skills
-            .single_color_stamina
-            .as_difficulty_value()
-            .difficulty_value()
-            * STAMINA_SKILL_MULTIPLIER;
+        let rhythm_difficulty_value = rhythm.cloned_difficulty_value();
+        let reading_difficulty_value = reading.cloned_difficulty_value();
+        let color_difficulty_value = color.cloned_difficulty_value();
+        let stamina_difficulty_value = stamina.cloned_difficulty_value();
+
+        let rhythm_rating = rhythm_difficulty_value * RHYTHM_SKILL_MULTIPLIER;
+        let reading_rating = reading_difficulty_value * READING_SKILL_MULTIPLIER;
+        let color_rating = color_difficulty_value * COLOR_SKILL_MULTIPLIER;
+        let stamina_rating = stamina_difficulty_value * STAMINA_SKILL_MULTIPLIER;
+        let mono_stamina_rating =
+            single_color_stamina.into_difficulty_value() * STAMINA_SKILL_MULTIPLIER;
         let mono_stamina_factor = if stamina_rating.abs() >= f64::EPSILON {
             (mono_stamina_rating / stamina_rating).powf(5.0)
         } else {
             1.0
         };
 
-        let color_difficult_strains = used_color.count_top_weighted_strains();
-        let rhythm_difficult_strains = used_rhythm.count_top_weighted_strains();
-        let stamina_difficult_strains = used_stamina.count_top_weighted_strains();
+        let color_difficult_strains = color.count_top_weighted_strains(color_difficulty_value);
+        let rhythm_difficult_strains = rhythm.count_top_weighted_strains(rhythm_difficulty_value);
+        let stamina_difficult_strains =
+            stamina.count_top_weighted_strains(stamina_difficulty_value);
 
         // * As we don't have pattern integration in osu!taiko, we apply the other two skills relative to rhythm.
         let pattern_multiplier = f64::powf(stamina_rating * color_rating, 0.10);
@@ -230,7 +227,10 @@ impl DifficultyValues {
             ) + f64::min(f64::max((stamina_rating - 7.0) / 1.0, 0.0), 0.05);
 
         let combined_rating = combined_difficulty_value(
-            skills,
+            rhythm,
+            reading,
+            color,
+            stamina,
             is_relax,
             attrs.is_convert,
             pattern_multiplier,

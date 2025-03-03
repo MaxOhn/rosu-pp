@@ -20,8 +20,8 @@ impl TaikoSkills {
     pub fn new(great_hit_window: f64, is_convert: bool) -> Self {
         Self {
             rhythm: Rhythm::new(great_hit_window),
-            reading: Reading::default(),
-            color: Color::default(),
+            reading: Reading::new(),
+            color: Color::new(),
             stamina: Stamina::new(false, is_convert),
             single_color_stamina: Stamina::new(true, is_convert),
         }

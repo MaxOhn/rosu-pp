@@ -3,97 +3,65 @@ use std::f64::consts::FRAC_PI_2;
 use crate::{
     any::difficulty::{
         object::IDifficultyObject,
-        skills::{strain_decay, DifficultyValue, ISkill, Skill, UsedStrainSkills},
+        skills::{strain_decay, StrainSkill},
     },
     osu::difficulty::object::OsuDifficultyObject,
     util::{
         difficulty::{milliseconds_to_bpm, reverse_lerp, smootherstep, smoothstep},
         float_ext::FloatExt,
-        strains_vec::StrainsVec,
     },
 };
 
 use super::strain::OsuStrainSkill;
 
-const SKILL_MULTIPLIER: f64 = 25.6;
-const STRAIN_DECAY_BASE: f64 = 0.15;
-
-#[derive(Clone)]
-pub struct Aim {
-    include_sliders: bool,
-    curr_strain: f64,
-    slider_strains: Vec<f64>, // TODO: use StrainVec?
-    inner: OsuStrainSkill,
+define_skill! {
+    #[derive(Clone)]
+    pub struct Aim: StrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
+        include_sliders: bool,
+        current_strain: f64 = 0.0,
+        slider_strains: Vec<f64> = Vec::with_capacity(64),
+    }
 }
 
 impl Aim {
-    pub fn new(include_sliders: bool) -> Self {
-        Self {
-            include_sliders,
-            curr_strain: 0.0,
-            slider_strains: Vec::with_capacity(64), // TODO: check default
-            inner: OsuStrainSkill::default(),
+    const SKILL_MULTIPLIER: f64 = 25.6;
+    const STRAIN_DECAY_BASE: f64 = 0.15;
+
+    fn calculate_initial_strain(
+        &mut self,
+        time: f64,
+        curr: &OsuDifficultyObject<'_>,
+        objects: &[OsuDifficultyObject<'_>],
+    ) -> f64 {
+        let prev_start_time = curr
+            .previous(0, objects)
+            .map_or(0.0, |prev| prev.start_time);
+
+        self.current_strain * strain_decay(time - prev_start_time, Self::STRAIN_DECAY_BASE)
+    }
+
+    fn strain_value_at(
+        &mut self,
+        curr: &OsuDifficultyObject<'_>,
+        objects: &[OsuDifficultyObject<'_>],
+    ) -> f64 {
+        self.current_strain *= strain_decay(curr.delta_time, Self::STRAIN_DECAY_BASE);
+        self.current_strain += AimEvaluator::evaluate_diff_of(curr, objects, self.include_sliders)
+            * Self::SKILL_MULTIPLIER;
+
+        if curr.base.is_slider() {
+            self.slider_strains.push(self.current_strain);
         }
-    }
 
-    pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.inner.get_curr_strain_peaks().into_strains()
-    }
-
-    pub fn difficulty_value(self) -> UsedStrainSkills<AimResidue> {
-        Self::static_difficulty_value(self.inner, self.slider_strains)
-    }
-
-    /// Use [`difficulty_value`] instead whenever possible because
-    /// [`as_difficulty_value`] clones internally.
-    pub fn as_difficulty_value(&self) -> UsedStrainSkills<AimResidue> {
-        Self::static_difficulty_value(self.inner.clone(), self.slider_strains.clone())
-    }
-
-    fn static_difficulty_value(
-        skill: OsuStrainSkill,
-        slider_strains: Vec<f64>,
-    ) -> UsedStrainSkills<AimResidue> {
-        let used = skill.difficulty_value(
-            OsuStrainSkill::REDUCED_SECTION_COUNT,
-            OsuStrainSkill::REDUCED_STRAIN_BASELINE,
-            OsuStrainSkill::DECAY_WEIGHT,
-        );
-
-        UsedStrainSkills {
-            value: AimResidue {
-                difficulty_value: used.value.0,
-                slider_strains,
-            },
-            object_strains: used.object_strains,
-        }
-    }
-}
-
-pub(crate) struct AimResidue {
-    difficulty_value: f64,
-    slider_strains: Vec<f64>,
-}
-
-impl UsedStrainSkills<AimResidue> {
-    pub const fn difficulty_value(&self) -> f64 {
-        self.value.difficulty_value
-    }
-
-    pub fn count_top_weighted_strains(&self) -> f64 {
-        UsedStrainSkills::<DifficultyValue>::static_count_top_weighted_strains(
-            &self.object_strains,
-            self.value.difficulty_value,
-        )
+        self.current_strain
     }
 
     pub fn get_difficult_sliders(&self) -> f64 {
-        if self.value.slider_strains.is_empty() {
+        if self.slider_strains.is_empty() {
             return 0.0;
         }
 
         let max_slider_strain = self
-            .value
             .slider_strains
             .iter()
             .fold(0.0, |max, next| f64::max(max, *next));
@@ -102,75 +70,26 @@ impl UsedStrainSkills<AimResidue> {
             return 0.0;
         }
 
-        self.value
-            .slider_strains
+        self.slider_strains
             .iter()
             .copied()
             .map(|strain| 1.0 / (1.0 + f64::exp(-(strain / max_slider_strain * 12.0 - 6.0))))
             .sum()
     }
-}
 
-impl ISkill for Aim {
-    type DifficultyObjects<'a> = [OsuDifficultyObject<'a>];
-}
-
-impl<'a> Skill<'a, Aim> {
-    fn calculate_initial_strain(&mut self, time: f64, curr: &'a OsuDifficultyObject<'a>) -> f64 {
-        let prev_start_time = curr
-            .previous(0, self.diff_objects)
-            .map_or(0.0, |prev| prev.start_time);
-
-        self.inner.curr_strain * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
-    }
-
-    fn curr_section_peak(&self) -> f64 {
-        self.inner.inner.inner.curr_section_peak
-    }
-
-    fn curr_section_peak_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_peak
-    }
-
-    fn curr_section_end(&self) -> f64 {
-        self.inner.inner.inner.curr_section_end
-    }
-
-    fn curr_section_end_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_end
-    }
-
-    pub fn process(&mut self, curr: &'a OsuDifficultyObject<'a>) {
-        if curr.idx == 0 {
-            *self.curr_section_end_mut() = (curr.start_time / OsuStrainSkill::SECTION_LEN).ceil()
-                * OsuStrainSkill::SECTION_LEN;
-        }
-
-        while curr.start_time > self.curr_section_end() {
-            self.inner.inner.save_curr_peak();
-            let initial_strain = self.calculate_initial_strain(self.curr_section_end(), curr);
-            self.inner.inner.start_new_section_from(initial_strain);
-            *self.curr_section_end_mut() += OsuStrainSkill::SECTION_LEN;
-        }
-
-        let strain = self.strain_value_at(curr);
-        *self.curr_section_peak_mut() = strain.max(self.curr_section_peak());
-        self.inner.inner.inner.object_strains.push(strain);
-    }
-
-    fn strain_value_at(&mut self, curr: &'a OsuDifficultyObject<'a>) -> f64 {
-        self.inner.curr_strain *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
-        self.inner.curr_strain +=
-            AimEvaluator::evaluate_diff_of(curr, self.diff_objects, self.inner.include_sliders)
-                * SKILL_MULTIPLIER;
-
-        if curr.base.is_slider() {
-            self.inner.slider_strains.push(self.inner.curr_strain);
-        }
-
-        self.inner.curr_strain
+    // From `OsuStrainSkill`; native rather than trait function so that it has
+    // priority over `StrainSkill::difficulty_value`
+    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64 {
+        super::strain::difficulty_value(
+            current_strain_peaks,
+            Self::REDUCED_SECTION_COUNT,
+            Self::REDUCED_STRAIN_BASELINE,
+            Self::DECAY_WEIGHT,
+        )
     }
 }
+
+impl OsuStrainSkill for Aim {}
 
 struct AimEvaluator;
 

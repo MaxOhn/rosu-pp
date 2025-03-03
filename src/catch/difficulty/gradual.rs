@@ -3,7 +3,7 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::skills::Skill,
+    any::difficulty::skills::StrainSkill,
     catch::{
         attributes::{GradualObjectCount, ObjectCountBuilder},
         catcher::Catcher,
@@ -97,7 +97,7 @@ impl CatchGradualDifficulty {
         );
 
         let count = count.into_gradual();
-        let movement = Movement::new(clock_rate, half_catcher_width);
+        let movement = Movement::new(half_catcher_width, clock_rate);
 
         Ok(Self {
             idx: 0,
@@ -120,7 +120,7 @@ impl Iterator for CatchGradualDifficulty {
         // object yet and just skip processing.
         if self.idx > 0 {
             let curr = self.diff_objects.get(self.idx - 1)?;
-            Skill::new(&mut self.movement, &self.diff_objects).process(curr);
+            self.movement.process(curr, &self.diff_objects);
         } else if self.count.is_empty() {
             return None;
         }
@@ -130,7 +130,7 @@ impl Iterator for CatchGradualDifficulty {
 
         let mut attrs = self.attrs.clone();
 
-        let movement = self.movement.as_difficulty_value();
+        let movement = self.movement.cloned_difficulty_value();
         DifficultyValues::eval(&mut attrs, movement);
 
         Some(attrs)
@@ -154,10 +154,8 @@ impl Iterator for CatchGradualDifficulty {
             self.idx += 1;
         }
 
-        let mut movement = Skill::new(&mut self.movement, &self.diff_objects);
-
         for curr in skip_iter.take(take) {
-            movement.process(curr);
+            self.movement.process(curr, &self.diff_objects);
 
             self.attrs.add_object_count(self.count[self.idx]);
             self.idx += 1;

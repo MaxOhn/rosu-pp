@@ -1,123 +1,41 @@
 use std::f64::consts::PI;
 
 use crate::{
-    any::difficulty::{
-        object::IDifficultyObject,
-        skills::{
-            strain_decay, DifficultyValue, ISkill, Skill, StrainDecaySkill, UsedStrainSkills,
-        },
-    },
     taiko::difficulty::{
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
         rhythm::data::same_rhythm_hit_object_grouping::SameRhythmHitObjectGrouping,
     },
     util::{
         difficulty::{bell_curve, logistic},
-        strains_vec::StrainsVec,
         sync::RefCount,
     },
 };
 
 use super::stamina::StaminaEvaluator;
 
-const SKILL_MULTIPLIER: f64 = 1.0;
-const STRAIN_DECAY_BASE: f64 = 0.4;
-
-#[derive(Clone)]
-pub struct Rhythm {
-    inner: StrainDecaySkill,
-    great_hit_window: f64,
+define_skill! {
+    #[derive(Clone)]
+    pub struct Rhythm: StrainDecaySkill => TaikoDifficultyObjects[TaikoDifficultyObject] {
+        great_hit_window: f64,
+    }
 }
 
 impl Rhythm {
-    pub fn new(great_hit_window: f64) -> Self {
-        Self {
-            inner: StrainDecaySkill::default(),
-            great_hit_window,
-        }
-    }
+    const SKILL_MULTIPLIER: f64 = 1.0;
+    const STRAIN_DECAY_BASE: f64 = 0.4;
 
-    const fn curr_strain(&self) -> f64 {
-        self.inner.curr_strain
-    }
-
-    fn curr_strain_mut(&mut self) -> &mut f64 {
-        &mut self.inner.curr_strain
-    }
-
-    pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks()
-    }
-
-    pub fn as_difficulty_value(&self) -> UsedStrainSkills<DifficultyValue> {
-        self.inner
-            .clone()
-            .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
-    }
-}
-
-impl ISkill for Rhythm {
-    type DifficultyObjects<'a> = TaikoDifficultyObjects;
-}
-
-impl Skill<'_, Rhythm> {
-    fn calculate_initial_strain(&mut self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
-        let prev_start_time = curr
-            .previous(0, &self.diff_objects.objects)
-            .map_or(0.0, |prev| prev.get().start_time);
-
-        self.inner.curr_strain() * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
-    }
-
-    const fn curr_section_peak(&self) -> f64 {
-        self.inner.inner.inner.curr_section_peak
-    }
-
-    fn curr_section_peak_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_peak
-    }
-
-    const fn curr_section_end(&self) -> f64 {
-        self.inner.inner.inner.curr_section_end
-    }
-
-    fn curr_section_end_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_end
-    }
-
-    pub fn process(&mut self, curr: &TaikoDifficultyObject) {
-        if curr.idx == 0 {
-            *self.curr_section_end_mut() = (curr.start_time / StrainDecaySkill::SECTION_LEN).ceil()
-                * StrainDecaySkill::SECTION_LEN;
-        }
-
-        while curr.start_time > self.curr_section_end() {
-            self.inner.inner.save_curr_peak();
-            let initial_strain = self.calculate_initial_strain(self.curr_section_end(), curr);
-            self.inner.inner.start_new_section_from(initial_strain);
-            *self.curr_section_end_mut() += StrainDecaySkill::SECTION_LEN;
-        }
-
-        let strain_value_at = self.strain_value_at(curr);
-        *self.curr_section_peak_mut() = strain_value_at.max(self.curr_section_peak());
-        self.inner.inner.inner.object_strains.push(strain_value_at);
-    }
-
-    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject) -> f64 {
-        let mut difficulty = RhythmEvaluator::evaluate_diff_of(curr, self.inner.great_hit_window);
+    fn strain_value_of(
+        &mut self,
+        curr: &TaikoDifficultyObject,
+        objects: &TaikoDifficultyObjects,
+    ) -> f64 {
+        let mut difficulty = RhythmEvaluator::evaluate_diff_of(curr, self.great_hit_window);
 
         // * To prevent abuse of exceedingly long intervals between awkward rhythms, we penalise its difficulty.
-        let stamina_difficulty = StaminaEvaluator::evaluate_diff_of(curr, self.diff_objects) - 0.5; // * Remove base strain
+        let stamina_difficulty = StaminaEvaluator::evaluate_diff_of(curr, objects) - 0.5; // * Remove base strain
         difficulty *= logistic(stamina_difficulty, 1.0 / 15.0, 50.0, None);
 
         difficulty
-    }
-
-    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject) -> f64 {
-        *self.inner.curr_strain_mut() *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
-        *self.inner.curr_strain_mut() += self.strain_value_of(curr) * SKILL_MULTIPLIER;
-
-        self.inner.curr_strain()
     }
 }
 

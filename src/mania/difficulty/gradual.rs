@@ -3,7 +3,7 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::skills::Skill,
+    any::difficulty::skills::StrainSkill,
     mania::object::ObjectParams,
     model::{beatmap::HitWindows, hit_object::HitObject, mode::ConvertError},
     Beatmap, Difficulty,
@@ -127,7 +127,7 @@ impl Iterator for ManiaGradualDifficulty {
         // yet and just skip processing.
         if self.idx > 0 {
             let curr = self.diff_objects.get(self.idx - 1)?;
-            Skill::new(&mut self.strain, &self.diff_objects).process(curr);
+            self.strain.process(curr, &self.diff_objects);
 
             let is_circle = self.objects_is_circle[self.idx];
             increment_combo(
@@ -143,7 +143,7 @@ impl Iterator for ManiaGradualDifficulty {
         self.idx += 1;
 
         Some(ManiaDifficultyAttributes {
-            stars: self.strain.as_difficulty_value() * DIFFICULTY_MULTIPLIER,
+            stars: self.strain.cloned_difficulty_value() * DIFFICULTY_MULTIPLIER,
             hit_window: self.hit_window,
             max_combo: self.note_state.curr_combo,
             n_objects: self.idx as u32,
@@ -173,12 +173,11 @@ impl Iterator for ManiaGradualDifficulty {
             self.idx += 1;
         }
 
-        let mut strain = Skill::new(&mut self.strain, &self.diff_objects);
         let clock_rate = self.difficulty.get_clock_rate();
 
         for (curr, is_circle) in skip_iter.take(take) {
             increment_combo(*is_circle, curr, &mut self.note_state, clock_rate);
-            strain.process(curr);
+            self.strain.process(curr, &self.diff_objects);
             self.idx += 1;
         }
 

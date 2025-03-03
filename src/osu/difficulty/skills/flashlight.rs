@@ -1,117 +1,90 @@
 use std::cmp;
 
 use crate::{
-    any::difficulty::{
-        object::IDifficultyObject,
-        skills::{strain_decay, ISkill, Skill, StrainSkill},
-    },
-    model::mods::GameMods,
+    any::difficulty::{object::IDifficultyObject, skills::strain_decay},
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
-    util::strains_vec::StrainsVec,
+    GameMods,
 };
 
-const SKILL_MULTIPLIER: f64 = 0.05512;
-const STRAIN_DECAY_BASE: f64 = 0.15;
+define_skill! {
+    pub struct Flashlight: StrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
+        current_strain: f64,
+        has_hidden_mod: bool,
+        evaluator: FlashlightEvaluator = todo!(),
+    }
 
-pub struct Flashlight {
-    curr_strain: f64,
-    has_hidden_mod: bool,
-    inner: StrainSkill,
-    evaluator: FlashlightEvaluator,
-}
-
-impl Flashlight {
     pub fn new(mods: &GameMods, radius: f64, time_preempt: f64, time_fade_in: f64) -> Self {
-        let scaling_factor = 52.0 / radius;
+        {
+            let scaling_factor = 52.0 / radius;
+        }
 
         Self {
-            curr_strain: 0.0,
+            current_strain: 0.0,
             has_hidden_mod: mods.hd(),
-            inner: StrainSkill::default(),
             evaluator: FlashlightEvaluator::new(scaling_factor, time_preempt, time_fade_in),
         }
     }
+}
 
-    pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks().into_strains()
+impl Flashlight {
+    const SKILL_MULTIPLIER: f64 = 0.05512;
+    const STRAIN_DECAY_BASE: f64 = 0.15;
+
+    fn calculate_initial_strain(
+        &mut self,
+        time: f64,
+        curr: &OsuDifficultyObject<'_>,
+        objects: &[OsuDifficultyObject<'_>],
+    ) -> f64 {
+        let prev_start_time = curr
+            .previous(0, objects)
+            .map_or(0.0, |prev| prev.start_time);
+
+        self.current_strain * strain_decay(time - prev_start_time, Self::STRAIN_DECAY_BASE)
     }
 
-    pub fn difficulty_value(self) -> f64 {
-        Self::static_difficulty_value(self.inner)
+    fn strain_value_at(
+        &mut self,
+        curr: &OsuDifficultyObject<'_>,
+        objects: &[OsuDifficultyObject<'_>],
+    ) -> f64 {
+        self.current_strain *= strain_decay(curr.delta_time, Self::STRAIN_DECAY_BASE);
+        self.current_strain += self
+            .evaluator
+            .evaluate_diff_of(curr, objects, self.has_hidden_mod)
+            * Self::SKILL_MULTIPLIER;
+
+        self.current_strain
     }
 
-    /// Use [`difficulty_value`] instead whenever possible because
-    /// [`as_difficulty_value`] clones internally.
-    pub fn as_difficulty_value(&self) -> f64 {
-        Self::static_difficulty_value(self.inner.clone())
-    }
-
-    fn static_difficulty_value(skill: StrainSkill) -> f64 {
-        skill.get_curr_strain_peaks().into_strains().sum()
+    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64 {
+        current_strain_peaks.into_iter().sum()
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {
-        25.0 * (difficulty).powf(2.0)
+        25.0 * f64::powf(difficulty, 2.0)
     }
 }
 
-impl ISkill for Flashlight {
-    type DifficultyObjects<'a> = [OsuDifficultyObject<'a>];
-}
+// pub struct Flashlight_ {
+//     curr_strain: f64,
+//     has_hidden_mod: bool,
+//     inner: StrainSkill,
+//     evaluator: FlashlightEvaluator,
+// }
 
-impl<'a> Skill<'a, Flashlight> {
-    fn calculate_initial_strain(&mut self, time: f64, curr: &'a OsuDifficultyObject<'a>) -> f64 {
-        let prev_start_time = curr
-            .previous(0, self.diff_objects)
-            .map_or(0.0, |prev| prev.start_time);
+// impl Flashlight_ {
+//     pub fn new(mods: &GameMods, radius: f64, time_preempt: f64, time_fade_in: f64) -> Self {
+//         let scaling_factor = 52.0 / radius;
 
-        self.inner.curr_strain * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
-    }
-
-    fn curr_section_peak(&self) -> f64 {
-        self.inner.inner.curr_section_peak
-    }
-
-    fn curr_section_peak_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.curr_section_peak
-    }
-
-    fn curr_section_end(&self) -> f64 {
-        self.inner.inner.curr_section_end
-    }
-
-    fn curr_section_end_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.curr_section_end
-    }
-
-    pub fn process(&mut self, curr: &'a OsuDifficultyObject<'a>) {
-        if curr.idx == 0 {
-            *self.curr_section_end_mut() =
-                (curr.start_time / StrainSkill::SECTION_LEN).ceil() * StrainSkill::SECTION_LEN;
-        }
-
-        while curr.start_time > self.curr_section_end() {
-            self.inner.inner.save_curr_peak();
-            let initial_strain = self.calculate_initial_strain(self.curr_section_end(), curr);
-            self.inner.inner.start_new_section_from(initial_strain);
-            *self.curr_section_end_mut() += StrainSkill::SECTION_LEN;
-        }
-
-        let strain_value_at = self.strain_value_at(curr);
-        *self.curr_section_peak_mut() = strain_value_at.max(self.curr_section_peak());
-    }
-
-    fn strain_value_at(&mut self, curr: &'a OsuDifficultyObject<'a>) -> f64 {
-        self.inner.curr_strain *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
-        self.inner.curr_strain += self.inner.evaluator.evaluate_diff_of(
-            curr,
-            self.diff_objects,
-            self.inner.has_hidden_mod,
-        ) * SKILL_MULTIPLIER;
-
-        self.inner.curr_strain
-    }
-}
+//         Self {
+//             curr_strain: 0.0,
+//             has_hidden_mod: mods.hd(),
+//             inner: StrainSkill::default(),
+//             evaluator: FlashlightEvaluator::new(scaling_factor, time_preempt, time_fade_in),
+//         }
+//     }
+// }
 
 struct FlashlightEvaluator {
     scaling_factor: f64,

@@ -1,63 +1,45 @@
-use crate::any::difficulty::skills::{DifficultyValue, StrainSkill, UsedStrainSkills};
+pub trait OsuStrainSkill {
+    const REDUCED_SECTION_COUNT: usize = 10;
+    const REDUCED_STRAIN_BASELINE: f64 = 0.75;
 
-#[derive(Clone, Default)]
-pub struct OsuStrainSkill {
-    pub inner: StrainSkill,
+    fn difficulty_to_performance(difficulty: f64) -> f64 {
+        difficulty_to_performance(difficulty)
+    }
 }
 
-impl OsuStrainSkill {
-    pub const REDUCED_SECTION_COUNT: usize = 10;
-    pub const REDUCED_STRAIN_BASELINE: f64 = 0.75;
+pub fn difficulty_value(
+    current_strain_peaks: Vec<f64>,
+    reduced_section_count: usize,
+    reduced_strain_baseline: f64,
+    decay_weight: f64,
+) -> f64 {
+    let mut difficulty = 0.0;
+    let mut weight = 1.0;
 
-    pub const DECAY_WEIGHT: f64 = 0.9;
-    pub const SECTION_LEN: f64 = 400.0;
+    let mut peaks = current_strain_peaks;
+    peaks.retain(|&p| p > 0.0);
+    peaks.sort_unstable_by(|a, b| b.total_cmp(a));
 
-    pub fn save_curr_peak(&mut self) {
-        self.inner.save_curr_peak();
+    let peaks_iter = peaks.iter_mut().take(reduced_section_count);
+
+    for (i, strain) in peaks_iter.enumerate() {
+        let clamped = f64::from((i as f32 / reduced_section_count as f32).clamp(0.0, 1.0));
+        let scale = f64::log10(lerp(1.0, 10.0, clamped));
+        *strain *= lerp(reduced_strain_baseline, 1.0, scale);
     }
 
-    pub fn start_new_section_from(&mut self, initial_strain: f64) {
-        self.inner.start_new_section_from(initial_strain);
+    peaks.sort_unstable_by(|a, b| b.total_cmp(a));
+
+    for strain in peaks {
+        difficulty += strain * weight;
+        weight *= decay_weight;
     }
 
-    pub fn difficulty_value(
-        self,
-        reduced_section_count: usize,
-        reduced_strain_baseline: f64,
-        decay_weight: f64,
-    ) -> UsedStrainSkills<DifficultyValue> {
-        let mut difficulty = 0.0;
-        let mut weight = 1.0;
+    difficulty
+}
 
-        let UsedStrainSkills {
-            value: mut peaks,
-            object_strains,
-        } = self.inner.get_curr_strain_peaks();
-
-        let peaks_iter = peaks.sorted_non_zero_iter_mut().take(reduced_section_count);
-
-        for (i, strain) in peaks_iter.enumerate() {
-            let clamped = f64::from((i as f32 / reduced_section_count as f32).clamp(0.0, 1.0));
-            let scale = (lerp(1.0, 10.0, clamped)).log10();
-            *strain *= lerp(reduced_strain_baseline, 1.0, scale);
-        }
-
-        peaks.sort_desc();
-
-        for strain in peaks.iter() {
-            difficulty += strain * weight;
-            weight *= decay_weight;
-        }
-
-        UsedStrainSkills {
-            value: DifficultyValue(difficulty),
-            object_strains,
-        }
-    }
-
-    pub fn difficulty_to_performance(difficulty: f64) -> f64 {
-        (5.0 * (difficulty / 0.0675).max(1.0) - 4.0).powf(3.0) / 100_000.0
-    }
+pub fn difficulty_to_performance(difficulty: f64) -> f64 {
+    f64::powf(5.0 * f64::max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100_000.0
 }
 
 fn lerp(start: f64, end: f64, amount: f64) -> f64 {

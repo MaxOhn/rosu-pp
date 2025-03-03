@@ -3,7 +3,7 @@ use std::{cmp, mem};
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::skills::Skill,
+    any::difficulty::skills::StrainSkill,
     model::mode::ConvertError,
     osu::{
         convert::convert_objects,
@@ -158,10 +158,10 @@ impl Iterator for OsuGradualDifficulty {
         if self.idx > 0 {
             let curr = self.diff_objects.get(self.idx - 1)?;
 
-            Skill::new(&mut self.skills.aim, &self.diff_objects).process(curr);
-            Skill::new(&mut self.skills.aim_no_sliders, &self.diff_objects).process(curr);
-            Skill::new(&mut self.skills.speed, &self.diff_objects).process(curr);
-            Skill::new(&mut self.skills.flashlight, &self.diff_objects).process(curr);
+            self.skills.aim.process(curr, &self.diff_objects);
+            self.skills.aim_no_sliders.process(curr, &self.diff_objects);
+            self.skills.speed.process(curr, &self.diff_objects);
+            self.skills.flashlight.process(curr, &self.diff_objects);
 
             Self::increment_combo(curr.base, &mut self.attrs);
         } else if self.osu_objects.is_empty() {
@@ -172,21 +172,7 @@ impl Iterator for OsuGradualDifficulty {
 
         let mut attrs = self.attrs.clone();
 
-        let aim_difficulty_value = self.skills.aim.as_difficulty_value();
-        let aim_no_sliders_difficulty_value = self.skills.aim_no_sliders.as_difficulty_value();
-        let speed_relevant_note_count = self.skills.speed.relevant_note_count();
-        let speed_difficulty_value = self.skills.speed.as_difficulty_value();
-        let flashlight_difficulty_value = self.skills.flashlight.as_difficulty_value();
-
-        DifficultyValues::eval(
-            &mut attrs,
-            self.difficulty.get_mods(),
-            &aim_difficulty_value,
-            &aim_no_sliders_difficulty_value,
-            &speed_difficulty_value,
-            speed_relevant_note_count,
-            flashlight_difficulty_value,
-        );
+        DifficultyValues::eval(&mut attrs, self.difficulty.get_mods(), &self.skills);
 
         Some(attrs)
     }
@@ -208,17 +194,8 @@ impl Iterator for OsuGradualDifficulty {
             self.idx += 1;
         }
 
-        let mut aim = Skill::new(&mut self.skills.aim, &self.diff_objects);
-        let mut aim_no_sliders = Skill::new(&mut self.skills.aim_no_sliders, &self.diff_objects);
-        let mut speed = Skill::new(&mut self.skills.speed, &self.diff_objects);
-        let mut flashlight = Skill::new(&mut self.skills.flashlight, &self.diff_objects);
-
         for curr in skip_iter.take(take) {
-            aim.process(curr);
-            aim_no_sliders.process(curr);
-            speed.process(curr);
-            flashlight.process(curr);
-
+            self.skills.process(curr, &self.diff_objects);
             Self::increment_combo(curr.base, &mut self.attrs);
             self.idx += 1;
         }

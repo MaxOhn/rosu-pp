@@ -19,7 +19,7 @@ use crate::{
 
 use super::{
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
-    difficulty::skills::{flashlight::Flashlight, strain::OsuStrainSkill},
+    difficulty::skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill},
     score_state::{OsuScoreOrigin, OsuScoreState},
     Osu,
 };
@@ -918,7 +918,7 @@ impl OsuPerformanceInner<'_> {
             aim_difficulty *= slider_nerf_factor;
         }
 
-        let mut aim_value = OsuStrainSkill::difficulty_to_performance(aim_difficulty);
+        let mut aim_value = Aim::difficulty_to_performance(aim_difficulty);
 
         let total_hits = self.total_hits();
 
@@ -971,7 +971,7 @@ impl OsuPerformanceInner<'_> {
             return 0.0;
         };
 
-        let mut speed_value = OsuStrainSkill::difficulty_to_performance(self.attrs.speed);
+        let mut speed_value = Speed::difficulty_to_performance(self.attrs.speed);
 
         let total_hits = self.total_hits();
 
@@ -1232,7 +1232,7 @@ impl OsuPerformanceInner<'_> {
     }
 
     fn calculate_speed_high_deviation_nerf(&self, speed_deviation: f64) -> f64 {
-        let speed_value = OsuStrainSkill::difficulty_to_performance(self.attrs.speed);
+        let speed_value = Speed::difficulty_to_performance(self.attrs.speed);
 
         // * Decides a point where the PP value achieved compared to the speed deviation is assumed to be tapped improperly. Any PP above this point is considered "excess" speed difficulty.
         // * This is used to cause PP above the cutoff to scale logarithmically towards the original speed value thus nerfing the value.

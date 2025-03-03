@@ -1,112 +1,49 @@
 use std::ops::Not;
 
 use crate::{
-    any::difficulty::{
-        object::IDifficultyObject,
-        skills::{
-            strain_decay, DifficultyValue, ISkill, Skill, StrainDecaySkill, StrainSkill,
-            UsedStrainSkills,
-        },
-    },
+    any::difficulty::{object::IDifficultyObject, skills::strain_decay},
     taiko::difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
-    util::{difficulty::logistic_exp, strains_vec::StrainsVec, sync::Weak},
+    util::{difficulty::logistic_exp, sync::Weak},
 };
 
-const SKILL_MULTIPLIER: f64 = 1.1;
-const STRAIN_DECAY_BASE: f64 = 0.4;
-
-#[derive(Clone)]
-pub struct Stamina {
-    inner: StrainSkill,
-    single_color: bool,
-    curr_strain: f64,
-    is_convert: bool,
+define_skill! {
+    #[derive(Clone)]
+    pub struct Stamina: StrainSkill => TaikoDifficultyObjects[TaikoDifficultyObject] {
+        single_color: bool,
+        is_convert: bool,
+        current_strain: f64 = 0.0,
+    }
 }
 
 impl Stamina {
-    pub fn new(single_color: bool, is_convert: bool) -> Self {
-        Self {
-            inner: StrainSkill::default(),
-            single_color,
-            curr_strain: 0.0,
-            is_convert,
-        }
-    }
+    const SKILL_MULTIPLIER: f64 = 1.1;
+    const STRAIN_DECAY_BASE: f64 = 0.4;
 
-    pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks().into_strains()
-    }
-
-    pub fn as_difficulty_value(&self) -> UsedStrainSkills<DifficultyValue> {
-        self.inner
-            .clone()
-            .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
-    }
-}
-
-impl ISkill for Stamina {
-    type DifficultyObjects<'a> = TaikoDifficultyObjects;
-}
-
-impl Skill<'_, Stamina> {
-    fn calculate_initial_strain(&mut self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
-        if self.inner.single_color {
+    fn calculate_initial_strain(
+        &mut self,
+        time: f64,
+        curr: &TaikoDifficultyObject,
+        objects: &TaikoDifficultyObjects,
+    ) -> f64 {
+        if self.single_color {
             return 0.0;
         }
 
         let prev_start_time = curr
-            .previous(0, &self.diff_objects.objects)
+            .previous(0, objects)
             .map_or(0.0, |prev| prev.get().start_time);
 
-        self.curr_strain() * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
+        self.current_strain * strain_decay(time - prev_start_time, Self::STRAIN_DECAY_BASE)
     }
 
-    const fn curr_strain(&self) -> f64 {
-        self.inner.curr_strain
-    }
-
-    fn curr_strain_mut(&mut self) -> &mut f64 {
-        &mut self.inner.curr_strain
-    }
-
-    const fn curr_section_peak(&self) -> f64 {
-        self.inner.inner.curr_section_peak
-    }
-
-    fn curr_section_peak_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.curr_section_peak
-    }
-
-    const fn curr_section_end(&self) -> f64 {
-        self.inner.inner.curr_section_end
-    }
-
-    fn curr_section_end_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.curr_section_end
-    }
-
-    pub fn process(&mut self, curr: &TaikoDifficultyObject) {
-        if curr.idx == 0 {
-            *self.curr_section_end_mut() = (curr.start_time / StrainDecaySkill::SECTION_LEN).ceil()
-                * StrainDecaySkill::SECTION_LEN;
-        }
-
-        while curr.start_time > self.curr_section_end() {
-            self.inner.inner.save_curr_peak();
-            let initial_strain = self.calculate_initial_strain(self.curr_section_end(), curr);
-            self.inner.inner.start_new_section_from(initial_strain);
-            *self.curr_section_end_mut() += StrainDecaySkill::SECTION_LEN;
-        }
-
-        let strain_value_at = self.strain_value_at(curr);
-        *self.curr_section_peak_mut() = strain_value_at.max(self.curr_section_peak());
-        self.inner.inner.object_strains.push(strain_value_at);
-    }
-
-    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject) -> f64 {
-        *self.curr_strain_mut() *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
-        *self.curr_strain_mut() +=
-            StaminaEvaluator::evaluate_diff_of(curr, self.diff_objects) * SKILL_MULTIPLIER;
+    fn strain_value_at(
+        &mut self,
+        curr: &TaikoDifficultyObject,
+        objects: &TaikoDifficultyObjects,
+    ) -> f64 {
+        self.current_strain *= strain_decay(curr.delta_time, Self::STRAIN_DECAY_BASE);
+        self.current_strain +=
+            StaminaEvaluator::evaluate_diff_of(curr, objects) * Self::SKILL_MULTIPLIER;
 
         // * Safely prevents previous strains from shifting as new notes are added.
         let index = curr
@@ -124,15 +61,15 @@ impl Skill<'_, Stamina> {
             })
             .unwrap_or(0) as isize;
 
-        if self.inner.single_color {
-            logistic_exp(-(index - 10) as f64 / 2.0, Some(self.curr_strain()))
-        } else if self.inner.is_convert {
-            self.curr_strain()
+        if self.single_color {
+            logistic_exp(-(index - 10) as f64 / 2.0, Some(self.current_strain))
+        } else if self.is_convert {
+            self.current_strain
         } else {
             #[allow(clippy::manual_clamp)]
             let monolength_bonus = 1.0 + f64::min(f64::max((index - 5) as f64 / 50.0, 0.0), 0.30);
 
-            self.curr_strain() * monolength_bonus
+            self.current_strain * monolength_bonus
         }
     }
 }
@@ -142,7 +79,7 @@ pub(super) struct StaminaEvaluator;
 impl StaminaEvaluator {
     pub(super) fn evaluate_diff_of(
         curr: &TaikoDifficultyObject,
-        hit_objects: &TaikoDifficultyObjects,
+        objects: &TaikoDifficultyObjects,
     ) -> f64 {
         if curr.base_hit_type.is_hit().not() {
             return 0.0;
@@ -150,9 +87,8 @@ impl StaminaEvaluator {
 
         // * Find the previous hit object hit by the current finger, which is n notes prior, n being the number of
         // * available fingers.
-        let prev = curr.previous(1, &hit_objects.objects);
-        let prev_mono =
-            hit_objects.previous_mono(curr, Self::available_fingers_for(curr, hit_objects) - 1);
+        let prev = curr.previous(1, objects);
+        let prev_mono = objects.previous_mono(curr, Self::available_fingers_for(curr, objects) - 1);
 
         // * Add a base strain to all objects
         let mut object_strain = 0.5;

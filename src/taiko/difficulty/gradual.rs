@@ -3,7 +3,7 @@ use std::{cmp, mem, slice::Iter};
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::skills::Skill,
+    any::difficulty::skills::StrainSkill,
     model::{beatmap::HitWindows, hit_object::HitObject, mode::ConvertError},
     util::sync::RefCount,
     Beatmap, Difficulty,
@@ -148,11 +148,13 @@ impl Iterator for TaikoGradualDifficulty {
                 let curr = self.diff_objects_iter.next()?;
                 let borrowed = curr.get();
 
-                Skill::new(&mut self.skills.rhythm, &self.diff_objects).process(&borrowed);
-                Skill::new(&mut self.skills.color, &self.diff_objects).process(&borrowed);
-                Skill::new(&mut self.skills.stamina, &self.diff_objects).process(&borrowed);
-                Skill::new(&mut self.skills.single_color_stamina, &self.diff_objects)
-                    .process(&borrowed);
+                self.skills.rhythm.process(&borrowed, &self.diff_objects);
+                self.skills.reading.process(&borrowed, &self.diff_objects);
+                self.skills.color.process(&borrowed, &self.diff_objects);
+                self.skills.stamina.process(&borrowed, &self.diff_objects);
+                self.skills
+                    .single_color_stamina
+                    .process(&borrowed, &self.diff_objects);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;
@@ -229,22 +231,17 @@ impl Iterator for TaikoGradualDifficulty {
             }
         }
 
-        let mut rhythm = Skill::new(&mut self.skills.rhythm, &self.diff_objects);
-        let mut reading = Skill::new(&mut self.skills.reading, &self.diff_objects);
-        let mut color = Skill::new(&mut self.skills.color, &self.diff_objects);
-        let mut stamina = Skill::new(&mut self.skills.stamina, &self.diff_objects);
-        let mut single_color_stamina =
-            Skill::new(&mut self.skills.single_color_stamina, &self.diff_objects);
-
         for _ in 0..take {
             loop {
                 let curr = self.diff_objects_iter.next()?;
                 let borrowed = curr.get();
-                rhythm.process(&borrowed);
-                reading.process(&borrowed);
-                color.process(&borrowed);
-                stamina.process(&borrowed);
-                single_color_stamina.process(&borrowed);
+                self.skills.rhythm.process(&borrowed, &self.diff_objects);
+                self.skills.reading.process(&borrowed, &self.diff_objects);
+                self.skills.color.process(&borrowed, &self.diff_objects);
+                self.skills.stamina.process(&borrowed, &self.diff_objects);
+                self.skills
+                    .single_color_stamina
+                    .process(&borrowed, &self.diff_objects);
 
                 if borrowed.base_hit_type.is_hit() {
                     self.attrs.max_combo += 1;

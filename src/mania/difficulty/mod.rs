@@ -3,7 +3,7 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::{skills::Skill, Difficulty},
+    any::difficulty::{skills::StrainSkill, Difficulty},
     mania::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},
@@ -37,7 +37,7 @@ pub fn difficulty(
         .od_great;
 
     Ok(ManiaDifficultyAttributes {
-        stars: values.strain.difficulty_value() * DIFFICULTY_MULTIPLIER,
+        stars: values.strain.into_difficulty_value() * DIFFICULTY_MULTIPLIER,
         hit_window,
         max_combo: values.max_combo,
         n_objects,
@@ -69,12 +69,8 @@ impl DifficultyValues {
 
         let mut strain = Strain::new(total_columns as usize);
 
-        {
-            let mut strain = Skill::new(&mut strain, &diff_objects);
-
-            for curr in diff_objects.iter() {
-                strain.process(curr);
-            }
+        for curr in diff_objects.iter() {
+            strain.process(curr, &diff_objects);
         }
 
         Self {

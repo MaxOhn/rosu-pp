@@ -1,4 +1,7 @@
-use crate::{any::difficulty::object::IDifficultyObject, catch::object::palpable::PalpableObject};
+use crate::{
+    any::difficulty::object::{HasStartTime, IDifficultyObject},
+    catch::object::palpable::PalpableObject,
+};
 
 pub struct CatchDifficultyObject {
     pub idx: usize,
@@ -50,7 +53,15 @@ pub struct LastObject {
 }
 
 impl IDifficultyObject for CatchDifficultyObject {
+    type DifficultyObjects = [Self];
+
     fn idx(&self) -> usize {
         self.idx
+    }
+}
+
+impl HasStartTime for CatchDifficultyObject {
+    fn start_time(&self) -> f64 {
+        self.start_time
     }
 }

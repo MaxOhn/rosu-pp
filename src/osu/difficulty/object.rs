@@ -3,7 +3,7 @@ use std::{borrow::Cow, pin::Pin};
 use rosu_map::util::Pos;
 
 use crate::{
-    any::difficulty::object::IDifficultyObject,
+    any::difficulty::object::{HasStartTime, IDifficultyObject},
     osu::object::{OsuObject, OsuObjectKind, OsuSlider},
 };
 
@@ -235,7 +235,15 @@ impl<'a> OsuDifficultyObject<'a> {
 }
 
 impl IDifficultyObject for OsuDifficultyObject<'_> {
+    type DifficultyObjects = [Self];
+
     fn idx(&self) -> usize {
         self.idx
+    }
+}
+
+impl HasStartTime for OsuDifficultyObject<'_> {
+    fn start_time(&self) -> f64 {
+        self.start_time
     }
 }

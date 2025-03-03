@@ -162,6 +162,9 @@ pub use self::{
     model::{beatmap::Beatmap, mods::GameMods},
 };
 
+#[macro_use]
+mod util;
+
 /// Types for calculations of any mode.
 pub mod any;
 
@@ -179,5 +182,3 @@ pub mod mania;
 
 /// Types used in and around this crate.
 pub mod model;
-
-mod util;

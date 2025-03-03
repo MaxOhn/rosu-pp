@@ -1,7 +1,7 @@
 use std::slice::Iter;
 
 use crate::{
-    any::difficulty::object::IDifficultyObject,
+    any::difficulty::object::{HasStartTime, IDifficultyObject, IDifficultyObjects},
     model::control_point::{EffectPoint, TimingPoint},
     taiko::object::{HitType, TaikoObject},
     util::{interval_grouping::HasInterval, sync::RefCount},
@@ -194,9 +194,25 @@ impl TaikoDifficultyObjects {
     }
 }
 
+impl IDifficultyObjects for TaikoDifficultyObjects {
+    type DifficultyObject = RefCount<TaikoDifficultyObject>;
+
+    fn get(&self, idx: usize) -> Option<&Self::DifficultyObject> {
+        self.objects.get(idx)
+    }
+}
+
 impl IDifficultyObject for TaikoDifficultyObject {
+    type DifficultyObjects = TaikoDifficultyObjects;
+
     fn idx(&self) -> usize {
         self.idx
+    }
+}
+
+impl HasStartTime for RefCount<TaikoDifficultyObject> {
+    fn start_time(&self) -> f64 {
+        self.get().start_time
     }
 }
 

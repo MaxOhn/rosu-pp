@@ -1,97 +1,22 @@
 use std::ops::Not;
 
 use crate::{
-    any::difficulty::{
-        object::IDifficultyObject,
-        skills::{strain_decay, ISkill, Skill, StrainDecaySkill},
-    },
     taiko::difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
-    util::{difficulty::logistic, strains_vec::StrainsVec, sync::Weak},
+    util::{difficulty::logistic, sync::Weak},
 };
 
-const SKILL_MULTIPLIER: f64 = 1.0;
-const STRAIN_DECAY_BASE: f64 = 0.4;
-
-#[derive(Clone, Default)]
-pub struct Reading {
-    inner: StrainDecaySkill,
+define_skill! {
+    #[derive(Clone)]
+    pub struct Reading: StrainDecaySkill => TaikoDifficultyObjects[TaikoDifficultyObject] {
+        current_strain: f64 = 0.0,
+    }
 }
 
 impl Reading {
-    const fn curr_strain(&self) -> f64 {
-        self.inner.curr_strain
-    }
+    const SKILL_MULTIPLIER: f64 = 1.0;
+    const STRAIN_DECAY_BASE: f64 = 0.4;
 
-    fn curr_strain_mut(&mut self) -> &mut f64 {
-        &mut self.inner.curr_strain
-    }
-
-    pub fn get_curr_strain_peaks(self) -> StrainsVec {
-        self.inner.get_curr_strain_peaks()
-    }
-
-    pub fn as_difficulty_value(&self) -> f64 {
-        self.inner
-            .clone()
-            .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
-            .difficulty_value()
-    }
-}
-
-impl ISkill for Reading {
-    type DifficultyObjects<'a> = TaikoDifficultyObjects;
-}
-
-impl Skill<'_, Reading> {
-    fn calculate_initial_strain(&mut self, time: f64, curr: &TaikoDifficultyObject) -> f64 {
-        let prev_start_time = curr
-            .previous(0, &self.diff_objects.objects)
-            .map_or(0.0, |prev| prev.get().start_time);
-
-        self.inner.curr_strain() * strain_decay(time - prev_start_time, STRAIN_DECAY_BASE)
-    }
-
-    const fn curr_section_peak(&self) -> f64 {
-        self.inner.inner.inner.curr_section_peak
-    }
-
-    fn curr_section_peak_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_peak
-    }
-
-    const fn curr_section_end(&self) -> f64 {
-        self.inner.inner.inner.curr_section_end
-    }
-
-    fn curr_section_end_mut(&mut self) -> &mut f64 {
-        &mut self.inner.inner.inner.curr_section_end
-    }
-
-    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject) -> f64 {
-        *self.inner.curr_strain_mut() *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
-        *self.inner.curr_strain_mut() += self.strain_value_of(curr) * SKILL_MULTIPLIER;
-
-        self.inner.curr_strain()
-    }
-
-    pub fn process(&mut self, curr: &TaikoDifficultyObject) {
-        if curr.idx == 0 {
-            *self.curr_section_end_mut() = (curr.start_time / StrainDecaySkill::SECTION_LEN).ceil()
-                * StrainDecaySkill::SECTION_LEN;
-        }
-
-        while curr.start_time > self.curr_section_end() {
-            self.inner.inner.save_curr_peak();
-            let initial_strain = self.calculate_initial_strain(self.curr_section_end(), curr);
-            self.inner.inner.start_new_section_from(initial_strain);
-            *self.curr_section_end_mut() += StrainDecaySkill::SECTION_LEN;
-        }
-
-        let strain_value_at = self.strain_value_at(curr);
-        *self.curr_section_peak_mut() = strain_value_at.max(self.curr_section_peak());
-    }
-
-    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject) -> f64 {
+    fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, _: &TaikoDifficultyObjects) -> f64 {
         // * Drum Rolls and Swells are exempt.
         if curr.base_hit_type.is_hit().not() {
             return 0.0;
@@ -112,12 +37,11 @@ impl Skill<'_, Reading> {
             })
             .unwrap_or(0) as isize;
 
-        *self.inner.curr_strain_mut() = logistic(index as f64, 4.0, -1.0 / 25.0, Some(0.5)) + 0.5;
-        *self.inner.curr_strain_mut() *= STRAIN_DECAY_BASE;
-        *self.inner.curr_strain_mut() +=
-            ReadingEvaluator::evaluate_diff_of(curr) * SKILL_MULTIPLIER;
+        self.current_strain = logistic(index as f64, 4.0, -1.0 / 25.0, Some(0.5)) + 0.5;
+        self.current_strain *= Self::STRAIN_DECAY_BASE;
+        self.current_strain += ReadingEvaluator::evaluate_diff_of(curr) * Self::SKILL_MULTIPLIER;
 
-        self.inner.curr_strain()
+        self.current_strain
     }
 }
 
