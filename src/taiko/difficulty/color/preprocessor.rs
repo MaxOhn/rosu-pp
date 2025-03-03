@@ -5,7 +5,7 @@ use crate::{
     util::sync::{Ref, RefCount, Weak},
 };
 
-use super::{
+use super::data::{
     alternating_mono_pattern::AlternatingMonoPattern, mono_streak::MonoStreak,
     repeating_hit_patterns::RepeatingHitPatterns,
 };
@@ -46,11 +46,11 @@ impl ColorDifficultyPreprocessor {
                         .filter_map(Weak::upgrade)
                     {
                         let mut borrowed = hit_object.get_mut();
-                        borrowed.color.repeating_hit_patterns =
+                        borrowed.color_data.repeating_hit_patterns =
                             Some(RefCount::clone(&repeating_hit_pattern));
-                        borrowed.color.alternating_mono_pattern =
+                        borrowed.color_data.alternating_mono_pattern =
                             Some(RefCount::downgrade(mono_pattern));
-                        borrowed.color.mono_streak = Some(RefCount::downgrade(mono_streak));
+                        borrowed.color_data.mono_streak = Some(RefCount::downgrade(mono_streak));
                     }
                 }
             }

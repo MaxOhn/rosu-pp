@@ -274,6 +274,7 @@ fn erf_inv_impl(p: f64, q: f64, s: f64) -> f64 {
     result * s
 }
 
+// TODO: const-ify
 fn evaluate_polynomial(z: f64, coefficients: &[f64]) -> f64 {
     let mut coefficients = coefficients.iter().copied().rev();
 

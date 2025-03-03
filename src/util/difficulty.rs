@@ -38,18 +38,18 @@ pub fn bell_curve(x: f64, mean: f64, width: f64, multiplier: Option<f64>) -> f64
     multiplier.unwrap_or(1.0) * f64::exp(E * -(f64::powf(x - mean, 2.0) / f64::powf(width, 2.0)))
 }
 
-pub fn smoothstep(x: f64, start: f64, end: f64) -> f64 {
+pub const fn smoothstep(x: f64, start: f64, end: f64) -> f64 {
     let x = reverse_lerp(x, start, end);
 
     x * x * (3.0 - 2.0 * x)
 }
 
-pub fn smootherstep(x: f64, start: f64, end: f64) -> f64 {
+pub const fn smootherstep(x: f64, start: f64, end: f64) -> f64 {
     let x = reverse_lerp(x, start, end);
 
     x * x * x * (x * (6.0 * x - 15.0) + 10.0)
 }
 
-pub fn reverse_lerp(x: f64, start: f64, end: f64) -> f64 {
+pub const fn reverse_lerp(x: f64, start: f64, end: f64) -> f64 {
     f64::clamp((x - start) / (end - start), 0.0, 1.0)
 }

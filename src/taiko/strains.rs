@@ -24,7 +24,14 @@ impl TaikoStrains {
 
 pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<TaikoStrains, ConvertError> {
     let map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
-    let values = DifficultyValues::calculate(difficulty, &map);
+
+    let great_hit_window = map
+        .attributes()
+        .difficulty(difficulty)
+        .hit_windows()
+        .od_great;
+
+    let values = DifficultyValues::calculate(difficulty, &map, great_hit_window);
 
     Ok(TaikoStrains {
         color: values.skills.color.get_curr_strain_peaks().into_vec(),

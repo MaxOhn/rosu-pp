@@ -9,8 +9,8 @@ pub struct TaikoDifficultyAttributes {
     pub rhythm: f64,
     /// The difficulty of the color skill.
     pub color: f64,
-    /// The difficulty of the hardest parts of the map.
-    pub peak: f64,
+    /// The difficulty of the reading skill.
+    pub reading: f64,
     /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc)
     pub great_hit_window: f64,
     /// The perceived hit window for an n100 inclusive of rate-adjusting mods (DT/HT/etc)
@@ -18,6 +18,9 @@ pub struct TaikoDifficultyAttributes {
     /// The ratio of stamina difficulty from mono-color (single color) streams to total
     /// stamina difficulty.
     pub mono_stamina_factor: f64,
+    pub rhythm_top_strains: f64,
+    pub color_top_strains: f64,
+    pub stamina_top_strains: f64,
     /// The final star rating.
     pub stars: f64,
     /// The maximum combo.

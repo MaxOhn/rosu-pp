@@ -181,6 +181,7 @@ impl AimEvaluator {
     const VELOCITY_CHANGE_MULTIPLIER: f64 = 0.75;
     const WIGGLE_MULTIPLIER: f64 = 1.02;
 
+    #[allow(clippy::too_many_lines)]
     fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
@@ -359,11 +360,11 @@ impl AimEvaluator {
         aim_strain
     }
 
-    fn calc_wide_angle_bonus(angle: f64) -> f64 {
+    const fn calc_wide_angle_bonus(angle: f64) -> f64 {
         smoothstep(angle, f64::to_radians(40.0), f64::to_radians(140.0))
     }
 
-    fn calc_acute_angle_bonus(angle: f64) -> f64 {
+    const fn calc_acute_angle_bonus(angle: f64) -> f64 {
         smoothstep(angle, f64::to_radians(140.0), f64::to_radians(40.0))
     }
 }

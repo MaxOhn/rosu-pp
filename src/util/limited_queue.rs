@@ -1,4 +1,4 @@
-use std::{mem, ops::Index, slice::Iter};
+use std::ops::Index;
 
 /// Efficient counterpart to osu!'s [`LimitedCapacityQueue`] i.e. an indexed
 /// queue with limited capacity.
@@ -77,72 +77,6 @@ impl<T, const N: usize> LimitedQueue<T, N> {
             (&[], &self.queue[0..self.len])
         }
     }
-
-    pub fn iter(&self) -> LimitedQueueIter<'_, T> {
-        let (head, tail) = self.as_slices();
-
-        LimitedQueueIter {
-            head: head.iter(),
-            tail: tail.iter(),
-        }
-    }
-}
-
-pub struct LimitedQueueIter<'a, T> {
-    head: Iter<'a, T>,
-    tail: Iter<'a, T>,
-}
-
-impl<'a, T> Iterator for LimitedQueueIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let val @ Some(_) = self.head.next() {
-            val
-        } else {
-            mem::swap(&mut self.head, &mut self.tail);
-
-            self.head.next()
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.len();
-
-        (len, Some(len))
-    }
-
-    fn last(mut self) -> Option<Self::Item> {
-        self.next_back()
-    }
-
-    fn nth(&mut self, mut n: usize) -> Option<Self::Item> {
-        if self.head.len() <= n {
-            n -= self.head.len();
-            mem::swap(&mut self.head, &mut self.tail);
-            self.tail = [].iter();
-        }
-
-        self.head.nth(n)
-    }
-}
-
-impl<T> DoubleEndedIterator for LimitedQueueIter<'_, T> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if let val @ Some(_) = self.tail.next_back() {
-            val
-        } else {
-            mem::swap(&mut self.head, &mut self.tail);
-
-            self.tail.next_back()
-        }
-    }
-}
-
-impl<T> ExactSizeIterator for LimitedQueueIter<'_, T> {
-    fn len(&self) -> usize {
-        self.head.len() + self.tail.len()
-    }
 }
 
 impl<T, const N: usize> Index<usize> for LimitedQueue<T, N> {
@@ -166,7 +100,6 @@ mod test {
         let queue = LimitedQueue::<u8, 4>::default();
         assert!(queue.is_empty());
         assert_eq!(queue.last(), None);
-        assert_eq!(queue.iter().count(), 0);
     }
 
     #[test]
@@ -177,7 +110,6 @@ mod test {
         assert!(!queue.is_empty());
         assert_eq!(queue.len(), 1);
         assert_eq!(queue.last(), Some(&elem));
-        assert!(queue.iter().eq([elem].iter()));
         assert_eq!(queue[0], elem);
     }
 
@@ -191,7 +123,6 @@ mod test {
         }
 
         assert_eq!(queue.last(), Some(&5));
-        assert!(queue.iter().eq(&[2, 3, 4, 5]));
         assert_eq!(queue[0], 2);
         assert_eq!(queue[3], 5);
     }
@@ -219,43 +150,5 @@ mod test {
 
         queue.push(7);
         assert_eq!(queue.as_slices(), ([5, 6].as_slice(), [7].as_slice()));
-    }
-
-    #[test]
-    fn iter_nth() {
-        const CAPACITY: usize = 5;
-        const LIMIT: usize = 11;
-
-        let mut queue = LimitedQueue::<u8, CAPACITY>::default();
-
-        // The queue is not yet full
-        for n in 0..CAPACITY {
-            queue.push(n as u8);
-
-            for i in 0..=n {
-                assert_eq!(queue.iter().nth(i), Some(&(i as u8)));
-            }
-
-            for i in n + 1..CAPACITY {
-                assert_eq!(queue.iter().nth(i), None);
-            }
-        }
-
-        // The queue is full
-        for n in CAPACITY..LIMIT {
-            queue.push(n as u8);
-
-            let (head, tail) = queue.as_slices();
-
-            for (i, item) in head.iter().enumerate() {
-                assert_eq!(queue.iter().nth(i), Some(item));
-            }
-
-            for (i, item) in tail.iter().enumerate() {
-                assert_eq!(queue.iter().nth(head.len() + i), Some(item));
-            }
-
-            assert_eq!(queue.iter().nth(head.len() + tail.len() + 1), None);
-        }
     }
 }

@@ -3,13 +3,20 @@
 pub struct EffectPoint {
     pub time: f64,
     pub kiai: bool,
+    pub scroll_speed: f64,
 }
 
 impl EffectPoint {
     pub const DEFAULT_KIAI: bool = rosu_map::section::timing_points::EffectPoint::DEFAULT_KIAI;
+    pub const DEFAULT_SCROLL_SPEED: f64 =
+        rosu_map::section::timing_points::EffectPoint::DEFAULT_SCROLL_SPEED;
 
     pub const fn new(time: f64, kiai: bool) -> Self {
-        Self { time, kiai }
+        Self {
+            time,
+            kiai,
+            scroll_speed: Self::DEFAULT_SCROLL_SPEED,
+        }
     }
 
     pub const fn is_redundant(&self, existing: &Self) -> bool {
@@ -22,6 +29,7 @@ impl Default for EffectPoint {
         Self {
             time: 0.0,
             kiai: Self::DEFAULT_KIAI,
+            scroll_speed: Self::DEFAULT_SCROLL_SPEED,
         }
     }
 }

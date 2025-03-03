@@ -544,7 +544,7 @@ impl DecodeBeatmap for Beatmap {
 
         let timing_change = split
             .next()
-            .map_or(true, |next| matches!(next.chars().next(), Some('1')));
+            .is_none_or(|next| matches!(next.chars().next(), Some('1')));
 
         let kiai = split
             .next()
@@ -564,7 +564,12 @@ impl DecodeBeatmap for Beatmap {
         let difficulty = DifficultyPoint::new(time, beat_len, speed_multiplier);
         state.add_pending_point(time, difficulty, timing_change);
 
-        let effect = EffectPoint::new(time, kiai);
+        let mut effect = EffectPoint::new(time, kiai);
+
+        if matches!(state.mode, GameMode::Taiko | GameMode::Mania) {
+            effect.scroll_speed = (speed_multiplier.clamp(0.01, 10.0) / 0.01).round() * 0.01;
+        }
+
         state.add_pending_point(time, effect, timing_change);
 
         state.pending_control_points_time = time;

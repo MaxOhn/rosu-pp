@@ -3,10 +3,12 @@ use std::f64::consts::E;
 use crate::{
     any::difficulty::{
         object::IDifficultyObject,
-        skills::{strain_decay, ISkill, Skill, StrainDecaySkill},
+        skills::{
+            strain_decay, DifficultyValue, ISkill, Skill, StrainDecaySkill, UsedStrainSkills,
+        },
     },
     taiko::difficulty::{
-        color::{
+        color::data::{
             alternating_mono_pattern::AlternatingMonoPattern, mono_streak::MonoStreak,
             repeating_hit_patterns::RepeatingHitPatterns,
         },
@@ -36,26 +38,14 @@ impl Color {
         &mut self.inner.curr_strain
     }
 
-    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject) -> f64 {
-        *self.curr_strain_mut() *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
-        *self.curr_strain_mut() += Self::strain_value_of(curr) * SKILL_MULTIPLIER;
-
-        self.curr_strain()
-    }
-
-    fn strain_value_of(curr: &TaikoDifficultyObject) -> f64 {
-        ColorEvaluator::evaluate_diff_of(curr)
-    }
-
     pub fn get_curr_strain_peaks(self) -> StrainsVec {
         self.inner.get_curr_strain_peaks()
     }
 
-    pub fn as_difficulty_value(&self) -> f64 {
+    pub fn as_difficulty_value(&self) -> UsedStrainSkills<DifficultyValue> {
         self.inner
             .clone()
             .difficulty_value(StrainDecaySkill::DECAY_WEIGHT)
-            .difficulty_value()
     }
 }
 
@@ -101,15 +91,109 @@ impl Skill<'_, Color> {
             *self.curr_section_end_mut() += StrainDecaySkill::SECTION_LEN;
         }
 
-        let strain_value_at = self.inner.strain_value_at(curr);
+        let strain_value_at = self.strain_value_at(curr);
         *self.curr_section_peak_mut() = strain_value_at.max(self.curr_section_peak());
+        self.inner.inner.inner.object_strains.push(strain_value_at);
+    }
+
+    fn strain_value_at(&mut self, curr: &TaikoDifficultyObject) -> f64 {
+        *self.inner.curr_strain_mut() *= strain_decay(curr.delta_time, STRAIN_DECAY_BASE);
+        *self.inner.curr_strain_mut() += self.strain_value_of(curr) * SKILL_MULTIPLIER;
+
+        self.inner.curr_strain()
+    }
+
+    fn strain_value_of(&self, curr: &TaikoDifficultyObject) -> f64 {
+        ColorEvaluator::evaluate_diff_of(curr, self.diff_objects)
     }
 }
 
 struct ColorEvaluator;
 
 impl ColorEvaluator {
-    fn evaluate_diff_of_mono_streak(mono_streak: &RefCount<MonoStreak>) -> f64 {
+    fn consistent_ratio_penalty(
+        hit_object: &TaikoDifficultyObject,
+        diff_objects: &TaikoDifficultyObjects,
+        threshold: Option<f64>,
+        max_objects_to_check: Option<usize>,
+    ) -> f64 {
+        let threshold = threshold.unwrap_or(0.01);
+        let max_objects_to_check = max_objects_to_check.unwrap_or(64);
+
+        let curr = hit_object;
+
+        let mut consistent_ratio_count = 0;
+        let mut total_ratio_count = 0.0;
+
+        let prev_objects =
+            &diff_objects.objects[curr.idx.saturating_sub(max_objects_to_check)..curr.idx];
+
+        for window in prev_objects.windows(2).rev() {
+            let [prev, curr] = window else { unreachable!() };
+
+            let curr = curr.get();
+            let prev = prev.get();
+
+            let curr_ratio = curr.rhythm_data.ratio;
+            let prev_ratio = prev.rhythm_data.ratio;
+
+            // * A consistent interval is defined as the percentage difference between the two rhythmic ratios with the margin of error.
+            if f64::abs(1.0 - curr_ratio / prev_ratio) <= threshold {
+                consistent_ratio_count += 1;
+                total_ratio_count += curr_ratio;
+
+                break;
+            }
+        }
+
+        // * Ensure no division by zero
+        1.0 - total_ratio_count / f64::from(consistent_ratio_count + 1) * 0.8
+    }
+
+    fn evaluate_diff_of(
+        hit_object: &TaikoDifficultyObject,
+        diff_objects: &TaikoDifficultyObjects,
+    ) -> f64 {
+        let color_data = &hit_object.color_data;
+        let mut difficulty = 0.0;
+
+        if let Some(mono_streak) = color_data.mono_streak.as_ref().and_then(Weak::upgrade) {
+            if let Some(first_hit_object) = mono_streak.get().first_hit_object() {
+                if &*first_hit_object.get() == hit_object {
+                    difficulty += Self::eval_mono_streak_diff(&mono_streak);
+                }
+            }
+        }
+
+        if let Some(alternating_mono_pattern) = color_data
+            .alternating_mono_pattern
+            .as_ref()
+            .and_then(Weak::upgrade)
+        {
+            if let Some(first_hit_object) = alternating_mono_pattern.get().first_hit_object() {
+                if &*first_hit_object.get() == hit_object {
+                    difficulty +=
+                        Self::eval_alternating_mono_pattern_diff(&alternating_mono_pattern);
+                }
+            }
+        }
+
+        if let Some(repeating_hit_patterns) = color_data.repeating_hit_patterns.as_ref() {
+            if let Some(first_hit_object) = repeating_hit_patterns.get().first_hit_object() {
+                if &*first_hit_object.get() == hit_object {
+                    difficulty += Self::eval_repeating_hit_patterns_diff(repeating_hit_patterns);
+                }
+            }
+        }
+
+        let consistency_penalty =
+            Self::consistent_ratio_penalty(hit_object, diff_objects, None, None);
+        difficulty *= consistency_penalty;
+
+        difficulty
+    }
+
+    fn eval_mono_streak_diff(mono_streak: &RefCount<MonoStreak>) -> f64 {
         let mono_streak = mono_streak.get();
 
         let parent_eval = mono_streak
@@ -117,12 +201,12 @@ impl ColorEvaluator {
             .as_ref()
             .and_then(Weak::upgrade)
             .as_ref()
-            .map_or(1.0, Self::evaluate_diff_of_alternating_mono_pattern);
+            .map_or(1.0, Self::eval_alternating_mono_pattern_diff);
 
         logistic_exp(E * mono_streak.idx as f64 - 2.0 * E, None) * parent_eval * 0.5
     }
 
-    fn evaluate_diff_of_alternating_mono_pattern(
+    fn eval_alternating_mono_pattern_diff(
         alternating_mono_pattern: &RefCount<AlternatingMonoPattern>,
     ) -> f64 {
         let alternating_mono_pattern = alternating_mono_pattern.get();
@@ -132,53 +216,16 @@ impl ColorEvaluator {
             .as_ref()
             .and_then(Weak::upgrade)
             .as_ref()
-            .map_or(1.0, Self::evaluate_diff_of_repeating_hit_patterns);
+            .map_or(1.0, Self::eval_repeating_hit_patterns_diff);
 
         logistic_exp(E * alternating_mono_pattern.idx as f64 - 2.0 * E, None) * parent_eval
     }
 
-    fn evaluate_diff_of_repeating_hit_patterns(
+    fn eval_repeating_hit_patterns_diff(
         repeating_hit_patterns: &RefCount<RepeatingHitPatterns>,
     ) -> f64 {
         let repetition_interval = repeating_hit_patterns.get().repetition_interval as f64;
 
         2.0 * (1.0 - logistic_exp(E * repetition_interval - 2.0 * E, None))
-    }
-
-    fn evaluate_diff_of(hit_object: &TaikoDifficultyObject) -> f64 {
-        let color = &hit_object.color;
-        let mut difficulty = 0.0;
-
-        if let Some(mono_streak) = color.mono_streak.as_ref().and_then(Weak::upgrade) {
-            if let Some(first_hit_object) = mono_streak.get().first_hit_object() {
-                if &*first_hit_object.get() == hit_object {
-                    difficulty += Self::evaluate_diff_of_mono_streak(&mono_streak);
-                }
-            }
-        }
-
-        if let Some(alternating_mono_pattern) = color
-            .alternating_mono_pattern
-            .as_ref()
-            .and_then(Weak::upgrade)
-        {
-            if let Some(first_hit_object) = alternating_mono_pattern.get().first_hit_object() {
-                if &*first_hit_object.get() == hit_object {
-                    difficulty +=
-                        Self::evaluate_diff_of_alternating_mono_pattern(&alternating_mono_pattern);
-                }
-            }
-        }
-
-        if let Some(repeating_hit_patterns) = color.repeating_hit_patterns.as_ref() {
-            if let Some(first_hit_object) = repeating_hit_patterns.get().first_hit_object() {
-                if &*first_hit_object.get() == hit_object {
-                    difficulty +=
-                        Self::evaluate_diff_of_repeating_hit_patterns(repeating_hit_patterns);
-                }
-            }
-        }
-
-        difficulty
     }
 }

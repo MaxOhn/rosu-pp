@@ -1,6 +1,13 @@
 pub trait FloatExt: Sized {
+    const EPS: Self;
+
     /// `self == other`
-    fn eq(self, other: Self) -> bool;
+    fn eq(self, other: Self) -> bool {
+        self.almost_eq(other, Self::EPS)
+    }
+
+    /// `self ~= other` (within `acceptable_difference`)
+    fn almost_eq(self, other: Self, acceptable_difference: Self) -> bool;
 
     /// `self != other`
     fn not_eq(self, other: Self) -> bool;
@@ -12,12 +19,14 @@ pub trait FloatExt: Sized {
 macro_rules! impl_float_ext {
     ( $ty:ty ) => {
         impl FloatExt for $ty {
-            fn eq(self, other: Self) -> bool {
-                (self - other).abs() < <$ty>::EPSILON
+            const EPS: Self = <$ty>::EPSILON;
+
+            fn almost_eq(self, other: Self, acceptable_difference: Self) -> bool {
+                (self - other).abs() < acceptable_difference
             }
 
             fn not_eq(self, other: Self) -> bool {
-                (self - other).abs() >= <$ty>::EPSILON
+                (self - other).abs() >= Self::EPS
             }
 
             // <https://github.com/dotnet/runtime/blob/1d1bf92fcf43aa6981804dc53c5174445069c9e4/src/libraries/System.Private.CoreLib/src/System/Double.cs#L841>

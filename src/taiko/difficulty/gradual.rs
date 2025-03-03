@@ -102,7 +102,7 @@ impl TaikoGradualDifficulty {
             &mut n_diff_objects,
         );
 
-        let skills = TaikoSkills::new();
+        let skills = TaikoSkills::new(od_great, map.is_convert);
 
         let attrs = TaikoDifficultyAttributes {
             great_hit_window: od_great,
@@ -175,8 +175,9 @@ impl Iterator for TaikoGradualDifficulty {
         self.idx += 1;
 
         let mut attrs = self.attrs.clone();
+        let is_relax = self.difficulty.get_mods().rx();
 
-        DifficultyValues::eval(&mut attrs, self.skills.clone());
+        DifficultyValues::eval(&mut attrs, self.skills.clone(), is_relax);
 
         Some(attrs)
     }
@@ -229,6 +230,7 @@ impl Iterator for TaikoGradualDifficulty {
         }
 
         let mut rhythm = Skill::new(&mut self.skills.rhythm, &self.diff_objects);
+        let mut reading = Skill::new(&mut self.skills.reading, &self.diff_objects);
         let mut color = Skill::new(&mut self.skills.color, &self.diff_objects);
         let mut stamina = Skill::new(&mut self.skills.stamina, &self.diff_objects);
         let mut single_color_stamina =
@@ -239,6 +241,7 @@ impl Iterator for TaikoGradualDifficulty {
                 let curr = self.diff_objects_iter.next()?;
                 let borrowed = curr.get();
                 rhythm.process(&borrowed);
+                reading.process(&borrowed);
                 color.process(&borrowed);
                 stamina.process(&borrowed);
                 single_color_stamina.process(&borrowed);

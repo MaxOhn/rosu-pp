@@ -1182,6 +1182,7 @@ impl OsuPerformanceInner<'_> {
 
         let n = f64::max(1.0, object_count - relevant_count_miss - relevant_count_meh);
 
+        #[allow(clippy::items_after_statements, clippy::unreadable_literal)]
         const Z: f64 = 2.32634787404; // * 99% critical value for the normal distribution (one-tailed).
 
         // * Proportion of greats hit on circles, ignoring misses and 50s.
@@ -1241,6 +1242,7 @@ impl OsuPerformanceInner<'_> {
             return 1.0;
         }
 
+        #[allow(clippy::items_after_statements)]
         const SCALE: f64 = 50.0;
 
         let mut adjusted_speed_value = SCALE
@@ -1275,7 +1277,7 @@ impl OsuPerformanceInner<'_> {
     }
 }
 
-fn total_successful_hits(state: &OsuScoreState) -> u32 {
+const fn total_successful_hits(state: &OsuScoreState) -> u32 {
     state.n300 + state.n100 + state.n50
 }
 
