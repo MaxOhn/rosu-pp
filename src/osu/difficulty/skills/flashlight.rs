@@ -3,6 +3,7 @@ use std::cmp;
 use crate::{
     any::difficulty::{object::IDifficultyObject, skills::strain_decay},
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
+    util::strains_vec::StrainsVec,
     GameMods,
 };
 
@@ -57,8 +58,12 @@ impl Flashlight {
         self.current_strain
     }
 
-    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64 {
-        current_strain_peaks.into_iter().sum()
+    #[allow(
+        clippy::needless_pass_by_value,
+        reason = "function definition needs to stay in-sync with `StrainSkill::difficulty_value`"
+    )]
+    fn difficulty_value(current_strain_peaks: StrainsVec) -> f64 {
+        current_strain_peaks.sum()
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {

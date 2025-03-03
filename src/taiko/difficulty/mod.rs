@@ -89,10 +89,10 @@ fn combined_difficulty_value(
     let mut peaks = Vec::with_capacity(cap);
 
     let iter = rhythm_peaks
-        .into_iter()
-        .zip(reading_peaks)
-        .zip(color_peaks)
-        .zip(stamina_peaks);
+        .iter()
+        .zip(reading_peaks.iter())
+        .zip(color_peaks.iter())
+        .zip(stamina_peaks.iter());
 
     for (((mut rhythm_peak, mut reading_peak), mut color_peak), mut stamina_peak) in iter {
         rhythm_peak *= RHYTHM_SKILL_MULTIPLIER * pattern_multiplier;

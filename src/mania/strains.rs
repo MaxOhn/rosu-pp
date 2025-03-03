@@ -26,6 +26,6 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<ManiaStrains, C
     let values = DifficultyValues::calculate(difficulty, &map);
 
     Ok(ManiaStrains {
-        strains: values.strain.into_current_strain_peaks(),
+        strains: values.strain.into_current_strain_peaks().into_vec(),
     })
 }

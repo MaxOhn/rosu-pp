@@ -37,12 +37,13 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<TaikoStrains, C
     let values = DifficultyValues::calculate(difficulty, &map, great_hit_window);
 
     Ok(TaikoStrains {
-        color: values.skills.color.into_current_strain_peaks(),
-        rhythm: values.skills.rhythm.into_current_strain_peaks(),
-        stamina: values.skills.stamina.into_current_strain_peaks(),
+        color: values.skills.color.into_current_strain_peaks().into_vec(),
+        rhythm: values.skills.rhythm.into_current_strain_peaks().into_vec(),
+        stamina: values.skills.stamina.into_current_strain_peaks().into_vec(),
         single_color_stamina: values
             .skills
             .single_color_stamina
-            .into_current_strain_peaks(),
+            .into_current_strain_peaks()
+            .into_vec(),
     })
 }

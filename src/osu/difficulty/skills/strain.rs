@@ -1,3 +1,5 @@
+use crate::util::strains_vec::StrainsVec;
+
 pub trait OsuStrainSkill {
     const REDUCED_SECTION_COUNT: usize = 10;
     const REDUCED_STRAIN_BASELINE: f64 = 0.75;
@@ -8,7 +10,7 @@ pub trait OsuStrainSkill {
 }
 
 pub fn difficulty_value(
-    current_strain_peaks: Vec<f64>,
+    current_strain_peaks: StrainsVec,
     reduced_section_count: usize,
     reduced_strain_baseline: f64,
     decay_weight: f64,
@@ -17,18 +19,28 @@ pub fn difficulty_value(
     let mut weight = 1.0;
 
     let mut peaks = current_strain_peaks;
-    peaks.retain(|&p| p > 0.0);
-    peaks.sort_unstable_by(|a, b| b.total_cmp(a));
 
-    let peaks_iter = peaks.iter_mut().take(reduced_section_count);
+    // Note that we remove all initial zeros here.
+    let peaks_iter = peaks.sorted_non_zero_iter_mut().take(reduced_section_count);
 
     for (i, strain) in peaks_iter.enumerate() {
+        // Note that unless `reduced_strain_baseline == 0.0`, `strain` can
+        // never be `0.0`.
         let clamped = f64::from((i as f32 / reduced_section_count as f32).clamp(0.0, 1.0));
         let scale = f64::log10(lerp(1.0, 10.0, clamped));
         *strain *= lerp(reduced_strain_baseline, 1.0, scale);
     }
 
-    peaks.sort_unstable_by(|a, b| b.total_cmp(a));
+    peaks.sort_desc();
+
+    // Sanity assert; will most definitely never panic
+    debug_assert!(reduced_strain_baseline != 0.0);
+
+    // SAFETY: As noted, zeros were removed from all initial strains and no
+    // strain was mutated to a zero afterwards.
+    let peaks = unsafe { peaks.transmute_into_vec() };
+
+    // Using `Vec<f64>` is much faster for iteration than `StrainsVec`
 
     for strain in peaks {
         difficulty += strain * weight;

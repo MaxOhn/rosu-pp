@@ -9,6 +9,7 @@ use crate::{
     util::{
         difficulty::{milliseconds_to_bpm, reverse_lerp, smootherstep, smoothstep},
         float_ext::FloatExt,
+        strains_vec::StrainsVec,
     },
 };
 
@@ -19,7 +20,7 @@ define_skill! {
     pub struct Aim: StrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         include_sliders: bool,
         current_strain: f64 = 0.0,
-        slider_strains: Vec<f64> = Vec::with_capacity(64),
+        slider_strains: Vec<f64> = Vec::with_capacity(64), // TODO: use `StrainsVec`?
     }
 }
 
@@ -79,7 +80,7 @@ impl Aim {
 
     // From `OsuStrainSkill`; native rather than trait function so that it has
     // priority over `StrainSkill::difficulty_value`
-    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64 {
+    fn difficulty_value(current_strain_peaks: StrainsVec) -> f64 {
         super::strain::difficulty_value(
             current_strain_peaks,
             Self::REDUCED_SECTION_COUNT,

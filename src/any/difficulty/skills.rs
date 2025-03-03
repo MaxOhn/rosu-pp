@@ -1,3 +1,5 @@
+use crate::util::strains_vec::StrainsVec;
+
 pub trait StrainSkill: Sized {
     type DifficultyObject<'a>;
     type DifficultyObjects<'a>: ?Sized;
@@ -22,15 +24,18 @@ pub trait StrainSkill: Sized {
         objects: &Self::DifficultyObjects<'a>,
     );
 
-    fn into_current_strain_peaks(self) -> Vec<f64>;
+    fn into_current_strain_peaks(self) -> StrainsVec;
 
-    fn get_current_strain_peaks(mut strain_peaks: Vec<f64>, current_section_peak: f64) -> Vec<f64> {
+    fn get_current_strain_peaks(
+        mut strain_peaks: StrainsVec,
+        current_section_peak: f64,
+    ) -> StrainsVec {
         strain_peaks.push(current_section_peak);
 
         strain_peaks
     }
 
-    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64;
+    fn difficulty_value(current_strain_peaks: StrainsVec) -> f64;
 
     fn into_difficulty_value(self) -> f64;
 
@@ -54,15 +59,17 @@ pub trait StrainDecaySkill: StrainSkill {
     fn strain_decay(ms: f64) -> f64;
 }
 
-pub fn difficulty_value(current_strain_peaks: Vec<f64>, decay_weight: f64) -> f64 {
+pub fn difficulty_value(current_strain_peaks: StrainsVec, decay_weight: f64) -> f64 {
     let mut difficulty = 0.0;
     let mut weight = 1.0;
 
     // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
     // * These sections will not contribute to the difficulty.
     let mut peaks = current_strain_peaks;
-    peaks.retain(|&p| p > 0.0);
-    peaks.sort_unstable_by(|a, b| b.total_cmp(a));
+    peaks.retain_non_zero_and_sort();
+
+    // SAFETY: we just removed all zeros
+    let peaks = unsafe { peaks.transmute_into_vec() };
 
     // * Difficulty is the weighted sum of the highest strains from every section.
     // * We're sorting from highest to lowest strain.
