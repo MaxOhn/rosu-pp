@@ -1190,7 +1190,7 @@ impl OsuPerformanceInner<'_> {
 
         // * We can be 99% confident that p is at least this value.
         let p_lower_bound = (n * p + Z * Z / 2.0) / (n + Z * Z)
-            - Z / f64::sqrt(n + Z * Z) * (n * p * (1.0 - p) + Z * Z / 4.0);
+            - Z / (n + Z * Z) * f64::sqrt(n * p * (1.0 - p) + Z * Z / 4.0);
 
         let great_hit_window: f64 = self.attrs.great_hit_window;
         let ok_hit_window: f64 = self.attrs.ok_hit_window;

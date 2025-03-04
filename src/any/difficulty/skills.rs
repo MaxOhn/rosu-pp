@@ -135,7 +135,7 @@ impl UsedStrainSkills<DifficultyValue> {
         // * Use a weighted sum of all strains. Constants are arbitrary and give nice values.
         object_strains
             .iter()
-            .map(|s| 1.1 / (1.0 + (-10.0 * f64::exp(s / consistent_top_strain - 0.88))))
+            .map(|s| 1.1 / (1.0 + f64::exp(-10.0 * (s / consistent_top_strain - 0.88))))
             .sum()
     }
 }
