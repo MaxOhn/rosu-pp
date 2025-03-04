@@ -1,4 +1,4 @@
-use crate::util::strains_vec::StrainsVec;
+use crate::util::{float_ext::FloatExt, hint::unlikely, strains_vec::StrainsVec};
 
 pub trait StrainSkill: Sized {
     type DifficultyObject<'a>;
@@ -59,6 +59,25 @@ pub trait StrainDecaySkill: StrainSkill {
     fn strain_decay(ms: f64) -> f64;
 }
 
+pub fn count_top_weighted_strains(object_strains: &[f64], difficulty_value: f64) -> f64 {
+    if unlikely(object_strains.is_empty()) {
+        return 0.0;
+    }
+
+    // * What would the top strain be if all strain values were identical
+    let consistent_top_strain = difficulty_value / 10.0;
+
+    if unlikely(FloatExt::eq(consistent_top_strain, 0.0)) {
+        return object_strains.len() as f64;
+    }
+
+    // * Use a weighted sum of all strains. Constants are arbitrary and give nice values
+    object_strains
+        .iter()
+        .map(|s| 1.1 / (1.0 + f64::exp(-10.0 * (s / consistent_top_strain - 0.88))))
+        .sum()
+}
+
 pub fn difficulty_value(current_strain_peaks: StrainsVec, decay_weight: f64) -> f64 {
     let mut difficulty = 0.0;
     let mut weight = 1.0;
@@ -81,8 +100,6 @@ pub fn difficulty_value(current_strain_peaks: StrainsVec, decay_weight: f64) -> 
     difficulty
 }
 
-// ------- OLD STUFF; TODO: remove ---------
-
 pub fn strain_decay(ms: f64, strain_decay_base: f64) -> f64 {
-    strain_decay_base.powf(ms / 1000.0)
+    f64::powf(strain_decay_base, ms / 1000.0)
 }

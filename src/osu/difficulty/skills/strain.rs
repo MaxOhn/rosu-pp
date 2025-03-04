@@ -54,6 +54,6 @@ pub fn difficulty_to_performance(difficulty: f64) -> f64 {
     f64::powf(5.0 * f64::max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100_000.0
 }
 
-fn lerp(start: f64, end: f64, amount: f64) -> f64 {
+const fn lerp(start: f64, end: f64, amount: f64) -> f64 {
     start + (end - start) * amount
 }

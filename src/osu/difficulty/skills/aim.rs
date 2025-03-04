@@ -62,12 +62,9 @@ impl Aim {
             return 0.0;
         }
 
-        let max_slider_strain = self
-            .slider_strains
-            .iter()
-            .fold(0.0, |max, next| f64::max(max, *next));
+        let max_slider_strain = self.slider_strains.iter().copied().fold(0.0, f64::max);
 
-        if max_slider_strain.eq(0.0) {
+        if FloatExt::eq(max_slider_strain, 0.0) {
             return 0.0;
         }
 

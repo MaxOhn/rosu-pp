@@ -197,7 +197,7 @@ macro_rules! define_skill {
                     object::{IDifficultyObject, IDifficultyObjects, HasStartTime},
                     skills::{StrainSkill, StrainDecaySkill},
                 },
-                util::{float_ext::FloatExt, strains_vec::StrainsVec},
+                util::strains_vec::StrainsVec,
             };
 
             define_skill!( @impl $trait $name $objects[$object] );
@@ -242,22 +242,10 @@ macro_rules! define_skill {
             }
 
             fn count_top_weighted_strains(&self, difficulty_value: f64) -> f64 {
-                if self.strain_skill_object_strains.is_empty() {
-                    return 0.0;
-                }
-
-                // * What would the top strain be if all strain values were identical
-                let consistent_top_strain = difficulty_value / 10.0;
-
-                if FloatExt::eq(consistent_top_strain, 0.0) {
-                    return self.strain_skill_object_strains.len() as f64;
-                }
-
-                // * Use a weighted sum of all strains. Constants are arbitrary and give nice values
-                self.strain_skill_object_strains
-                    .iter()
-                    .map(|s| 1.1 / (1.0 + f64::exp(-10.0 * (s / consistent_top_strain - 0.88))))
-                    .sum()
+                crate::any::difficulty::skills::count_top_weighted_strains(
+                    &self.strain_skill_object_strains,
+                    difficulty_value,
+                )
             }
 
             fn save_current_peak(&mut self) {
@@ -321,7 +309,7 @@ macro_rules! define_skill {
             ) -> f64 {
                 let prev_start_time = curr
                     .previous(0, objects)
-                    .map_or(0.0, |prev| prev.start_time());
+                    .map_or(0.0, HasStartTime::start_time);
 
                 self.strain_decay_skill_current_strain
                     * Self::strain_decay(time - prev_start_time)
@@ -341,7 +329,7 @@ macro_rules! define_skill {
             }
 
             fn strain_decay(ms: f64) -> f64 {
-                f64::powf(Self::STRAIN_DECAY_BASE, ms / 1000.0)
+                crate::any::difficulty::skills::strain_decay(ms, Self::STRAIN_DECAY_BASE)
             }
         }
     };
