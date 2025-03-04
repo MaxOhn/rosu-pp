@@ -2,6 +2,8 @@ use std::cmp;
 
 use rosu_map::section::general::GameMode;
 
+use self::calculator::ManiaPerformanceCalculator;
+
 use crate::{
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance},
     model::{mode::ConvertError, mods::GameMods},
@@ -10,12 +12,9 @@ use crate::{
     Performance,
 };
 
-use super::{
-    attributes::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
-    score_state::ManiaScoreState,
-    Mania,
-};
+use super::{attributes::ManiaPerformanceAttributes, score_state::ManiaScoreState, Mania};
 
+mod calculator;
 pub mod gradual;
 
 /// Performance calculator on osu!mania maps.
@@ -794,13 +793,7 @@ impl<'map> ManiaPerformance<'map> {
             MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Mania>(map)?,
         };
 
-        let inner = ManiaPerformanceInner {
-            mods: self.difficulty.get_mods(),
-            attrs,
-            state,
-        };
-
-        Ok(inner.calculate())
+        Ok(ManiaPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state).calculate())
     }
 
     pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Mania>) -> Self {
@@ -875,74 +868,6 @@ impl<'map, T: IntoModePerformance<'map, Mania>> From<T> for ManiaPerformance<'ma
     }
 }
 
-struct ManiaPerformanceInner<'mods> {
-    attrs: ManiaDifficultyAttributes,
-    mods: &'mods GameMods,
-    state: ManiaScoreState,
-}
-
-impl ManiaPerformanceInner<'_> {
-    fn calculate(self) -> ManiaPerformanceAttributes {
-        let mut multiplier = 1.0;
-
-        if self.mods.nf() {
-            multiplier *= 0.75;
-        }
-
-        if self.mods.ez() {
-            multiplier *= 0.5;
-        }
-
-        let difficulty_value = self.compute_difficulty_value();
-        let pp = difficulty_value * multiplier;
-
-        ManiaPerformanceAttributes {
-            difficulty: self.attrs,
-            pp,
-            pp_difficulty: difficulty_value,
-        }
-    }
-
-    fn compute_difficulty_value(&self) -> f64 {
-        // * Star rating to pp curve
-        8.0 * (self.attrs.stars - 0.15).max(0.05).powf(2.2)
-             // * From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
-             * (5.0 * self.calculate_custom_accuracy() - 4.0).max(0.0)
-             // * Length bonus, capped at 1500 notes
-             * (1.0 + 0.1 * (self.total_hits() / 1500.0).min(1.0))
-    }
-
-    const fn total_hits(&self) -> f64 {
-        self.state.total_hits() as f64
-    }
-
-    fn calculate_custom_accuracy(&self) -> f64 {
-        let ManiaScoreState {
-            n320,
-            n300,
-            n200,
-            n100,
-            n50,
-            misses: _,
-        } = &self.state;
-
-        let total_hits = self.state.total_hits();
-
-        if total_hits == 0 {
-            return 0.0;
-        }
-
-        custom_accuracy(*n320, *n300, *n200, *n100, *n50, total_hits)
-    }
-}
-
-fn custom_accuracy(n320: u32, n300: u32, n200: u32, n100: u32, n50: u32, total_hits: u32) -> f64 {
-    let numerator = n320 * 32 + n300 * 30 + n200 * 20 + n100 * 10 + n50 * 5;
-    let denominator = total_hits * 32;
-
-    f64::from(numerator) / f64::from(denominator)
-}
-
 fn accuracy(n320: u32, n300: u32, n200: u32, n100: u32, n50: u32, misses: u32) -> f64 {
     let numerator = 6 * (n320 + n300) + 4 * n200 + 2 * n100 + n50;
     let denominator = 6 * (n320 + n300 + n200 + n100 + n50 + misses);
@@ -959,11 +884,12 @@ mod tests {
 
     use crate::{
         any::{DifficultyAttributes, PerformanceAttributes},
+        mania::ManiaDifficultyAttributes,
         osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
         Beatmap,
     };
 
-    use super::*;
+    use super::{calculator::custom_accuracy, *};
 
     static ATTRS: OnceLock<ManiaDifficultyAttributes> = OnceLock::new();
 
