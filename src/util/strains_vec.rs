@@ -7,6 +7,8 @@ mod inner {
         slice::{self, Iter},
     };
 
+    use crate::util::hint::{likely, unlikely};
+
     use self::entry::StrainsEntry;
 
     /// A specialized `Vec<f64>` where all entries must be non-negative.
@@ -326,30 +328,6 @@ mod inner {
                 }
             }
         }
-    }
-
-    #[inline]
-    #[cold]
-    const fn cold() {}
-
-    /// Hints at the compiler that the condition is likely `true`.
-    #[inline]
-    const fn likely(b: bool) -> bool {
-        if !b {
-            cold();
-        }
-
-        b
-    }
-
-    /// Hints at the compiler that the condition is likely `false`.
-    #[inline]
-    const fn unlikely(b: bool) -> bool {
-        if b {
-            cold();
-        }
-
-        b
     }
 
     #[cfg(test)]

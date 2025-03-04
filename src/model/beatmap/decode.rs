@@ -22,7 +22,7 @@ use crate::{
         },
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
     },
-    util::{float_ext::FloatExt, sort},
+    util::{float_ext::FloatExt, hint::unlikely, sort},
 };
 
 use super::{Beatmap, DEFAULT_SLIDER_LENIENCY};
@@ -520,9 +520,9 @@ impl DecodeBeatmap for Beatmap {
             .parse::<f64>()
             .map_err(ParseNumberError::InvalidFloat)?;
 
-        if beat_len < f64::from(-MAX_PARSE_VALUE) {
+        if unlikely(beat_len < f64::from(-MAX_PARSE_VALUE)) {
             return Err(ParseNumberError::NumberUnderflow.into());
-        } else if beat_len > f64::from(MAX_PARSE_VALUE) {
+        } else if unlikely(beat_len > f64::from(MAX_PARSE_VALUE)) {
             return Err(ParseNumberError::NumberOverflow.into());
         }
 
@@ -533,7 +533,7 @@ impl DecodeBeatmap for Beatmap {
         };
 
         if let Some(numerator) = split.next() {
-            if i32::parse(numerator)? < 1 {
+            if unlikely(i32::parse(numerator)? < 1) {
                 return Err(ParseBeatmapError::TimeSignature);
             }
         }
@@ -553,7 +553,7 @@ impl DecodeBeatmap for Beatmap {
             .is_some_and(|flags| flags.has_flag(EffectFlags::KIAI));
 
         if timing_change {
-            if beat_len.is_nan() {
+            if unlikely(beat_len.is_nan()) {
                 return Err(ParseBeatmapError::TimingControlPointNaN);
             }
 
@@ -641,7 +641,7 @@ impl DecodeBeatmap for Beatmap {
 
             let repeats = repeat_count.parse_num::<i32>()?;
 
-            if repeats > 9000 {
+            if unlikely(repeats > 9000) {
                 return Err(ParseBeatmapError::InvalidRepeatCount);
             }
 
