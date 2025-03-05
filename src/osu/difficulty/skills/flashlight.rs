@@ -1,7 +1,10 @@
 use std::cmp;
 
 use crate::{
-    any::difficulty::{object::IDifficultyObject, skills::strain_decay},
+    any::difficulty::{
+        object::{HasStartTime, IDifficultyObject},
+        skills::strain_decay,
+    },
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
     util::strains_vec::StrainsVec,
     GameMods,
@@ -39,7 +42,7 @@ impl Flashlight {
     ) -> f64 {
         let prev_start_time = curr
             .previous(0, objects)
-            .map_or(0.0, |prev| prev.start_time);
+            .map_or(0.0, HasStartTime::start_time);
 
         self.current_strain * strain_decay(time - prev_start_time, Self::STRAIN_DECAY_BASE)
     }

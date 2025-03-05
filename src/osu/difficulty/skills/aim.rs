@@ -2,7 +2,7 @@ use std::f64::consts::FRAC_PI_2;
 
 use crate::{
     any::difficulty::{
-        object::IDifficultyObject,
+        object::{HasStartTime, IDifficultyObject},
         skills::{strain_decay, StrainSkill},
     },
     osu::difficulty::object::OsuDifficultyObject,
@@ -36,7 +36,7 @@ impl Aim {
     ) -> f64 {
         let prev_start_time = curr
             .previous(0, objects)
-            .map_or(0.0, |prev| prev.start_time);
+            .map_or(0.0, HasStartTime::start_time);
 
         self.current_strain * strain_decay(time - prev_start_time, Self::STRAIN_DECAY_BASE)
     }

@@ -2,7 +2,7 @@ use std::{cmp, f64::consts::PI};
 
 use crate::{
     any::difficulty::{
-        object::IDifficultyObject,
+        object::{HasStartTime, IDifficultyObject},
         skills::{strain_decay, StrainSkill},
     },
     osu::difficulty::object::OsuDifficultyObject,
@@ -37,7 +37,7 @@ impl Speed {
     ) -> f64 {
         let prev_start_time = curr
             .previous(0, objects)
-            .map_or(0.0, |prev| prev.start_time);
+            .map_or(0.0, HasStartTime::start_time);
 
         (self.current_strain * self.current_rhythm)
             * strain_decay(time - prev_start_time, Self::STRAIN_DECAY_BASE)

@@ -43,11 +43,11 @@ impl ManiaPerformanceCalculator<'_> {
 
     fn compute_difficulty_value(&self) -> f64 {
         // * Star rating to pp curve
-        8.0 * (self.attrs.stars - 0.15).max(0.05).powf(2.2)
+        8.0 * f64::powf(f64::max(self.attrs.stars - 0.15, 0.05), 2.2)
              // * From 80% accuracy, 1/20th of total pp is awarded per additional 1% accuracy
-             * (5.0 * self.calculate_custom_accuracy() - 4.0).max(0.0)
+             * f64::max(0.0, 5.0 * self.calculate_custom_accuracy() - 4.0)
              // * Length bonus, capped at 1500 notes
-             * (1.0 + 0.1 * (self.total_hits() / 1500.0).min(1.0))
+             * (1.0 + 0.1 * f64::min(1.0, self.total_hits() / 1500.0))
     }
 
     const fn total_hits(&self) -> f64 {

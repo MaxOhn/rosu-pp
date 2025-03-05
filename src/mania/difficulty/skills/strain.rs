@@ -1,4 +1,8 @@
-use crate::{mania::difficulty::object::ManiaDifficultyObject, util::difficulty::logistic};
+use crate::{
+    any::difficulty::object::{HasStartTime, IDifficultyObject},
+    mania::difficulty::object::ManiaDifficultyObject,
+    util::difficulty::logistic,
+};
 
 define_skill! {
     #[allow(clippy::struct_field_names)]
@@ -28,6 +32,27 @@ impl Strain {
 
     const SKILL_MULTIPLIER: f64 = 1.0;
     const STRAIN_DECAY_BASE: f64 = 1.0;
+
+    fn calculate_initial_strain<'a>(
+        &self,
+        offset: f64,
+        curr: &ManiaDifficultyObject,
+        objects: &[ManiaDifficultyObject],
+    ) -> f64 {
+        let prev_start_time = curr
+            .previous(0, objects)
+            .map_or(0.0, HasStartTime::start_time);
+
+        apply_decay(
+            self.individual_strain,
+            offset - prev_start_time,
+            Self::INDIVIDUAL_DECAY_BASE,
+        ) + apply_decay(
+            self.overall_strain,
+            offset - prev_start_time,
+            Self::OVERALL_DECAY_BASE,
+        )
+    }
 
     fn strain_value_of(
         &mut self,
@@ -108,5 +133,5 @@ impl Strain {
 }
 
 fn apply_decay(value: f64, delta_time: f64, decay_base: f64) -> f64 {
-    value * decay_base.powf(delta_time / 1000.0)
+    value * f64::powf(decay_base, delta_time / 1000.0)
 }
