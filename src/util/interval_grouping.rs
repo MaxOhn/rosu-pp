@@ -54,7 +54,7 @@ impl<T: HasInterval> GroupedByIntervalIter<'_, T> {
 
         *i += 1;
 
-        while *i < objects.len() {
+        while *i < objects.len() - 1 {
             if !(objects[*i]
                 .get()
                 .interval()

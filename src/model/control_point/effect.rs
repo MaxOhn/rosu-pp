@@ -1,3 +1,5 @@
+use crate::util::float_ext::FloatExt;
+
 /// Effect-related info about this control point.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct EffectPoint {
@@ -19,8 +21,8 @@ impl EffectPoint {
         }
     }
 
-    pub const fn is_redundant(&self, existing: &Self) -> bool {
-        self.kiai == existing.kiai
+    pub fn is_redundant(&self, existing: &Self) -> bool {
+        self.kiai == existing.kiai && FloatExt::eq(self.scroll_speed, existing.scroll_speed)
     }
 }
 

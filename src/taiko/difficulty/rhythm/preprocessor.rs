@@ -12,7 +12,7 @@ pub struct RhythmDifficultyPreprocessor;
 
 impl RhythmDifficultyPreprocessor {
     pub fn process_and_assign(hit_objects: &TaikoDifficultyObjects) {
-        let rhythm_groups = create_same_rhythm_grouped_hit_objects(&hit_objects.objects);
+        let rhythm_groups = create_same_rhythm_grouped_hit_objects(&hit_objects.note_objects);
 
         for rhythm_group in rhythm_groups.iter() {
             for hit_object in rhythm_group.get().hit_objects.iter() {

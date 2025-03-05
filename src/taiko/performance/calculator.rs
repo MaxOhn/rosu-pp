@@ -101,7 +101,8 @@ impl TaikoPerformanceCalculator<'_> {
 
         // * Scale accuracy more harshly on nearly-completely mono (single coloured) speed maps.
         let acc_scaling_exp = f64::from(2) + self.attrs.mono_stamina_factor;
-        let acc_scaling_shift = f64::from(500) - f64::from(100) * self.attrs.mono_stamina_factor;
+        let acc_scaling_shift =
+            f64::from(500) - f64::from(100) * (self.attrs.mono_stamina_factor * f64::from(3));
 
         difficulty_value
             * (erf(acc_scaling_shift / (f64::sqrt(2.0) * estimated_unstable_rate)))

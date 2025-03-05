@@ -37,7 +37,7 @@ impl Reading {
             })
             .unwrap_or(0) as isize;
 
-        self.current_strain = logistic(index as f64, 4.0, -1.0 / 25.0, Some(0.5)) + 0.5;
+        self.current_strain *= logistic(index as f64, 4.0, -1.0 / 25.0, Some(0.5)) + 0.5;
         self.current_strain *= Self::STRAIN_DECAY_BASE;
         self.current_strain += ReadingEvaluator::evaluate_diff_of(curr) * Self::SKILL_MULTIPLIER;
 

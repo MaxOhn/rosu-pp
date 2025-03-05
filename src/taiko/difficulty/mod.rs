@@ -167,8 +167,8 @@ impl DifficultyValues {
             &mut n_diff_objects,
         );
 
-        // The first two hit objects have no difficulty object
-        n_diff_objects = n_diff_objects.saturating_sub(2);
+        // The first hit object has no difficulty object
+        n_diff_objects = n_diff_objects.saturating_sub(1);
 
         let mut skills = TaikoSkills::new(great_hit_window, converted.is_convert);
 
@@ -266,7 +266,8 @@ impl DifficultyValues {
                     *n_diff_objects += 1;
                     *max_combo += u32::from(h.is_hit());
                 }
-            });
+            })
+            .skip(1);
 
         let Some(mut last) = hit_objects_iter.next() else {
             return TaikoDifficultyObjects::with_capacity(0);
@@ -287,6 +288,12 @@ impl DifficultyValues {
 
             diff_objects.push(diff_object);
             last = curr;
+        }
+
+        // The first hit object is currently straight up skipped and not
+        // considered for the first (or any other) difficulty object
+        if take > 0 && *n_diff_objects > 0 {
+            *n_diff_objects -= 1;
         }
 
         ColorDifficultyPreprocessor::process_and_assign(&diff_objects);
