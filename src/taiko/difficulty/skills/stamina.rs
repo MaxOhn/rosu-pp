@@ -1,5 +1,3 @@
-use std::ops::Not;
-
 use crate::{
     any::difficulty::{object::IDifficultyObject, skills::strain_decay},
     taiko::difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
@@ -81,7 +79,7 @@ impl StaminaEvaluator {
         curr: &TaikoDifficultyObject,
         objects: &TaikoDifficultyObjects,
     ) -> f64 {
-        if curr.base_hit_type.is_hit().not() {
+        if !curr.base_hit_type.is_hit() {
             return 0.0;
         }
 

@@ -30,6 +30,7 @@ impl TaikoDifficultyObject {
         clock_rate: f64,
         idx: usize,
         map: &Beatmap,
+        global_slider_velocity: f64,
         objects: &mut TaikoDifficultyObjects,
     ) -> RefCount<Self> {
         let delta_time = (hit_object.start_time - last_object.start_time) / clock_rate;
@@ -68,8 +69,12 @@ impl TaikoDifficultyObject {
             .map_or(TimingPoint::DEFAULT_BPM, TimingPoint::bpm);
 
         // * Calculate the slider velocity at the note's start time.
-        let curr_slider_velocity =
-            calculate_slider_velocity(map, normalized_start_time, clock_rate);
+        let curr_slider_velocity = calculate_slider_velocity(
+            map,
+            normalized_start_time,
+            clock_rate,
+            global_slider_velocity,
+        );
 
         let effective_bpm = curr_control_point_bpm * curr_slider_velocity;
 
@@ -101,8 +106,12 @@ impl TaikoDifficultyObject {
     }
 }
 
-fn calculate_slider_velocity(map: &Beatmap, start_time: f64, clock_rate: f64) -> f64 {
-    let global_slider_velocity = map.slider_multiplier;
+fn calculate_slider_velocity(
+    map: &Beatmap,
+    start_time: f64,
+    clock_rate: f64,
+    global_slider_velocity: f64,
+) -> f64 {
     let active_effect_control_point_scroll_speed = map
         .effect_point_at(start_time)
         .map_or(EffectPoint::DEFAULT_SCROLL_SPEED, |effect_point| {

@@ -810,19 +810,27 @@ impl ControlPoint<BeatmapState> for DifficultyPoint {
 
 impl ControlPoint<BeatmapState> for EffectPoint {
     fn check_already_existing(&self, state: &BeatmapState) -> bool {
-        match effect_point_at(&state.effect_points, self.time) {
+        self.check_already_existing(&state.effect_points)
+    }
+
+    fn add(self, state: &mut BeatmapState) {
+        self.add(&mut state.effect_points);
+    }
+}
+
+// osu!taiko conversion mutates the list of effect points
+impl ControlPoint<Vec<EffectPoint>> for EffectPoint {
+    fn check_already_existing(&self, effect_points: &Vec<EffectPoint>) -> bool {
+        match effect_point_at(effect_points, self.time) {
             Some(existing) => self.is_redundant(existing),
             None => self.is_redundant(&EffectPoint::default()),
         }
     }
 
-    fn add(self, state: &mut BeatmapState) {
-        match state
-            .effect_points
-            .binary_search_by(|probe| probe.time.total_cmp(&self.time))
-        {
-            Err(i) => state.effect_points.insert(i, self),
-            Ok(i) => state.effect_points[i] = self,
+    fn add(self, effect_points: &mut Vec<EffectPoint>) {
+        match effect_points.binary_search_by(|probe| probe.time.total_cmp(&self.time)) {
+            Err(i) => effect_points.insert(i, self),
+            Ok(i) => effect_points[i] = self,
         }
     }
 }

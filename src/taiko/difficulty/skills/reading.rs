@@ -1,5 +1,3 @@
-use std::ops::Not;
-
 use crate::{
     taiko::difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     util::{difficulty::logistic, sync::Weak},
@@ -18,7 +16,7 @@ impl Reading {
 
     fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, _: &TaikoDifficultyObjects) -> f64 {
         // * Drum Rolls and Swells are exempt.
-        if curr.base_hit_type.is_hit().not() {
+        if !curr.base_hit_type.is_hit() {
             return 0.0;
         }
 

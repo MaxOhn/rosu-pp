@@ -30,15 +30,8 @@ pub fn difficulty(
 
     let values = DifficultyValues::calculate(difficulty, &map);
 
-    let hit_window = map
-        .attributes()
-        .difficulty(difficulty)
-        .hit_windows()
-        .od_great;
-
     Ok(ManiaDifficultyAttributes {
         stars: values.strain.into_difficulty_value() * DIFFICULTY_MULTIPLIER,
-        hit_window,
         max_combo: values.max_combo,
         n_objects,
         n_hold_notes: values.n_hold_notes,

@@ -5,7 +5,7 @@ use rosu_map::section::general::GameMode;
 use crate::{
     any::difficulty::skills::StrainSkill,
     mania::object::ObjectParams,
-    model::{beatmap::HitWindows, hit_object::HitObject, mode::ConvertError},
+    model::{hit_object::HitObject, mode::ConvertError},
     Beatmap, Difficulty,
 };
 
@@ -53,7 +53,6 @@ pub struct ManiaGradualDifficulty {
     is_convert: bool,
     strain: Strain,
     diff_objects: Box<[ManiaDifficultyObject]>,
-    hit_window: f64,
     note_state: NoteState,
 }
 
@@ -72,11 +71,6 @@ impl ManiaGradualDifficulty {
         let total_columns = map.cs.round_ties_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(&map);
-
-        let HitWindows {
-            od_great: hit_window,
-            ..
-        } = map.attributes().difficulty(&difficulty).hit_windows();
 
         let mania_objects = map
             .hit_objects
@@ -111,7 +105,6 @@ impl ManiaGradualDifficulty {
             is_convert: map.is_convert,
             strain,
             diff_objects,
-            hit_window,
             note_state,
         })
     }
@@ -144,7 +137,6 @@ impl Iterator for ManiaGradualDifficulty {
 
         Some(ManiaDifficultyAttributes {
             stars: self.strain.cloned_difficulty_value() * DIFFICULTY_MULTIPLIER,
-            hit_window: self.hit_window,
             max_combo: self.note_state.curr_combo,
             n_objects: self.idx as u32,
             n_hold_notes: self.note_state.n_hold_notes,
