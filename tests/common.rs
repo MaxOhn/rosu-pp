@@ -1,5 +1,4 @@
-// False positive
-#[allow(unused)]
+#[allow(unused, reason = "false positive")]
 pub use self::{mods::*, paths::*};
 
 /// Paths to .osu files
@@ -28,7 +27,18 @@ mod mods {
 
 #[track_caller]
 pub fn assert_eq_float<F: Float>(a: F, b: F) {
-    assert!((a - b).abs() < F::EPSILON, "{a} != {b}")
+    assert!((a - b).less_than_eps(), "{a} != {b}")
+}
+
+#[track_caller]
+#[allow(unused, reason = "false positive")]
+pub fn assert_eq_option<F: Float>(a: Option<F>, b: Option<F>) {
+    match (a, b) {
+        (Some(a), Some(b)) => assert!((a - b).less_than_eps(), "{a} != {b}"),
+        (None, None) => {}
+        (None, Some(b)) => panic!("None != Some({b})"),
+        (Some(a), None) => panic!("Some({a}) != None"),
+    }
 }
 
 /// Trait to provide flexibility in the `assert_eq_float` function.
@@ -38,6 +48,10 @@ pub trait Float:
     const EPSILON: Self;
 
     fn abs(self) -> Self;
+
+    fn less_than_eps(self) -> bool {
+        self.abs() < Self::EPSILON
+    }
 }
 
 macro_rules! impl_float {
