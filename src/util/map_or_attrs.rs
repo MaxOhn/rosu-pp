@@ -11,24 +11,15 @@ pub enum MapOrAttrs<'map, M: IGameMode> {
 }
 
 impl<M: IGameMode> MapOrAttrs<'_, M> {
-    /// Return a mutable reference to the attributes.
-    ///
-    /// If `self` is of variant `Map`, store `attrs` in `self`, and return a
-    /// mutable reference to it.
+    /// Insert `attrs` into `self` and return a mutable reference to them.
     pub fn insert_attrs(&mut self, attrs: M::DifficultyAttributes) -> &mut M::DifficultyAttributes {
-        // TODO: dont match, just overwrite
-        match self {
-            MapOrAttrs::Map(_) => {
-                *self = Self::Attrs(attrs);
+        *self = Self::Attrs(attrs);
 
-                let Self::Attrs(ref mut attrs) = self else {
-                    unreachable!()
-                };
+        let Self::Attrs(ref mut attrs) = self else {
+            unreachable!()
+        };
 
-                attrs
-            }
-            MapOrAttrs::Attrs(ref mut attrs) => attrs,
-        }
+        attrs
     }
 }
 
