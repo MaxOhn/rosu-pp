@@ -33,7 +33,7 @@ impl Strain {
     const SKILL_MULTIPLIER: f64 = 1.0;
     const STRAIN_DECAY_BASE: f64 = 1.0;
 
-    fn calculate_initial_strain<'a>(
+    fn calculate_initial_strain(
         &self,
         offset: f64,
         curr: &ManiaDifficultyObject,

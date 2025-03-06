@@ -416,16 +416,6 @@ mod inner {
             self.sort_desc();
         }
 
-        pub fn non_zero_iter(&self) -> Copied<Iter<'_, f64>> {
-            self.inner.iter().copied()
-        }
-
-        pub fn sorted_non_zero_iter(&mut self) -> Copied<Iter<'_, f64>> {
-            self.retain_non_zero_and_sort();
-
-            self.non_zero_iter()
-        }
-
         pub fn sorted_non_zero_iter_mut(&mut self) -> IterMut<'_, f64> {
             self.retain_non_zero_and_sort();
 
@@ -438,6 +428,10 @@ mod inner {
 
         pub fn iter(&self) -> Copied<Iter<'_, f64>> {
             self.inner.iter().copied()
+        }
+
+        pub unsafe fn transmute_into_vec(self) -> Vec<f64> {
+            self.inner
         }
 
         pub fn into_vec(self) -> Vec<f64> {
