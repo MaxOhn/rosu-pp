@@ -70,9 +70,8 @@ impl RhythmEvaluator {
                 .first_hit_object()
                 .is_some_and(|h| &*h.get() == hit_object)
             {
-                if let Some(interval_ratio) = same_pattern_grouped.get().interval_ratio() {
-                    same_pattern += 1.15 * Self::ratio_difficulty(interval_ratio, None);
-                }
+                same_pattern += 1.15
+                    * Self::ratio_difficulty(same_pattern_grouped.get().interval_ratio(), None);
             }
         }
 

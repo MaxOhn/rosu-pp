@@ -83,8 +83,11 @@ fn combined_difficulty_value(
     let stamina_peaks = stamina.into_current_strain_peaks();
 
     let cap = cmp::min(
-        cmp::min(color_peaks.len(), rhythm_peaks.len()),
-        stamina_peaks.len(),
+        rhythm_peaks.len(),
+        cmp::min(
+            reading_peaks.len(),
+            cmp::min(color_peaks.len(), stamina_peaks.len()),
+        ),
     );
     let mut peaks = Vec::with_capacity(cap);
 

@@ -27,16 +27,15 @@ impl SamePatternsGroupedHitObjects {
             .map(|grouped| grouped.get().interval)
     }
 
-    pub fn interval_ratio(&self) -> Option<f64> {
-        self.group_interval().map(|group_interval| {
-            group_interval
-                / self
-                    .previous
+    pub fn interval_ratio(&self) -> f64 {
+        self.group_interval()
+            .zip(
+                self.previous
                     .as_ref()
                     .and_then(Weak::upgrade)
-                    .and_then(|prev| prev.get().group_interval())
-                    .unwrap_or(1.0)
-        })
+                    .and_then(|prev| prev.get().group_interval()),
+            )
+            .map_or(1.0, |(this, prev)| this / prev)
     }
 
     pub fn first_hit_object(&self) -> Option<RefCount<TaikoDifficultyObject>> {
