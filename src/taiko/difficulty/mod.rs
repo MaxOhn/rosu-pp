@@ -98,7 +98,9 @@ fn combined_difficulty_value(
         .zip(stamina_peaks.iter());
 
     for (((mut rhythm_peak, mut reading_peak), mut color_peak), mut stamina_peak) in iter {
-        rhythm_peak *= RHYTHM_SKILL_MULTIPLIER * pattern_multiplier;
+        rhythm_peak *= RHYTHM_SKILL_MULTIPLIER;
+        rhythm_peak *= pattern_multiplier;
+
         reading_peak *= READING_SKILL_MULTIPLIER;
 
         color_peak *= if is_relax {
@@ -107,7 +109,8 @@ fn combined_difficulty_value(
             COLOR_SKILL_MULTIPLIER
         };
 
-        stamina_peak *= STAMINA_SKILL_MULTIPLIER * strain_length_bonus;
+        stamina_peak *= STAMINA_SKILL_MULTIPLIER;
+        stamina_peak *= strain_length_bonus;
 
         // * Available finger count is increased by 150%, thus we adjust accordingly.
         stamina_peak /= if is_convert || is_relax { 1.5 } else { 1.0 };
