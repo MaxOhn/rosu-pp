@@ -22,7 +22,7 @@ macro_rules! impl_float_ext {
             const EPS: Self = <$ty>::EPSILON;
 
             fn almost_eq(self, other: Self, acceptable_difference: Self) -> bool {
-                (self - other).abs() < acceptable_difference
+                (self - other).abs() <= acceptable_difference
             }
 
             fn not_eq(self, other: Self) -> bool {
