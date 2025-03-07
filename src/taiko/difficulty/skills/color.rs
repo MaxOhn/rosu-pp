@@ -51,7 +51,7 @@ impl ColorEvaluator {
         let mut total_ratio_count = 0.0;
 
         let prev_objects =
-            &objects.objects[curr.idx.saturating_sub(max_objects_to_check)..=curr.idx];
+            &objects.objects[curr.idx.saturating_sub(2 * max_objects_to_check)..=curr.idx];
 
         for window in prev_objects.windows(3).rev().step_by(2) {
             let [prev, _, curr] = window else {
