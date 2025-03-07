@@ -567,8 +567,7 @@ impl DecodeBeatmap for Beatmap {
         let mut effect = EffectPoint::new(time, kiai);
 
         if matches!(state.mode, GameMode::Taiko | GameMode::Mania) {
-            effect.scroll_speed =
-                (speed_multiplier.clamp(0.01, 10.0) / f64::EPSILON).round() * f64::EPSILON;
+            effect.scroll_speed = speed_multiplier.clamp(0.01, 10.0);
         }
 
         state.add_pending_point(time, effect, timing_change);
