@@ -18,7 +18,7 @@ tracing = ["rosu-map/tracing"]
 
 [dependencies]
 rosu-map = { version = "0.2.0" }
-rosu-mods = { version = "0.2.0" }
+rosu-mods = { version = "0.3.0" }
 
 [dev-dependencies]
 proptest = "1.4.0"
