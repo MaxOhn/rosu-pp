@@ -18,7 +18,7 @@ use crate::{
     Beatmap, Difficulty,
 };
 
-use self::skills::TaikoSkills;
+pub(crate) use self::skills::TaikoSkills;
 
 use super::attributes::TaikoDifficultyAttributes;
 

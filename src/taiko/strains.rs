@@ -5,6 +5,8 @@ use crate::{
     taiko::difficulty::DifficultyValues, Beatmap, Difficulty,
 };
 
+use super::difficulty::TaikoSkills;
+
 /// The result of calculating the strains on a osu!taiko map.
 ///
 /// Suitable to plot the difficulty of a map over time.
@@ -12,6 +14,8 @@ use crate::{
 pub struct TaikoStrains {
     /// Strain peaks of the color skill.
     pub color: Vec<f64>,
+    /// Strain peaks of the reading skill.
+    pub reading: Vec<f64>,
     /// Strain peaks of the rhythm skill.
     pub rhythm: Vec<f64>,
     /// Strain peaks of the stamina skill.
@@ -36,14 +40,19 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<TaikoStrains, C
 
     let values = DifficultyValues::calculate(difficulty, &map, great_hit_window);
 
+    let TaikoSkills {
+        rhythm,
+        reading,
+        color,
+        stamina,
+        single_color_stamina,
+    } = values.skills;
+
     Ok(TaikoStrains {
-        color: values.skills.color.into_current_strain_peaks().into_vec(),
-        rhythm: values.skills.rhythm.into_current_strain_peaks().into_vec(),
-        stamina: values.skills.stamina.into_current_strain_peaks().into_vec(),
-        single_color_stamina: values
-            .skills
-            .single_color_stamina
-            .into_current_strain_peaks()
-            .into_vec(),
+        color: color.into_current_strain_peaks().into_vec(),
+        reading: reading.into_current_strain_peaks().into_vec(),
+        rhythm: rhythm.into_current_strain_peaks().into_vec(),
+        stamina: stamina.into_current_strain_peaks().into_vec(),
+        single_color_stamina: single_color_stamina.into_current_strain_peaks().into_vec(),
     })
 }
