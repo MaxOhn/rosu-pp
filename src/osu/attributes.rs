@@ -37,10 +37,10 @@ pub struct OsuDifficultyAttributes {
     ///
     /// The meaning depends on the kind of score:
     /// - if set on osu!stable, this value is irrelevant
-    /// - if set on osu!lazer *without* `CL`, this value is the amount of
-    ///   slider ticks and repeats
-    /// - if set on osu!lazer *with* `CL`, this value is the amount of slider
-    ///   heads, ticks, and repeats
+    /// - if set on osu!lazer *with* slider accuracy, this value is the amount
+    ///   of hit slider ticks and repeats
+    /// - if set on osu!lazer *without* slider accuracy, this value is the
+    ///   amount of hit slider heads, ticks, and repeats
     pub n_large_ticks: u32,
     /// The amount of spinners.
     pub n_spinners: u32,

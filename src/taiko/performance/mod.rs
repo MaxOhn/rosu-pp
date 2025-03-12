@@ -48,6 +48,7 @@ impl<'map> TaikoPerformance<'map> {
     /// Otherwise, the final attributes will be incorrect.
     ///
     /// [`Beatmap`]: crate::model::beatmap::Beatmap
+    /// [`TaikoDifficultyAttributes`]: crate::taiko::TaikoDifficultyAttributes
     pub fn new(map_or_attrs: impl IntoModePerformance<'map, Taiko>) -> Self {
         map_or_attrs.into_performance()
     }

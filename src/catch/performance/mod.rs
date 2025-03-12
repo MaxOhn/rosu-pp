@@ -49,6 +49,7 @@ impl<'map> CatchPerformance<'map> {
     /// Otherwise, the final attributes will be incorrect.
     ///
     /// [`Beatmap`]: crate::model::beatmap::Beatmap
+    /// [`CatchDifficultyAttributes`]: crate::catch::CatchDifficultyAttributes
     pub fn new(map_or_attrs: impl IntoModePerformance<'map, Catch>) -> Self {
         map_or_attrs.into_performance()
     }

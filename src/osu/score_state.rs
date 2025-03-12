@@ -8,10 +8,10 @@ pub struct OsuScoreState {
     ///
     /// The meaning depends on the kind of score:
     /// - if set on osu!stable, this field is irrelevant and can be `0`
-    /// - if set on osu!lazer *without* `CL`, this field is the amount of hit
-    ///   slider ticks and repeats
-    /// - if set on osu!lazer *with* `CL`, this field is the amount of hit
-    ///   slider heads, ticks, and repeats
+    /// - if set on osu!lazer *with* slider accuracy, this field is the amount
+    ///   of hit slider ticks and repeats
+    /// - if set on osu!lazer *without* slider accuracy, this field is the
+    ///   amount of hit slider heads, ticks, and repeats
     ///
     /// Only relevant for osu!lazer.
     pub large_tick_hits: u32,

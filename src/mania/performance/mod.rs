@@ -50,6 +50,7 @@ impl<'map> ManiaPerformance<'map> {
     /// Otherwise, the final attributes will be incorrect.
     ///
     /// [`Beatmap`]: crate::model::beatmap::Beatmap
+    /// [`ManiaDifficultyAttributes`]: crate::mania::ManiaDifficultyAttributes
     pub fn new(map_or_attrs: impl IntoModePerformance<'map, Mania>) -> Self {
         map_or_attrs.into_performance()
     }

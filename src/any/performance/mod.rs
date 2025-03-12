@@ -330,10 +330,10 @@ impl<'map> Performance<'map> {
     ///
     /// The meaning depends on the kind of score:
     /// - if set on osu!stable, this value is irrelevant and can be `0`
-    /// - if set on osu!lazer *without* `CL`, this value is the amount of hit
-    ///   slider ticks and repeats
-    /// - if set on osu!lazer *with* `CL`, this value is the amount of hit
-    ///   slider heads, ticks, and repeats
+    /// - if set on osu!lazer *with* slider accuracy, this value is the amount
+    ///   of hit slider ticks and repeats
+    /// - if set on osu!lazer *without* slider accuracy, this value is the
+    ///   amount of hit slider heads, ticks, and repeats
     pub fn large_tick_hits(self, large_tick_hits: u32) -> Self {
         if let Self::Osu(osu) = self {
             Self::Osu(osu.large_tick_hits(large_tick_hits))
