@@ -218,8 +218,6 @@ impl DifficultyValues {
             1.0
         };
 
-        let color_difficult_strains = color.count_top_weighted_strains(color_difficulty_value);
-        let rhythm_difficult_strains = rhythm.count_top_weighted_strains(rhythm_difficulty_value);
         let stamina_difficult_strains =
             stamina.count_top_weighted_strains(stamina_difficulty_value);
 
@@ -250,9 +248,6 @@ impl DifficultyValues {
         attrs.color = color_rating;
         attrs.stamina = stamina_rating;
         attrs.mono_stamina_factor = mono_stamina_factor;
-        attrs.rhythm_top_strains = rhythm_difficult_strains;
-        attrs.color_top_strains = color_difficult_strains;
-        attrs.stamina_top_strains = stamina_difficult_strains;
         attrs.stars = star_rating;
     }
 

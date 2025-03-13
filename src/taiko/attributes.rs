@@ -18,9 +18,6 @@ pub struct TaikoDifficultyAttributes {
     /// The ratio of stamina difficulty from mono-color (single color) streams to total
     /// stamina difficulty.
     pub mono_stamina_factor: f64,
-    pub rhythm_top_strains: f64,
-    pub color_top_strains: f64,
-    pub stamina_top_strains: f64,
     /// The final star rating.
     pub stars: f64,
     /// The maximum combo.
