@@ -15,7 +15,7 @@ use crate::{
         object::TaikoObject,
     },
     util::difficulty::norm,
-    Beatmap, Difficulty,
+    Beatmap, Difficulty, GameMods,
 };
 
 pub(crate) use self::skills::TaikoSkills;
@@ -171,7 +171,7 @@ impl DifficultyValues {
             clock_rate,
             &mut max_combo,
             &mut n_diff_objects,
-            difficulty.get_mods().hr(),
+            difficulty.get_mods(),
         );
 
         // The first hit object has no difficulty object
@@ -257,7 +257,7 @@ impl DifficultyValues {
         clock_rate: f64,
         max_combo: &mut u32,
         n_diff_objects: &mut usize,
-        hr: bool,
+        mods: &GameMods,
     ) -> TaikoDifficultyObjects {
         let mut hit_objects_iter = converted
             .hit_objects
@@ -281,10 +281,14 @@ impl DifficultyValues {
 
         let mut global_slider_velocity = converted.slider_multiplier;
 
-        if hr {
+        if mods.hr() {
             const SLIDER_MULTIPLIER: f64 = 1.4 * 4.0 / 3.0;
 
             global_slider_velocity *= SLIDER_MULTIPLIER;
+        }
+
+        if let Some(scroll_speed) = mods.scroll_speed() {
+            global_slider_velocity *= scroll_speed;
         }
 
         for (i, curr) in hit_objects_iter.enumerate() {

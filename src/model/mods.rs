@@ -223,6 +223,17 @@ impl GameMods {
             }
         }
     }
+
+    pub(crate) fn scroll_speed(&self) -> Option<f64> {
+        let Self::Lazer(mods) = self else { return None };
+
+        mods.iter()
+            .find_map(|m| match m {
+                GameMod::DifficultyAdjustTaiko(da) => Some(da.scroll_speed),
+                _ => None,
+            })
+            .flatten()
+    }
 }
 
 macro_rules! impl_map_attr {

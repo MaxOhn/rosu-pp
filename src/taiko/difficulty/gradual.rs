@@ -100,7 +100,7 @@ impl TaikoGradualDifficulty {
             clock_rate,
             &mut max_combo,
             &mut n_diff_objects,
-            difficulty.get_mods().hr(),
+            difficulty.get_mods(),
         );
 
         let skills = TaikoSkills::new(od_great, map.is_convert);
