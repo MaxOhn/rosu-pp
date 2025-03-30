@@ -314,6 +314,7 @@ impl_has_mod! {
     so: + SpunOut ["SpunOut"],
     ap: + Autopilot ["Autopilot"],
     bl: - Blinds ["Blinds"],
+    cl: - Classic ["Classic"],
     tc: - Traceable ["Traceable"],
 }
 
