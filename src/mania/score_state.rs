@@ -41,13 +41,13 @@ impl ManiaScoreState {
             return 0.0;
         }
 
-        let perfect_weight = if classic { 300 } else { 305 };
+        let perfect_weight = if classic { 60 } else { 61 };
 
         let numerator = perfect_weight * self.n320
-            + 300 * self.n300
-            + 200 * self.n200
-            + 100 * self.n100
-            + 50 * self.n50;
+            + 60 * self.n300
+            + 40 * self.n200
+            + 20 * self.n100
+            + 10 * self.n50;
 
         let denominator = perfect_weight * total_hits;
 
