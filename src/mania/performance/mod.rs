@@ -857,28 +857,40 @@ mod tests {
                 let max_left = n_remaining
                     .saturating_sub(new320 + new300 + n100.unwrap_or(0) + n50.unwrap_or(0));
 
-                let min_state = ManiaScoreState {
-                    n320: new320,
-                    n300: new300,
-                    n200: n200.unwrap_or(max_left.saturating_sub(
-                        n100.unwrap_or(max_left.saturating_sub(n50.unwrap_or(max_left)))
-                            + n50.unwrap_or(max_left),
-                    )),
-                    n100: n100.unwrap_or(max_left.saturating_sub(n50.unwrap_or(max_left))),
-                    n50: n50.unwrap_or(max_left),
-                    misses,
+                let min_state = {
+                    let n50 = n50.unwrap_or(max_left);
+                    let n100 = n100.unwrap_or(
+                        n_remaining.saturating_sub(new320 + new300 + n200.unwrap_or(0) + n50),
+                    );
+                    let n200 =
+                        n200.unwrap_or(n_remaining.saturating_sub(new320 + new300 + n100 + n50));
+
+                    ManiaScoreState {
+                        n320: new320,
+                        n300: new300,
+                        n200,
+                        n100,
+                        n50,
+                        misses,
+                    }
                 };
 
-                let max_state = ManiaScoreState {
-                    n320: new320,
-                    n300: new300,
-                    n200: n200.unwrap_or(max_left),
-                    n100: n100.unwrap_or(max_left.saturating_sub(n200.unwrap_or(max_left))),
-                    n50: n50.unwrap_or(max_left.saturating_sub(
-                        n200.unwrap_or(max_left)
-                            + n100.unwrap_or(max_left.saturating_sub(n200.unwrap_or(max_left))),
-                    )),
-                    misses,
+                let max_state = {
+                    let n200 = n200.unwrap_or(max_left);
+                    let n100 = n100.unwrap_or(
+                        n_remaining.saturating_sub(new320 + new300 + n200 + n50.unwrap_or(0)),
+                    );
+                    let n50 =
+                        n50.unwrap_or(n_remaining.saturating_sub(new320 + new300 + n200 + n100));
+
+                    ManiaScoreState {
+                        n320: new320,
+                        n300: new300,
+                        n200,
+                        n100,
+                        n50,
+                        misses,
+                    }
                 };
 
                 n300_iters += 1;
