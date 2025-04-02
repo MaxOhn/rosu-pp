@@ -34,15 +34,22 @@ impl ManiaScoreState {
     }
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.
-    pub fn accuracy(&self) -> f64 {
+    pub fn accuracy(&self, classic: bool) -> f64 {
         let total_hits = self.total_hits();
 
         if total_hits == 0 {
             return 0.0;
         }
 
-        let numerator = 6 * (self.n320 + self.n300) + 4 * self.n200 + 2 * self.n100 + self.n50;
-        let denominator = 6 * total_hits;
+        let perfect_weight = if classic { 60 } else { 61 };
+
+        let numerator = perfect_weight * self.n320
+            + 60 * self.n300
+            + 40 * self.n200
+            + 20 * self.n100
+            + 10 * self.n50;
+
+        let denominator = perfect_weight * total_hits;
 
         f64::from(numerator) / f64::from(denominator)
     }
