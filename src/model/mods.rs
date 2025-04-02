@@ -315,6 +315,7 @@ impl_has_mod! {
     ap: + Autopilot ["Autopilot"],
     bl: - Blinds ["Blinds"],
     cl: - Classic ["Classic"],
+    ho: - HoldOff ["HoldOff"],
     tc: - Traceable ["Traceable"],
 }
 

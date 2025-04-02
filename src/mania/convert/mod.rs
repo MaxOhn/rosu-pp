@@ -1,9 +1,11 @@
+use std::mem;
+
 use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
     model::{
         beatmap::Beatmap,
-        hit_object::{HitObjectKind, HoldNote, Spinner},
+        hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
     },
     util::{limited_queue::LimitedQueue, random::Random, sort},
     GameMods,
@@ -133,10 +135,15 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
     }
 
     map.hit_sounds.clear();
-    map.hit_objects = new_hit_objects;
+    mem::swap(&mut map.hit_objects, &mut new_hit_objects);
     map.hit_objects
         .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
     sort::osu_legacy(&mut map.hit_objects);
+
+    if mods.ho() {
+        new_hit_objects.clear();
+        apply_hold_off_to_beatmap(map, &mut new_hit_objects);
+    }
 
     map.mode = GameMode::Mania;
     map.is_convert = true;
@@ -190,11 +197,42 @@ fn target_columns(map: &Beatmap, mods: &GameMods) -> f32 {
         }
     }
 
-    // Keeping it in-sync with lazer
-    #[allow(clippy::manual_clamp)]
+    #[allow(clippy::manual_clamp, reason = "keeping it in-sync with lazer")]
     {
         ((rounded_od as i32) + 1).min(7).max(4) as f32
     }
+}
+
+fn apply_hold_off_to_beatmap(map: &mut Beatmap, buf: &mut Vec<HitObject>) {
+    let new_hit_objects_iter = map.hit_objects.iter().filter_map(|h| {
+        if h.is_hold_note() {
+            Some(HitObject {
+                pos: h.pos,
+                start_time: h.start_time,
+                kind: HitObjectKind::Circle,
+            })
+        } else {
+            None
+        }
+    });
+
+    let old_hit_objects_iter = map.hit_objects.iter().filter_map(|h| {
+        if h.is_circle() {
+            Some(HitObject {
+                pos: h.pos,
+                start_time: h.start_time,
+                kind: HitObjectKind::Circle,
+            })
+        } else {
+            None
+        }
+    });
+
+    buf.extend(old_hit_objects_iter.chain(new_hit_objects_iter));
+    mem::swap(&mut map.hit_objects, buf);
+
+    map.hit_objects
+        .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
 }
 
 #[cfg(test)]
