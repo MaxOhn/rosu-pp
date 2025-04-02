@@ -285,6 +285,10 @@ impl DifficultyValues {
             const SLIDER_MULTIPLIER: f64 = 1.4 * 4.0 / 3.0;
 
             global_slider_velocity *= SLIDER_MULTIPLIER;
+        } else if mods.ez() {
+            const SLIDER_MULTIPLIER: f64 = 0.8;
+
+            global_slider_velocity *= SLIDER_MULTIPLIER;
         }
 
         if let Some(scroll_speed) = mods.scroll_speed() {
