@@ -292,7 +292,7 @@ impl DifficultyValues {
         }
 
         if let Some(scroll_speed) = mods.scroll_speed() {
-            global_slider_velocity *= scroll_speed;
+            global_slider_velocity *= f64::from(scroll_speed as f32);
         }
 
         for (i, curr) in hit_objects_iter.enumerate() {
