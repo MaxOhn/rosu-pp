@@ -140,11 +140,6 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
         .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
     sort::osu_legacy(&mut map.hit_objects);
 
-    if mods.ho() {
-        new_hit_objects.clear();
-        apply_hold_off_to_beatmap(map, &mut new_hit_objects);
-    }
-
     map.mode = GameMode::Mania;
     map.is_convert = true;
 }
@@ -203,7 +198,7 @@ fn target_columns(map: &Beatmap, mods: &GameMods) -> f32 {
     }
 }
 
-fn apply_hold_off_to_beatmap(map: &mut Beatmap, buf: &mut Vec<HitObject>) {
+pub(super) fn apply_hold_off_to_beatmap(map: &mut Beatmap) {
     let new_hit_objects_iter = map.hit_objects.iter().filter_map(|h| {
         if h.is_hold_note() {
             Some(HitObject {
@@ -228,8 +223,9 @@ fn apply_hold_off_to_beatmap(map: &mut Beatmap, buf: &mut Vec<HitObject>) {
         }
     });
 
-    buf.extend(old_hit_objects_iter.chain(new_hit_objects_iter));
-    mem::swap(&mut map.hit_objects, buf);
+    let mut new_hit_objects = Vec::with_capacity(map.hit_objects.len());
+    new_hit_objects.extend(old_hit_objects_iter.chain(new_hit_objects_iter));
+    map.hit_objects = new_hit_objects;
 
     map.hit_objects
         .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));

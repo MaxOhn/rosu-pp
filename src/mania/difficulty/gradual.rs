@@ -4,7 +4,7 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     any::difficulty::skills::StrainSkill,
-    mania::object::ObjectParams,
+    mania::{convert, object::ObjectParams},
     model::{hit_object::HitObject, mode::ConvertError},
     Beatmap, Difficulty,
 };
@@ -65,7 +65,11 @@ struct NoteState {
 impl ManiaGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
-        let map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+        let mut map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+
+        if difficulty.get_mods().ho() {
+            convert::apply_hold_off_to_beatmap(map.to_mut());
+        }
 
         let take = difficulty.get_passed_objects();
         let total_columns = map.cs.round_ties_even().max(1.0);

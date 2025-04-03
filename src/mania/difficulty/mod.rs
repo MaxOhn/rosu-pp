@@ -12,7 +12,7 @@ use crate::{
     Beatmap,
 };
 
-use super::attributes::ManiaDifficultyAttributes;
+use super::{attributes::ManiaDifficultyAttributes, convert};
 
 pub mod gradual;
 mod object;
@@ -24,7 +24,11 @@ pub fn difficulty(
     difficulty: &Difficulty,
     map: &Beatmap,
 ) -> Result<ManiaDifficultyAttributes, ConvertError> {
-    let map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+    let mut map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+
+    if difficulty.get_mods().ho() {
+        convert::apply_hold_off_to_beatmap(map.to_mut());
+    }
 
     let n_objects = cmp::min(difficulty.get_passed_objects(), map.hit_objects.len()) as u32;
 
