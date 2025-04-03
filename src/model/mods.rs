@@ -122,24 +122,20 @@ impl GameMods {
 
     pub(crate) fn reflection(&self) -> Reflection {
         match self {
-            Self::Lazer(ref mods) => {
-                if mods.contains_intermode(GameModIntermode::HardRock) {
-                    return Reflection::Vertical;
-                }
-
-                mods.iter()
-                    .find_map(|m| match m {
-                        GameMod::MirrorOsu(mr) => match mr.reflection.as_deref() {
-                            None => Some(Reflection::Horizontal),
-                            Some("1") => Some(Reflection::Vertical),
-                            Some("2") => Some(Reflection::Both),
-                            Some(_) => Some(Reflection::None),
-                        },
-                        GameMod::MirrorCatch(_) => Some(Reflection::Horizontal),
-                        _ => None,
-                    })
-                    .unwrap_or(Reflection::None)
-            }
+            Self::Lazer(ref mods) => mods
+                .iter()
+                .find_map(|m| match m {
+                    GameMod::HardRockOsu(_) => Some(Reflection::Vertical),
+                    GameMod::MirrorOsu(mr) => match mr.reflection.as_deref() {
+                        None => Some(Reflection::Horizontal),
+                        Some("1") => Some(Reflection::Vertical),
+                        Some("2") => Some(Reflection::Both),
+                        Some(_) => Some(Reflection::None),
+                    },
+                    GameMod::MirrorCatch(_) => Some(Reflection::Horizontal),
+                    _ => None,
+                })
+                .unwrap_or(Reflection::None),
             Self::Intermode(ref mods) => {
                 if mods.contains(GameModIntermode::HardRock) {
                     Reflection::Vertical
