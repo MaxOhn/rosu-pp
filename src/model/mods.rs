@@ -61,7 +61,18 @@ impl GameMods {
     /// `1.0`.
     pub(crate) fn clock_rate(&self) -> f64 {
         match self {
-            Self::Lazer(ref mods) => mods.clock_rate().unwrap_or(1.0),
+            Self::Lazer(ref mods) => mods
+                .iter()
+                .find_map(|m| {
+                    let default = match m.intermode() {
+                        GameModIntermode::DoubleTime | GameModIntermode::Nightcore => 1.5,
+                        GameModIntermode::HalfTime | GameModIntermode::Daycore => 0.75,
+                        _ => return None,
+                    };
+
+                    Some(default * (m.clock_rate()? / default))
+                })
+                .unwrap_or(1.0),
             Self::Intermode(ref mods) => mods.legacy_clock_rate(),
             Self::Legacy(mods) => mods.clock_rate(),
         }
