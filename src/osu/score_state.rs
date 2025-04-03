@@ -1,3 +1,5 @@
+use crate::util::{float_ext::FloatExt, hint::unlikely};
+
 /// Aggregation for a score's current state.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OsuScoreState {
@@ -58,8 +60,8 @@ impl OsuScoreState {
 
     /// Calculate the accuracy between `0.0` and `1.0` for this state.
     pub fn accuracy(&self, origin: OsuScoreOrigin) -> f64 {
-        let mut numerator = 300 * self.n300 + 100 * self.n100 + 50 * self.n50;
-        let mut denominator = 300 * (self.n300 + self.n100 + self.n50 + self.misses);
+        let mut numerator = f64::from(6 * self.n300 + 2 * self.n100 + self.n50);
+        let mut denominator = f64::from(6 * (self.n300 + self.n100 + self.n50 + self.misses));
 
         match origin {
             OsuScoreOrigin::Stable => {}
@@ -70,8 +72,8 @@ impl OsuScoreState {
                 let slider_end_hits = self.slider_end_hits.min(max_slider_ends);
                 let large_tick_hits = self.large_tick_hits.min(max_large_ticks);
 
-                numerator += 150 * slider_end_hits + 30 * large_tick_hits;
-                denominator += 150 * max_slider_ends + 30 * max_large_ticks;
+                numerator += f64::from(3 * slider_end_hits) + 0.6 * f64::from(large_tick_hits);
+                denominator += f64::from(3 * max_slider_ends) + 0.6 * f64::from(max_large_ticks);
             }
             OsuScoreOrigin::WithoutSliderAcc {
                 max_large_ticks,
@@ -80,15 +82,15 @@ impl OsuScoreState {
                 let large_tick_hits = self.large_tick_hits.min(max_large_ticks);
                 let small_tick_hits = self.small_tick_hits.min(max_small_ticks);
 
-                numerator += 30 * large_tick_hits + 10 * small_tick_hits;
-                denominator += 30 * max_large_ticks + 10 * max_small_ticks;
+                numerator += 0.6 * f64::from(large_tick_hits) + 0.2 * f64::from(small_tick_hits);
+                denominator += 0.6 * f64::from(max_large_ticks) + 0.2 * f64::from(max_small_ticks);
             }
         }
 
-        if denominator == 0 {
+        if unlikely(denominator.eq(0.0)) {
             0.0
         } else {
-            f64::from(numerator) / f64::from(denominator)
+            numerator / denominator
         }
     }
 }
