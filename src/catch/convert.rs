@@ -23,7 +23,7 @@ use super::{
 
 const RNG_SEED: i32 = 1337;
 
-pub fn convert(map: &mut Beatmap) {
+pub const fn convert(map: &mut Beatmap) {
     map.mode = GameMode::Catch;
     map.is_convert = true;
 }

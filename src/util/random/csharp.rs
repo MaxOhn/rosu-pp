@@ -1,6 +1,6 @@
 // <https://github.com/dotnet/runtime/blob/5535e31a712343a63f5d7d796cd874e563e5ac14/src/libraries/System.Private.CoreLib/src/System/Random.cs#L13>
 pub struct Random {
-    _prng: CompatPrng,
+    prng: CompatPrng,
 }
 
 impl Random {
@@ -8,26 +8,26 @@ impl Random {
     pub fn new(seed: i32) -> Self {
         Self {
             // <https://github.com/dotnet/runtime/blob/15872212c29cecc8d82da4548c3060f2614665f7/src/libraries/System.Private.CoreLib/src/System/Random.CompatImpl.cs#L22>
-            _prng: CompatPrng::initialize(seed),
+            prng: CompatPrng::initialize(seed),
         }
     }
 
     // <https://github.com/dotnet/runtime/blob/15872212c29cecc8d82da4548c3060f2614665f7/src/libraries/System.Private.CoreLib/src/System/Random.CompatImpl.cs#L26>
     pub const fn next(&mut self) -> i32 {
-        self._prng.internal_sample()
+        self.prng.internal_sample()
     }
 
     // <https://github.com/dotnet/runtime/blob/15872212c29cecc8d82da4548c3060f2614665f7/src/libraries/System.Private.CoreLib/src/System/Random.CompatImpl.cs#L28>
     pub fn next_max(&mut self, max: i32) -> i32 {
-        (self._prng.sample() * f64::from(max)) as i32
+        (self.prng.sample() * f64::from(max)) as i32
     }
 }
 
 // <https://github.com/dotnet/runtime/blob/15872212c29cecc8d82da4548c3060f2614665f7/src/libraries/System.Private.CoreLib/src/System/Random.CompatImpl.cs#L256>
 struct CompatPrng {
-    _seed_array: [i32; 56],
-    _inext: i32,
-    _inextp: i32,
+    seed_array: [i32; 56],
+    inext: i32,
+    inextp: i32,
 }
 
 impl CompatPrng {
@@ -79,9 +79,9 @@ impl CompatPrng {
         }
 
         Self {
-            _seed_array: seed_array,
-            _inext: 0,
-            _inextp: 21,
+            seed_array,
+            inext: 0,
+            inextp: 21,
         }
     }
 
@@ -90,14 +90,14 @@ impl CompatPrng {
     }
 
     const fn internal_sample(&mut self) -> i32 {
-        let mut loc_inext = self._inext;
+        let mut loc_inext = self.inext;
         loc_inext += 1;
 
         if loc_inext >= 56 {
             loc_inext = 1;
         }
 
-        let mut loc_inextp = self._inextp;
+        let mut loc_inextp = self.inextp;
         loc_inextp += 1;
 
         if loc_inextp >= 56 {
@@ -105,7 +105,7 @@ impl CompatPrng {
         }
 
         let mut ret_val =
-            self._seed_array[loc_inext as usize] - self._seed_array[loc_inextp as usize];
+            self.seed_array[loc_inext as usize] - self.seed_array[loc_inextp as usize];
 
         if ret_val == i32::MAX {
             ret_val -= 1;
@@ -115,9 +115,9 @@ impl CompatPrng {
             ret_val += i32::MAX;
         }
 
-        self._seed_array[loc_inext as usize] = ret_val;
-        self._inext = loc_inext;
-        self._inextp = loc_inextp;
+        self.seed_array[loc_inext as usize] = ret_val;
+        self.inext = loc_inext;
+        self.inextp = loc_inextp;
 
         ret_val
     }

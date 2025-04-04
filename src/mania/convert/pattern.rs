@@ -179,7 +179,7 @@ fn column_to_pos(column: u8, total_columns: i32) -> f32 {
 pub struct ContainedColumns(u16);
 
 impl ContainedColumns {
-    pub fn insert(&mut self, column: u8) {
+    pub const fn insert(&mut self, column: u8) {
         self.0 |= 1 << column;
     }
 

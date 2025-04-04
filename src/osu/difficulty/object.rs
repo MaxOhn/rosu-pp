@@ -223,7 +223,7 @@ impl<'a> OsuDifficultyObject<'a> {
         h
     }
 
-    fn get_end_cursor_pos(hit_object: &OsuObject) -> Pos {
+    const fn get_end_cursor_pos(hit_object: &OsuObject) -> Pos {
         if let OsuObjectKind::Slider(ref slider) = hit_object.kind {
             // We don't have access to the slider's curve at this point so we
             // take the pre-computed value.

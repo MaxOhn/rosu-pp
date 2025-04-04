@@ -174,7 +174,7 @@ mod inner {
             let mut iter = self.inner.iter();
 
             while let Some(zero_count) = copy_non_zero(&mut iter, &mut vec) {
-                vec.extend(iter::repeat(0.0).take(zero_count));
+                vec.extend(iter::repeat_n(0.0, zero_count));
             }
 
             vec
@@ -295,7 +295,7 @@ mod inner {
             }
 
             #[inline]
-            pub fn as_value_mut(&mut self) -> &mut f64 {
+            pub const fn as_value_mut(&mut self) -> &mut f64 {
                 unsafe { &mut self.value }
             }
 
@@ -305,14 +305,14 @@ mod inner {
             }
 
             #[inline]
-            pub fn incr_zero_count(&mut self) {
+            pub const fn incr_zero_count(&mut self) {
                 unsafe {
                     self.zero_count += 1;
                 }
             }
 
             #[inline]
-            pub fn decr_zero_count(&mut self) {
+            pub const fn decr_zero_count(&mut self) {
                 unsafe {
                     self.zero_count -= 1;
                 }

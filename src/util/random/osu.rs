@@ -22,7 +22,7 @@ impl Random {
         }
     }
 
-    pub fn gen_unsigned(&mut self) -> u32 {
+    pub const fn gen_unsigned(&mut self) -> u32 {
         let t = self.x ^ (self.x << 11);
         self.x = self.y;
         self.y = self.z;
@@ -32,7 +32,7 @@ impl Random {
         self.w
     }
 
-    pub fn next_int(&mut self) -> i32 {
+    pub const fn next_int(&mut self) -> i32 {
         (INT_MASK & self.gen_unsigned()) as i32
     }
 
@@ -48,7 +48,7 @@ impl Random {
         (min + self.next_double() * (max - min)) as i32
     }
 
-    pub fn next_bool(&mut self) -> bool {
+    pub const fn next_bool(&mut self) -> bool {
         if self.bit_idx == 32 {
             self.bit_buf = self.gen_unsigned();
             self.bit_idx = 1;

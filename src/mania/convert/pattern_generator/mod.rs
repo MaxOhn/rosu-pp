@@ -16,7 +16,7 @@ pub struct PatternGenerator<'a> {
 }
 
 impl<'a> PatternGenerator<'a> {
-    fn new(
+    const fn new(
         hit_object: &'a HitObject,
         total_columns: i32,
         random: &'a mut Random,
