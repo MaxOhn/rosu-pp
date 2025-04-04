@@ -1,7 +1,7 @@
 use crate::{
     mania::object::ManiaObject,
     model::{beatmap::Beatmap, hit_object::HitObject},
-    util::random::Random,
+    util::random::osu::Random,
 };
 
 pub(super) mod end_time_object;

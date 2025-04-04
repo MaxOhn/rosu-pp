@@ -20,7 +20,7 @@ use crate::{
 
 pub(crate) use self::skills::TaikoSkills;
 
-use super::attributes::TaikoDifficultyAttributes;
+use super::{attributes::TaikoDifficultyAttributes, convert};
 
 mod color;
 pub mod gradual;
@@ -39,7 +39,11 @@ pub fn difficulty(
     difficulty: &Difficulty,
     map: &Beatmap,
 ) -> Result<TaikoDifficultyAttributes, ConvertError> {
-    let map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
+    let mut map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
+
+    if let Some(seed) = difficulty.get_mods().random_seed() {
+        convert::apply_random_to_beatmap(map.to_mut(), seed);
+    }
 
     let HitWindows {
         od_great,
@@ -158,7 +162,7 @@ pub struct DifficultyValues {
 }
 
 impl DifficultyValues {
-    pub fn calculate(difficulty: &Difficulty, converted: &Beatmap, great_hit_window: f64) -> Self {
+    pub fn calculate(difficulty: &Difficulty, map: &Beatmap, great_hit_window: f64) -> Self {
         let take = difficulty.get_passed_objects();
         let clock_rate = difficulty.get_clock_rate();
 
@@ -166,7 +170,7 @@ impl DifficultyValues {
         let mut max_combo = 0;
 
         let diff_objects = Self::create_difficulty_objects(
-            converted,
+            map,
             take as u32,
             clock_rate,
             &mut max_combo,
@@ -177,7 +181,7 @@ impl DifficultyValues {
         // The first hit object has no difficulty object
         n_diff_objects = n_diff_objects.saturating_sub(1);
 
-        let mut skills = TaikoSkills::new(great_hit_window, converted.is_convert);
+        let mut skills = TaikoSkills::new(great_hit_window, map.is_convert);
 
         for hit_object in diff_objects.iter().take(n_diff_objects) {
             skills.rhythm.process(&hit_object.get(), &diff_objects);

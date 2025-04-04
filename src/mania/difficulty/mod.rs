@@ -30,6 +30,10 @@ pub fn difficulty(
         convert::apply_hold_off_to_beatmap(map.to_mut());
     }
 
+    if let Some(seed) = difficulty.get_mods().random_seed() {
+        convert::apply_random_to_beatmap(map.to_mut(), seed);
+    }
+
     let n_objects = cmp::min(difficulty.get_passed_objects(), map.hit_objects.len()) as u32;
 
     let values = DifficultyValues::calculate(difficulty, &map);

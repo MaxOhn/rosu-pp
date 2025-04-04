@@ -5,6 +5,7 @@ use rosu_map::section::general::GameMode;
 use crate::{
     any::difficulty::skills::StrainSkill,
     model::{beatmap::HitWindows, hit_object::HitObject, mode::ConvertError},
+    taiko::convert,
     util::sync::RefCount,
     Beatmap, Difficulty,
 };
@@ -69,7 +70,11 @@ enum FirstTwoCombos {
 impl TaikoGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!taiko maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
-        let map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
+        let mut map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
+
+        if let Some(seed) = difficulty.get_mods().random_seed() {
+            convert::apply_random_to_beatmap(map.to_mut(), seed);
+        }
 
         let take = difficulty.get_passed_objects();
         let clock_rate = difficulty.get_clock_rate();

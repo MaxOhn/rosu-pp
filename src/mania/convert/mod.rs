@@ -1,13 +1,16 @@
-use std::mem;
-
 use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
+    mania::object::ManiaObject,
     model::{
         beatmap::Beatmap,
         hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
     },
-    util::{limited_queue::LimitedQueue, random::Random, sort},
+    util::{
+        limited_queue::LimitedQueue,
+        random::{csharp::Random as CsharpRandom, osu::Random as OsuRandom},
+        sort,
+    },
     GameMods,
 };
 
@@ -31,7 +34,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
         + (map.od * 41.2) as i32
         + map.ar.round_ties_even() as i32;
 
-    let mut random = Random::new(seed);
+    let mut random = OsuRandom::new(seed);
 
     map.cs = target_columns(map, mods);
 
@@ -135,7 +138,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
     }
 
     map.hit_sounds.clear();
-    mem::swap(&mut map.hit_objects, &mut new_hit_objects);
+    map.hit_objects = new_hit_objects;
     map.hit_objects
         .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
     sort::osu_legacy(&mut map.hit_objects);
@@ -226,9 +229,27 @@ pub(super) fn apply_hold_off_to_beatmap(map: &mut Beatmap) {
     let mut new_hit_objects = Vec::with_capacity(map.hit_objects.len());
     new_hit_objects.extend(old_hit_objects_iter.chain(new_hit_objects_iter));
     map.hit_objects = new_hit_objects;
+    map.hit_sounds.clear();
 
     map.hit_objects
         .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+}
+
+pub(super) fn apply_random_to_beatmap(map: &mut Beatmap, seed: i32) {
+    let mut rng = CsharpRandom::new(seed);
+
+    let total_columns = map.cs;
+    let available_columns = total_columns as u8;
+    let mut shuffled_columns: Vec<_> = (0..available_columns).collect();
+
+    shuffled_columns.sort_by_cached_key(|_| rng.next());
+    let divisor = 512.0 / total_columns;
+
+    for h in map.hit_objects.iter_mut() {
+        let old_column = ManiaObject::column(h.pos.x, total_columns);
+        let new_column = shuffled_columns[old_column];
+        h.pos.x = f32::ceil(f32::from(new_column) * divisor);
+    }
 }
 
 #[cfg(test)]

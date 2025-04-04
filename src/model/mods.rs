@@ -241,6 +241,20 @@ impl GameMods {
             })
             .flatten()
     }
+
+    pub(crate) fn random_seed(&self) -> Option<i32> {
+        let Self::Lazer(mods) = self else { return None };
+
+        mods.iter()
+            .find_map(|m| match m {
+                // `RandomOsu` is not implemented because it relies on
+                // hitobjects' combo index which is never stored.
+                GameMod::RandomTaiko(m) => m.seed,
+                GameMod::RandomMania(m) => m.seed,
+                _ => None,
+            })
+            .map(|seed| seed as i32)
+    }
 }
 
 macro_rules! impl_map_attr {

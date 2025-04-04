@@ -6,7 +6,7 @@ use crate::{
         hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
         mods::Reflection,
     },
-    util::{float_ext::FloatExt, random::Random},
+    util::{float_ext::FloatExt, random::osu::Random},
 };
 
 use super::{

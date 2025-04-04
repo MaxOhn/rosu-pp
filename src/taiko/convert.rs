@@ -1,7 +1,9 @@
 use std::cmp;
 
 use rosu_map::{
-    section::{general::GameMode, timing_points::ControlPoint},
+    section::{
+        general::GameMode, hit_objects::hit_samples::HitSoundType, timing_points::ControlPoint,
+    },
     util::Pos,
 };
 
@@ -11,7 +13,10 @@ use crate::{
         control_point::{DifficultyPoint, EffectPoint, TimingPoint},
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
     },
-    util::{float_ext::FloatExt, get_precision_adjusted_beat_len, sort::TandemSorter},
+    util::{
+        float_ext::FloatExt, get_precision_adjusted_beat_len,
+        random::csharp::Random as CsharpRandom, sort::TandemSorter,
+    },
 };
 
 const VELOCITY_MULTIPLIER: f32 = 1.4;
@@ -178,6 +183,24 @@ impl<'c> SliderParams<'c> {
             duration: 0,
             tick_spacing: 0.0,
             slider_velocity,
+        }
+    }
+}
+
+pub(super) fn apply_random_to_beatmap(map: &mut Beatmap, seed: i32) {
+    let mut rng = CsharpRandom::new(seed);
+
+    for (h, s) in map.hit_objects.iter().zip(map.hit_sounds.iter_mut()) {
+        if !h.is_circle() {
+            continue;
+        }
+
+        if rng.next_max(2) == 0 {
+            // Center
+            *s &= !(HitSoundType::CLAP | HitSoundType::WHISTLE);
+        } else {
+            // Rim
+            *s = HitSoundType::from(u8::from(*s) | HitSoundType::CLAP);
         }
     }
 }
