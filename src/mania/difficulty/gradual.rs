@@ -71,6 +71,10 @@ impl ManiaGradualDifficulty {
             convert::apply_hold_off_to_beatmap(map.to_mut());
         }
 
+        if difficulty.get_mods().invert() {
+            convert::apply_invert_to_beatmap(map.to_mut());
+        }
+
         if let Some(seed) = difficulty.get_mods().random_seed() {
             convert::apply_random_to_beatmap(map.to_mut(), seed);
         }

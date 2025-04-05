@@ -4,6 +4,7 @@ use crate::{
     mania::object::ManiaObject,
     model::{
         beatmap::Beatmap,
+        control_point::TimingPoint,
         hit_object::{HitObject, HitObjectKind, HoldNote, Spinner},
     },
     util::{
@@ -233,6 +234,75 @@ pub(super) fn apply_hold_off_to_beatmap(map: &mut Beatmap) {
 
     map.hit_objects
         .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+}
+
+pub(super) fn apply_invert_to_beatmap(map: &mut Beatmap) {
+    let mut new_objects = Vec::new();
+    let mut column_buf = Vec::new();
+    let mut locations = Vec::new();
+
+    let total_columns = map.cs;
+
+    for column in 0..total_columns as usize {
+        let iter = map
+            .hit_objects
+            .iter()
+            .filter(|h| ManiaObject::column(h.pos.x, total_columns) == column);
+
+        column_buf.clear();
+        column_buf.extend(iter);
+
+        let notes = column_buf
+            .iter()
+            .filter(|h| h.is_circle())
+            .map(|h| h.start_time);
+
+        let hold_notes = column_buf
+            .iter()
+            .filter_map(|h| match h.kind {
+                HitObjectKind::Hold(hold) => Some([h.start_time, h.start_time + hold.duration]),
+                _ => None,
+            })
+            .flatten();
+
+        locations.clear();
+        locations.extend(notes.chain(hold_notes));
+        locations.sort_by(|a, b| a.total_cmp(&b));
+
+        let iter = locations.windows(2).map(|window| {
+            let [start_time, end_time] = *window else {
+                unreachable!()
+            };
+
+            // * Full duration of the hold note.
+            let mut duration = end_time - start_time;
+
+            // * Beat length at the end of the hold note.
+            let beat_length = map
+                .timing_point_at(end_time)
+                .map_or(TimingPoint::DEFAULT_BEAT_LEN, |tp| tp.beat_len);
+
+            // * Decrease the duration by at most a 1/4 beat to ensure there's no instantaneous notes.
+            duration = f64::max(duration / 2.0, duration - beat_length / 4.0);
+
+            HitObject {
+                pos: column_buf[0].pos,
+                start_time,
+                kind: HitObjectKind::Hold(HoldNote { duration }),
+            }
+        });
+
+        new_objects.extend(iter);
+    }
+
+    map.hit_objects = new_objects;
+    map.hit_sounds.clear();
+
+    map.hit_objects
+        .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+
+    // * No breaks
+    map.breaks.clear();
 }
 
 pub(super) fn apply_random_to_beatmap(map: &mut Beatmap, seed: i32) {
