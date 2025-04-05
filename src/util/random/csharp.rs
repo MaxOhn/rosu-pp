@@ -1,3 +1,5 @@
+use crate::util::hint::unlikely;
+
 // <https://github.com/dotnet/runtime/blob/5535e31a712343a63f5d7d796cd874e563e5ac14/src/libraries/System.Private.CoreLib/src/System/Random.cs#L13>
 pub struct Random {
     prng: CompatPrng,
@@ -34,7 +36,7 @@ impl CompatPrng {
     fn initialize(seed: i32) -> Self {
         let mut seed_array = [0; 56];
 
-        let subtraction = if seed == i32::MIN {
+        let subtraction = if unlikely(seed == i32::MIN) {
             i32::MAX
         } else {
             i32::abs(seed)
@@ -70,7 +72,7 @@ impl CompatPrng {
                     n -= 55;
                 }
 
-                seed_array[i] -= seed_array[1 + n];
+                seed_array[i] = seed_array[i].wrapping_sub(seed_array[1 + n]);
 
                 if seed_array[i] < 0 {
                     seed_array[i] += i32::MAX;
