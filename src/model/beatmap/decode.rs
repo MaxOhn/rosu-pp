@@ -279,13 +279,28 @@ impl From<BeatmapState> for Beatmap {
         state.flush_pending_points();
 
         let Difficulty {
-            hp_drain_rate,
-            circle_size,
-            overall_difficulty,
-            approach_rate,
-            slider_multiplier,
-            slider_tick_rate,
+            mut hp_drain_rate,
+            mut circle_size,
+            mut overall_difficulty,
+            mut approach_rate,
+            mut slider_multiplier,
+            mut slider_tick_rate,
         } = state.difficulty;
+
+        hp_drain_rate = hp_drain_rate.clamp(0.0, 10.0);
+
+        // * mania uses "circle size" for key count, thus different allowable range
+        circle_size = if state.mode == GameMode::Mania {
+            circle_size.clamp(1.0, 18.0)
+        } else {
+            circle_size.clamp(0.0, 10.0)
+        };
+
+        overall_difficulty = overall_difficulty.clamp(0.0, 10.0);
+        approach_rate = approach_rate.clamp(0.0, 10.0);
+
+        slider_multiplier = slider_multiplier.clamp(0.4, 3.6);
+        slider_tick_rate = slider_tick_rate.clamp(0.5, 8.0);
 
         let mut sorter = sort::TandemSorter::new_stable(&state.hit_objects, |a, b| {
             a.start_time.total_cmp(&b.start_time)
