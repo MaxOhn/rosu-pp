@@ -65,8 +65,11 @@ impl GameMods {
                 .iter()
                 .find_map(|m| {
                     let default = match m.intermode() {
-                        GameModIntermode::DoubleTime | GameModIntermode::Nightcore => 1.5,
-                        GameModIntermode::HalfTime | GameModIntermode::Daycore => 0.75,
+                        GameModIntermode::DoubleTime | GameModIntermode::HalfTime => {
+                            return m.clock_rate()
+                        }
+                        GameModIntermode::Nightcore => 1.5,
+                        GameModIntermode::Daycore => 0.75,
                         _ => return None,
                     };
 
