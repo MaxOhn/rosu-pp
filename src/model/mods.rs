@@ -61,7 +61,21 @@ impl GameMods {
     /// `1.0`.
     pub(crate) fn clock_rate(&self) -> f64 {
         match self {
-            Self::Lazer(ref mods) => mods.clock_rate().unwrap_or(1.0),
+            Self::Lazer(ref mods) => mods
+                .iter()
+                .find_map(|m| {
+                    let default = match m.intermode() {
+                        GameModIntermode::DoubleTime | GameModIntermode::HalfTime => {
+                            return m.clock_rate()
+                        }
+                        GameModIntermode::Nightcore => 1.5,
+                        GameModIntermode::Daycore => 0.75,
+                        _ => return None,
+                    };
+
+                    Some(default * (m.clock_rate()? / default))
+                })
+                .unwrap_or(1.0),
             Self::Intermode(ref mods) => mods.legacy_clock_rate(),
             Self::Legacy(mods) => mods.clock_rate(),
         }
@@ -111,24 +125,20 @@ impl GameMods {
 
     pub(crate) fn reflection(&self) -> Reflection {
         match self {
-            Self::Lazer(ref mods) => {
-                if mods.contains_intermode(GameModIntermode::HardRock) {
-                    return Reflection::Vertical;
-                }
-
-                mods.iter()
-                    .find_map(|m| match m {
-                        GameMod::MirrorOsu(mr) => match mr.reflection.as_deref() {
-                            None => Some(Reflection::Horizontal),
-                            Some("1") => Some(Reflection::Vertical),
-                            Some("2") => Some(Reflection::Both),
-                            Some(_) => Some(Reflection::None),
-                        },
-                        GameMod::MirrorCatch(_) => Some(Reflection::Horizontal),
-                        _ => None,
-                    })
-                    .unwrap_or(Reflection::None)
-            }
+            Self::Lazer(ref mods) => mods
+                .iter()
+                .find_map(|m| match m {
+                    GameMod::HardRockOsu(_) => Some(Reflection::Vertical),
+                    GameMod::MirrorOsu(mr) => match mr.reflection.as_deref() {
+                        None => Some(Reflection::Horizontal),
+                        Some("1") => Some(Reflection::Vertical),
+                        Some("2") => Some(Reflection::Both),
+                        Some(_) => Some(Reflection::None),
+                    },
+                    GameMod::MirrorCatch(_) => Some(Reflection::Horizontal),
+                    _ => None,
+                })
+                .unwrap_or(Reflection::None),
             Self::Intermode(ref mods) => {
                 if mods.contains(GameModIntermode::HardRock) {
                     Reflection::Vertical
@@ -223,6 +233,31 @@ impl GameMods {
             }
         }
     }
+
+    pub(crate) fn scroll_speed(&self) -> Option<f64> {
+        let Self::Lazer(mods) = self else { return None };
+
+        mods.iter()
+            .find_map(|m| match m {
+                GameMod::DifficultyAdjustTaiko(da) => Some(da.scroll_speed),
+                _ => None,
+            })
+            .flatten()
+    }
+
+    pub(crate) fn random_seed(&self) -> Option<i32> {
+        let Self::Lazer(mods) = self else { return None };
+
+        mods.iter()
+            .find_map(|m| match m {
+                // `RandomOsu` is not implemented because it relies on
+                // hitobjects' combo index which is never stored.
+                GameMod::RandomTaiko(m) => m.seed,
+                GameMod::RandomMania(m) => m.seed,
+                _ => None,
+            })
+            .map(|seed| seed as i32)
+    }
 }
 
 macro_rules! impl_map_attr {
@@ -301,7 +336,11 @@ impl_has_mod! {
     rx: + Relax ["Relax"],
     fl: + Flashlight ["Flashlight"],
     so: + SpunOut ["SpunOut"],
+    ap: + Autopilot ["Autopilot"],
     bl: - Blinds ["Blinds"],
+    cl: - Classic ["Classic"],
+    invert: - Invert ["Invert"],
+    ho: - HoldOff ["HoldOff"],
     tc: - Traceable ["Traceable"],
 }
 

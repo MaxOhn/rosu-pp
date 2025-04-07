@@ -2,20 +2,19 @@ use std::cmp;
 
 use rosu_map::section::general::GameMode;
 
+use self::calculator::TaikoPerformanceCalculator;
+
 use crate::{
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance},
     model::{mode::ConvertError, mods::GameMods},
     osu::OsuPerformance,
-    util::{map_or_attrs::MapOrAttrs, special_functions},
+    util::map_or_attrs::MapOrAttrs,
     Performance,
 };
 
-use super::{
-    attributes::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
-    score_state::TaikoScoreState,
-    Taiko,
-};
+use super::{attributes::TaikoPerformanceAttributes, score_state::TaikoScoreState, Taiko};
 
+mod calculator;
 pub mod gradual;
 
 /// Performance calculator on osu!taiko maps.
@@ -49,6 +48,7 @@ impl<'map> TaikoPerformance<'map> {
     /// Otherwise, the final attributes will be incorrect.
     ///
     /// [`Beatmap`]: crate::model::beatmap::Beatmap
+    /// [`TaikoDifficultyAttributes`]: crate::taiko::TaikoDifficultyAttributes
     pub fn new(map_or_attrs: impl IntoModePerformance<'map, Taiko>) -> Self {
         map_or_attrs.into_performance()
     }
@@ -197,7 +197,6 @@ impl<'map> TaikoPerformance<'map> {
     }
 
     /// Provide parameters through a [`TaikoScoreState`].
-    #[allow(clippy::needless_pass_by_value)]
     pub const fn state(mut self, state: TaikoScoreState) -> Self {
         let TaikoScoreState {
             max_combo,
@@ -315,13 +314,7 @@ impl<'map> TaikoPerformance<'map> {
             MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Taiko>(map)?,
         };
 
-        let inner = TaikoPerformanceInner {
-            mods: self.difficulty.get_mods(),
-            state,
-            attrs,
-        };
-
-        Ok(inner.calculate())
+        Ok(TaikoPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state).calculate())
     }
 
     pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Taiko>) -> Self {
@@ -392,188 +385,6 @@ impl<'map, T: IntoModePerformance<'map, Taiko>> From<T> for TaikoPerformance<'ma
     }
 }
 
-struct TaikoPerformanceInner<'mods> {
-    attrs: TaikoDifficultyAttributes,
-    mods: &'mods GameMods,
-    state: TaikoScoreState,
-}
-
-impl TaikoPerformanceInner<'_> {
-    fn calculate(self) -> TaikoPerformanceAttributes {
-        // * The effectiveMissCount is calculated by gaining a ratio for totalSuccessfulHits
-        // * and increasing the miss penalty for shorter object counts lower than 1000.
-        let total_successful_hits = self.total_successful_hits();
-
-        let estimated_unstable_rate = self
-            .compute_deviation_upper_bound(total_successful_hits)
-            .map(|v| v * 10.0);
-
-        let effective_miss_count = if total_successful_hits > 0 {
-            (1000.0 / f64::from(total_successful_hits)).max(1.0) * f64::from(self.state.misses)
-        } else {
-            0.0
-        };
-
-        let mut multiplier = 1.13;
-
-        if self.mods.hd() && !self.attrs.is_convert {
-            multiplier *= 1.075;
-        }
-
-        if self.mods.ez() {
-            multiplier *= 0.95;
-        }
-
-        let diff_value =
-            self.compute_difficulty_value(effective_miss_count, estimated_unstable_rate);
-        let acc_value = self.compute_accuracy_value(estimated_unstable_rate);
-
-        let pp = (diff_value.powf(1.1) + acc_value.powf(1.1)).powf(1.0 / 1.1) * multiplier;
-
-        TaikoPerformanceAttributes {
-            difficulty: self.attrs,
-            pp,
-            pp_acc: acc_value,
-            pp_difficulty: diff_value,
-            effective_miss_count,
-            estimated_unstable_rate,
-        }
-    }
-
-    fn compute_difficulty_value(
-        &self,
-        effective_miss_count: f64,
-        estimated_unstable_rate: Option<f64>,
-    ) -> f64 {
-        let Some(estimated_unstable_rate) = estimated_unstable_rate else {
-            return 0.0;
-        };
-
-        let attrs = &self.attrs;
-        let exp_base = 5.0 * (attrs.stars / 0.115).max(1.0) - 4.0;
-        let mut diff_value = exp_base.powf(2.25) / 1150.0;
-
-        let len_bonus = 1.0 + 0.1 * (f64::from(attrs.max_combo) / 1500.0).min(1.0);
-        diff_value *= len_bonus;
-
-        diff_value *= 0.986_f64.powf(effective_miss_count);
-
-        if self.mods.ez() {
-            diff_value *= 0.9;
-        }
-
-        if self.mods.hd() {
-            diff_value *= 1.025;
-        }
-
-        if self.mods.hr() {
-            diff_value *= 1.10;
-        }
-
-        if self.mods.fl() {
-            diff_value *=
-                (1.05 - (self.attrs.mono_stamina_factor / 50.0).min(1.0) * len_bonus).max(1.0);
-        }
-
-        // * Scale accuracy more harshly on nearly-completely mono (single coloured) speed maps.
-        let acc_scaling_exp = f64::from(2) + self.attrs.mono_stamina_factor;
-        let acc_scaling_shift = f64::from(300) - f64::from(100) * self.attrs.mono_stamina_factor;
-
-        diff_value
-            * (special_functions::erf(
-                acc_scaling_shift / (2.0_f64.sqrt() * estimated_unstable_rate),
-            ))
-            .powf(acc_scaling_exp)
-    }
-
-    fn compute_accuracy_value(&self, estimated_unstable_rate: Option<f64>) -> f64 {
-        if self.attrs.great_hit_window <= 0.0 {
-            return 0.0;
-        }
-
-        let Some(estimated_unstable_rate) = estimated_unstable_rate else {
-            return 0.0;
-        };
-
-        let mut acc_value =
-            (70.0 / estimated_unstable_rate).powf(1.1) * self.attrs.stars.powf(0.4) * 100.0;
-
-        let len_bonus = (self.total_hits() / 1500.0).powf(0.3).min(1.15);
-
-        // * Slight HDFL Bonus for accuracy. A clamp is used to prevent against negative values.
-        if self.mods.hd() && self.mods.fl() && !self.attrs.is_convert {
-            acc_value *= (1.05 * len_bonus).max(1.0);
-        }
-
-        acc_value
-    }
-
-    // * Computes an upper bound on the player's tap deviation based on the OD, number of circles and sliders,
-    // * and the hit judgements, assuming the player's mean hit error is 0. The estimation is consistent in that
-    // * two SS scores on the same map with the same settings will always return the same deviation.
-    fn compute_deviation_upper_bound(&self, total_successful_hits: u32) -> Option<f64> {
-        if total_successful_hits == 0 || self.attrs.great_hit_window <= 0.0 {
-            return None;
-        }
-
-        let h300 = self.attrs.great_hit_window;
-        let h100 = self.attrs.ok_hit_window;
-        let n = self.total_hits();
-
-        #[allow(clippy::items_after_statements, clippy::unreadable_literal)]
-        // * 99% critical value for the normal distribution (one-tailed).
-        const Z: f64 = 2.32634787404;
-
-        // * The upper bound on deviation, calculated with the ratio of 300s to objects, and the great hit window.
-        let calc_deviation_great_window = || {
-            if self.state.n300 == 0 {
-                return None;
-            }
-
-            // * Proportion of greats hit.
-            let p = f64::from(self.state.n300) / n;
-
-            // * We can be 99% confident that p is at least this value.
-            let p_lower_bound = (n * p + Z * Z / 2.0) / (n + Z * Z)
-                - Z / (n + Z * Z) * (n * p * (1.0 - p) + Z * Z / 4.0).sqrt();
-
-            // * We can be 99% confident that the deviation is not higher than:
-            Some(h300 / (2.0_f64.sqrt() * special_functions::erf_inv(p_lower_bound)))
-        };
-
-        // * The upper bound on deviation, calculated with the ratio of 300s + 100s to objects, and the good hit window.
-        // * This will return a lower value than the first method when the number of 100s is high, but the miss count is low.
-        let calc_deviation_good_window = || {
-            // * Proportion of greats + goods hit.
-            let p = f64::from(total_successful_hits) / n;
-
-            // * We can be 99% confident that p is at least this value.
-            let p_lower_bound = (n * p + Z * Z / 2.0) / (n + Z * Z)
-                - Z / (n + Z * Z) * (n * p * (1.0 - p) + Z * Z / 4.0).sqrt();
-
-            // * We can be 99% confident that the deviation is not higher than:
-            h100 / (2.0_f64.sqrt() * special_functions::erf_inv(p_lower_bound))
-        };
-
-        let deviation_great_window = calc_deviation_great_window();
-        let deviation_good_window = calc_deviation_good_window();
-
-        let Some(deviation_great_window) = deviation_great_window else {
-            return Some(deviation_good_window);
-        };
-
-        Some(deviation_great_window.min(deviation_good_window))
-    }
-
-    const fn total_hits(&self) -> f64 {
-        self.state.total_hits() as f64
-    }
-
-    const fn total_successful_hits(&self) -> u32 {
-        self.state.n300 + self.state.n100
-    }
-}
-
 fn accuracy(n300: u32, n100: u32, misses: u32) -> f64 {
     if n300 + n100 + misses == 0 {
         return 0.0;
@@ -595,6 +406,7 @@ mod test {
     use crate::{
         any::{DifficultyAttributes, PerformanceAttributes},
         osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
+        taiko::TaikoDifficultyAttributes,
         Beatmap,
     };
 

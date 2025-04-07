@@ -1,5 +1,7 @@
 pub mod difficulty;
 pub mod float_ext;
+pub mod hint;
+pub mod interval_grouping;
 pub mod limited_queue;
 pub mod map_or_attrs;
 pub mod random;
@@ -7,6 +9,9 @@ pub mod sort;
 pub mod special_functions;
 pub mod strains_vec;
 pub mod sync;
+
+#[macro_use]
+mod macros;
 
 pub fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {
     let slider_velocity_as_beat_len = -100.0 / slider_velocity_multiplier;

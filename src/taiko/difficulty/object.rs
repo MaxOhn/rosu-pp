@@ -1,12 +1,14 @@
 use std::slice::Iter;
 
 use crate::{
-    any::difficulty::object::IDifficultyObject,
+    any::difficulty::object::{HasStartTime, IDifficultyObject, IDifficultyObjects},
+    model::control_point::{EffectPoint, TimingPoint},
     taiko::object::{HitType, TaikoObject},
-    util::sync::RefCount,
+    util::{interval_grouping::HasInterval, sync::RefCount},
+    Beatmap,
 };
 
-use super::{color::TaikoDifficultyColor, rhythm::HitObjectRhythm};
+use super::{color::color_data::ColorData, rhythm::rhythm_data::RhythmData};
 
 #[derive(Debug)]
 pub struct TaikoDifficultyObject {
@@ -16,22 +18,30 @@ pub struct TaikoDifficultyObject {
     pub base_hit_type: HitType,
     pub mono_idx: MonoIndex,
     pub note_idx: usize,
-    pub rhythm: &'static HitObjectRhythm,
-    pub color: TaikoDifficultyColor,
+    pub rhythm_data: RhythmData,
+    pub color_data: ColorData,
+    pub effective_bpm: f64,
 }
 
 impl TaikoDifficultyObject {
     pub fn new(
         hit_object: &TaikoObject,
         last_object: &TaikoObject,
-        last_last_object: &TaikoObject,
         clock_rate: f64,
         idx: usize,
+        map: &Beatmap,
+        global_slider_velocity: f64,
         objects: &mut TaikoDifficultyObjects,
     ) -> RefCount<Self> {
         let delta_time = (hit_object.start_time - last_object.start_time) / clock_rate;
-        let rhythm = closest_rhythm(delta_time, last_object, last_last_object, clock_rate);
-        let color = TaikoDifficultyColor::default();
+
+        let prev_delta_time = idx
+            .checked_sub(1)
+            .map(|i| objects.objects[i].get().delta_time);
+
+        let color_data = ColorData::default();
+        let rhythm_data = RhythmData::new(delta_time, prev_delta_time);
+
         let mut note_idx = 0;
 
         let mono_idx = match hit_object.hit_type {
@@ -48,15 +58,36 @@ impl TaikoDifficultyObject {
             HitType::NonHit => MonoIndex::None,
         };
 
+        let start_time = hit_object.start_time / clock_rate;
+
+        // * Using `hitObject.StartTime` causes floating point error differences
+        let normalized_start_time = start_time * clock_rate;
+
+        // * Retrieve the timing point at the note's start time
+        let curr_control_point_bpm = map
+            .timing_point_at(normalized_start_time)
+            .map_or(TimingPoint::DEFAULT_BPM, TimingPoint::bpm);
+
+        // * Calculate the slider velocity at the note's start time.
+        let curr_slider_velocity = calculate_slider_velocity(
+            map,
+            normalized_start_time,
+            clock_rate,
+            global_slider_velocity,
+        );
+
+        let effective_bpm = curr_control_point_bpm * curr_slider_velocity;
+
         let this = RefCount::new(Self {
             idx,
             delta_time,
-            start_time: hit_object.start_time / clock_rate,
+            start_time,
             base_hit_type: hit_object.hit_type,
             mono_idx,
             note_idx,
-            rhythm,
-            color,
+            rhythm_data,
+            color_data,
+            effective_bpm,
         });
 
         match hit_object.hit_type {
@@ -72,6 +103,27 @@ impl TaikoDifficultyObject {
         }
 
         this
+    }
+}
+
+fn calculate_slider_velocity(
+    map: &Beatmap,
+    start_time: f64,
+    clock_rate: f64,
+    global_slider_velocity: f64,
+) -> f64 {
+    let active_effect_control_point_scroll_speed = map
+        .effect_point_at(start_time)
+        .map_or(EffectPoint::DEFAULT_SCROLL_SPEED, |effect_point| {
+            effect_point.scroll_speed
+        });
+
+    global_slider_velocity * active_effect_control_point_scroll_speed * clock_rate
+}
+
+impl HasInterval for TaikoDifficultyObject {
+    fn interval(&self) -> f64 {
+        self.delta_time
     }
 }
 
@@ -151,41 +203,25 @@ impl TaikoDifficultyObjects {
     }
 }
 
-#[rustfmt::skip]
-pub static COMMON_RHYTHMS: [HitObjectRhythm; 9] = [
-    HitObjectRhythm { id: 0, ratio: 1.0, difficulty: 0.0 },
-    HitObjectRhythm { id: 1, ratio: 2.0 / 1.0, difficulty: 0.3 },
-    HitObjectRhythm { id: 2, ratio: 1.0 / 2.0, difficulty: 0.5 },
-    HitObjectRhythm { id: 3, ratio: 3.0 / 1.0, difficulty: 0.3 },
-    HitObjectRhythm { id: 4, ratio: 1.0 / 3.0, difficulty: 0.35 },
-    HitObjectRhythm { id: 5, ratio: 3.0 / 2.0, difficulty: 0.6 },
-    HitObjectRhythm { id: 6, ratio: 2.0 / 3.0, difficulty: 0.4 },
-    HitObjectRhythm { id: 7, ratio: 5.0 / 4.0, difficulty: 0.5 },
-    HitObjectRhythm { id: 8, ratio: 4.0 / 5.0, difficulty: 0.7 },
-];
+impl IDifficultyObjects for TaikoDifficultyObjects {
+    type DifficultyObject = RefCount<TaikoDifficultyObject>;
 
-fn closest_rhythm(
-    delta_time: f64,
-    last_object: &TaikoObject,
-    last_last_object: &TaikoObject,
-    clock_rate: f64,
-) -> &'static HitObjectRhythm {
-    let prev_len = (last_object.start_time - last_last_object.start_time) / clock_rate;
-    let ratio = delta_time / prev_len;
-
-    COMMON_RHYTHMS
-        .iter()
-        .min_by(|r1, r2| {
-            (r1.ratio - ratio)
-                .abs()
-                .total_cmp(&(r2.ratio - ratio).abs())
-        })
-        .unwrap()
+    fn get(&self, idx: usize) -> Option<&Self::DifficultyObject> {
+        self.objects.get(idx)
+    }
 }
 
 impl IDifficultyObject for TaikoDifficultyObject {
+    type DifficultyObjects = TaikoDifficultyObjects;
+
     fn idx(&self) -> usize {
         self.idx
+    }
+}
+
+impl HasStartTime for RefCount<TaikoDifficultyObject> {
+    fn start_time(&self) -> f64 {
+        self.get().start_time
     }
 }
 

@@ -17,11 +17,12 @@ sync = []
 tracing = ["rosu-map/tracing"]
 
 [dependencies]
-rosu-map = { version = "0.2.0" }
+# rosu-map = { version = "0.2.0" }
+rosu-map = { git = "https://github.com/MaxOhn/rosu-map" }
 rosu-mods = { version = "0.3.0" }
 
 [dev-dependencies]
-proptest = "1.4.0"
+proptest = "1.6.0"
 
 [profile.test.package.proptest]
 opt-level = 3

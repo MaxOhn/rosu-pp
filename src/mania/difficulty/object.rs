@@ -1,4 +1,7 @@
-use crate::{any::difficulty::object::IDifficultyObject, mania::object::ManiaObject};
+use crate::{
+    any::difficulty::object::{HasStartTime, IDifficultyObject},
+    mania::object::ManiaObject,
+};
 
 pub struct ManiaDifficultyObject {
     pub idx: usize,
@@ -21,7 +24,15 @@ impl ManiaDifficultyObject {
 }
 
 impl IDifficultyObject for ManiaDifficultyObject {
+    type DifficultyObjects = [Self];
+
     fn idx(&self) -> usize {
         self.idx
+    }
+}
+
+impl HasStartTime for ManiaDifficultyObject {
+    fn start_time(&self) -> f64 {
+        self.start_time
     }
 }

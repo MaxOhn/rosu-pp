@@ -1,6 +1,6 @@
 use rosu_map::section::general::GameMode;
 
-use crate::{model::mode::ConvertError, Beatmap, Difficulty};
+use crate::{any::difficulty::skills::StrainSkill, model::mode::ConvertError, Beatmap, Difficulty};
 
 use super::difficulty::{skills::OsuSkills, DifficultyValues};
 
@@ -39,9 +39,9 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<OsuStrains, Con
     } = DifficultyValues::calculate(difficulty, &map);
 
     Ok(OsuStrains {
-        aim: aim.get_curr_strain_peaks().into_vec(),
-        aim_no_sliders: aim_no_sliders.get_curr_strain_peaks().into_vec(),
-        speed: speed.get_curr_strain_peaks().into_vec(),
-        flashlight: flashlight.get_curr_strain_peaks().into_vec(),
+        aim: aim.into_current_strain_peaks().into_vec(),
+        aim_no_sliders: aim_no_sliders.into_current_strain_peaks().into_vec(),
+        speed: speed.into_current_strain_peaks().into_vec(),
+        flashlight: flashlight.into_current_strain_peaks().into_vec(),
     })
 }

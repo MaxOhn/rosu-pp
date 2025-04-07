@@ -1,11 +1,14 @@
 use crate::{
+    any::difficulty::skills::StrainSkill,
     model::{beatmap::BeatmapAttributes, mods::GameMods},
     osu::object::OsuObject,
 };
 
 use self::{aim::Aim, flashlight::Flashlight, speed::Speed};
 
-use super::{scaling_factor::ScalingFactor, HD_FADE_IN_DURATION_MULTIPLIER};
+use super::{
+    object::OsuDifficultyObject, scaling_factor::ScalingFactor, HD_FADE_IN_DURATION_MULTIPLIER,
+};
 
 pub mod aim;
 pub mod flashlight;
@@ -44,7 +47,7 @@ impl OsuSkills {
 
         let aim = Aim::new(true);
         let aim_no_sliders = Aim::new(false);
-        let speed = Speed::new(hit_window);
+        let speed = Speed::new(hit_window, mods.ap());
         let flashlight = Flashlight::new(mods, scaling_factor.radius, time_preempt, time_fade_in);
 
         Self {
@@ -53,5 +56,12 @@ impl OsuSkills {
             speed,
             flashlight,
         }
+    }
+
+    pub fn process(&mut self, curr: &OsuDifficultyObject<'_>, objects: &[OsuDifficultyObject<'_>]) {
+        self.aim.process(curr, objects);
+        self.aim_no_sliders.process(curr, objects);
+        self.speed.process(curr, objects);
+        self.flashlight.process(curr, objects);
     }
 }

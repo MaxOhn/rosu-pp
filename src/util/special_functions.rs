@@ -56,7 +56,7 @@ mod consts {
 use consts::*;
 
 pub fn erf(x: f64) -> f64 {
-    if x.abs() < f64::EPSILON {
+    if x == 0.0 {
         return 0.0;
     }
 
@@ -76,7 +76,7 @@ pub fn erf(x: f64) -> f64 {
 }
 
 pub fn erf_inv(z: f64) -> f64 {
-    if z.abs() < f64::EPSILON {
+    if z == 0.0 {
         return 0.0;
     }
 
@@ -274,6 +274,7 @@ fn erf_inv_impl(p: f64, q: f64, s: f64) -> f64 {
     result * s
 }
 
+// TODO: const-ify
 fn evaluate_polynomial(z: f64, coefficients: &[f64]) -> f64 {
     let mut coefficients = coefficients.iter().copied().rev();
 

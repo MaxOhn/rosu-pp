@@ -3,9 +3,9 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::skills::Skill,
-    mania::object::ObjectParams,
-    model::{beatmap::HitWindows, hit_object::HitObject, mode::ConvertError},
+    any::difficulty::skills::StrainSkill,
+    mania::{convert, object::ObjectParams},
+    model::{hit_object::HitObject, mode::ConvertError},
     Beatmap, Difficulty,
 };
 
@@ -53,7 +53,6 @@ pub struct ManiaGradualDifficulty {
     is_convert: bool,
     strain: Strain,
     diff_objects: Box<[ManiaDifficultyObject]>,
-    hit_window: f64,
     note_state: NoteState,
 }
 
@@ -66,17 +65,24 @@ struct NoteState {
 impl ManiaGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
-        let map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+        let mut map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+
+        if difficulty.get_mods().ho() {
+            convert::apply_hold_off_to_beatmap(map.to_mut());
+        }
+
+        if difficulty.get_mods().invert() {
+            convert::apply_invert_to_beatmap(map.to_mut());
+        }
+
+        if let Some(seed) = difficulty.get_mods().random_seed() {
+            convert::apply_random_to_beatmap(map.to_mut(), seed);
+        }
 
         let take = difficulty.get_passed_objects();
         let total_columns = map.cs.round_ties_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
         let mut params = ObjectParams::new(&map);
-
-        let HitWindows {
-            od_great: hit_window,
-            ..
-        } = map.attributes().difficulty(&difficulty).hit_windows();
 
         let mania_objects = map
             .hit_objects
@@ -111,7 +117,6 @@ impl ManiaGradualDifficulty {
             is_convert: map.is_convert,
             strain,
             diff_objects,
-            hit_window,
             note_state,
         })
     }
@@ -127,7 +132,7 @@ impl Iterator for ManiaGradualDifficulty {
         // yet and just skip processing.
         if self.idx > 0 {
             let curr = self.diff_objects.get(self.idx - 1)?;
-            Skill::new(&mut self.strain, &self.diff_objects).process(curr);
+            self.strain.process(curr, &self.diff_objects);
 
             let is_circle = self.objects_is_circle[self.idx];
             increment_combo(
@@ -143,8 +148,7 @@ impl Iterator for ManiaGradualDifficulty {
         self.idx += 1;
 
         Some(ManiaDifficultyAttributes {
-            stars: self.strain.as_difficulty_value() * DIFFICULTY_MULTIPLIER,
-            hit_window: self.hit_window,
+            stars: self.strain.cloned_difficulty_value() * DIFFICULTY_MULTIPLIER,
             max_combo: self.note_state.curr_combo,
             n_objects: self.idx as u32,
             n_hold_notes: self.note_state.n_hold_notes,
@@ -173,12 +177,11 @@ impl Iterator for ManiaGradualDifficulty {
             self.idx += 1;
         }
 
-        let mut strain = Skill::new(&mut self.strain, &self.diff_objects);
         let clock_rate = self.difficulty.get_clock_rate();
 
         for (curr, is_circle) in skip_iter.take(take) {
             increment_combo(*is_circle, curr, &mut self.note_state, clock_rate);
-            strain.process(curr);
+            self.strain.process(curr, &self.diff_objects);
             self.idx += 1;
         }
 

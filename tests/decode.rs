@@ -41,8 +41,7 @@ fn taiko() {
     assert_eq!(map.hit_sounds.len(), 295);
     assert_eq!(map.timing_points.len(), 1);
     assert_eq!(map.difficulty_points.len(), 3);
-    // osu!lazer has 7 effect points because they store scroll speed
-    assert_eq!(map.effect_points.len(), 4);
+    assert_eq!(map.effect_points.len(), 7);
     assert_eq_float(map.stack_leniency, 0.7);
     assert_eq!(map.breaks.len(), 0);
 }

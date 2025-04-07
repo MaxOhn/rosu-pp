@@ -4,8 +4,11 @@ pub use inner::*;
 mod inner {
     use std::{
         iter::{self, Copied},
+        mem,
         slice::{self, Iter},
     };
+
+    use crate::util::hint::{likely, unlikely};
 
     use self::entry::StrainsEntry;
 
@@ -92,27 +95,6 @@ mod inner {
             self.sort_desc();
         }
 
-        /// Iterator over the raw entries, assuming that there are no zeros.
-        ///
-        /// Panics if there are zeros.
-        #[inline]
-        pub fn non_zero_iter(&self) -> impl ExactSizeIterator<Item = f64> + '_ {
-            #[cfg(debug_assertions)]
-            debug_assert!(!self.has_zero);
-
-            self.inner.iter().copied().map(StrainsEntry::value)
-        }
-
-        /// Same as [`StrainsVec::retain_non_zero_and_sort`] followed by
-        /// [`StrainsVec::iter`] but the resulting iterator is faster
-        /// because it doesn't need to check whether entries are zero.
-        #[inline]
-        pub fn sorted_non_zero_iter(&mut self) -> impl ExactSizeIterator<Item = f64> + '_ {
-            self.retain_non_zero_and_sort();
-
-            self.non_zero_iter()
-        }
-
         /// Removes all zeros, sorts the remaining entries in descending order, and
         /// returns an iterator over mutable references to the values.
         #[inline]
@@ -136,6 +118,16 @@ mod inner {
         #[inline]
         pub fn iter(&self) -> StrainsIter<'_> {
             StrainsIter::new(self)
+        }
+
+        /// Converts this [`StrainsVec`] into `Vec<f64>`.
+        ///
+        /// # Safety
+        ///
+        /// `self` may not include *any* zeros.
+        pub unsafe fn transmute_into_vec(self) -> Vec<f64> {
+            // SAFETY: `StrainsEntry` has the same properties as `f64`
+            unsafe { mem::transmute::<Vec<StrainsEntry>, Vec<f64>>(self.inner) }
         }
 
         /// Allocates a new `Vec<f64>` to store all values, including zeros.
@@ -182,7 +174,7 @@ mod inner {
             let mut iter = self.inner.iter();
 
             while let Some(zero_count) = copy_non_zero(&mut iter, &mut vec) {
-                vec.extend(iter::repeat(0.0).take(zero_count));
+                vec.extend(iter::repeat_n(0.0, zero_count));
             }
 
             vec
@@ -303,7 +295,7 @@ mod inner {
             }
 
             #[inline]
-            pub fn as_value_mut(&mut self) -> &mut f64 {
+            pub const fn as_value_mut(&mut self) -> &mut f64 {
                 unsafe { &mut self.value }
             }
 
@@ -313,43 +305,19 @@ mod inner {
             }
 
             #[inline]
-            pub fn incr_zero_count(&mut self) {
+            pub const fn incr_zero_count(&mut self) {
                 unsafe {
                     self.zero_count += 1;
                 }
             }
 
             #[inline]
-            pub fn decr_zero_count(&mut self) {
+            pub const fn decr_zero_count(&mut self) {
                 unsafe {
                     self.zero_count -= 1;
                 }
             }
         }
-    }
-
-    #[inline]
-    #[cold]
-    const fn cold() {}
-
-    /// Hints at the compiler that the condition is likely `true`.
-    #[inline]
-    const fn likely(b: bool) -> bool {
-        if !b {
-            cold();
-        }
-
-        b
-    }
-
-    /// Hints at the compiler that the condition is likely `false`.
-    #[inline]
-    const fn unlikely(b: bool) -> bool {
-        if b {
-            cold();
-        }
-
-        b
     }
 
     #[cfg(test)]
@@ -396,10 +364,11 @@ mod inner {
                 assert!(vec.iter().eq(raw.iter().copied()));
                 assert_eq!(vec.clone().into_vec(), raw);
 
+                vec.retain_non_zero_and_sort();
                 raw.retain(|&n| n > 0.0);
                 raw.sort_by(|a, b| b.total_cmp(a));
 
-                assert!(vec.sorted_non_zero_iter().eq(raw));
+                assert_eq!(unsafe { vec.transmute_into_vec() }, raw);
             }
         }
     }
@@ -447,16 +416,6 @@ mod inner {
             self.sort_desc();
         }
 
-        pub fn non_zero_iter(&self) -> Copied<Iter<'_, f64>> {
-            self.inner.iter().copied()
-        }
-
-        pub fn sorted_non_zero_iter(&mut self) -> Copied<Iter<'_, f64>> {
-            self.retain_non_zero_and_sort();
-
-            self.non_zero_iter()
-        }
-
         pub fn sorted_non_zero_iter_mut(&mut self) -> IterMut<'_, f64> {
             self.retain_non_zero_and_sort();
 
@@ -469,6 +428,10 @@ mod inner {
 
         pub fn iter(&self) -> Copied<Iter<'_, f64>> {
             self.inner.iter().copied()
+        }
+
+        pub unsafe fn transmute_into_vec(self) -> Vec<f64> {
+            self.inner
         }
 
         pub fn into_vec(self) -> Vec<f64> {

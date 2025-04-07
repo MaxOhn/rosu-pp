@@ -9,8 +9,8 @@ pub struct TaikoDifficultyAttributes {
     pub rhythm: f64,
     /// The difficulty of the color skill.
     pub color: f64,
-    /// The difficulty of the hardest parts of the map.
-    pub peak: f64,
+    /// The difficulty of the reading skill.
+    pub reading: f64,
     /// The perceived hit window for an n300 inclusive of rate-adjusting mods (DT/HT/etc)
     pub great_hit_window: f64,
     /// The perceived hit window for an n100 inclusive of rate-adjusting mods (DT/HT/etc)

@@ -1,7 +1,10 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::Difficulty, catch::difficulty::DifficultyValues, model::mode::ConvertError, Beatmap,
+    any::{difficulty::skills::StrainSkill, Difficulty},
+    catch::difficulty::DifficultyValues,
+    model::mode::ConvertError,
+    Beatmap,
 };
 
 /// The result of calculating the strains on a osu!catch map.
@@ -23,6 +26,6 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<CatchStrains, C
     let DifficultyValues { movement, .. } = DifficultyValues::calculate(difficulty, &map);
 
     Ok(CatchStrains {
-        movement: movement.get_curr_strain_peaks().into_vec(),
+        movement: movement.into_current_strain_peaks().into_vec(),
     })
 }

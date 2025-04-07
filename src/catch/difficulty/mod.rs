@@ -1,7 +1,7 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::{skills::Skill, Difficulty},
+    any::difficulty::{skills::StrainSkill, Difficulty},
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
@@ -33,7 +33,7 @@ pub fn difficulty(
         mut attrs,
     } = DifficultyValues::calculate(difficulty, &map);
 
-    DifficultyValues::eval(&mut attrs, movement.difficulty_value());
+    DifficultyValues::eval(&mut attrs, movement.into_difficulty_value());
 
     Ok(attrs)
 }
@@ -79,20 +79,19 @@ impl DifficultyValues {
         let palpable_objects =
             convert_objects(map, &mut count, reflection, hr_offsets, map_attrs.cs as f32);
 
+        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs as f32) * 0.5;
+        half_catcher_width *= 1.0 - ((map_attrs.cs as f32 - 5.5).max(0.0) * 0.0625);
+
         let diff_objects = Self::create_difficulty_objects(
-            &map_attrs,
             clock_rate,
+            half_catcher_width,
             palpable_objects.iter().take(take),
         );
 
-        let mut movement = Movement::new(clock_rate);
+        let mut movement = Movement::new(half_catcher_width, clock_rate);
 
-        {
-            let mut movement = Skill::new(&mut movement, &diff_objects);
-
-            for curr in diff_objects.iter() {
-                movement.process(curr);
-            }
+        for curr in diff_objects.iter() {
+            movement.process(curr, &diff_objects);
         }
 
         attrs.set_object_count(&count.into_regular());
@@ -105,16 +104,14 @@ impl DifficultyValues {
     }
 
     pub fn create_difficulty_objects<'a>(
-        map_attrs: &BeatmapAttributes,
         clock_rate: f64,
+        half_catcher_width: f32,
         mut palpable_objects: impl ExactSizeIterator<Item = &'a PalpableObject>,
     ) -> Box<[CatchDifficultyObject]> {
         let Some(mut last_object) = palpable_objects.next() else {
             return Box::default();
         };
 
-        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs as f32) * 0.5;
-        half_catcher_width *= 1.0 - ((map_attrs.cs as f32 - 5.5).max(0.0) * 0.0625);
         let scaling_factor =
             CatchDifficultyObject::NORMALIZED_HITOBJECT_RADIUS / half_catcher_width;
 

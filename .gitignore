@@ -3,3 +3,4 @@ Cargo.lock
 output*
 /.idea
 /tests/custom.rs
+expanded.rs

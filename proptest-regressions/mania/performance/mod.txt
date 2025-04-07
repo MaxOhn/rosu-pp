@@ -20,3 +20,6 @@ cc 0924f546edd96e86ee6163aa08dd6b77fc5a6219be6766a5b5d3b6d0caa80145 # shrinks to
 cc a3c828166cc0a217e7a4e2d3592372209f886b6ea78a3da40664f3201df5a49b # shrinks to acc = 0.0, n320 = Some(0), n300 = Some(66), n200 = None, n100 = None, n50 = None, n_misses = Some(529), best_case = false
 cc 1d15772c531f04fc3c0cc28ce76cf219ce7db950f36d3688bc01714a72fb8e5a # shrinks to acc = 0.0, n320 = None, n300 = None, n200 = None, n100 = None, n50 = None, n_misses = Some(595), best_case = false
 cc d3ee41c1d71505bc965f52f591792539d06b370305428f1f20d798b0c525328d
+cc c52017a8d3f2ecdd36b2d522a8e5f17b7fb7b951a9eb84c8d2537b857f019f47 # shrinks to classic = false, acc = 0.463979922129014, n320 = None, n300 = Some(1), n200 = None, n100 = None, n50 = None, n_misses = Some(384), best_case = false
+cc c7995a555d9fc698d9eb52c3ec30604cae4463c57d7e54abe1af1b823dce3bbd # shrinks to classic = false, acc = 0.3455386317199003, n320 = None, n300 = None, n200 = None, n100 = Some(0), n50 = None, n_misses = None, best_case = true
+cc e6baa2d0e1559edaf17898b9cfea4ad24b1ac0f4a336fa372b9e768e79675d21 # shrinks to classic = false, acc = 0.0, n320 = None, n300 = None, n200 = None, n100 = None, n50 = Some(0), n_misses = None, best_case = true

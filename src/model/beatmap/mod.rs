@@ -153,7 +153,7 @@ impl Beatmap {
             GameMode::Catch => Catch::convert(&mut map),
             GameMode::Mania => Mania::convert(&mut map, mods),
             GameMode::Osu => unreachable!(),
-        };
+        }
 
         Ok(Cow::Owned(map))
     }

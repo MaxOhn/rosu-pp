@@ -3,7 +3,7 @@ use std::{borrow::Cow, pin::Pin};
 use rosu_map::util::Pos;
 
 use crate::{
-    any::difficulty::object::IDifficultyObject,
+    any::difficulty::object::{HasStartTime, IDifficultyObject},
     osu::object::{OsuObject, OsuObjectKind, OsuSlider},
 };
 
@@ -223,7 +223,7 @@ impl<'a> OsuDifficultyObject<'a> {
         h
     }
 
-    fn get_end_cursor_pos(hit_object: &OsuObject) -> Pos {
+    const fn get_end_cursor_pos(hit_object: &OsuObject) -> Pos {
         if let OsuObjectKind::Slider(ref slider) = hit_object.kind {
             // We don't have access to the slider's curve at this point so we
             // take the pre-computed value.
@@ -235,7 +235,15 @@ impl<'a> OsuDifficultyObject<'a> {
 }
 
 impl IDifficultyObject for OsuDifficultyObject<'_> {
+    type DifficultyObjects = [Self];
+
     fn idx(&self) -> usize {
         self.idx
+    }
+}
+
+impl HasStartTime for OsuDifficultyObject<'_> {
+    fn start_time(&self) -> f64 {
+        self.start_time
     }
 }
