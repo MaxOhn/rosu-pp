@@ -1,4 +1,31 @@
-# v2.0.0 (2024-12-03)
+# v3.0.0 (2025-04-07)
+
+Updated all modes' difficulty and performance calculation. See PR [#51] or osu!'s newspost for more info: <https://osu.ppy.sh/home/news/2025-03-06-performance-points-star-rating-updates>
+
+- __Breaking changes:__
+  - Added fields:
+    - `OsuDifficultyAttributes.aim_difficult_slider_count`
+    - `OsuDifficultyAttributes.great_hit_window`
+    - `OsuDifficultyAttributes.ok_hit_window`
+    - `OsuDifficultyAttributes.meh_hit_window`
+    - `OsuPerformanceAttributes.speed_deviation`
+    - `TaikoDifficultyAttributes.reading`
+    - `TaikoStrains.reading`
+    - `HitWindows.od_meh`
+    - `EffectPoint.scroll_speed`
+  - Removed fields:
+    - `OsuDifficultyAttributes.od` (added the method `OsuDifficultyAttributes::od`)
+    - `TaikoDifficultyAttributes.peak`
+    - `ManiaDifficultyAttributes.hit_window`
+  - `GameMods` is now a wrapping *enum* around `rosu_mods`' types instead of a struct
+  - The method `ManiaScoreState::accuracy` now takes an additional `bool` argument whether to calculate classic or lazer accuracy ([#53])
+  - The method `EffectPoint::is_redundant` is no longer const
+
+- New mods considered in difficulty and performance calculation:
+  - taiko: `Random`
+  - mania: `HoldOff`, `Invert`, `Random`
+
+## v2.0.0 (2024-12-03)
 
 Updated all modes' difficulty and performance calculation. See osu!'s newspost for more info: <https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates>
 
@@ -412,6 +439,8 @@ Big changes including the most recent [osu!](https://osu.ppy.sh/home/news/2022-0
 [#34]: https://github.com/MaxOhn/rosu-pp/pull/34
 [#35]: https://github.com/MaxOhn/rosu-pp/pull/35
 [#36]: https://github.com/MaxOhn/rosu-pp/pull/36
+[#51]: https://github.com/MaxOhn/rosu-pp/pull/51
+[#53]: https://github.com/MaxOhn/rosu-pp/pull/53
 
 [ZST]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
 [`rosu-map`]: https://github.com/MaxOhn/rosu-map
