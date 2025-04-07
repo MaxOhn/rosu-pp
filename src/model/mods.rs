@@ -4,14 +4,12 @@ use rosu_mods::{
     generated_mods::{
         DifficultyAdjustCatch, DifficultyAdjustMania, DifficultyAdjustOsu, DifficultyAdjustTaiko,
     },
-    GameMod, GameModIntermode,
+    GameMod, GameModIntermode, GameMods as GameModsLazer, GameModsIntermode, GameModsLegacy,
 };
 
-use reexports::{GameModsIntermode, GameModsLazer, GameModsLegacy};
-
-/// Re-exported types from [`rosu_mods`].
-pub mod reexports {
-    pub use rosu_mods::{GameMods as GameModsLazer, GameModsIntermode, GameModsLegacy};
+/// Re-exported [`rosu_mods`].
+pub mod rosu_mods {
+    pub use rosu_mods::*;
 }
 
 /// Collection of game mods.
