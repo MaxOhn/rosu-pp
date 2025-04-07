@@ -17,8 +17,7 @@ sync = []
 tracing = ["rosu-map/tracing"]
 
 [dependencies]
-# rosu-map = { version = "0.2.0" }
-rosu-map = { git = "https://github.com/MaxOhn/rosu-map" }
+rosu-map = { version = "0.2.1" }
 rosu-mods = { version = "0.3.0" }
 
 [dev-dependencies]
