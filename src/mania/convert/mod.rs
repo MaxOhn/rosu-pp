@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
@@ -140,8 +142,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
 
     map.hit_sounds.clear();
     map.hit_objects = new_hit_objects;
-    map.hit_objects
-        .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+    map.hit_objects.sort_by(cmp_by_start_time);
     sort::osu_legacy(&mut map.hit_objects);
 
     map.mode = GameMode::Mania;
@@ -231,13 +232,11 @@ pub(super) fn apply_hold_off_to_beatmap(map: &mut Beatmap) {
     new_hit_objects.extend(old_hit_objects_iter.chain(new_hit_objects_iter));
     map.hit_objects = new_hit_objects;
     map.hit_sounds.clear();
-
-    map.hit_objects
-        .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+    map.hit_objects.sort_by(cmp_by_start_time);
 }
 
 pub(super) fn apply_invert_to_beatmap(map: &mut Beatmap) {
-    let mut new_objects = Vec::new();
+    let mut new_objects = Vec::with_capacity(map.hit_objects.len());
     let mut column_buf = Vec::new();
     let mut locations = Vec::new();
 
@@ -254,8 +253,7 @@ pub(super) fn apply_invert_to_beatmap(map: &mut Beatmap) {
 
         let notes = column_buf
             .iter()
-            .filter(|h| h.is_circle())
-            .map(|h| h.start_time);
+            .filter_map(|h| h.is_circle().then_some(h.start_time));
 
         let hold_notes = column_buf
             .iter()
@@ -267,7 +265,7 @@ pub(super) fn apply_invert_to_beatmap(map: &mut Beatmap) {
 
         locations.clear();
         locations.extend(notes.chain(hold_notes));
-        locations.sort_by(|a, b| a.total_cmp(&b));
+        locations.sort_by(f64::total_cmp);
 
         let iter = locations.windows(2).map(|window| {
             let [start_time, end_time] = *window else {
@@ -297,9 +295,7 @@ pub(super) fn apply_invert_to_beatmap(map: &mut Beatmap) {
 
     map.hit_objects = new_objects;
     map.hit_sounds.clear();
-
-    map.hit_objects
-        .sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
+    map.hit_objects.sort_by(cmp_by_start_time);
 
     // * No breaks
     map.breaks.clear();
@@ -320,6 +316,10 @@ pub(super) fn apply_random_to_beatmap(map: &mut Beatmap, seed: i32) {
         let new_column = shuffled_columns[old_column];
         h.pos.x = f32::ceil(f32::from(new_column) * divisor);
     }
+}
+
+fn cmp_by_start_time(a: &HitObject, b: &HitObject) -> Ordering {
+    a.start_time.total_cmp(&b.start_time)
 }
 
 #[cfg(test)]
