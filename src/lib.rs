@@ -5,10 +5,10 @@
 //! while also providing a significant [boost in performance](#speed).
 //!
 //! Last commits of the ported code:
-//!   - [osu!lazer] : `62e536baf6e9f464e8a355d9491f2ac84b21b7b0` (2024-12-24)
-//!   - [osu!tools] : `89b8f3b1c2e4e5674004eac4723120e7d3aef997` (2024-11-03)
+//!   - [osu!lazer] : `79b737bc270c8361261a9edd43b380f5326c3848` (2025-02-27)
+//!   - [osu!tools] : `152c5d90f73f4d7eabcf4047ecb939c1b621db85` (2025-02-28)
 //!
-//! News posts of the latest updates: <https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates>
+//! News posts of the latest updates: <https://osu.ppy.sh/home/news/2025-03-06-performance-points-star-rating-updates>
 //!
 //! ## Usage
 //!
