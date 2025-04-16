@@ -15,6 +15,7 @@ use crate::{
 pub use self::{
     attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
     decode::{BeatmapState, ParseBeatmapError},
+    suspicious::TooSuspicious,
 };
 
 use super::{
@@ -29,6 +30,7 @@ use super::{
 mod attributes;
 mod bpm;
 mod decode;
+mod suspicious;
 
 /// All beatmap data that is relevant for difficulty and performance
 /// calculation.
@@ -181,6 +183,19 @@ impl Beatmap {
         }
 
         Ok(())
+    }
+
+    /// Check whether hitobjects appear too suspicious for further calculation.
+    ///
+    /// Sometimes a [`Beatmap`] isn't created for gameplay but rather to test
+    /// the limits of osu! itself. Difficulty- and/or performance calculation
+    /// should likely be avoided on these maps due to potential performance
+    /// issues.
+    pub fn check_suspicion(&self) -> Result<(), TooSuspicious> {
+        match TooSuspicious::new(&self.hit_objects) {
+            None => Ok(()),
+            Some(err) => Err(err),
+        }
     }
 }
 
