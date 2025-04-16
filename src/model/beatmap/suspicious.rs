@@ -24,7 +24,7 @@ pub enum TooSuspicious {
     RedFlag,
     /// Too many sliders' positions were suspicious.
     SliderPositions,
-    /// Too many sliders had a very amount of repeats.
+    /// Too many sliders had a very high amount of repeats.
     SliderRepeats,
 }
 
