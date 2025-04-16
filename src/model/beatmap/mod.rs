@@ -192,7 +192,7 @@ impl Beatmap {
     /// should likely be avoided on these maps due to potential performance
     /// issues.
     pub fn check_suspicion(&self) -> Result<(), TooSuspicious> {
-        match TooSuspicious::new(&self.hit_objects) {
+        match TooSuspicious::new(self) {
             None => Ok(()),
             Some(err) => Err(err),
         }
