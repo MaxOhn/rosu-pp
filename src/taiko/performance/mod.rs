@@ -242,7 +242,9 @@ impl<'map> TaikoPerformance<'map> {
                     let remaining = total_result_count.saturating_sub(n300 + n100 + misses);
 
                     match priority {
-                        HitResultPriority::BestCase => n300 += remaining,
+                        HitResultPriority::BestCase | HitResultPriority::Fastest => {
+                            n300 += remaining
+                        }
                         HitResultPriority::WorstCase => n100 += remaining,
                     }
                 }
@@ -251,20 +253,28 @@ impl<'map> TaikoPerformance<'map> {
                 (None, None) => {
                     let target_total = acc * f64::from(2 * total_result_count);
 
-                    let mut best_dist = f64::MAX;
+                    match priority {
+                        HitResultPriority::Fastest => {
+                            n300 = f64::round_ties_even(target_total) as u32 - n_remaining;
+                            n100 = total_result_count.saturating_sub(n300 + misses);
+                        }
+                        _ => {
+                            let mut best_dist = f64::MAX;
 
-                    let raw_n300 = target_total - f64::from(n_remaining);
-                    let min_n300 = cmp::min(n_remaining, raw_n300.floor() as u32);
-                    let max_n300 = cmp::min(n_remaining, raw_n300.ceil() as u32);
+                            let raw_n300 = target_total - f64::from(n_remaining);
+                            let min_n300 = cmp::min(n_remaining, raw_n300.floor() as u32);
+                            let max_n300 = cmp::min(n_remaining, raw_n300.ceil() as u32);
 
-                    for new300 in min_n300..=max_n300 {
-                        let new100 = n_remaining - new300;
-                        let dist = (acc - accuracy(new300, new100, misses)).abs();
+                            for new300 in min_n300..=max_n300 {
+                                let new100 = n_remaining - new300;
+                                let dist = (acc - accuracy(new300, new100, misses)).abs();
 
-                        if dist < best_dist {
-                            best_dist = dist;
-                            n300 = new300;
-                            n100 = new100;
+                                if dist < best_dist {
+                                    best_dist = dist;
+                                    n300 = new300;
+                                    n100 = new100;
+                                }
+                            }
                         }
                     }
                 }
@@ -273,11 +283,13 @@ impl<'map> TaikoPerformance<'map> {
             let remaining = total_result_count.saturating_sub(n300 + n100 + misses);
 
             match priority {
-                HitResultPriority::BestCase => match (self.n300, self.n100) {
-                    (None, _) => n300 = remaining,
-                    (_, None) => n100 = remaining,
-                    _ => n300 += remaining,
-                },
+                HitResultPriority::BestCase | HitResultPriority::Fastest => {
+                    match (self.n300, self.n100) {
+                        (None, _) => n300 = remaining,
+                        (_, None) => n100 = remaining,
+                        _ => n300 += remaining,
+                    }
+                }
                 HitResultPriority::WorstCase => match (self.n100, self.n300) {
                     (None, _) => n100 = remaining,
                     (_, None) => n300 = remaining,

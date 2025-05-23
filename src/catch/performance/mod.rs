@@ -347,6 +347,8 @@ impl<'map> CatchPerformance<'map> {
             let max_tiny_droplets =
                 cmp::min(attrs.n_tiny_droplets, raw_tiny_droplets.ceil() as u32);
 
+            // Hopefully using `HitResultPriority::Fastest` wouldn't make a big
+            // difference here so let's be lazy and ignore it
             for n_tiny_droplets in min_tiny_droplets..=max_tiny_droplets {
                 let n_tiny_droplet_misses = attrs.n_tiny_droplets - n_tiny_droplets;
 
