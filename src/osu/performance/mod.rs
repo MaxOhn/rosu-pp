@@ -464,15 +464,11 @@ impl<'map> OsuPerformance<'map> {
                 (Some(_), None, None) => {
                     match priority {
                         HitResultPriority::Fastest => {
-                            //     300aN - 300A - 50C = 100B
-                            // <=> 300aN - 50R - 250A = 50B
-                            // <=> (300aN - 50R - 250A) / 50 = B
-                            n100 = i32::max(
-                                0,
-                                f64::round(target_total) as i32
-                                    - 50 * n_remaining as i32
-                                    - 250 * n300 as i32,
-                            ) as u32
+                            //     (300N + S) - 300A - 50C - s = 100B
+                            // <=> (300N + S) - 50R - 250A - s = 50B
+                            // <=> ((300N + S) - 50R - 250A - s) / 50 = B
+                            n100 = (f64::round(target_total) as u32)
+                                .saturating_sub(50 * n_remaining + 250 * n300 + slider_acc_value)
                                 / 50;
                             n50 = n_objects.saturating_sub(n300 + n100 + misses);
                         }
@@ -514,15 +510,11 @@ impl<'map> OsuPerformance<'map> {
                 }
                 (None, Some(_), None) => match priority {
                     HitResultPriority::Fastest => {
-                        //     300aN - 100B - 50C = 300A
-                        // <=> 300aN - 50R - 50B = 250A
-                        // <=> (300aN - 50R - 50B) / 250 = A
-                        n300 = i32::max(
-                            0,
-                            f64::round(target_total) as i32
-                                - 50 * n_remaining as i32
-                                - 50 * n100 as i32,
-                        ) as u32
+                        //     (300N + S)a - 100B - 50C - s = 300A
+                        // <=> (300N + S)a - 50R - 50B - s = 250A
+                        // <=> ((300N + S)a - 50R - 50B - s) / 250 = A
+                        n300 = (f64::round(target_total) as u32)
+                            .saturating_sub(50 * n_remaining + 50 * n100 + slider_acc_value)
                             / 250;
                         n50 = n_objects.saturating_sub(n300 + n100 + misses);
                     }
@@ -563,14 +555,11 @@ impl<'map> OsuPerformance<'map> {
                 },
                 (None, None, Some(_)) => match priority {
                     HitResultPriority::Fastest => {
-                        //     300aN - 100B - 50C = 300A
-                        // <=> 300aN - 100R + 50C = 200A
-                        // <=> (300aN - 100R + 50C) / 200 = A
-                        n300 = i32::max(
-                            0,
-                            f64::round(target_total) as i32 - 100 * n_remaining as i32
-                                + 50 * n50 as i32,
-                        ) as u32
+                        //     (300N + S)a - 100B - 50C - s = 300A
+                        // <=> (300N + S)a - 100R + 50C - s = 200A
+                        // <=> ((300N + S)a - 100R + 50C - s) / 200 = A
+                        n300 = (f64::round(target_total) as u32 + 50 * n50)
+                            .saturating_sub(100 * n_remaining + slider_acc_value)
                             / 200;
                         n100 = n_objects.saturating_sub(n300 + n50 + misses);
                     }
@@ -613,17 +602,15 @@ impl<'map> OsuPerformance<'map> {
                 (None, None, None) => {
                     match priority {
                         HitResultPriority::Fastest => {
-                            //     300aN - 100B - 50C = 300A
-                            // <=> 300aN - 50R - 50B = 250A
-                            // <=> (300aN - 50R - 50B) / 250 = A
+                            //     (300N + S)a - 100B - 50C - s = 300A
+                            // <=> (300N + S)a - 50R - 50B - s = 250A
+                            // <=> ((300N + S)a - 50R - 50B - s) / 250 = A
 
-                            //     300aN - 300A - 50C = 100B
-                            // <=> 300aN - 50R - 250A = 50B
-                            // <=> (300aN - 50R - 250A) / 50 = B
-                            let delta = i32::max(
-                                0,
-                                f64::round_ties_even(target_total) as i32 - 50 * n_remaining as i32,
-                            ) as u32;
+                            //     (300N + S)a - 300A - 50C - s = 100B
+                            // <=> (300N + S)a - 50R - 250A - s = 50B
+                            // <=> ((300N + S)a - 50R - 250A - s) / 50 = B
+                            let delta = (f64::round_ties_even(target_total) as u32)
+                                .saturating_sub(50 * n_remaining + slider_acc_value);
 
                             n300 = delta / 250;
                             n100 = (delta % 250) / 50;
