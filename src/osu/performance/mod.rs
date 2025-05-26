@@ -613,13 +613,20 @@ impl<'map> OsuPerformance<'map> {
                 (None, None, None) => {
                     match priority {
                         HitResultPriority::Fastest => {
+                            //     300aN - 100B - 50C = 300A
+                            // <=> 300aN - 50R - 50B = 250A
+                            // <=> (300aN - 50R - 50B) / 250 = A
+
+                            //     300aN - 300A - 50C = 100B
+                            // <=> 300aN - 50R - 250A = 50B
+                            // <=> (300aN - 50R - 250A) / 50 = B
                             let delta = i32::max(
                                 0,
-                                f64::round_ties_even(target_total) as i32 - n_remaining as i32,
+                                f64::round_ties_even(target_total) as i32 - 50 * n_remaining as i32,
                             ) as u32;
 
-                            n300 = delta / 5;
-                            n100 = delta % 5;
+                            n300 = delta / 250;
+                            n100 = (delta % 250) / 50;
                             n50 = n_objects.saturating_sub(n300 + n100 + misses);
                         }
                         _ => {
