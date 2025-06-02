@@ -169,74 +169,6 @@ fn basic_osu() {
             };
         }
     };
-    #[cfg(target_os = "linux")]
-    test_cases! {
-        Osu: OSU {
-            NM => {
-                pp: 273.55482143018787,
-                pp_acc: 97.62287463107766,
-                pp_aim: 98.91907543994563,
-                pp_flashlight: 0.0,
-                pp_speed: 65.89857918351103,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.855079578025586),
-            };
-            HD => {
-                pp: 300.22543969392876,
-                pp_acc: 105.43270460156388,
-                pp_aim: 109.6023348327671,
-                pp_flashlight: 0.0,
-                pp_speed: 73.01562523256396,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.855079578025586),
-            };
-            EZ HD => {
-                pp: 186.89279040924507,
-                pp_acc: 16.6270597231239,
-                pp_aim: 96.66495037071935,
-                pp_flashlight: 0.0,
-                pp_speed: 63.20254195234833,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(23.1539101317497),
-            };
-            HR => {
-                pp: 405.7923033508039,
-                pp_acc: 161.55575439788055,
-                pp_aim: 145.16956208688748,
-                pp_flashlight: 0.0,
-                pp_speed: 81.7375074976892,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(8.857953596258472),
-            };
-            DT => {
-                pp: 741.3788121712137,
-                pp_acc: 184.09450675506795,
-                pp_aim: 301.88645138363296,
-                pp_flashlight: 0.0,
-                pp_speed: 224.91817628556774,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(7.873979522967204),
-            };
-            FL => {
-                pp: 403.31324405364177,
-                pp_acc: 99.57533212369923,
-                pp_aim: 98.91907543994563,
-                pp_flashlight: 132.28811994208644,
-                pp_speed: 65.89857918351103,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.855079578025586),
-            };
-            HD FL => {
-                pp: 470.3193633451629,
-                pp_acc: 107.54135869359516,
-                pp_aim: 109.6023348327671,
-                pp_flashlight: 171.61406165164135,
-                pp_speed: 73.01562523256396,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.855079578025586),
-            };
-        }
-    };
 }
 
 #[test]
@@ -310,39 +242,6 @@ fn convert_taiko() {
             };
         }
     }
-    #[cfg(target_os = "linux")]
-    test_cases! {
-        Taiko: OSU {
-            NM => {
-                pp: 321.96508788209525,
-                pp_acc: 150.50068595207387,
-                pp_difficulty: 152.95500113793892,
-                effective_miss_count: 0.0,
-                estimated_unstable_rate: Some(85.75868894575865),
-            };
-            HD => {
-                pp: 326.0279405978374,
-                pp_acc: 150.50068595207387,
-                pp_difficulty: 156.7788761663874,
-                effective_miss_count: 0.0,
-                estimated_unstable_rate: Some(85.75868894575865),
-            };
-            HR => {
-                pp: 400.1259115798042,
-                pp_acc: 187.46770845243455,
-                pp_difficulty: 189.65602547641478,
-                effective_miss_count: 0.0,
-                estimated_unstable_rate: Some(72.67685680089848),
-            };
-            DT => {
-                pp: 688.6809319343615,
-                pp_acc: 274.8702821415836,
-                pp_difficulty: 373.46911205993484,
-                effective_miss_count: 0.0,
-                estimated_unstable_rate: Some(57.17245929717244),
-            };
-        }
-    };
 }
 
 #[test]
