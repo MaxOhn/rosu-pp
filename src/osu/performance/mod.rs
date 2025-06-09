@@ -466,9 +466,12 @@ impl<'map> OsuPerformance<'map> {
                         //     (300N + S) - 300A - 50C - s = 100B
                         // <=> (300N + S) - 50R - 250A - s = 50B
                         // <=> ((300N + S) - 50R - 250A - s) / 50 = B
-                        n100 = (f64::round(target_total) as u32)
-                            .saturating_sub(50 * n_remaining + 250 * n300 + slider_acc_value)
-                            / 50;
+                        n100 = u32::min(
+                            n_remaining.saturating_sub(n300),
+                            (f64::round(target_total) as u32)
+                                .saturating_sub(50 * n_remaining + 250 * n300 + slider_acc_value)
+                                / 50,
+                        );
                         n50 = n_objects.saturating_sub(n300 + n100 + misses);
                     } else {
                         let mut best_dist = f64::MAX;
@@ -510,9 +513,12 @@ impl<'map> OsuPerformance<'map> {
                         //     (300N + S)a - 100B - 50C - s = 300A
                         // <=> (300N + S)a - 50R - 50B - s = 250A
                         // <=> ((300N + S)a - 50R - 50B - s) / 250 = A
-                        n300 = (f64::round(target_total) as u32)
-                            .saturating_sub(50 * n_remaining + 50 * n100 + slider_acc_value)
-                            / 250;
+                        n300 = u32::min(
+                            n_remaining.saturating_sub(n100),
+                            (f64::round(target_total) as u32)
+                                .saturating_sub(50 * n_remaining + 50 * n100 + slider_acc_value)
+                                / 250,
+                        );
                         n50 = n_objects.saturating_sub(n300 + n100 + misses);
                     } else {
                         let mut best_dist = f64::MAX;
@@ -554,9 +560,12 @@ impl<'map> OsuPerformance<'map> {
                         //     (300N + S)a - 100B - 50C - s = 300A
                         // <=> (300N + S)a - 100R + 50C - s = 200A
                         // <=> ((300N + S)a - 100R + 50C - s) / 200 = A
-                        n300 = (f64::round(target_total) as u32 + 50 * n50)
-                            .saturating_sub(100 * n_remaining + slider_acc_value)
-                            / 200;
+                        n300 = u32::min(
+                            n_remaining.saturating_sub(n50),
+                            (f64::round(target_total) as u32 + 50 * n50)
+                                .saturating_sub(100 * n_remaining + slider_acc_value)
+                                / 200,
+                        );
                         n100 = n_objects.saturating_sub(n300 + n50 + misses);
                     } else {
                         let mut best_dist = f64::MAX;
@@ -606,8 +615,8 @@ impl<'map> OsuPerformance<'map> {
                         let delta = (f64::round_ties_even(target_total) as u32)
                             .saturating_sub(50 * n_remaining + slider_acc_value);
 
-                        n300 = delta / 250;
-                        n100 = (delta % 250) / 50;
+                        n300 = u32::min(n_remaining, delta / 250);
+                        n100 = u32::min(n_remaining - n300, (delta % 250) / 50);
                         n50 = n_objects.saturating_sub(n300 + n100 + misses);
                     } else {
                         let mut best_dist = f64::MAX;

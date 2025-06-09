@@ -254,7 +254,10 @@ impl<'map> TaikoPerformance<'map> {
                     let target_total = acc * f64::from(2 * total_result_count);
 
                     if let HitResultPriority::Fastest = priority {
-                        n300 = f64::round_ties_even(target_total) as u32 - n_remaining;
+                        n300 = u32::min(
+                            n_remaining,
+                            (f64::round_ties_even(target_total) as u32).saturating_sub(n_remaining),
+                        );
                         n100 = total_result_count.saturating_sub(n300 + misses);
                     } else {
                         let mut best_dist = f64::MAX;
