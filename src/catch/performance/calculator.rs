@@ -48,7 +48,7 @@ impl CatchPerformanceCalculator<'_> {
 
         // Combo scaling
         if self.state.max_combo > 0 {
-            pp *= (f64::from(self.state.max_combo).powf(0.8) / f64::from(max_combo).powf(0.8))
+            pp *= (f64::from(self.state.max_combo).powf(0.35) / f64::from(max_combo).powf(0.35))
                 .min(1.0);
         }
 

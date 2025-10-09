@@ -88,7 +88,7 @@ impl DifficultyValues {
             palpable_objects.iter().take(take),
         );
 
-        let mut movement = Movement::new(half_catcher_width, clock_rate);
+        let mut movement = Movement::new(clock_rate);
 
         for curr in diff_objects.iter() {
             movement.process(curr, &diff_objects);
@@ -113,7 +113,9 @@ impl DifficultyValues {
         };
 
         let scaling_factor =
-            CatchDifficultyObject::NORMALIZED_HITOBJECT_RADIUS / half_catcher_width;
+            CatchDifficultyObject::NORMALIZED_HALF_CATCHER_WIDTH / half_catcher_width;
+
+        let mut last_player_pos = None;
 
         palpable_objects
             .enumerate()
@@ -123,9 +125,11 @@ impl DifficultyValues {
                     last_object,
                     clock_rate,
                     scaling_factor,
+                    last_player_pos,
                     i,
                 );
                 last_object = hit_object;
+                last_player_pos = Some(diff_object.player_pos);
 
                 diff_object
             })

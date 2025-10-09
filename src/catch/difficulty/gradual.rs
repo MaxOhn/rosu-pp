@@ -97,7 +97,7 @@ impl CatchGradualDifficulty {
         );
 
         let count = count.into_gradual();
-        let movement = Movement::new(half_catcher_width, clock_rate);
+        let movement = Movement::new(clock_rate);
 
         Ok(Self {
             idx: 0,
