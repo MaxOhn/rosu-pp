@@ -7,6 +7,7 @@ use crate::{
     any::difficulty::skills::StrainSkill,
     mania::{convert, object::ObjectParams},
     model::{hit_object::HitObject, mode::ConvertError},
+    util::sync::RefCount,
 };
 
 use super::{
@@ -52,7 +53,7 @@ pub struct ManiaGradualDifficulty {
     objects_is_circle: Box<[bool]>,
     is_convert: bool,
     strain: Strain,
-    diff_objects: Box<[ManiaDifficultyObject]>,
+    diff_objects: Box<[RefCount<ManiaDifficultyObject>]>,
     note_state: NoteState,
 }
 
@@ -90,7 +91,11 @@ impl ManiaGradualDifficulty {
             .map(|h| ManiaObject::new(h, total_columns, &mut params))
             .take(take);
 
-        let diff_objects = DifficultyValues::create_difficulty_objects(clock_rate, mania_objects);
+        let diff_objects = DifficultyValues::create_difficulty_objects(
+            clock_rate,
+            total_columns as usize,
+            mania_objects,
+        );
 
         let strain = Strain::new(total_columns as usize);
 
@@ -132,7 +137,7 @@ impl Iterator for ManiaGradualDifficulty {
         // yet and just skip processing.
         if self.idx > 0 {
             let curr = self.diff_objects.get(self.idx - 1)?;
-            self.strain.process(curr, &self.diff_objects);
+            self.strain.process(&curr.get(), &self.diff_objects);
 
             let is_circle = self.objects_is_circle[self.idx];
             increment_combo(
@@ -181,7 +186,7 @@ impl Iterator for ManiaGradualDifficulty {
 
         for (curr, is_circle) in skip_iter.take(take) {
             increment_combo(*is_circle, curr, &mut self.note_state, clock_rate);
-            self.strain.process(curr, &self.diff_objects);
+            self.strain.process(&curr.get(), &self.diff_objects);
             self.idx += 1;
         }
 
@@ -197,14 +202,16 @@ impl ExactSizeIterator for ManiaGradualDifficulty {
 
 fn increment_combo(
     is_circle: bool,
-    diff_obj: &ManiaDifficultyObject,
+    diff_obj: &RefCount<ManiaDifficultyObject>,
     state: &mut NoteState,
     clock_rate: f64,
 ) {
+    let h = diff_obj.get();
+
     increment_combo_raw(
         is_circle,
-        diff_obj.start_time * clock_rate,
-        diff_obj.end_time * clock_rate,
+        h.start_time * clock_rate,
+        h.end_time * clock_rate,
         state,
     );
 }
