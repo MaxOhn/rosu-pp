@@ -5,14 +5,14 @@ use rosu_map::section::general::GameMode;
 use self::calculator::ManiaPerformanceCalculator;
 
 use crate::{
+    Performance,
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance},
     model::{mode::ConvertError, mods::GameMods},
     osu::OsuPerformance,
     util::map_or_attrs::MapOrAttrs,
-    Performance,
 };
 
-use super::{attributes::ManiaPerformanceAttributes, score_state::ManiaScoreState, Mania};
+use super::{Mania, attributes::ManiaPerformanceAttributes, score_state::ManiaScoreState};
 
 mod calculator;
 pub mod gradual;
@@ -807,10 +807,10 @@ mod tests {
     use rosu_mods::GameMod;
 
     use crate::{
+        Beatmap,
         any::{DifficultyAttributes, PerformanceAttributes},
         mania::ManiaDifficultyAttributes,
         osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
-        Beatmap,
     };
 
     use super::{calculator::custom_accuracy, *};
@@ -1250,15 +1250,15 @@ mod tests {
         for _ in 0..CASES {
             const LIMIT: u32 = N_OBJECTS + N_HOLD_NOTES + 10;
 
-            let classic = rng.gen();
-            let acc = rng.gen_range(0.0..=1.0);
-            let n320 = rng.gen_bool(0.1).then(|| rng.gen_range(0..=LIMIT));
-            let n300 = rng.gen_bool(0.1).then(|| rng.gen_range(0..=LIMIT));
-            let n200 = rng.gen_bool(0.1).then(|| rng.gen_range(0..=LIMIT));
-            let n100 = rng.gen_bool(0.1).then(|| rng.gen_range(0..=LIMIT));
-            let n50 = rng.gen_bool(0.1).then(|| rng.gen_range(0..=LIMIT));
-            let n_misses = rng.gen_bool(0.2).then(|| rng.gen_range(0..=LIMIT));
-            let best_case = rng.gen();
+            let classic = rng.random();
+            let acc = rng.random_range(0.0..=1.0);
+            let n320 = rng.random_bool(0.1).then(|| rng.random_range(0..=LIMIT));
+            let n300 = rng.random_bool(0.1).then(|| rng.random_range(0..=LIMIT));
+            let n200 = rng.random_bool(0.1).then(|| rng.random_range(0..=LIMIT));
+            let n100 = rng.random_bool(0.1).then(|| rng.random_range(0..=LIMIT));
+            let n50 = rng.random_bool(0.1).then(|| rng.random_range(0..=LIMIT));
+            let n_misses = rng.random_bool(0.2).then(|| rng.random_range(0..=LIMIT));
+            let best_case = rng.random();
 
             eprintln!(
                 "classic={} | acc={} | n320={:?} | n300={:?} | n200={:?} | \
@@ -1431,19 +1431,24 @@ mod tests {
         let _ = ManiaDifficultyAttributes::default().performance();
         let _ = ManiaPerformanceAttributes::default().performance();
 
-        assert!(map
-            .convert_mut(GameMode::Osu, &GameMods::default())
-            .is_err());
+        assert!(
+            map.convert_mut(GameMode::Osu, &GameMods::default())
+                .is_err()
+        );
 
         assert!(ManiaPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
         assert!(ManiaPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
-        assert!(ManiaPerformance::try_new(DifficultyAttributes::Osu(
-            OsuDifficultyAttributes::default()
-        ))
-        .is_none());
-        assert!(ManiaPerformance::try_new(PerformanceAttributes::Osu(
-            OsuPerformanceAttributes::default()
-        ))
-        .is_none());
+        assert!(
+            ManiaPerformance::try_new(
+                DifficultyAttributes::Osu(OsuDifficultyAttributes::default())
+            )
+            .is_none()
+        );
+        assert!(
+            ManiaPerformance::try_new(PerformanceAttributes::Osu(
+                OsuPerformanceAttributes::default()
+            ))
+            .is_none()
+        );
     }
 }

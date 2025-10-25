@@ -1,7 +1,7 @@
 [package]
 name = "rosu-pp"
 version = "3.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["MaxOhn <ohn.m@hotmail.de>"]
 license = "MIT"
 readme = "README.md"
@@ -21,7 +21,7 @@ rosu-map = { version = "0.2.1" }
 rosu-mods = { version = "0.3.0" }
 
 [dev-dependencies]
-proptest = "1.6.0"
+proptest = "1.8.0"
 
 [profile.test.package.proptest]
 opt-level = 3

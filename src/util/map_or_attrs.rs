@@ -3,7 +3,7 @@ use std::{
     fmt::{Debug, Formatter, Result as FmtResult},
 };
 
-use crate::{model::mode::IGameMode, Beatmap};
+use crate::{Beatmap, model::mode::IGameMode};
 
 pub enum MapOrAttrs<'map, M: IGameMode> {
     Map(Cow<'map, Beatmap>),
@@ -15,7 +15,7 @@ impl<M: IGameMode> MapOrAttrs<'_, M> {
     pub fn insert_attrs(&mut self, attrs: M::DifficultyAttributes) -> &mut M::DifficultyAttributes {
         *self = Self::Attrs(attrs);
 
-        let Self::Attrs(ref mut attrs) = self else {
+        let Self::Attrs(attrs) = self else {
             unreachable!()
         };
 

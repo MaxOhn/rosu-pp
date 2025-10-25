@@ -1,10 +1,10 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use rosu_mods::{
+    GameMod, GameModIntermode, GameMods as GameModsLazer, GameModsIntermode, GameModsLegacy,
     generated_mods::{
         DifficultyAdjustCatch, DifficultyAdjustMania, DifficultyAdjustOsu, DifficultyAdjustTaiko,
     },
-    GameMod, GameModIntermode, GameMods as GameModsLazer, GameModsIntermode, GameModsLegacy,
 };
 
 /// Re-exported [`rosu_mods`].
@@ -43,9 +43,9 @@ pub enum GameMods {
 impl Debug for GameMods {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
-            Self::Lazer(ref mods) => Debug::fmt(mods, f),
-            Self::Intermode(ref mods) => Debug::fmt(mods, f),
-            Self::Legacy(ref mods) => Debug::fmt(mods, f),
+            Self::Lazer(mods) => Debug::fmt(mods, f),
+            Self::Intermode(mods) => Debug::fmt(mods, f),
+            Self::Legacy(mods) => Debug::fmt(mods, f),
         }
     }
 }
@@ -59,12 +59,12 @@ impl GameMods {
     /// `1.0`.
     pub(crate) fn clock_rate(&self) -> f64 {
         match self {
-            Self::Lazer(ref mods) => mods
+            Self::Lazer(mods) => mods
                 .iter()
                 .find_map(|m| {
                     let default = match m.intermode() {
                         GameModIntermode::DoubleTime | GameModIntermode::HalfTime => {
-                            return m.clock_rate()
+                            return m.clock_rate();
                         }
                         GameModIntermode::Nightcore => 1.5,
                         GameModIntermode::Daycore => 0.75,
@@ -74,7 +74,7 @@ impl GameMods {
                     Some(default * (m.clock_rate()? / default))
                 })
                 .unwrap_or(1.0),
-            Self::Intermode(ref mods) => mods.legacy_clock_rate(),
+            Self::Intermode(mods) => mods.legacy_clock_rate(),
             Self::Legacy(mods) => mods.clock_rate(),
         }
     }
@@ -93,7 +93,7 @@ impl GameMods {
     pub(crate) fn hardrock_offsets(&self) -> bool {
         fn custom_hardrock_offsets(mods: &GameMods) -> Option<bool> {
             match mods {
-                GameMods::Lazer(ref mods) => mods.iter().find_map(|gamemod| match gamemod {
+                GameMods::Lazer(mods) => mods.iter().find_map(|gamemod| match gamemod {
                     GameMod::DifficultyAdjustCatch(DifficultyAdjustCatch {
                         hard_rock_offsets,
                         ..
@@ -109,21 +109,21 @@ impl GameMods {
 
     pub(crate) fn no_slider_head_acc(&self, lazer: bool) -> bool {
         match self {
-            Self::Lazer(ref mods) => mods
+            Self::Lazer(mods) => mods
                 .iter()
                 .find_map(|m| match m {
                     GameMod::ClassicOsu(cl) => Some(cl.no_slider_head_accuracy.unwrap_or(true)),
                     _ => None,
                 })
                 .unwrap_or(!lazer),
-            Self::Intermode(ref mods) => mods.contains(GameModIntermode::Classic) || !lazer,
+            Self::Intermode(mods) => mods.contains(GameModIntermode::Classic) || !lazer,
             Self::Legacy(_) => !lazer,
         }
     }
 
     pub(crate) fn reflection(&self) -> Reflection {
         match self {
-            Self::Lazer(ref mods) => mods
+            Self::Lazer(mods) => mods
                 .iter()
                 .find_map(|m| match m {
                     GameMod::HardRockOsu(_) => Some(Reflection::Vertical),
@@ -137,7 +137,7 @@ impl GameMods {
                     _ => None,
                 })
                 .unwrap_or(Reflection::None),
-            Self::Intermode(ref mods) => {
+            Self::Intermode(mods) => {
                 if mods.contains(GameModIntermode::HardRock) {
                     Reflection::Vertical
                 } else {
@@ -156,7 +156,7 @@ impl GameMods {
 
     pub(crate) fn mania_keys(&self) -> Option<f32> {
         match self {
-            Self::Lazer(ref mods) => {
+            Self::Lazer(mods) => {
                 if mods.contains_intermode(GameModIntermode::OneKey) {
                     Some(1.0)
                 } else if mods.contains_intermode(GameModIntermode::TwoKeys) {
@@ -181,7 +181,7 @@ impl GameMods {
                     None
                 }
             }
-            Self::Intermode(ref mods) => {
+            Self::Intermode(mods) => {
                 if mods.contains(GameModIntermode::OneKey) {
                     Some(1.0)
                 } else if mods.contains(GameModIntermode::TwoKeys) {
@@ -206,7 +206,7 @@ impl GameMods {
                     None
                 }
             }
-            Self::Legacy(ref mods) => {
+            Self::Legacy(mods) => {
                 if mods.contains(GameModsLegacy::Key1) {
                     Some(1.0)
                 } else if mods.contains(GameModsLegacy::Key2) {
@@ -267,7 +267,7 @@ macro_rules! impl_map_attr {
                 #[doc = "value."]
                 pub(crate) fn $fn(&self) -> Option<f64> {
                     match self {
-                        Self::Lazer(ref mods) => mods.iter().find_map(|gamemod| match gamemod {
+                        Self::Lazer(mods) => mods.iter().find_map(|gamemod| match gamemod {
                             $( impl_map_attr!( @ $mode $field) => *$field, )*
                             _ => None,
                         }),
@@ -301,10 +301,10 @@ macro_rules! impl_has_mod {
                 #[doc = "`."]
                 pub(crate) fn $fn(&self) -> bool {
                     match self {
-                        Self::Lazer(ref mods) => {
+                        Self::Lazer(mods) => {
                             mods.contains_intermode(GameModIntermode::$name)
                         },
-                        Self::Intermode(ref mods) => {
+                        Self::Intermode(mods) => {
                             mods.contains(GameModIntermode::$name)
                         },
                         Self::Legacy(_mods) => {

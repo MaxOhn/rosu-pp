@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use rosu_map::{section::general::GameMode, util::Pos};
 
 use crate::{
+    GameMods,
     mania::object::ManiaObject,
     model::{
         beatmap::Beatmap,
@@ -14,7 +15,6 @@ use crate::{
         random::{csharp::Random as CsharpRandom, osu::Random as OsuRandom},
         sort,
     },
-    GameMods,
 };
 
 use self::{
@@ -65,7 +65,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
             HitObjectKind::Circle => {
                 compute_density(obj.start_time, &mut density);
 
-                let mut gen = HitObjectPatternGenerator::new(
+                let mut generator = HitObjectPatternGenerator::new(
                     &mut random,
                     obj,
                     sound,
@@ -75,9 +75,9 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
                     map,
                 );
 
-                let new_pattern = gen.generate();
+                let new_pattern = generator.generate();
 
-                last_values.stair = gen.stair_type;
+                last_values.stair = generator.stair_type;
                 last_values.time = obj.start_time;
                 last_values.pos = obj.pos;
 
@@ -87,7 +87,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
                 last_values.pattern = new_pattern;
             }
             HitObjectKind::Slider(ref slider) => {
-                let mut gen = PathObjectPatternGenerator::new(
+                let mut generator = PathObjectPatternGenerator::new(
                     &mut random,
                     obj,
                     sound,
@@ -99,7 +99,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
                     &slider.node_sounds,
                 );
 
-                let segment_duration = f64::from(gen.segment_duration);
+                let segment_duration = f64::from(generator.segment_duration);
 
                 for i in 0..=slider.repeats as i32 + 1 {
                     let time = obj.start_time + segment_duration * f64::from(i);
@@ -110,7 +110,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
                     compute_density(time, &mut density);
                 }
 
-                for new_pattern in gen.generate() {
+                for new_pattern in generator.generate() {
                     new_hit_objects.extend_from_slice(&new_pattern.hit_objects);
                     last_values.pattern = new_pattern;
                 }
@@ -119,7 +119,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
             | HitObjectKind::Hold(HoldNote { duration }) => {
                 let end_time = obj.start_time + duration;
 
-                let mut gen = EndTimeObjectPatternGenerator::new(
+                let mut generator = EndTimeObjectPatternGenerator::new(
                     &mut random,
                     obj,
                     end_time,
@@ -134,7 +134,7 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
 
                 compute_density(end_time, &mut density);
 
-                let new_pattern = gen.generate();
+                let new_pattern = generator.generate();
                 new_hit_objects.extend(new_pattern.hit_objects);
             }
         }
