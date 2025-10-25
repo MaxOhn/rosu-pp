@@ -1,24 +1,24 @@
 use std::{cmp, error, fmt, slice};
 
 use rosu_map::{
+    DecodeBeatmap, DecodeState,
     section::{
         difficulty::{Difficulty, DifficultyKey, ParseDifficultyError},
         events::{BreakPeriod, EventType, ParseEventTypeError},
         general::{GameMode, GeneralKey, ParseGameModeError},
         hit_objects::{
-            hit_samples::{HitSoundType, ParseHitSoundTypeError},
             HitObjectType, ParseHitObjectTypeError, PathControlPoint, PathType,
+            hit_samples::{HitSoundType, ParseHitSoundTypeError},
         },
         timing_points::{ControlPoint, EffectFlags, ParseEffectFlagsError},
     },
-    util::{KeyValue, ParseNumber, ParseNumberError, Pos, StrExt, MAX_PARSE_VALUE},
-    DecodeBeatmap, DecodeState,
+    util::{KeyValue, MAX_PARSE_VALUE, ParseNumber, ParseNumberError, Pos, StrExt},
 };
 
 use crate::{
     model::{
         control_point::{
-            difficulty_point_at, effect_point_at, DifficultyPoint, EffectPoint, TimingPoint,
+            DifficultyPoint, EffectPoint, TimingPoint, difficulty_point_at, effect_point_at,
         },
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
     },
@@ -547,10 +547,10 @@ impl DecodeBeatmap for Beatmap {
             1.0
         };
 
-        if let Some(numerator) = split.next() {
-            if unlikely(i32::parse(numerator)? < 1) {
-                return Err(ParseBeatmapError::TimeSignature);
-            }
+        if let Some(numerator) = split.next()
+            && unlikely(i32::parse(numerator)? < 1)
+        {
+            return Err(ParseBeatmapError::TimeSignature);
         }
 
         let _ = split.next(); // sample set

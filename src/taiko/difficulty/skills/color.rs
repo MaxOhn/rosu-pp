@@ -84,33 +84,28 @@ impl ColorEvaluator {
         let color_data = &hit_object.color_data;
         let mut difficulty = 0.0;
 
-        if let Some(mono_streak) = color_data.mono_streak.as_ref().and_then(Weak::upgrade) {
-            if let Some(first_hit_object) = mono_streak.get().first_hit_object() {
-                if &*first_hit_object.get() == hit_object {
-                    difficulty += Self::eval_mono_streak_diff(&mono_streak);
-                }
-            }
+        if let Some(mono_streak) = color_data.mono_streak.as_ref().and_then(Weak::upgrade)
+            && let Some(first_hit_object) = mono_streak.get().first_hit_object()
+            && &*first_hit_object.get() == hit_object
+        {
+            difficulty += Self::eval_mono_streak_diff(&mono_streak);
         }
 
         if let Some(alternating_mono_pattern) = color_data
             .alternating_mono_pattern
             .as_ref()
             .and_then(Weak::upgrade)
+            && let Some(first_hit_object) = alternating_mono_pattern.get().first_hit_object()
+            && &*first_hit_object.get() == hit_object
         {
-            if let Some(first_hit_object) = alternating_mono_pattern.get().first_hit_object() {
-                if &*first_hit_object.get() == hit_object {
-                    difficulty +=
-                        Self::eval_alternating_mono_pattern_diff(&alternating_mono_pattern);
-                }
-            }
+            difficulty += Self::eval_alternating_mono_pattern_diff(&alternating_mono_pattern);
         }
 
-        if let Some(repeating_hit_patterns) = color_data.repeating_hit_patterns.as_ref() {
-            if let Some(first_hit_object) = repeating_hit_patterns.get().first_hit_object() {
-                if &*first_hit_object.get() == hit_object {
-                    difficulty += Self::eval_repeating_hit_patterns_diff(repeating_hit_patterns);
-                }
-            }
+        if let Some(repeating_hit_patterns) = color_data.repeating_hit_patterns.as_ref()
+            && let Some(first_hit_object) = repeating_hit_patterns.get().first_hit_object()
+            && &*first_hit_object.get() == hit_object
+        {
+            difficulty += Self::eval_repeating_hit_patterns_diff(repeating_hit_patterns);
         }
 
         let consistency_penalty = Self::consistent_ratio_penalty(hit_object, objects, None, None);

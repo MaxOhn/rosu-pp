@@ -3,7 +3,7 @@ use std::f64::consts::FRAC_PI_2;
 use crate::{
     any::difficulty::{
         object::{HasStartTime, IDifficultyObject},
-        skills::{strain_decay, StrainSkill},
+        skills::{StrainSkill, strain_decay},
     },
     osu::difficulty::object::OsuDifficultyObject,
     util::{
@@ -157,77 +157,76 @@ impl AimEvaluator {
         // * If rhythms are the same.
         if osu_curr_obj.strain_time.max(osu_last_obj.strain_time)
             < 1.25 * osu_curr_obj.strain_time.min(osu_last_obj.strain_time)
+            && let Some((curr_angle, last_angle)) = osu_curr_obj.angle.zip(osu_last_obj.angle)
         {
-            if let Some((curr_angle, last_angle)) = osu_curr_obj.angle.zip(osu_last_obj.angle) {
-                // * Rewarding angles, take the smaller velocity as base.
-                let angle_bonus = curr_vel.min(prev_vel);
+            // * Rewarding angles, take the smaller velocity as base.
+            let angle_bonus = curr_vel.min(prev_vel);
 
-                wide_angle_bonus = Self::calc_wide_angle_bonus(curr_angle);
-                acute_angle_bonus = Self::calc_acute_angle_bonus(curr_angle);
+            wide_angle_bonus = Self::calc_wide_angle_bonus(curr_angle);
+            acute_angle_bonus = Self::calc_acute_angle_bonus(curr_angle);
 
-                // * Penalize angle repetition.
-                wide_angle_bonus *= 1.0
-                    - f64::min(
-                        wide_angle_bonus,
-                        f64::powf(Self::calc_wide_angle_bonus(last_angle), 3.0),
-                    );
-                acute_angle_bonus *= 0.08
-                    + 0.92
-                        * (1.0
-                            - f64::min(
-                                acute_angle_bonus,
-                                f64::powf(Self::calc_acute_angle_bonus(last_angle), 3.0),
-                            ));
+            // * Penalize angle repetition.
+            wide_angle_bonus *= 1.0
+                - f64::min(
+                    wide_angle_bonus,
+                    f64::powf(Self::calc_wide_angle_bonus(last_angle), 3.0),
+                );
+            acute_angle_bonus *= 0.08
+                + 0.92
+                    * (1.0
+                        - f64::min(
+                            acute_angle_bonus,
+                            f64::powf(Self::calc_acute_angle_bonus(last_angle), 3.0),
+                        ));
 
-                // * Apply full wide angle bonus for distance more than one diameter
-                wide_angle_bonus *= angle_bonus
-                    * smootherstep(osu_curr_obj.lazy_jump_dist, 0.0, f64::from(DIAMETER));
+            // * Apply full wide angle bonus for distance more than one diameter
+            wide_angle_bonus *=
+                angle_bonus * smootherstep(osu_curr_obj.lazy_jump_dist, 0.0, f64::from(DIAMETER));
 
-                // * Apply acute angle bonus for BPM above 300 1/2 and distance more than one diameter
-                acute_angle_bonus *= angle_bonus
-                    * smootherstep(
-                        milliseconds_to_bpm(osu_curr_obj.strain_time, Some(2)),
-                        300.0,
-                        400.0,
-                    )
-                    * smootherstep(
+            // * Apply acute angle bonus for BPM above 300 1/2 and distance more than one diameter
+            acute_angle_bonus *= angle_bonus
+                * smootherstep(
+                    milliseconds_to_bpm(osu_curr_obj.strain_time, Some(2)),
+                    300.0,
+                    400.0,
+                )
+                * smootherstep(
+                    osu_curr_obj.lazy_jump_dist,
+                    f64::from(DIAMETER),
+                    f64::from(DIAMETER * 2),
+                );
+
+            // * Apply wiggle bonus for jumps that are [radius, 3*diameter] in distance, with < 110 angle
+            // * https://www.desmos.com/calculator/dp0v0nvowc
+            wiggle_bonus = angle_bonus
+                * smootherstep(
+                    osu_curr_obj.lazy_jump_dist,
+                    f64::from(RADIUS),
+                    f64::from(DIAMETER),
+                )
+                * f64::powf(
+                    reverse_lerp(
                         osu_curr_obj.lazy_jump_dist,
+                        f64::from(DIAMETER * 3),
                         f64::from(DIAMETER),
-                        f64::from(DIAMETER * 2),
-                    );
-
-                // * Apply wiggle bonus for jumps that are [radius, 3*diameter] in distance, with < 110 angle
-                // * https://www.desmos.com/calculator/dp0v0nvowc
-                wiggle_bonus = angle_bonus
-                    * smootherstep(
-                        osu_curr_obj.lazy_jump_dist,
-                        f64::from(RADIUS),
-                        f64::from(DIAMETER),
-                    )
-                    * f64::powf(
-                        reverse_lerp(
-                            osu_curr_obj.lazy_jump_dist,
-                            f64::from(DIAMETER * 3),
-                            f64::from(DIAMETER),
-                        ),
-                        1.8,
-                    )
-                    * smootherstep(curr_angle, f64::to_radians(110.0), f64::to_radians(60.0))
-                    * smootherstep(
+                    ),
+                    1.8,
+                )
+                * smootherstep(curr_angle, f64::to_radians(110.0), f64::to_radians(60.0))
+                * smootherstep(
+                    osu_last_obj.lazy_jump_dist,
+                    f64::from(RADIUS),
+                    f64::from(DIAMETER),
+                )
+                * f64::powf(
+                    reverse_lerp(
                         osu_last_obj.lazy_jump_dist,
-                        f64::from(RADIUS),
+                        f64::from(DIAMETER * 3),
                         f64::from(DIAMETER),
-                    )
-                    * f64::powf(
-                        reverse_lerp(
-                            osu_last_obj.lazy_jump_dist,
-                            f64::from(DIAMETER * 3),
-                            f64::from(DIAMETER),
-                        ),
-                        1.8,
-                    )
-                    * smootherstep(last_angle, f64::to_radians(110.0), f64::to_radians(60.0));
-            }
+                    ),
+                    1.8,
+                )
+                * smootherstep(last_angle, f64::to_radians(110.0), f64::to_radians(60.0));
         }
 
         if prev_vel.max(curr_vel).not_eq(0.0) {

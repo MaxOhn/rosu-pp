@@ -516,10 +516,10 @@ impl<'h> PathObjectPatternGenerator<'h> {
         let upper = self.inner.total_columns;
 
         let is_valid = |column: i32| {
-            if let Some(fun) = validation {
-                if !(fun)(column) {
-                    return false;
-                }
+            if let Some(fun) = validation
+                && !(fun)(column)
+            {
+                return false;
             }
 
             let column = column as u8;

@@ -51,28 +51,26 @@ impl RhythmEvaluator {
         let mut interval_penalty = 0.0;
 
         // * Difficulty for SameRhythmGroupedHitObjects
-        if let Some(ref same_rhythm_grouped) = rhythm_data.same_rhythm_grouped_hit_objects {
-            if same_rhythm_grouped
+        if let Some(ref same_rhythm_grouped) = rhythm_data.same_rhythm_grouped_hit_objects
+            && same_rhythm_grouped
                 .get()
                 .first_hit_object()
                 .is_some_and(|h| &*h.get() == hit_object)
-            {
-                same_rhythm += 10.0 * Self::evaluate_diff_of_(same_rhythm_grouped, hit_window);
-                interval_penalty =
-                    Self::repeated_interval_penalty(same_rhythm_grouped, hit_window, None);
-            }
+        {
+            same_rhythm += 10.0 * Self::evaluate_diff_of_(same_rhythm_grouped, hit_window);
+            interval_penalty =
+                Self::repeated_interval_penalty(same_rhythm_grouped, hit_window, None);
         }
 
         // * Difficulty for SamePatternsGroupedHitObjects
-        if let Some(ref same_pattern_grouped) = rhythm_data.same_patterns_grouped_hit_objects {
-            if same_pattern_grouped
+        if let Some(ref same_pattern_grouped) = rhythm_data.same_patterns_grouped_hit_objects
+            && same_pattern_grouped
                 .get()
                 .first_hit_object()
                 .is_some_and(|h| &*h.get() == hit_object)
-            {
-                same_pattern += 1.15
-                    * Self::ratio_difficulty(same_pattern_grouped.get().interval_ratio(), None);
-            }
+        {
+            same_pattern +=
+                1.15 * Self::ratio_difficulty(same_pattern_grouped.get().interval_ratio(), None);
         }
 
         difficulty += f64::max(same_rhythm, same_pattern) * interval_penalty;
@@ -102,14 +100,14 @@ impl RhythmEvaluator {
         let duration = borrowed.duration();
 
         // * If a previous interval exists and there are multiple hit objects in the sequence:
-        if let Some(prev_interval) = prev_interval.filter(|_| borrowed.hit_objects.len() > 1) {
-            if let Some(duration) = duration {
-                let expected_duration_from_prev = prev_interval * borrowed.hit_objects.len() as f64;
-                let duration_diff = duration - expected_duration_from_prev;
+        if let Some(prev_interval) = prev_interval.filter(|_| borrowed.hit_objects.len() > 1)
+            && let Some(duration) = duration
+        {
+            let expected_duration_from_prev = prev_interval * borrowed.hit_objects.len() as f64;
+            let duration_diff = duration - expected_duration_from_prev;
 
-                if duration_diff > 0.0 {
-                    interval_diff *= logistic(duration_diff / hit_window, 0.7, 1.0, Some(1.0));
-                }
+            if duration_diff > 0.0 {
+                interval_diff *= logistic(duration_diff / hit_window, 0.7, 1.0, Some(1.0));
             }
         }
 
