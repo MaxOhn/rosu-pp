@@ -41,7 +41,7 @@ impl ManiaDifficultyObject {
             let prev_note = &objects[idx - 1];
             let prev_note_ref = prev_note.get();
 
-            prev_hit_objects = prev_note_ref.prev_hit_objects.clone();
+            prev_hit_objects.clone_from(&prev_note_ref.prev_hit_objects);
 
             // * intentionally depends on processing order to match live.
             prev_hit_objects[prev_note_ref.column] = Some(RefCount::clone(prev_note));
@@ -49,8 +49,8 @@ impl ManiaDifficultyObject {
 
         Self {
             idx,
-            start_time,
             delta_time,
+            start_time,
             end_time,
             column,
             prev_hit_objects,
