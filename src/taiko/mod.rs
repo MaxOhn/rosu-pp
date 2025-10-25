@@ -1,17 +1,17 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Difficulty,
     model::{
         beatmap::Beatmap,
         mode::{ConvertError, IGameMode},
     },
-    Difficulty,
 };
 
 pub use self::{
     attributes::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
     difficulty::gradual::TaikoGradualDifficulty,
-    performance::{gradual::TaikoGradualPerformance, TaikoPerformance},
+    performance::{TaikoPerformance, gradual::TaikoGradualPerformance},
     score_state::TaikoScoreState,
     strains::TaikoStrains,
 };

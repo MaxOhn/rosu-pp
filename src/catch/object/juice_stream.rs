@@ -6,13 +6,13 @@ use rosu_map::section::{
 };
 
 use crate::{
+    Beatmap,
     catch::attributes::ObjectCountBuilder,
     model::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::Slider,
     },
     util::get_precision_adjusted_beat_len,
-    Beatmap,
 };
 
 pub struct JuiceStream<'a> {

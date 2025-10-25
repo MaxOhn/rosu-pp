@@ -5,14 +5,14 @@ use rosu_map::section::general::GameMode;
 use self::calculator::TaikoPerformanceCalculator;
 
 use crate::{
+    Performance,
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance},
     model::{mode::ConvertError, mods::GameMods},
     osu::OsuPerformance,
     util::map_or_attrs::MapOrAttrs,
-    Performance,
 };
 
-use super::{attributes::TaikoPerformanceAttributes, score_state::TaikoScoreState, Taiko};
+use super::{Taiko, attributes::TaikoPerformanceAttributes, score_state::TaikoScoreState};
 
 mod calculator;
 pub mod gradual;
@@ -416,10 +416,10 @@ mod test {
     use rosu_map::section::general::GameMode;
 
     use crate::{
+        Beatmap,
         any::{DifficultyAttributes, PerformanceAttributes},
         osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
         taiko::TaikoDifficultyAttributes,
-        Beatmap,
     };
 
     use super::*;
@@ -625,19 +625,24 @@ mod test {
         let _ = TaikoDifficultyAttributes::default().performance();
         let _ = TaikoPerformanceAttributes::default().performance();
 
-        assert!(map
-            .convert_mut(GameMode::Osu, &GameMods::default())
-            .is_err());
+        assert!(
+            map.convert_mut(GameMode::Osu, &GameMods::default())
+                .is_err()
+        );
 
         assert!(TaikoPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
         assert!(TaikoPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
-        assert!(TaikoPerformance::try_new(DifficultyAttributes::Osu(
-            OsuDifficultyAttributes::default()
-        ))
-        .is_none());
-        assert!(TaikoPerformance::try_new(PerformanceAttributes::Osu(
-            OsuPerformanceAttributes::default()
-        ))
-        .is_none());
+        assert!(
+            TaikoPerformance::try_new(
+                DifficultyAttributes::Osu(OsuDifficultyAttributes::default())
+            )
+            .is_none()
+        );
+        assert!(
+            TaikoPerformance::try_new(PerformanceAttributes::Osu(
+                OsuPerformanceAttributes::default()
+            ))
+            .is_none()
+        );
     }
 }

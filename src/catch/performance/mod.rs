@@ -5,14 +5,14 @@ use rosu_map::section::general::GameMode;
 use self::calculator::CatchPerformanceCalculator;
 
 use crate::{
+    Performance,
     any::{Difficulty, IntoModePerformance, IntoPerformance},
     model::{mode::ConvertError, mods::GameMods},
     osu::OsuPerformance,
     util::map_or_attrs::MapOrAttrs,
-    Performance,
 };
 
-use super::{attributes::CatchPerformanceAttributes, score_state::CatchScoreState, Catch};
+use super::{Catch, attributes::CatchPerformanceAttributes, score_state::CatchScoreState};
 
 mod calculator;
 pub mod gradual;
@@ -520,10 +520,10 @@ mod test {
     use rosu_map::section::general::GameMode;
 
     use crate::{
+        Beatmap,
         any::{DifficultyAttributes, PerformanceAttributes},
         catch::CatchDifficultyAttributes,
         osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
-        Beatmap,
     };
 
     use super::*;
@@ -767,19 +767,24 @@ mod test {
         let _ = CatchDifficultyAttributes::default().performance();
         let _ = CatchPerformanceAttributes::default().performance();
 
-        assert!(map
-            .convert_mut(GameMode::Osu, &GameMods::default())
-            .is_err());
+        assert!(
+            map.convert_mut(GameMode::Osu, &GameMods::default())
+                .is_err()
+        );
 
         assert!(CatchPerformance::try_new(OsuDifficultyAttributes::default()).is_none());
         assert!(CatchPerformance::try_new(OsuPerformanceAttributes::default()).is_none());
-        assert!(CatchPerformance::try_new(DifficultyAttributes::Osu(
-            OsuDifficultyAttributes::default()
-        ))
-        .is_none());
-        assert!(CatchPerformance::try_new(PerformanceAttributes::Osu(
-            OsuPerformanceAttributes::default()
-        ))
-        .is_none());
+        assert!(
+            CatchPerformance::try_new(
+                DifficultyAttributes::Osu(OsuDifficultyAttributes::default())
+            )
+            .is_none()
+        );
+        assert!(
+            CatchPerformance::try_new(PerformanceAttributes::Osu(
+                OsuPerformanceAttributes::default()
+            ))
+            .is_none()
+        );
     }
 }

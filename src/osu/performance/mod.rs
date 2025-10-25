@@ -6,19 +6,19 @@ use self::calculator::OsuPerformanceCalculator;
 pub use self::calculator::PERFORMANCE_BASE_MULTIPLIER;
 
 use crate::{
+    Beatmap,
     any::{Difficulty, HitResultPriority, IntoModePerformance, IntoPerformance, Performance},
     catch::CatchPerformance,
     mania::ManiaPerformance,
     model::{mode::ConvertError, mods::GameMods},
     taiko::TaikoPerformance,
     util::map_or_attrs::MapOrAttrs,
-    Beatmap,
 };
 
 use super::{
+    Osu,
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
     score_state::{OsuScoreOrigin, OsuScoreState},
-    Osu,
 };
 
 mod calculator;
@@ -914,9 +914,9 @@ mod test {
     use rosu_mods::{GameModIntermode, GameModsIntermode};
 
     use crate::{
+        Beatmap,
         any::{DifficultyAttributes, PerformanceAttributes},
         taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
-        Beatmap,
     };
 
     use super::*;
@@ -1313,14 +1313,18 @@ mod test {
 
         assert!(OsuPerformance::try_new(TaikoDifficultyAttributes::default()).is_none());
         assert!(OsuPerformance::try_new(TaikoPerformanceAttributes::default()).is_none());
-        assert!(OsuPerformance::try_new(DifficultyAttributes::Taiko(
-            TaikoDifficultyAttributes::default()
-        ))
-        .is_none());
-        assert!(OsuPerformance::try_new(PerformanceAttributes::Taiko(
-            TaikoPerformanceAttributes::default()
-        ))
-        .is_none());
+        assert!(
+            OsuPerformance::try_new(DifficultyAttributes::Taiko(
+                TaikoDifficultyAttributes::default()
+            ))
+            .is_none()
+        );
+        assert!(
+            OsuPerformance::try_new(PerformanceAttributes::Taiko(
+                TaikoPerformanceAttributes::default()
+            ))
+            .is_none()
+        );
         assert!(OsuPerformance::try_new(&map).is_none());
         assert!(OsuPerformance::try_new(map).is_none());
     }

@@ -6,15 +6,15 @@ use std::{
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    GradualDifficulty, GradualPerformance,
     catch::Catch,
     mania::Mania,
     model::{beatmap::Beatmap, mode::ConvertError, mods::GameMods},
     osu::Osu,
     taiko::Taiko,
-    GradualDifficulty, GradualPerformance,
 };
 
-use super::{attributes::DifficultyAttributes, InspectDifficulty, Strains};
+use super::{InspectDifficulty, Strains, attributes::DifficultyAttributes};
 
 pub mod gradual;
 pub mod inspect;

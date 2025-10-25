@@ -1,6 +1,6 @@
 use rosu_map::section::general::GameMode;
 
-use crate::{any::difficulty::ModsDependent, model::mods::GameMods, Difficulty};
+use crate::{Difficulty, any::difficulty::ModsDependent, model::mods::GameMods};
 
 use super::Beatmap;
 
@@ -436,8 +436,8 @@ mod tests {
     #![allow(clippy::float_cmp)]
 
     use rosu_mods::{
-        generated_mods::{DifficultyAdjustOsu, DoubleTimeCatch, DoubleTimeOsu, HiddenOsu},
         GameMod, GameMods,
+        generated_mods::{DifficultyAdjustOsu, DoubleTimeCatch, DoubleTimeOsu, HiddenOsu},
     };
 
     use super::*;

@@ -1,13 +1,13 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Beatmap, Difficulty,
     any::{PerformanceAttributes, ScoreState},
     catch::{Catch, CatchGradualPerformance},
     mania::{Mania, ManiaGradualPerformance},
     model::mode::{ConvertError, IGameMode},
     osu::{Osu, OsuGradualPerformance},
     taiko::{Taiko, TaikoGradualPerformance},
-    Beatmap, Difficulty,
 };
 
 /// Gradually calculate the performance attributes on maps of any mode.

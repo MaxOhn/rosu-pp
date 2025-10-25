@@ -1,10 +1,10 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::{difficulty::skills::StrainSkill, Difficulty},
+    Beatmap,
+    any::{Difficulty, difficulty::skills::StrainSkill},
     mania::difficulty::DifficultyValues,
     model::mode::ConvertError,
-    Beatmap,
 };
 
 /// The result of calculating the strains on a osu!mania map.

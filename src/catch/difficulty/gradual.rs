@@ -3,20 +3,20 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Beatmap, Difficulty,
     any::difficulty::skills::StrainSkill,
     catch::{
+        CatchDifficultyAttributes,
         attributes::{GradualObjectCount, ObjectCountBuilder},
         catcher::Catcher,
         convert::convert_objects,
-        CatchDifficultyAttributes,
     },
     model::mode::ConvertError,
-    Beatmap, Difficulty,
 };
 
 use super::{
-    object::CatchDifficultyObject, skills::movement::Movement, CatchDifficultySetup,
-    DifficultyValues,
+    CatchDifficultySetup, DifficultyValues, object::CatchDifficultyObject,
+    skills::movement::Movement,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!catch map.
@@ -173,7 +173,7 @@ impl ExactSizeIterator for CatchGradualDifficulty {
 
 #[cfg(test)]
 mod tests {
-    use crate::{catch::Catch, Beatmap};
+    use crate::{Beatmap, catch::Catch};
 
     use super::*;
 

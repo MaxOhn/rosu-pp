@@ -1,4 +1,4 @@
-use crate::{mania::ManiaGradualDifficulty, model::mode::ConvertError, Beatmap, Difficulty};
+use crate::{Beatmap, Difficulty, mania::ManiaGradualDifficulty, model::mode::ConvertError};
 
 use super::{ManiaPerformanceAttributes, ManiaScoreState};
 
@@ -117,7 +117,7 @@ impl ManiaGradualPerformance {
 
 #[cfg(test)]
 mod tests {
-    use crate::{mania::ManiaPerformance, Beatmap};
+    use crate::{Beatmap, mania::ManiaPerformance};
 
     use super::*;
 

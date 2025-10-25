@@ -6,7 +6,7 @@ use rosu_map::section::{
 };
 
 pub use rosu_map::{
-    section::hit_objects::{hit_samples::HitSoundType, PathControlPoint, PathType, SplineType},
+    section::hit_objects::{PathControlPoint, PathType, SplineType, hit_samples::HitSoundType},
     util::Pos,
 };
 

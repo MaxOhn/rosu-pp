@@ -10,6 +10,7 @@ use crate::{
 };
 
 use super::{
+    PLAYFIELD_WIDTH,
     attributes::ObjectCountBuilder,
     catcher::Catcher,
     object::{
@@ -18,7 +19,6 @@ use super::{
         juice_stream::{JuiceStream, JuiceStreamBufs, NestedJuiceStreamObjectKind},
         palpable::PalpableObject,
     },
-    PLAYFIELD_WIDTH,
 };
 
 const RNG_SEED: i32 = 1337;

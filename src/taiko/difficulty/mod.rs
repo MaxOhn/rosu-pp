@@ -5,6 +5,7 @@ use rosu_map::section::general::GameMode;
 use skills::{color::Color, reading::Reading, rhythm::Rhythm, stamina::Stamina};
 
 use crate::{
+    Beatmap, Difficulty, GameMods,
     any::difficulty::skills::StrainSkill,
     model::{beatmap::HitWindows, mode::ConvertError},
     taiko::{
@@ -15,7 +16,6 @@ use crate::{
         object::TaikoObject,
     },
     util::difficulty::norm,
-    Beatmap, Difficulty, GameMods,
 };
 
 pub(crate) use self::skills::TaikoSkills;

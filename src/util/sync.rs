@@ -153,7 +153,7 @@ const fn _share_gradual_taiko() {}
 mod tests {
     #[test]
     fn share_gradual_taiko() {
-        use crate::{taiko::TaikoGradualDifficulty, Beatmap, Difficulty};
+        use crate::{Beatmap, Difficulty, taiko::TaikoGradualDifficulty};
 
         let map = Beatmap::from_bytes(&[]).unwrap();
         let mut gradual = TaikoGradualDifficulty::new(Difficulty::new(), &map).unwrap();

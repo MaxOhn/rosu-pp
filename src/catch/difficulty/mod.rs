@@ -1,12 +1,12 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::{skills::StrainSkill, Difficulty},
+    Beatmap,
+    any::difficulty::{Difficulty, skills::StrainSkill},
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
     model::{beatmap::BeatmapAttributes, mode::ConvertError},
-    Beatmap,
 };
 
 use self::skills::movement::Movement;

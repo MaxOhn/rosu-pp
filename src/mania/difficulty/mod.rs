@@ -3,13 +3,13 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::{skills::StrainSkill, Difficulty},
+    Beatmap,
+    any::difficulty::{Difficulty, skills::StrainSkill},
     mania::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},
     },
     model::mode::ConvertError,
-    Beatmap,
 };
 
 use super::{attributes::ManiaDifficultyAttributes, convert};

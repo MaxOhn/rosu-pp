@@ -1,7 +1,7 @@
 use crate::{
-    model::mode::ConvertError,
-    taiko::{difficulty::gradual::TaikoGradualDifficulty, TaikoScoreState},
     Beatmap, Difficulty,
+    model::mode::ConvertError,
+    taiko::{TaikoScoreState, difficulty::gradual::TaikoGradualDifficulty},
 };
 
 use super::TaikoPerformanceAttributes;
@@ -130,7 +130,7 @@ impl TaikoGradualPerformance {
 
 #[cfg(test)]
 mod tests {
-    use crate::{taiko::TaikoPerformance, Beatmap};
+    use crate::{Beatmap, taiko::TaikoPerformance};
 
     use super::*;
 

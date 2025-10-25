@@ -1,13 +1,13 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Beatmap, Difficulty,
     any::DifficultyAttributes,
     catch::{Catch, CatchGradualDifficulty},
     mania::{Mania, ManiaGradualDifficulty},
     model::mode::{ConvertError, IGameMode},
     osu::{Osu, OsuGradualDifficulty},
     taiko::{Taiko, TaikoGradualDifficulty},
-    Beatmap, Difficulty,
 };
 
 /// Gradually calculate the difficulty attributes on maps of any mode.

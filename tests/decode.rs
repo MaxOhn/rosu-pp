@@ -1,4 +1,4 @@
-use rosu_pp::{model::mode::GameMode, Beatmap, GameMods};
+use rosu_pp::{Beatmap, GameMods, model::mode::GameMode};
 
 use crate::common::assert_eq_float;
 

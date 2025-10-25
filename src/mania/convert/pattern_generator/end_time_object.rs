@@ -1,10 +1,10 @@
 use rosu_map::section::hit_objects::hit_samples::HitSoundType;
 
 use crate::{
+    Beatmap,
     mania::convert::{pattern::Pattern, pattern_type::PatternType},
     model::hit_object::HitObject,
     util::random::osu::Random,
-    Beatmap,
 };
 
 use super::PatternGenerator;

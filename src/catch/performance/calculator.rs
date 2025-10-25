@@ -1,6 +1,6 @@
 use crate::{
-    catch::{CatchDifficultyAttributes, CatchPerformanceAttributes, CatchScoreState},
     GameMods,
+    catch::{CatchDifficultyAttributes, CatchPerformanceAttributes, CatchScoreState},
 };
 
 pub(super) struct CatchPerformanceCalculator<'mods> {

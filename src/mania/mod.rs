@@ -1,17 +1,17 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Difficulty, GameMods,
     model::{
         beatmap::Beatmap,
         mode::{ConvertError, IGameMode},
     },
-    Difficulty, GameMods,
 };
 
 pub use self::{
     attributes::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
     difficulty::gradual::ManiaGradualDifficulty,
-    performance::{gradual::ManiaGradualPerformance, ManiaPerformance},
+    performance::{ManiaPerformance, gradual::ManiaGradualPerformance},
     score_state::ManiaScoreState,
     strains::ManiaStrains,
 };

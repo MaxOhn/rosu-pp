@@ -3,20 +3,20 @@ use std::{cmp, mem};
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Beatmap, Difficulty,
     any::difficulty::skills::StrainSkill,
     model::mode::ConvertError,
     osu::{
         convert::convert_objects,
         object::{OsuObject, OsuObjectKind},
     },
-    Beatmap, Difficulty,
 };
 
 use self::osu_objects::OsuObjects;
 
 use super::{
-    object::OsuDifficultyObject, skills::OsuSkills, DifficultyValues, OsuDifficultyAttributes,
-    OsuDifficultySetup,
+    DifficultyValues, OsuDifficultyAttributes, OsuDifficultySetup, object::OsuDifficultyObject,
+    skills::OsuSkills,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!standard map.
@@ -237,7 +237,7 @@ mod osu_objects {
 
 #[cfg(test)]
 mod tests {
-    use crate::{osu::Osu, Beatmap};
+    use crate::{Beatmap, osu::Osu};
 
     use super::*;
 

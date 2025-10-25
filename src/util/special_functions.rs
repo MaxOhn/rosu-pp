@@ -204,11 +204,7 @@ fn erf_imp(z: f64, mut invert: bool) -> f64 {
         0.0
     };
 
-    if invert {
-        1.0 - result
-    } else {
-        result
-    }
+    if invert { 1.0 - result } else { result }
 }
 
 fn erf_inv_impl(p: f64, q: f64, s: f64) -> f64 {

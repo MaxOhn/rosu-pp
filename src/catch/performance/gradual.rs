@@ -1,7 +1,7 @@
 use crate::{
+    Beatmap, Difficulty,
     catch::{CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState},
     model::mode::ConvertError,
-    Beatmap, Difficulty,
 };
 
 /// Gradually calculate the performance attributes of an osu!catch map.
@@ -139,7 +139,7 @@ impl CatchGradualPerformance {
 
 #[cfg(test)]
 mod tests {
-    use crate::{catch::CatchPerformance, Beatmap};
+    use crate::{Beatmap, catch::CatchPerformance};
 
     use super::*;
 

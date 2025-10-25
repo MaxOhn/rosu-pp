@@ -1,17 +1,17 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Difficulty,
     model::{
         beatmap::Beatmap,
         mode::{ConvertError, IGameMode},
     },
-    Difficulty,
 };
 
 pub use self::{
     attributes::{CatchDifficultyAttributes, CatchPerformanceAttributes},
     difficulty::gradual::CatchGradualDifficulty,
-    performance::{gradual::CatchGradualPerformance, CatchPerformance},
+    performance::{CatchPerformance, gradual::CatchGradualPerformance},
     score_state::CatchScoreState,
     strains::CatchStrains,
 };

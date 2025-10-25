@@ -1,15 +1,15 @@
 use std::{borrow::Cow, io, path::Path, str::FromStr};
 
 use rosu_map::{
-    section::{general::GameMode, hit_objects::hit_samples::HitSoundType},
     LATEST_FORMAT_VERSION,
+    section::{general::GameMode, hit_objects::hit_samples::HitSoundType},
 };
 
 pub use rosu_map::section::events::BreakPeriod;
 
 use crate::{
-    catch::Catch, mania::Mania, taiko::Taiko, Difficulty, GameMods, GradualDifficulty,
-    GradualPerformance, Performance,
+    Difficulty, GameMods, GradualDifficulty, GradualPerformance, Performance, catch::Catch,
+    mania::Mania, taiko::Taiko,
 };
 
 pub use self::{
@@ -20,8 +20,8 @@ pub use self::{
 
 use super::{
     control_point::{
-        difficulty_point_at, effect_point_at, timing_point_at, DifficultyPoint, EffectPoint,
-        TimingPoint,
+        DifficultyPoint, EffectPoint, TimingPoint, difficulty_point_at, effect_point_at,
+        timing_point_at,
     },
     hit_object::HitObject,
     mode::ConvertError,

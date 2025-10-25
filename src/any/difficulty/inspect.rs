@@ -1,4 +1,4 @@
-use crate::{model::mods::GameMods, Difficulty};
+use crate::{Difficulty, model::mods::GameMods};
 
 use super::ModsDependent;
 

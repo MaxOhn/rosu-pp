@@ -1,7 +1,7 @@
 use crate::{
+    GameMods,
     taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes, TaikoScoreState},
     util::special_functions::{erf, erf_inv},
-    GameMods,
 };
 
 pub(super) struct TaikoPerformanceCalculator<'mods> {

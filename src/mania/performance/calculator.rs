@@ -1,6 +1,6 @@
 use crate::{
-    mania::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaScoreState},
     GameMods,
+    mania::{ManiaDifficultyAttributes, ManiaPerformanceAttributes, ManiaScoreState},
 };
 
 pub(super) struct ManiaPerformanceCalculator<'mods> {

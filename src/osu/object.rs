@@ -9,12 +9,12 @@ use rosu_map::{
 };
 
 use crate::{
+    Beatmap,
     model::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
     },
     util::{get_precision_adjusted_beat_len, sort},
-    Beatmap,
 };
 
 use super::PLAYFIELD_BASE_SIZE;

@@ -1,9 +1,9 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Beatmap, Performance,
     any::{DifficultyAttributes, PerformanceAttributes},
     model::mode::IGameMode,
-    Beatmap, Performance,
 };
 
 /// Turning a type into the generic [`IGameMode`]'s performance calculator.

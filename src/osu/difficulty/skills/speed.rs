@@ -3,7 +3,7 @@ use std::{cmp, f64::consts::PI};
 use crate::{
     any::difficulty::{
         object::{HasStartTime, IDifficultyObject},
-        skills::{strain_decay, StrainSkill},
+        skills::{StrainSkill, strain_decay},
     },
     osu::difficulty::object::OsuDifficultyObject,
     util::{

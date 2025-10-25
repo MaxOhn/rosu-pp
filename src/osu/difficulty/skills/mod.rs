@@ -7,7 +7,7 @@ use crate::{
 use self::{aim::Aim, flashlight::Flashlight, speed::Speed};
 
 use super::{
-    object::OsuDifficultyObject, scaling_factor::ScalingFactor, HD_FADE_IN_DURATION_MULTIPLIER,
+    HD_FADE_IN_DURATION_MULTIPLIER, object::OsuDifficultyObject, scaling_factor::ScalingFactor,
 };
 
 pub mod aim;

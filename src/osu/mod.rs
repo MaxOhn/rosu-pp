@@ -1,17 +1,17 @@
 use rosu_map::util::Pos;
 
 use crate::{
+    Difficulty,
     model::{
         beatmap::Beatmap,
         mode::{ConvertError, IGameMode},
     },
-    Difficulty,
 };
 
 pub use self::{
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
     difficulty::gradual::OsuGradualDifficulty,
-    performance::{gradual::OsuGradualPerformance, OsuPerformance},
+    performance::{OsuPerformance, gradual::OsuGradualPerformance},
     score_state::{OsuScoreOrigin, OsuScoreState},
     strains::OsuStrains,
 };

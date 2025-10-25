@@ -5,7 +5,7 @@ use crate::{
     taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
 };
 
-use super::performance::{into::IntoPerformance, Performance};
+use super::performance::{Performance, into::IntoPerformance};
 
 /// The result of a difficulty calculation based on the mode.
 #[derive(Clone, Debug, PartialEq)]

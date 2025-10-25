@@ -1,11 +1,11 @@
 use std::slice::Iter;
 
 use crate::{
+    Beatmap,
     any::difficulty::object::{HasStartTime, IDifficultyObject, IDifficultyObjects},
     model::control_point::{EffectPoint, TimingPoint},
     taiko::object::{HitType, TaikoObject},
     util::{interval_grouping::HasInterval, sync::RefCount},
-    Beatmap,
 };
 
 use super::{color::color_data::ColorData, rhythm::rhythm_data::RhythmData};

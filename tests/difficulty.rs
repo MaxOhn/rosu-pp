@@ -1,11 +1,11 @@
 use std::panic::{self, UnwindSafe};
 
 use rosu_pp::{
+    Beatmap, Difficulty,
     catch::{Catch, CatchDifficultyAttributes},
     mania::{Mania, ManiaDifficultyAttributes},
     osu::{Osu, OsuDifficultyAttributes},
     taiko::{Taiko, TaikoDifficultyAttributes},
-    Beatmap, Difficulty,
 };
 
 use self::common::*;

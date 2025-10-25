@@ -1,8 +1,8 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    catch::CatchPerformance, mania::ManiaPerformance, osu::OsuPerformance, taiko::TaikoPerformance,
-    Difficulty, GameMods,
+    Difficulty, GameMods, catch::CatchPerformance, mania::ManiaPerformance, osu::OsuPerformance,
+    taiko::TaikoPerformance,
 };
 
 use self::into::IntoPerformance;
@@ -463,12 +463,12 @@ impl<'a, T: IntoPerformance<'a>> From<T> for Performance<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
+        Beatmap,
         any::DifficultyAttributes,
         catch::{CatchDifficultyAttributes, CatchPerformanceAttributes},
         mania::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
         osu::{OsuDifficultyAttributes, OsuPerformanceAttributes},
         taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
-        Beatmap,
     };
 
     use super::*;

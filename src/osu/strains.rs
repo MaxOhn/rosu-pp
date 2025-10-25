@@ -1,8 +1,8 @@
 use rosu_map::section::general::GameMode;
 
-use crate::{any::difficulty::skills::StrainSkill, model::mode::ConvertError, Beatmap, Difficulty};
+use crate::{Beatmap, Difficulty, any::difficulty::skills::StrainSkill, model::mode::ConvertError};
 
-use super::difficulty::{skills::OsuSkills, DifficultyValues};
+use super::difficulty::{DifficultyValues, skills::OsuSkills};
 
 /// The result of calculating the strains on a osu! map.
 ///

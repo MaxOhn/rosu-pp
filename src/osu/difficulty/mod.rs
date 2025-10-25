@@ -4,7 +4,8 @@ use rosu_map::section::general::GameMode;
 use skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill};
 
 use crate::{
-    any::difficulty::{skills::StrainSkill, Difficulty},
+    Beatmap,
+    any::difficulty::{Difficulty, skills::StrainSkill},
     model::{beatmap::BeatmapAttributes, mode::ConvertError, mods::GameMods},
     osu::{
         convert::convert_objects,
@@ -12,7 +13,6 @@ use crate::{
         object::OsuObject,
         performance::PERFORMANCE_BASE_MULTIPLIER,
     },
-    Beatmap,
 };
 
 use self::skills::OsuSkills;

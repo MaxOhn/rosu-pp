@@ -3,15 +3,15 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use crate::{
+    Beatmap, Difficulty,
     any::difficulty::skills::StrainSkill,
     mania::{convert, object::ObjectParams},
     model::{hit_object::HitObject, mode::ConvertError},
-    Beatmap, Difficulty,
 };
 
 use super::{
-    object::ManiaDifficultyObject, skills::strain::Strain, DifficultyValues,
-    ManiaDifficultyAttributes, ManiaObject, DIFFICULTY_MULTIPLIER,
+    DIFFICULTY_MULTIPLIER, DifficultyValues, ManiaDifficultyAttributes, ManiaObject,
+    object::ManiaDifficultyObject, skills::strain::Strain,
 };
 
 /// Gradually calculate the difficulty attributes of an osu!mania map.
@@ -220,7 +220,7 @@ fn increment_combo_raw(is_circle: bool, start_time: f64, end_time: f64, state: &
 
 #[cfg(test)]
 mod tests {
-    use crate::{mania::Mania, Beatmap};
+    use crate::{Beatmap, mania::Mania};
 
     use super::*;
 

@@ -1,8 +1,8 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    any::difficulty::skills::StrainSkill, model::mode::ConvertError,
-    taiko::difficulty::DifficultyValues, Beatmap, Difficulty,
+    Beatmap, Difficulty, any::difficulty::skills::StrainSkill, model::mode::ConvertError,
+    taiko::difficulty::DifficultyValues,
 };
 
 use super::difficulty::TaikoSkills;
