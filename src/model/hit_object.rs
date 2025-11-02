@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use rosu_map::section::{
     general::GameMode,
-    hit_objects::{BorrowedCurve, CurveBuffers},
+    hit_objects::{Curve, CurveBuffers},
 };
 
 pub use rosu_map::{
@@ -84,12 +84,8 @@ impl Slider {
         self.repeats + 1
     }
 
-    pub(crate) fn curve<'a>(
-        &self,
-        mode: GameMode,
-        bufs: &'a mut CurveBuffers,
-    ) -> BorrowedCurve<'a> {
-        BorrowedCurve::new(mode, &self.control_points, self.expected_dist, bufs)
+    pub(crate) fn curve(&self, mode: GameMode, bufs: &mut CurveBuffers) -> Curve {
+        Curve::new(mode, &self.control_points, self.expected_dist, bufs)
     }
 }
 

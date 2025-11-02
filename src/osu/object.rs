@@ -1,9 +1,7 @@
-use std::borrow::Cow;
-
 use rosu_map::{
     section::{
         general::GameMode,
-        hit_objects::{CurveBuffers, SliderEvent, SliderEventType, SliderEventsIter},
+        hit_objects::{Curve, CurveBuffers, SliderEvent, SliderEventType, SliderEventsIter},
     },
     util::Pos,
 };
@@ -67,9 +65,6 @@ impl OsuObject {
         reflect_y(&mut self.pos.y);
 
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            // Requires `stack_offset` so we can't add `h.pos` just yet
-            slider.lazy_end_pos.y = -slider.lazy_end_pos.y;
-
             for nested in slider.nested_objects.iter_mut() {
                 let mut nested_pos = self.pos; // already reflected at this point
                 nested_pos += Pos::new(nested.pos.x, -nested.pos.y);
@@ -86,9 +81,6 @@ impl OsuObject {
         reflect_x(&mut self.pos.x);
 
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            // Requires `stack_offset` so we can't add `h.pos` just yet
-            slider.lazy_end_pos.x = -slider.lazy_end_pos.x;
-
             for nested in slider.nested_objects.iter_mut() {
                 let mut nested_pos = self.pos; // already reflected at this point
                 nested_pos += Pos::new(-nested.pos.x, nested.pos.y);
@@ -106,10 +98,6 @@ impl OsuObject {
         reflect(&mut self.pos);
 
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            // Requires `stack_offset` so we can't add `h.pos` just yet
-            slider.lazy_end_pos.x = -slider.lazy_end_pos.x;
-            slider.lazy_end_pos.y = -slider.lazy_end_pos.y;
-
             for nested in slider.nested_objects.iter_mut() {
                 let mut nested_pos = self.pos; // already reflected at this point
                 nested_pos += Pos::new(-nested.pos.x, -nested.pos.y);
@@ -157,13 +145,6 @@ impl OsuObject {
         self.end_pos() + self.stack_offset
     }
 
-    pub const fn lazy_travel_time(&self) -> f64 {
-        match self.kind {
-            OsuObjectKind::Circle | OsuObjectKind::Spinner(_) => 0.0,
-            OsuObjectKind::Slider(ref slider) => slider.lazy_travel_time,
-        }
-    }
-
     pub const fn is_circle(&self) -> bool {
         matches!(self.kind, OsuObjectKind::Circle)
     }
@@ -185,9 +166,8 @@ pub enum OsuObjectKind {
 
 pub struct OsuSlider {
     pub end_time: f64,
-    pub lazy_end_pos: Pos,
-    pub lazy_travel_dist: f32,
-    pub lazy_travel_time: f64,
+    pub span_count: f64,
+    pub path: Curve,
     pub nested_objects: Vec<NestedSliderObject>,
 }
 
@@ -293,59 +273,12 @@ impl OsuSlider {
             a.start_time.total_cmp(&b.start_time)
         });
 
-        let mut nested = Cow::Borrowed(nested_objects.as_slice());
-        let lazy_travel_time = OsuSlider::lazy_travel_time(start_time, duration, &mut nested);
-
-        let mut end_time_min = lazy_travel_time / span_duration;
-
-        if end_time_min % 2.0 >= 1.0 {
-            end_time_min = 1.0 - end_time_min % 1.0;
-        } else {
-            end_time_min %= 1.0;
-        }
-
-        let lazy_end_pos = path.position_at(end_time_min);
-
         Self {
             end_time,
-            lazy_end_pos,
-            lazy_travel_dist: 0.0,
-            lazy_travel_time,
+            span_count,
+            path,
             nested_objects,
         }
-    }
-
-    pub fn lazy_travel_time(
-        start_time: f64,
-        duration: f64,
-        nested_objects: &mut Cow<'_, [NestedSliderObject]>,
-    ) -> f64 {
-        const TAIL_LENIENCY: f64 = -36.0;
-
-        let mut tracking_end_time =
-            (start_time + duration + TAIL_LENIENCY).max(start_time + duration / 2.0);
-
-        let last_real_tick = nested_objects
-            .iter()
-            .enumerate()
-            .rfind(|(_, nested)| nested.is_tick());
-
-        if let Some((idx, last_real_tick)) =
-            last_real_tick.filter(|(_, tick)| tick.start_time > tracking_end_time)
-        {
-            tracking_end_time = last_real_tick.start_time;
-
-            // * When the last tick falls after the tracking end time, we need to re-sort the nested objects
-            // * based on time. This creates a somewhat weird ordering which is counter to how a user would
-            // * understand the slider, but allows a zero-diff with known diffcalc output.
-            // *
-            // * To reiterate, this is definitely not correct from a difficulty calculation perspective
-            // * and should be revisited at a later date (likely by replacing this whole code with the commented
-            // * version above).
-            nested_objects.to_mut()[idx..].rotate_left(1);
-        }
-
-        tracking_end_time - start_time
     }
 
     pub fn repeat_count(&self) -> usize {

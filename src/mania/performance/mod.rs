@@ -425,6 +425,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             misses,
             hitresult_priority,
             hitresult_generator: _,
+            legacy_total_score: _,
         } = osu;
 
         Ok(Self {

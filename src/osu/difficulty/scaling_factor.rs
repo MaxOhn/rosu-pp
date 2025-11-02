@@ -11,7 +11,7 @@ const BROKEN_GAMEFIELD_ROUNDING_ALLOWANCE: f32 = 1.00041;
 /// osu!lazer stores these in each hit object but since all objects share the
 /// same scaling (w.r.t. difficulty & performance), we store them only once.
 pub struct ScalingFactor {
-    /// `NORMALIZED_RADIUS / Radius` and then adjusted if `Radius < 30`
+    /// `NORMALIZED_RADIUS / Radius`
     pub factor: f32,
     pub radius: f64,
     pub scale: f32,
@@ -25,14 +25,8 @@ impl ScalingFactor {
         let radius = f64::from(OsuObject::OBJECT_RADIUS * scale);
         let factor = OsuDifficultyObject::NORMALIZED_RADIUS as f32 / radius as f32;
 
-        let factor_with_small_circle_bonus = if radius < 30.0 {
-            factor * (1.0 + (30.0 - radius as f32).min(5.0) / 50.0)
-        } else {
-            factor
-        };
-
         Self {
-            factor: factor_with_small_circle_bonus,
+            factor,
             radius,
             scale,
         }

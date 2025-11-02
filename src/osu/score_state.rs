@@ -105,6 +105,10 @@ pub struct OsuScoreState {
     pub max_combo: u32,
     /// Hitresults of a score.
     pub hitresults: OsuHitResults,
+    /// Legacy total score.
+    ///
+    /// Only relevant for osu!stable
+    pub legacy_total_score: Option<u32>,
 }
 
 impl OsuScoreState {
@@ -113,6 +117,7 @@ impl OsuScoreState {
         Self {
             max_combo: 0,
             hitresults: OsuHitResults::new(),
+            legacy_total_score: None,
         }
     }
 }

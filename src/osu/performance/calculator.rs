@@ -4,8 +4,9 @@ use crate::{
     GameMods,
     osu::{
         OsuDifficultyAttributes, OsuHitResults, OsuPerformanceAttributes, OsuScoreState,
-        difficulty::skills::{
-            aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill,
+        difficulty::{
+            rating::OsuRatingCalculator,
+            skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill},
         },
     },
     util::{
@@ -18,7 +19,7 @@ use crate::{
 use super::{n_large_tick_miss, n_slider_ends_dropped, total_imperfect_hits};
 
 // * This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
-pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.15;
+pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.14;
 
 pub(super) struct OsuPerformanceCalculator<'mods> {
     attrs: OsuDifficultyAttributes,
@@ -26,7 +27,11 @@ pub(super) struct OsuPerformanceCalculator<'mods> {
     acc: f64,
     state: OsuScoreState,
     effective_miss_count: f64,
+    combo_based_estimated_miss_count: f64,
+    score_based_estimated_miss_count: Option<f64>,
     using_classic_slider_acc: bool,
+    speed_estimated_slider_breaks: f64,
+    aim_estimated_slider_breaks: f64,
 }
 
 impl<'a> OsuPerformanceCalculator<'a> {
@@ -36,7 +41,11 @@ impl<'a> OsuPerformanceCalculator<'a> {
         acc: f64,
         state: OsuScoreState,
         effective_miss_count: f64,
+        combo_based_estimated_miss_count: f64,
+        score_based_estimated_miss_count: Option<f64>,
         using_classic_slider_acc: bool,
+        speed_estimated_slider_breaks: f64,
+        aim_estimated_slider_breaks: f64,
     ) -> Self {
         Self {
             attrs,
@@ -44,7 +53,11 @@ impl<'a> OsuPerformanceCalculator<'a> {
             acc,
             state,
             effective_miss_count,
+            combo_based_estimated_miss_count,
+            score_based_estimated_miss_count,
             using_classic_slider_acc,
+            speed_estimated_slider_breaks,
+            aim_estimated_slider_breaks,
         }
     }
 }
@@ -75,12 +88,12 @@ impl OsuPerformanceCalculator<'_> {
         if self.mods.rx() {
             let od = self.attrs.od();
 
-            // * https://www.desmos.com/calculator/bc9eybdthb
+            // * https://www.desmos.com/calculator/vspzsop6td
             // * we use OD13.3 as maximum since it's the value at which great hitwidow becomes 0
             // * this is well beyond currently maximum achievable OD which is 12.17 (DTx2 + DA with OD11)
             let (n100_mult, n50_mult) = if od > 0.0 {
                 (
-                    (1.0 - (od / 13.33).powf(1.8)).max(0.0),
+                    0.75 * (1.0 - od / 13.33).max(0.0),
                     (1.0 - (od / 13.33).powf(5.0)).max(0.0),
                 )
             } else {
@@ -132,7 +145,7 @@ impl OsuPerformanceCalculator<'_> {
             let estimate_improperly_followed_difficult_sliders = if self.using_classic_slider_acc {
                 // * When the score is considered classic (regardless if it was made on old client or not)
                 // * we consider all missing combo to be dropped difficult sliders
-                let maximum_possible_dropped_sliders = total_imperfect_hits(&self.state.hitresults);
+                let maximum_possible_dropped_sliders = total_imperfect_hits(&self.state);
 
                 f64::clamp(
                     f64::min(
@@ -177,39 +190,36 @@ impl OsuPerformanceCalculator<'_> {
         aim_value *= len_bonus;
 
         if self.effective_miss_count > 0.0 {
+            let relevant_miss_count =
+                (self.effective_miss_count + self.aim_estimated_slider_breaks).min(
+                    total_imperfect_hits(&self.state)
+                        + f64::from(n_large_tick_miss(&self.attrs, &self.state)),
+                );
+
             aim_value *= Self::calculate_miss_penalty(
-                self.effective_miss_count,
+                relevant_miss_count,
                 self.attrs.aim_difficult_strain_count,
             );
         }
 
-        let ar_factor = if self.mods.rx() {
-            0.0
-        } else if self.attrs.ar > 10.33 {
-            0.3 * (self.attrs.ar - 10.33)
-        } else if self.attrs.ar < 8.0 {
-            0.05 * (8.0 - self.attrs.ar)
-        } else {
-            0.0
-        };
-
-        // * Buff for longer maps with high AR.
-        aim_value *= 1.0 + ar_factor * len_bonus;
-
+        // * TC bonuses are excluded when blinds is present as the increased visual difficulty is unimportant when notes cannot be seen.
         if self.mods.bl() {
             aim_value *= 1.3
                 + (total_hits
                     * (0.0016 / (1.0 + 2.0 * self.effective_miss_count))
                     * self.acc.powf(16.0))
                     * (1.0 - 0.003 * self.attrs.hp * self.attrs.hp);
-        } else if self.mods.hd() || self.mods.tc() {
-            // * We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
-            aim_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
+        } else if self.mods.tc() {
+            aim_value *= 1.0
+                + OsuRatingCalculator::calculate_visibility_bonus(
+                    self.mods,
+                    self.attrs.ar,
+                    Some(self.attrs.slider_factor),
+                    None,
+                );
         }
 
         aim_value *= self.acc;
-        // * It is important to consider accuracy difficulty when scaling with accuracy.
-        aim_value *= 0.98 + f64::powf(f64::max(0.0, self.attrs.od()), 2.0) / 2500.0;
 
         aim_value
     }
@@ -230,31 +240,31 @@ impl OsuPerformanceCalculator<'_> {
         speed_value *= len_bonus;
 
         if self.effective_miss_count > 0.0 {
+            let relevant_miss_count =
+                (self.effective_miss_count + self.speed_estimated_slider_breaks).min(
+                    total_imperfect_hits(&self.state)
+                        + f64::from(n_large_tick_miss(&self.attrs, &self.state)),
+                );
+
             speed_value *= Self::calculate_miss_penalty(
-                self.effective_miss_count,
+                relevant_miss_count,
                 self.attrs.speed_difficult_strain_count,
             );
         }
 
-        let ar_factor = if self.mods.ap() {
-            0.0
-        } else if self.attrs.ar > 10.33 {
-            0.3 * (self.attrs.ar - 10.33)
-        } else {
-            0.0
-        };
-
-        // * Buff for longer maps with high AR.
-        speed_value *= 1.0 + ar_factor * len_bonus;
-
+        // * TC bonuses are excluded when blinds is present as the increased visual difficulty is unimportant when notes cannot be seen.
         if self.mods.bl() {
             // * Increasing the speed value by object count for Blinds isn't
             // * ideal, so the minimum buff is given.
             speed_value *= 1.12;
-        } else if self.mods.hd() || self.mods.tc() {
-            // * We want to give more reward for lower AR when it comes to aim and HD.
-            // * This nerfs high AR and buffs lower AR.
-            speed_value *= 1.0 + 0.04 * (12.0 - self.attrs.ar);
+        } else if self.mods.tc() {
+            speed_value *= 1.0
+                + OsuRatingCalculator::calculate_visibility_bonus(
+                    self.mods,
+                    self.attrs.ar,
+                    None,
+                    None,
+                );
         }
 
         let speed_high_deviation_mult = self.calculate_speed_high_deviation_nerf(speed_deviation);
@@ -281,8 +291,7 @@ impl OsuPerformanceCalculator<'_> {
         let od = self.attrs.od();
 
         // * Scale the speed value with accuracy and OD.
-        speed_value *= (0.95 + f64::powf(f64::max(0.0, od), 2.0) / 750.0)
-            * f64::powf((self.acc + relevant_acc) / 2.0, (14.5 - od) / 2.0);
+        speed_value *= f64::powf((self.acc + relevant_acc) / 2.0, (14.5 - od) / 2.0);
 
         speed_value
     }
@@ -337,7 +346,8 @@ impl OsuPerformanceCalculator<'_> {
         if self.mods.bl() {
             acc_value *= 1.14;
         } else if self.mods.hd() || self.mods.tc() {
-            acc_value *= 1.08;
+            // * Decrease bonus for AR > 10
+            acc_value *= 1.0 + 0.08 * reverse_lerp(self.attrs.ar, 11.5, 10.0);
         }
 
         if self.mods.fl() {
@@ -365,17 +375,8 @@ impl OsuPerformanceCalculator<'_> {
 
         flashlight_value *= self.get_combo_scaling_factor();
 
-        // * Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius.
-        flashlight_value *= 0.7
-            + 0.1 * (total_hits / 200.0).min(1.0)
-            + f64::from(u8::from(total_hits > 200.0))
-                * 0.2
-                * ((total_hits - 200.0) / 200.0).min(1.0);
-
         // * Scale the flashlight value with accuracy _slightly_.
         flashlight_value *= 0.5 + self.acc / 2.0;
-        // * It is important to also consider accuracy difficulty when doing that.
-        flashlight_value *= 0.98 + f64::powf(f64::max(0.0, self.attrs.od()), 2.0) / 2500.0;
 
         flashlight_value
     }
@@ -407,12 +408,7 @@ impl OsuPerformanceCalculator<'_> {
             speed_note_count - relevant_count_miss - relevant_count_meh - relevant_count_ok,
         );
 
-        self.calculate_deviation(
-            relevant_count_great,
-            relevant_count_ok,
-            relevant_count_meh,
-            relevant_count_miss,
-        )
+        self.calculate_deviation(relevant_count_great, relevant_count_ok, relevant_count_meh)
     }
 
     fn calculate_deviation(
@@ -420,61 +416,52 @@ impl OsuPerformanceCalculator<'_> {
         relevant_count_great: f64,
         relevant_count_ok: f64,
         relevant_count_meh: f64,
-        relevant_count_miss: f64,
     ) -> Option<f64> {
         if relevant_count_great + relevant_count_ok + relevant_count_meh <= 0.0 {
             return None;
         }
 
-        let object_count =
-            relevant_count_great + relevant_count_ok + relevant_count_meh + relevant_count_miss;
-
-        // * The probability that a player hits a circle is unknown, but we can estimate it to be
-        // * the number of greats on circles divided by the number of circles, and then add one
-        // * to the number of circles as a bias correction.
-
-        let n = f64::max(1.0, object_count - relevant_count_miss - relevant_count_meh);
-
-        #[allow(clippy::items_after_statements, clippy::unreadable_literal)]
-        const Z: f64 = 2.32634787404; // * 99% critical value for the normal distribution (one-tailed).
-
-        // * Proportion of greats hit on circles, ignoring misses and 50s.
+        // * The sample proportion of successful hits.
+        let n = f64::max(1.0, relevant_count_great + relevant_count_ok);
         let p = relevant_count_great / n;
 
-        // * We can be 99% confident that p is at least this value.
-        let p_lower_bound = (n * p + Z * Z / 2.0) / (n + Z * Z)
-            - Z / (n + Z * Z) * f64::sqrt(n * p * (1.0 - p) + Z * Z / 4.0);
+        #[allow(clippy::items_after_statements, clippy::unreadable_literal)]
+        // * 99% critical value for the normal distribution (one-tailed).
+        const Z: f64 = 2.32634787404;
+
+        // * We can be 99% confident that the population proportion is at least this value.
+        let p_lower_bound = ((n * p + Z * Z / 2.0) / (n + Z * Z)
+            - Z / (n + Z * Z) * f64::sqrt(n * p * (1.0 - p) + Z * Z / 4.0))
+        .min(p);
 
         let great_hit_window: f64 = self.attrs.great_hit_window;
         let ok_hit_window: f64 = self.attrs.ok_hit_window;
         let meh_hit_window: f64 = self.attrs.meh_hit_window;
 
-        // * Compute the deviation assuming greats and oks are normally distributed, and mehs are uniformly distributed.
-        // * Begin with greats and oks first. Ignoring mehs, we can be 99% confident that the deviation is not higher than:
-        let mut deviation = great_hit_window / (f64::sqrt(2.0) * erf_inv(p_lower_bound));
+        let mut deviation;
 
-        let random_value = f64::sqrt(2.0 / PI)
-            * ok_hit_window
-            * f64::exp(-0.5 * f64::powf(ok_hit_window / deviation, 2.0))
-            / (deviation * erf(ok_hit_window / (f64::sqrt(2.0) * deviation)));
+        if p_lower_bound > 0.01 {
+            deviation = great_hit_window / (f64::sqrt(2.0) * erf_inv(p_lower_bound));
 
-        deviation *= f64::sqrt(1.0 - random_value);
+            // * Subtract the deviation provided by tails that land outside the ok hit window from the deviation computed above.
+            // * This is equivalent to calculating the deviation of a normal distribution truncated at +-okHitWindow.
+            let ok_hit_window_tail_amount = f64::sqrt(2.0 / PI)
+                * ok_hit_window
+                * f64::exp(-0.5 * f64::powf(ok_hit_window / deviation, 2.0))
+                / (deviation * erf(ok_hit_window / (f64::sqrt(2.0) * deviation)));
 
-        // * Value deviation approach as greatCount approaches 0
-        let limit_value = ok_hit_window / f64::sqrt(3.0);
-
-        // * If precision is not enough to compute true deviation - use limit value
-        if p_lower_bound == 0.0 || random_value >= 1.0 || deviation > limit_value {
-            deviation = limit_value;
+            deviation *= f64::sqrt(1.0 - ok_hit_window_tail_amount);
+        } else {
+            // * A tested limit value for the case of a score only containing oks.
+            deviation = ok_hit_window / f64::sqrt(3.0);
         }
 
-        // * Then compute the variance for mehs.
+        // * Compute and add the variance for mehs, assuming that they are uniformly distributed.
         let meh_variance = (meh_hit_window * meh_hit_window
             + ok_hit_window * meh_hit_window
             + ok_hit_window * ok_hit_window)
             / 3.0;
 
-        // * Find the total deviation.
         let deviation = f64::sqrt(
             ((relevant_count_great + relevant_count_ok) * f64::powf(deviation, 2.0)
                 + relevant_count_meh * meh_variance)

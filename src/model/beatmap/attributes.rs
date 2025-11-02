@@ -269,9 +269,12 @@ impl BeatmapAttributesBuilder {
                     mod_mult(self.od.value(mods, GameMods::od))
                 };
 
-                let great = difficulty_range(f64::from(raw_od), OSU_GREAT) / od_clock_rate;
-                let ok = difficulty_range(f64::from(raw_od), OSU_OK) / od_clock_rate;
-                let meh = difficulty_range(f64::from(raw_od), OSU_MEH) / od_clock_rate;
+                let great =
+                    (difficulty_range(f64::from(raw_od), OSU_GREAT).floor() - 0.5) / od_clock_rate;
+                let ok =
+                    (difficulty_range(f64::from(raw_od), OSU_OK).floor() - 0.5) / od_clock_rate;
+                let meh =
+                    (difficulty_range(f64::from(raw_od), OSU_MEH).floor() - 0.5) / od_clock_rate;
 
                 (great, Some(ok), Some(meh))
             }
@@ -378,7 +381,7 @@ impl BeatmapAttributesBuilder {
     }
 
     pub(crate) const fn osu_great_hit_window_to_od(hit_window: f64) -> f64 {
-        (OSU_GREAT.min - hit_window) / 6.0
+        (79.5 - hit_window) / 6.0
     }
 }
 

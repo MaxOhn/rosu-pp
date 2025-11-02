@@ -1,4 +1,4 @@
-use std::{cmp, f64::consts::PI};
+use std::cmp;
 
 use crate::{
     any::difficulty::{
@@ -7,7 +7,7 @@ use crate::{
     },
     osu::difficulty::object::OsuDifficultyObject,
     util::{
-        difficulty::{bpm_to_milliseconds, logistic, milliseconds_to_bpm},
+        difficulty::{bpm_to_milliseconds, logistic, milliseconds_to_bpm, smoothstep_bell_curve},
         strains_vec::StrainsVec,
     },
 };
@@ -21,11 +21,12 @@ define_skill! {
         current_rhythm: f64 = 0.0,
         hit_window: f64,
         has_autopilot_mod: bool,
+        slider_strains: Vec<f64> = Vec::with_capacity(64),
     }
 }
 
 impl Speed {
-    const SKILL_MULTIPLIER: f64 = 1.46;
+    const SKILL_MULTIPLIER: f64 = 1.47;
     const STRAIN_DECAY_BASE: f64 = 0.3;
     const REDUCED_SECTION_COUNT: usize = 5;
 
@@ -48,7 +49,7 @@ impl Speed {
         curr: &OsuDifficultyObject<'_>,
         objects: &[OsuDifficultyObject<'_>],
     ) -> f64 {
-        self.current_strain *= strain_decay(curr.strain_time, Self::STRAIN_DECAY_BASE);
+        self.current_strain *= strain_decay(curr.adjusted_delta_time, Self::STRAIN_DECAY_BASE);
         self.current_strain += SpeedEvaluator::evaluate_diff_of(
             curr,
             objects,
@@ -57,7 +58,13 @@ impl Speed {
         ) * Self::SKILL_MULTIPLIER;
         self.current_rhythm = RhythmEvaluator::evaluate_diff_of(curr, objects, self.hit_window);
 
-        self.current_strain * self.current_rhythm
+        let total_strain = self.current_strain * self.current_rhythm;
+
+        if curr.base.is_slider() {
+            self.slider_strains.push(total_strain);
+        }
+
+        total_strain
     }
 
     pub fn relevant_note_count(&self) -> f64 {
@@ -73,6 +80,10 @@ impl Speed {
                         sum + (1.0 + f64::exp(-(strain / max_strain * 12.0 - 6.0))).recip()
                     })
             })
+    }
+
+    pub fn slider_strains(&self) -> &[f64] {
+        &self.slider_strains
     }
 
     // From `OsuStrainSkill`; native rather than trait function so that it has
@@ -95,7 +106,7 @@ impl SpeedEvaluator {
     const SINGLE_SPACING_THRESHOLD: f64 = OsuDifficultyObject::NORMALIZED_DIAMETER as f64 * 1.25; // 1.25 circlers distance between centers
     const MIN_SPEED_BONUS: f64 = 200.0; // 200 BPM 1/4th
     const SPEED_BALANCING_FACTOR: f64 = 40.0;
-    const DIST_MULTIPLIER: f64 = 0.9;
+    const DIST_MULTIPLIER: f64 = 0.8;
 
     fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
@@ -112,7 +123,7 @@ impl SpeedEvaluator {
         let osu_prev_obj = curr.previous(0, diff_objects);
         let osu_next_obj = curr.next(0, diff_objects);
 
-        let mut strain_time = curr.strain_time;
+        let mut strain_time = curr.adjusted_delta_time;
         // Note: Technically `osu_next_obj` is never `None` but instead the
         // default value. This could maybe invalidate the `get_doubletapness`
         // result.
@@ -143,6 +154,8 @@ impl SpeedEvaluator {
         let mut dist_bonus =
             (dist / Self::SINGLE_SPACING_THRESHOLD).powf(3.95) * Self::DIST_MULTIPLIER;
 
+        dist_bonus *= osu_curr_obj.small_circle_bonus.sqrt();
+
         if autopilot {
             dist_bonus = 0.0;
         }
@@ -160,8 +173,8 @@ struct RhythmEvaluator;
 impl RhythmEvaluator {
     const HISTORY_TIME_MAX: u32 = 5 * 1000; // 5 seconds
     const HISTORY_OBJECTS_MAX: usize = 32;
-    const RHYTHM_OVERALL_MULTIPLIER: f64 = 0.95;
-    const RHYTHM_RATIO_MULTIPLIER: f64 = 12.0;
+    const RHYTHM_OVERALL_MULTIPLIER: f64 = 1.0;
+    const RHYTHM_RATIO_MULTIPLIER: f64 = 15.0;
 
     #[allow(clippy::too_many_lines)]
     fn evaluate_diff_of<'a>(
@@ -223,28 +236,31 @@ impl RhythmEvaluator {
                 // * either we're limited by time or limited by object count.
                 let curr_historical_decay = note_decay.min(time_decay);
 
-                let curr_delta = curr_obj.strain_time;
-                let prev_delta = prev_obj.strain_time;
-                let last_delta = last_obj.strain_time;
+                // * Use custom cap value to ensure that at this point delta time is actually zero
+                let curr_delta = curr_obj.delta_time.max(1e-7);
+                let prev_delta = prev_obj.delta_time.max(1e-7);
+                let last_delta = last_obj.delta_time.max(1e-7);
 
                 // * calculate how much current delta difference deserves a rhythm bonus
                 // * this function is meant to reduce rhythm bonus for deltas that are multiples of each other (i.e 100 and 200)
-                let delta_difference_ratio =
-                    prev_delta.min(curr_delta) / prev_delta.max(curr_delta);
+                let delta_difference = prev_delta.max(curr_delta) / prev_delta.min(curr_delta);
+
+                // * Take only the fractional part of the value since we're only interested in punishing multiples
+                let delta_difference_fraction = delta_difference - delta_difference.trunc();
+
                 let curr_ratio = 1.0
                     + Self::RHYTHM_RATIO_MULTIPLIER
-                        * (PI / delta_difference_ratio).sin().powf(2.0).min(0.5);
+                        * smoothstep_bell_curve(delta_difference_fraction, 0.5, 0.5).min(0.5);
 
-                // reduce ratio bonus if delta difference is too big
-                let fraction = (prev_delta / curr_delta).max(curr_delta / prev_delta);
-                let fraction_multiplier = (2.0 - fraction / 8.0).clamp(0.0, 1.0);
+                // * reduce ratio bonus if delta difference is too big
+                let difference_multiplier = (2.0 - delta_difference / 8.0).clamp(0.0, 1.0);
 
                 let window_penalty = (((prev_delta - curr_delta).abs() - delta_difference_eps)
                     .max(0.0)
                     / delta_difference_eps)
                     .min(1.0);
 
-                let mut effective_ratio = window_penalty * curr_ratio * fraction_multiplier;
+                let mut effective_ratio = window_penalty * curr_ratio * difference_multiplier;
 
                 if first_delta_switch {
                     // Keep in-sync with lazer
@@ -347,7 +363,11 @@ impl RhythmEvaluator {
         }
 
         // * produces multiplier that can be applied to strain. range [1, infinity) (not really though)
-        (4.0 + rhythm_complexity_sum * Self::RHYTHM_OVERALL_MULTIPLIER).sqrt() / 2.0
+        let mut rhythm_difficulty =
+            (4.0 + rhythm_complexity_sum * Self::RHYTHM_OVERALL_MULTIPLIER).sqrt() / 2.0;
+        rhythm_difficulty *= 1.0 - curr.get_doubletapness(curr.next(0, diff_objects), hit_window);
+
+        rhythm_difficulty
     }
 }
 

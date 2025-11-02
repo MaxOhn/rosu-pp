@@ -67,10 +67,6 @@ pub fn convert_objects(
 
     for h in osu_objects.iter_mut() {
         h.stack_offset = scaling_factor.stack_offset(h.stack_height);
-
-        if let OsuObjectKind::Slider(ref mut slider) = h.kind {
-            slider.lazy_end_pos += h.pos + h.stack_offset;
-        }
     }
 
     osu_objects

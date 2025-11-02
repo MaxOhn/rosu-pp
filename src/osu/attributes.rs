@@ -13,12 +13,22 @@ pub struct OsuDifficultyAttributes {
     pub flashlight: f64,
     /// The ratio of the aim strain with and without considering sliders
     pub slider_factor: f64,
+    /// Describes how much of aim's difficult strain count is contributed to by sliders
+    pub aim_top_weighted_slider_factor: f64,
+    /// Describes how much of speed's difficult strain count is contributed to by sliders
+    pub speed_top_weighted_slider_factor: f64,
     /// The number of clickable objects weighted by difficulty.
     pub speed_note_count: f64,
     /// Weighted sum of aim strains.
     pub aim_difficult_strain_count: f64,
     /// Weighted sum of speed strains.
     pub speed_difficult_strain_count: f64,
+    /// The amount of nested score per object.
+    pub nested_score_per_object: f64,
+    /// The legacy score base multiplier.
+    pub legacy_score_base_multiplier: f64,
+    /// The maximum legacy combo score.
+    pub maximum_legacy_combo_score: f64,
     /// The approach rate.
     pub ar: f64,
     /// The great hit window.

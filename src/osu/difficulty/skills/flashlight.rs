@@ -125,7 +125,7 @@ impl FlashlightEvaluator {
                 break;
             };
 
-            cumulative_strain_time += last_obj.strain_time;
+            cumulative_strain_time += last_obj.adjusted_delta_time;
 
             let curr_hit_obj = curr_obj.base;
 
@@ -182,7 +182,7 @@ impl FlashlightEvaluator {
 
         if let OsuObjectKind::Slider(slider) = &osu_curr.base.kind {
             // * Invert the scaling factor to determine the true travel distance independent of circle size.
-            let pixel_travel_dist = f64::from(slider.lazy_travel_dist) / self.scaling_factor;
+            let pixel_travel_dist = f64::from(osu_curr.lazy_travel_dist) / self.scaling_factor;
 
             // * Reward sliders based on velocity.
             slider_bonus = ((pixel_travel_dist / osu_curr.travel_time - Self::MIN_VELOCITY)
