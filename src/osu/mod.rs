@@ -19,6 +19,7 @@ pub use self::{
 mod attributes;
 mod convert;
 mod difficulty;
+mod legacy_score_miss_calc;
 mod object;
 mod performance;
 mod score_state;

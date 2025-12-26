@@ -335,6 +335,7 @@ impl_has_mod! {
     fl: + Flashlight ["Flashlight"],
     so: + SpunOut ["SpunOut"],
     ap: + Autopilot ["Autopilot"],
+    sv2: + ScoreV2 ["ScoreV2"],
     bl: - Blinds ["Blinds"],
     cl: - Classic ["Classic"],
     invert: - Invert ["Invert"],

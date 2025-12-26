@@ -8,7 +8,7 @@ use crate::{
             rating::OsuRatingCalculator,
             skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill},
         },
-        performance::legacy_score::calculate_legacy_score_miss_count,
+        legacy_score_miss_calc::OsuLegacyScoreMissCalculator,
     },
     util::{
         difficulty::{logistic, reverse_lerp, smoothstep},
@@ -68,18 +68,16 @@ impl OsuPerformanceCalculator<'_> {
         let combo_based_estimated_miss_count = self.calculate_combo_based_estimated_miss_count();
         let mut score_based_estimated_miss_count = None;
 
-        let mut effective_miss_count =
-            if using_classic_slider_acc && state.legacy_total_score.is_some() {
-                let legacy_score_miss_count =
-                    calculate_legacy_score_miss_count(state, acc, mods, attrs);
+        let mut effective_miss_count = if using_classic_slider_acc
+            && state.legacy_total_score.is_some()
+        {
+            let legacy_score_miss_calc = OsuLegacyScoreMissCalculator::new(state, acc, mods, attrs);
 
-                score_based_estimated_miss_count = Some(legacy_score_miss_count);
-
-                legacy_score_miss_count
-            } else {
-                // * Use combo-based miss count if this isn't a legacy score
-                combo_based_estimated_miss_count
-            };
+            *score_based_estimated_miss_count.insert(legacy_score_miss_calc.calculate())
+        } else {
+            // * Use combo-based miss count if this isn't a legacy score
+            combo_based_estimated_miss_count
+        };
 
         effective_miss_count = effective_miss_count.max(f64::from(state.hitresults.misses));
         effective_miss_count = effective_miss_count.min(f64::from(state.hitresults.total_hits()));

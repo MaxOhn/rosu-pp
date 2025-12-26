@@ -30,7 +30,6 @@ mod calculator;
 pub mod gradual;
 mod hitresult_generator;
 mod inspect;
-mod legacy_score;
 
 /// Performance calculator on osu!standard maps.
 #[derive(Clone, Debug)]
