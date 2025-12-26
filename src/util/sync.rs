@@ -9,6 +9,12 @@ mod inner {
     #[repr(transparent)]
     pub struct RefCount<T>(pub(super) Rc<RefCell<T>>);
 
+    impl<T> Clone for RefCount<T> {
+        fn clone(&self) -> Self {
+            Self(Rc::clone(&self.0))
+        }
+    }
+
     #[repr(transparent)]
     pub struct Weak<T>(pub(super) std::rc::Weak<RefCell<T>>);
 
@@ -49,6 +55,12 @@ mod inner {
 
     #[repr(transparent)]
     pub struct RefCount<T>(pub(super) Arc<RwLock<T>>);
+
+    impl<T> Clone for RefCount<T> {
+        fn clone(&self) -> Self {
+            Self(Arc::clone(&self.0))
+        }
+    }
 
     #[repr(transparent)]
     pub struct Weak<T>(pub(super) std::sync::Weak<RwLock<T>>);

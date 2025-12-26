@@ -10,10 +10,12 @@ use crate::{
         object::{ManiaObject, ObjectParams},
     },
     model::mode::ConvertError,
+    util::sync::RefCount,
 };
 
 use super::{attributes::ManiaDifficultyAttributes, convert};
 
+mod evaluators;
 pub mod gradual;
 mod object;
 mod skills;
@@ -70,12 +72,13 @@ impl DifficultyValues {
             .map(|h| ManiaObject::new(h, total_columns, &mut params))
             .take(take);
 
-        let diff_objects = Self::create_difficulty_objects(clock_rate, mania_objects);
+        let diff_objects =
+            Self::create_difficulty_objects(clock_rate, total_columns as usize, mania_objects);
 
         let mut strain = Strain::new(total_columns as usize);
 
         for curr in diff_objects.iter() {
-            strain.process(curr, &diff_objects);
+            strain.process(&curr.get(), &diff_objects);
         }
 
         Self {
@@ -87,26 +90,32 @@ impl DifficultyValues {
 
     pub fn create_difficulty_objects(
         clock_rate: f64,
+        total_columns: usize,
         mut mania_objects: impl ExactSizeIterator<Item = ManiaObject>,
-    ) -> Box<[ManiaDifficultyObject]> {
-        let Some(first) = mania_objects.next() else {
+    ) -> Box<[RefCount<ManiaDifficultyObject>]> {
+        let Some(mut prev) = mania_objects.next() else {
             return Box::default();
         };
 
         let n_diff_objects = mania_objects.len();
 
-        let diff_objects_iter = mania_objects.enumerate().scan(first, |last, (i, base)| {
-            let diff_object = ManiaDifficultyObject::new(&base, last, clock_rate, i);
-            *last = base;
+        let mut objects = Vec::with_capacity(n_diff_objects);
+        let mut per_column_objects = vec![Vec::new(); total_columns].into_boxed_slice();
 
-            Some(diff_object)
-        });
+        for curr in mania_objects {
+            let curr_obj =
+                ManiaDifficultyObject::new(&curr, &prev, clock_rate, &objects, &per_column_objects);
 
-        let mut diff_objects = Vec::with_capacity(n_diff_objects);
-        diff_objects.extend(diff_objects_iter);
+            let column = curr_obj.column;
+            let curr_obj = RefCount::new(curr_obj);
+            objects.push(RefCount::clone(&curr_obj));
+            per_column_objects[column].push(curr_obj);
 
-        debug_assert_eq!(n_diff_objects, diff_objects.len());
+            prev = curr;
+        }
 
-        diff_objects.into_boxed_slice()
+        debug_assert_eq!(n_diff_objects, objects.len());
+
+        objects.into_boxed_slice()
     }
 }
