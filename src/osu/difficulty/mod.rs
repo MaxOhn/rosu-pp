@@ -135,8 +135,6 @@ impl DifficultyValues {
 
         let aim_difficulty_value = aim.cloned_difficulty_value();
 
-        println!("aim: {}", aim_difficulty_value);
-
         let aim_difficult_strain_count = aim.count_top_weighted_strains(aim_difficulty_value);
 
         let difficult_sliders = aim.get_difficult_sliders();

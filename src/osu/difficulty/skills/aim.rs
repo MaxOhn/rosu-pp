@@ -1,5 +1,3 @@
-use rosu_map::util::Pos;
-
 use crate::{
     any::difficulty::{
         object::{HasStartTime, IDifficultyObject},
@@ -300,20 +298,6 @@ impl AimEvaluator {
         // * Add in additional slider velocity bonus.
         if with_slider_travel_dist {
             aim_strain += slider_bonus * Self::SLIDER_MULTIPLIER;
-        }
-
-        if osu_curr_obj.idx == 97 {
-            println!(
-                "pos: {} strain time: {} lazy jump dist: {} lazy travel time: {} lazy end pos: {} min jump dist: {} min jump time: {} angle: {}",
-                osu_curr_obj.base.pos,
-                osu_curr_obj.adjusted_delta_time,
-                osu_curr_obj.lazy_jump_dist,
-                osu_curr_obj.lazy_travel_time,
-                osu_curr_obj.lazy_end_pos.unwrap_or(Pos::default()),
-                osu_curr_obj.min_jump_dist,
-                osu_curr_obj.min_jump_time,
-                osu_curr_obj.angle.unwrap_or(0.0)
-            );
         }
 
         aim_strain

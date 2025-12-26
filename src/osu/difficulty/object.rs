@@ -151,13 +151,6 @@ impl<'a> OsuDifficultyObject<'a> {
             last_object.stacked_pos()
         };
 
-        if self.idx == 97 {
-            println!(
-                "scaling factor: {} last cursor pos: {}",
-                scaling_factor, last_cursor_pos
-            );
-        }
-
         self.lazy_jump_dist = f64::from(
             (self.base.stacked_pos() * scaling_factor - last_cursor_pos * scaling_factor).length(),
         );
