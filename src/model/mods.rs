@@ -256,6 +256,39 @@ impl GameMods {
             })
             .map(|seed| seed as i32)
     }
+
+    pub(crate) fn attraction_strength(&self) -> Option<f64> {
+        let Self::Lazer(mods) = self else { return None };
+
+        mods.iter()
+            .find_map(|m| match m {
+                GameMod::MagnetisedOsu(mg) => Some(mg.attraction_strength),
+                _ => None,
+            })
+            .flatten()
+    }
+
+    pub(crate) fn deflate_start_scale(&self) -> Option<f64> {
+        let Self::Lazer(mods) = self else { return None };
+
+        mods.iter()
+            .find_map(|m| match m {
+                GameMod::DeflateOsu(df) => Some(df.start_scale),
+                _ => None,
+            })
+            .flatten()
+    }
+
+    pub(crate) fn hd_only_fade_approach_circles(&self) -> Option<bool> {
+        let Self::Lazer(mods) = self else { return None };
+
+        mods.iter()
+            .find_map(|m| match m {
+                GameMod::HiddenOsu(hd) => Some(hd.only_fade_approach_circles),
+                _ => None,
+            })
+            .flatten()
+    }
 }
 
 macro_rules! impl_map_attr {

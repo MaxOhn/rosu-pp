@@ -1,6 +1,8 @@
+use std::convert::identity;
+
 use crate::{
-    util::{difficulty::reverse_lerp, float_ext::FloatExt},
     GameMods,
+    util::{difficulty::reverse_lerp, float_ext::FloatExt},
 };
 
 pub struct OsuRatingCalculator<'mods> {
@@ -50,7 +52,9 @@ impl OsuRatingCalculator<'_> {
             aim_rating *= 0.9;
         }
 
-        // TODO: magnetised
+        if let Some(magnetised_strength) = self.mods.attraction_strength() {
+            aim_rating *= 1.0 - magnetised_strength;
+        }
 
         let mut rating_multiplier = 1.0;
 
@@ -104,7 +108,10 @@ impl OsuRatingCalculator<'_> {
             speed_rating *= 0.5;
         }
 
-        // TODO: magnetised
+        if let Some(magnetised_strength) = self.mods.attraction_strength() {
+            // * reduce speed rating because of the speed distance scaling, with maximum reduction being 0.7x
+            speed_rating *= 1.0 - magnetised_strength * 0.3;
+        }
 
         let mut rating_multiplier = 1.0;
 
@@ -163,8 +170,13 @@ impl OsuRatingCalculator<'_> {
             flashlight_rating *= 0.4;
         }
 
-        // TODO: magnetised
-        // TODO: deflate
+        if let Some(magnetised_strength) = self.mods.attraction_strength() {
+            flashlight_rating *= 1.0 - magnetised_strength;
+        }
+
+        if let Some(deflate_initial_scale) = self.mods.deflate_start_scale() {
+            flashlight_rating *= reverse_lerp(deflate_initial_scale, 11.0, 1.0).clamp(0.1, 1.0);
+        }
 
         let mut rating_multiplier = 1.0;
 
@@ -188,8 +200,8 @@ impl OsuRatingCalculator<'_> {
         slider_factor: Option<f64>,
     ) -> f64 {
         // * NOTE: TC's effect is only noticeable in performance calculations until lazer mods are accounted for server-side.
-        // TODO: HD with only fade approach circles
-        let is_always_partially_visible = mods.tc();
+        let is_always_partially_visible =
+            mods.hd_only_fade_approach_circles().is_some_and(identity) || mods.tc();
 
         // * Start from normal curve, rewarding lower AR up to AR7
         let mut reading_bonus = 0.04 * (12.0 - approach_rate.max(7.0));
