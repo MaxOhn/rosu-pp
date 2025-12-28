@@ -34,7 +34,7 @@ impl HitResult {
                     Self::Meh => 50,
                     Self::Ok => 100,
                     Self::Good => 200,
-                    // Perfect doesn't actually give more score / accuracy directly
+                    // * Perfect doesn't actually give more score / accuracy directly
                     Self::Great | Self::Perfect => 300,
                     Self::SmallBonus => 10,
                     Self::LargeBonus => 50,

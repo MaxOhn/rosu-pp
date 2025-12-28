@@ -20,8 +20,8 @@ pub fn calculate_difficulty_peppy_stars(
      * but it is considered an "acceptable casualty", since in that case scores aren't inflated by _that_ much compared to others.
      */
 
-    // NOTE: we use f64 instead of C#'s decimal type for simplicity reason
-    // and sacrifice precision while doing so
+    // NOTE: we use f64 instead of C#'s decimal type for simplicity reasons and
+    // sacrifice precision while doing so
 
     let object_to_drain_ratio = if drain_len != 0 {
         (f64::from(object_count) / f64::from(drain_len) * 8.0).clamp(0.0, 16.0)

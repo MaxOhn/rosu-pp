@@ -50,9 +50,11 @@ pub fn difficulty(
 
     DifficultyValues::eval(&mut attrs, mods, &skills);
 
-    let simulator = OsuLegacyScoreSimulator::new(&map, &map_attrs, difficulty.get_passed_objects());
+    let mut simulator =
+        OsuLegacyScoreSimulator::new(&map, &map_attrs, difficulty.get_passed_objects());
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
+    attrs.legacy_score_base_multiplier = simulator.score_multiplier;
 
     Ok(attrs)
 }

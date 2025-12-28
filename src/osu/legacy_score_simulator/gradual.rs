@@ -27,6 +27,8 @@ pub struct OsuGradualLegacyScoreSimulator {
     break_len_prelim: i32,
     object_count: i32,
     start_time: Option<i32>,
+
+    pub prev_score_multiplier: Option<f64>,
 }
 
 impl OsuGradualLegacyScoreSimulator {
@@ -41,6 +43,7 @@ impl OsuGradualLegacyScoreSimulator {
             break_len_prelim: 0,
             object_count: 0,
             start_time: None,
+            prev_score_multiplier: None,
         }
     }
 
@@ -90,11 +93,13 @@ impl OsuGradualLegacyScoreSimulator {
         let end_time = round_time(obj.start_time);
         let drain_len = (end_time - start_time - self.break_len()) / 1000;
 
-        f64::from(calculate_difficulty_peppy_stars(
+        let score_multiplier = f64::from(calculate_difficulty_peppy_stars(
             &self.map_attrs,
             self.object_count,
             drain_len,
-        ))
+        ));
+
+        *self.prev_score_multiplier.insert(score_multiplier)
     }
 
     pub fn simulate_next(&mut self, obj: &OsuObject) -> LegacyScoreAttributes {

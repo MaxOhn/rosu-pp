@@ -14,7 +14,7 @@ pub struct OsuLegacyScoreSimulator<'a> {
     map: &'a Beatmap,
     passed_objects: usize,
     inner: OsuLegacyScoreSimulatorInner,
-    score_multiplier: f64,
+    pub score_multiplier: f64,
 }
 
 impl<'a> OsuLegacyScoreSimulator<'a> {
@@ -73,7 +73,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
         }
     }
 
-    pub fn simulate(mut self) -> LegacyScoreAttributes {
+    pub fn simulate(&mut self) -> LegacyScoreAttributes {
         let mut attrs = LegacyScoreAttributes::default();
         let mut bufs = CurveBuffers::default();
         let mut ticks_buf = Vec::new();

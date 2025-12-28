@@ -158,6 +158,8 @@ impl Iterator for OsuGradualDifficulty {
         if let Some(h) = self.osu_objects.get(self.idx) {
             let score_attrs = self.score_simulator.simulate_next(h);
             self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
+            self.attrs.legacy_score_base_multiplier =
+                self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
         }
 
         // The first difficulty object belongs to the second note since each
@@ -202,6 +204,8 @@ impl Iterator for OsuGradualDifficulty {
             if let Some(h) = self.osu_objects.get(self.idx) {
                 let score_attrs = self.score_simulator.simulate_next(h);
                 self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
+                self.attrs.legacy_score_base_multiplier =
+                    self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
             }
 
             take -= 1;
@@ -212,6 +216,8 @@ impl Iterator for OsuGradualDifficulty {
             if let Some(h) = self.osu_objects.get(self.idx) {
                 let score_attrs = self.score_simulator.simulate_next(h);
                 self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
+                self.attrs.legacy_score_base_multiplier =
+                    self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
             }
 
             self.skills.process(curr, &self.diff_objects);
