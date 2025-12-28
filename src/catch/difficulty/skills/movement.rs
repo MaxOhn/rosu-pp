@@ -32,7 +32,7 @@ impl MovementEvaluator {
     const NORMALIZED_HITOBJECT_RADIUS: f32 = 41.0;
     const DIRECTION_CHANGE_BONUS: f64 = 21.0;
 
-    fn evaluate_diff_of<'a>(
+    fn evaluate_diff_of(
         curr: &CatchDifficultyObject,
         diff_objects: &[CatchDifficultyObject],
         clock_rate: f64,

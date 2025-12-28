@@ -40,6 +40,6 @@ pub fn calculate_difficulty_peppy_stars(
     let overall_difficulty = map_attrs.od;
     let circle_size = map_attrs.cs;
 
-    return ((drain_rate + overall_difficulty + circle_size + object_to_drain_ratio) / 38.0 * 5.0)
-        .round_ties_even() as i32;
+    ((drain_rate + overall_difficulty + circle_size + object_to_drain_ratio) / 38.0 * 5.0)
+        .round_ties_even() as i32
 }

@@ -11,7 +11,7 @@ pub struct OsuLegacyScoreMissCalculator<'a> {
 }
 
 impl<'a> OsuLegacyScoreMissCalculator<'a> {
-    pub fn new(
+    pub const fn new(
         state: &'a OsuScoreState,
         acc: f64,
         mods: &'a GameMods,
@@ -120,8 +120,8 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
         combo_score /= 300.0 / 25.0 * attrs.legacy_score_base_multiplier;
 
         // * Reverse the arithmetic progression to work out the amount of combo per object based on the score.
-        let mut result = (attrs.max_combo as f64 - 2.0) * attrs.max_combo as f64;
-        result /= (attrs.max_combo as f64 + 2.0 * (combo_score - 1.0)).max(1.0);
+        let mut result = f64::from((attrs.max_combo as i32 - 2) * attrs.max_combo as i32);
+        result /= (f64::from(attrs.max_combo + 2) * (combo_score - 1.0)).max(1.0);
 
         result
     }
@@ -129,7 +129,7 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
     fn calculate_maximum_combo_based_miss_count(&self) -> f64 {
         let Self { state, attrs, .. } = self;
 
-        if attrs.n_sliders <= 0 {
+        if attrs.n_sliders == 0 {
             return f64::from(state.hitresults.misses);
         }
 

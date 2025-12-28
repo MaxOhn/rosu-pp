@@ -223,7 +223,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
         );
 
         if let Some(factor) = factor {
-            attrs.combo_score += i64::from((factor * self.score_multiplier) as i32)
+            attrs.combo_score += i64::from((factor * self.score_multiplier) as i32);
         }
     }
 }
@@ -235,21 +235,21 @@ struct OsuLegacyScoreSimulatorInner {
     combo: u32,
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 enum AddScoreComboMultiplier {
     Yes,
     #[default]
     No,
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 enum IsBonus {
     Yes,
     #[default]
     No,
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 enum IncreaseCombo {
     #[default]
     Yes,

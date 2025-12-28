@@ -17,7 +17,7 @@ pub struct OsuRatingCalculator<'mods> {
 const DIFFICULTY_MULTIPLIER: f64 = 0.0675;
 
 impl<'mods> OsuRatingCalculator<'mods> {
-    pub fn new(
+    pub const fn new(
         mods: &'mods GameMods,
         total_hits: u32,
         approach_rate: f64,
@@ -59,9 +59,9 @@ impl OsuRatingCalculator<'_> {
         let mut rating_multiplier = 1.0;
 
         let ar_length_bonus = 0.95
-            + 0.4 * (self.total_hits as f64 / 2000.0).min(1.0)
-            + f64::from(u8::from(self.total_hits as f64 > 2000.0))
-                * (self.total_hits as f64 / 2000.0).log10()
+            + 0.4 * (f64::from(self.total_hits) / 2000.0).min(1.0)
+            + f64::from(u8::from(self.total_hits > 2000))
+                * (f64::from(self.total_hits) / 2000.0).log10()
                 * 0.5;
 
         let ar_factor = if self.mods.rx() {
@@ -116,9 +116,9 @@ impl OsuRatingCalculator<'_> {
         let mut rating_multiplier = 1.0;
 
         let ar_length_bonus = 0.95
-            + 0.4 * (self.total_hits as f64 / 2000.0).min(1.0)
-            + f64::from(u8::from(self.total_hits as f64 > 2000.0))
-                * (self.total_hits as f64 / 2000.0).log10()
+            + 0.4 * (f64::from(self.total_hits) / 2000.0).min(1.0)
+            + f64::from(u8::from(self.total_hits > 2000))
+                * (f64::from(self.total_hits) / 2000.0).log10()
                 * 0.5;
 
         let ar_factor = if self.mods.ap() {
@@ -182,10 +182,10 @@ impl OsuRatingCalculator<'_> {
 
         // * Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius.
         rating_multiplier *= 0.7
-            + 0.1 * (self.total_hits as f64 / 200.0).min(1.0)
+            + 0.1 * (f64::from(self.total_hits) / 200.0).min(1.0)
             + f64::from(u8::from(self.total_hits > 200))
                 * 0.2
-                * ((self.total_hits as f64 - 200.0) / 200.0).min(1.0);
+                * (f64::from(self.total_hits - 200) / 200.0).min(1.0);
 
         // * It is important to consider accuracy difficulty when scaling with accuracy.
         rating_multiplier *= 0.98 + self.overall_difficulty.max(0.0).powf(2.0) / 2500.0;

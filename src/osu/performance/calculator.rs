@@ -427,7 +427,7 @@ impl OsuPerformanceCalculator<'_> {
             ..
         } = self;
 
-        if attrs.n_sliders <= 0 {
+        if attrs.n_sliders == 0 {
             return f64::from(state.hitresults.misses);
         }
 
@@ -444,19 +444,17 @@ impl OsuPerformanceCalculator<'_> {
             }
 
             // * In classic scores there can't be more misses than a sum of all non-perfect judgements
-            miss_count = miss_count.min(total_imperfect_hits(&state));
+            miss_count = miss_count.min(total_imperfect_hits(state));
         } else {
             let full_combo_threshold =
-                f64::from(attrs.max_combo - n_slider_ends_dropped(&attrs, &state));
+                f64::from(attrs.max_combo - n_slider_ends_dropped(attrs, state));
 
             if f64::from(state.max_combo) < full_combo_threshold {
                 miss_count = full_combo_threshold / f64::from(state.max_combo).max(1.0);
             }
 
             // * Combine regular misses with tick misses since tick misses break combo as well
-            miss_count = miss_count.min(f64::from(
-                n_large_tick_miss(&attrs, &state) + state.hitresults.misses,
-            ));
+            miss_count = miss_count.min(f64::from(n_large_tick_miss(attrs, state) + state.hitresults.misses));
         }
 
         miss_count

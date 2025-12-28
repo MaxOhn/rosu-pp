@@ -199,6 +199,8 @@ impl<'a> OsuDifficultyObject<'a> {
     }
 
     pub fn compute_slider_cursor_pos(&mut self, radius: f64) {
+        const TAIL_LENIENCY: f64 = -36.0;
+
         let OsuObjectKind::Slider(ref slider) = self.base.kind else {
             return;
         };
@@ -206,8 +208,6 @@ impl<'a> OsuDifficultyObject<'a> {
         if self.lazy_end_pos.is_some() {
             return;
         }
-
-        const TAIL_LENIENCY: f64 = -36.0;
 
         let pos = self.base.pos;
         let stack_offset = self.base.stack_offset;
