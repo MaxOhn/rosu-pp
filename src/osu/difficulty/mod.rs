@@ -13,6 +13,7 @@ use crate::{
             object::OsuDifficultyObject, rating::OsuRatingCalculator,
             scaling_factor::ScalingFactor, skills::strain::count_top_weighted_sliders,
         },
+        legacy_score_simulator::OsuLegacyScoreSimulator,
         object::OsuObject,
         performance::PERFORMANCE_BASE_MULTIPLIER,
     },
@@ -39,11 +40,19 @@ pub fn difficulty(
 ) -> Result<OsuDifficultyAttributes, ConvertError> {
     let map = map.convert_ref(GameMode::Osu, difficulty.get_mods())?;
 
-    let DifficultyValues { skills, mut attrs } = DifficultyValues::calculate(difficulty, &map);
+    let DifficultyValues {
+        skills,
+        mut attrs,
+        map_attrs,
+    } = DifficultyValues::calculate(difficulty, &map);
 
     let mods = difficulty.get_mods();
 
     DifficultyValues::eval(&mut attrs, mods, &skills);
+
+    let simulator = OsuLegacyScoreSimulator::new(&map, &map_attrs, difficulty.get_passed_objects());
+    let score_attrs = simulator.simulate();
+    attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
 
     Ok(attrs)
 }
@@ -84,6 +93,7 @@ impl OsuDifficultySetup {
 pub struct DifficultyValues {
     pub skills: OsuSkills,
     pub attrs: OsuDifficultyAttributes,
+    pub map_attrs: BeatmapAttributes,
 }
 
 impl DifficultyValues {
@@ -121,7 +131,11 @@ impl DifficultyValues {
             skills.process(hit_object, &diff_objects);
         }
 
-        Self { skills, attrs }
+        Self {
+            skills,
+            attrs,
+            map_attrs,
+        }
     }
 
     /// Process the difficulty values and store the results in `attrs`.
@@ -191,6 +205,9 @@ impl DifficultyValues {
         } else {
             0.0
         };
+
+        // TODO: sliderNestedScorePerObject
+        // TODO: legacyScoreBaseMultiplier
 
         let base_aim_performance = Aim::difficulty_to_performance(aim_rating);
         let base_speed_performance = Speed::difficulty_to_performance(speed_rating);

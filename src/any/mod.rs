@@ -21,6 +21,7 @@ pub mod hitresult_generator;
 
 mod attributes;
 pub(crate) mod difficulty;
+pub(crate) mod hit_result;
 mod performance;
 mod score_state;
 mod strains;

@@ -20,6 +20,7 @@ mod attributes;
 mod convert;
 mod difficulty;
 mod legacy_score_miss_calc;
+mod legacy_score_simulator;
 mod object;
 mod performance;
 mod score_state;
