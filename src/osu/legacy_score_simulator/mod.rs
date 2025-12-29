@@ -1,9 +1,8 @@
-use rosu_map::section::{general::GameMode, hit_objects::CurveBuffers};
+use rosu_map::section::{events::BreakPeriod, general::GameMode};
 
 use crate::{
-    Beatmap,
     any::hit_result::HitResult,
-    model::{beatmap::BeatmapAttributes, hit_object::HitObjectKind},
+    model::beatmap::BeatmapAttributes,
     osu::object::{NestedSliderObjectKind, OsuObject, OsuObjectKind},
     util::ruleset_ext::calculate_difficulty_peppy_stars,
 };
@@ -11,23 +10,28 @@ use crate::{
 pub mod gradual;
 
 pub struct OsuLegacyScoreSimulator<'a> {
-    map: &'a Beatmap,
+    osu_objects: &'a [OsuObject],
     passed_objects: usize,
     inner: OsuLegacyScoreSimulatorInner,
     pub score_multiplier: f64,
 }
 
 impl<'a> OsuLegacyScoreSimulator<'a> {
-    pub fn new(map: &'a Beatmap, map_attrs: &'a BeatmapAttributes, passed_objects: usize) -> Self {
+    pub fn new(
+        osu_objects: &'a [OsuObject],
+        breaks: &[BreakPeriod],
+        map_attrs: &'a BeatmapAttributes,
+        passed_objects: usize,
+    ) -> Self {
         let mut count_normal = 0;
         let mut count_slider = 0;
         let mut count_spinner = 0;
 
-        for obj in map.hit_objects.iter().take(passed_objects) {
+        for obj in osu_objects.iter().take(passed_objects) {
             match obj.kind {
-                HitObjectKind::Slider(_) => count_slider += 1,
-                HitObjectKind::Spinner(_) | HitObjectKind::Hold(_) => count_spinner += 1,
-                HitObjectKind::Circle => count_normal += 1,
+                OsuObjectKind::Slider(_) => count_slider += 1,
+                OsuObjectKind::Spinner(_) => count_spinner += 1,
+                OsuObjectKind::Circle => count_normal += 1,
             }
         }
 
@@ -35,17 +39,14 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
 
         let mut drain_len = 0;
 
-        let first = map.hit_objects.first();
-        let last = map
-            .hit_objects
+        let first = osu_objects.first();
+        let last = osu_objects
             .get(passed_objects.saturating_sub(1))
-            .or(map.hit_objects.last());
+            .or(osu_objects.last());
 
         if let Some((first, last)) = first.zip(last) {
-            // TODO: clock rate from mods already applied?
-
-            let break_len: i32 = map
-                .breaks
+            // TODO: Apply clock rate from mods to breaks?
+            let break_len: i32 = breaks
                 .iter()
                 // Note that this does not account for notes appearing during
                 // breaks or overlapping breaks.
@@ -62,7 +63,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
         }
 
         Self {
-            map,
+            osu_objects,
             passed_objects,
             inner: OsuLegacyScoreSimulatorInner::default(),
             score_multiplier: f64::from(calculate_difficulty_peppy_stars(
@@ -75,12 +76,9 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
 
     pub fn simulate(&mut self) -> LegacyScoreAttributes {
         let mut attrs = LegacyScoreAttributes::default();
-        let mut bufs = CurveBuffers::default();
-        let mut ticks_buf = Vec::new();
 
-        for obj in self.map.hit_objects.iter().take(self.passed_objects) {
-            let osu_obj = OsuObject::new(obj, self.map, &mut bufs, &mut ticks_buf);
-            self.simulate_hit(&osu_obj, &mut attrs);
+        for obj in self.osu_objects.iter().take(self.passed_objects) {
+            self.simulate_hit(obj, &mut attrs);
         }
 
         self.inner.finalize(&mut attrs);

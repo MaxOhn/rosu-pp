@@ -41,6 +41,7 @@ pub fn difficulty(
     let map = map.convert_ref(GameMode::Osu, difficulty.get_mods())?;
 
     let DifficultyValues {
+        osu_objects,
         skills,
         mut attrs,
         map_attrs,
@@ -50,8 +51,13 @@ pub fn difficulty(
 
     DifficultyValues::eval(&mut attrs, mods, &skills);
 
-    let mut simulator =
-        OsuLegacyScoreSimulator::new(&map, &map_attrs, difficulty.get_passed_objects());
+    let mut simulator = OsuLegacyScoreSimulator::new(
+        &osu_objects,
+        &map.breaks,
+        &map_attrs,
+        difficulty.get_passed_objects(),
+    );
+
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
     attrs.legacy_score_base_multiplier = simulator.score_multiplier;
@@ -93,6 +99,7 @@ impl OsuDifficultySetup {
 }
 
 pub struct DifficultyValues {
+    pub osu_objects: Box<[OsuObject]>,
     pub skills: OsuSkills,
     pub attrs: OsuDifficultyAttributes,
     pub map_attrs: BeatmapAttributes,
@@ -134,6 +141,7 @@ impl DifficultyValues {
         }
 
         Self {
+            osu_objects,
             skills,
             attrs,
             map_attrs,
@@ -209,7 +217,6 @@ impl DifficultyValues {
         };
 
         // TODO: sliderNestedScorePerObject
-        // TODO: legacyScoreBaseMultiplier
 
         let base_aim_performance = Aim::difficulty_to_performance(aim_rating);
         let base_speed_performance = Speed::difficulty_to_performance(speed_rating);

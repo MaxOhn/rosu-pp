@@ -3,7 +3,6 @@ use std::{cmp, iter::Peekable, vec};
 use rosu_map::section::events::BreakPeriod;
 
 use crate::{
-    Beatmap,
     any::hit_result::HitResult,
     model::beatmap::BeatmapAttributes,
     osu::{
@@ -32,13 +31,13 @@ pub struct OsuGradualLegacyScoreSimulator {
 }
 
 impl OsuGradualLegacyScoreSimulator {
-    pub fn new(map: &Beatmap, map_attrs: BeatmapAttributes) -> Self {
+    pub fn new(breaks: Vec<BreakPeriod>, map_attrs: BeatmapAttributes) -> Self {
         Self {
             map_attrs,
             attrs: LegacyScoreAttributes::default(),
             inner: OsuLegacyScoreSimulatorInner::default(),
             combo_score_factors: Vec::new(),
-            breaks: map.breaks.clone().into_iter().peekable(),
+            breaks: breaks.into_iter().peekable(),
             elapsed_curr_break: None,
             break_len_prelim: 0,
             object_count: 0,

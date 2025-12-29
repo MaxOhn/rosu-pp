@@ -113,7 +113,7 @@ impl OsuGradualDifficulty {
 
         let skills = OsuSkills::new(mods, &scaling_factor, &map_attrs, time_preempt);
         let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
-        let score_simulator = OsuGradualLegacyScoreSimulator::new(&map, map_attrs);
+        let score_simulator = OsuGradualLegacyScoreSimulator::new(map.breaks.clone(), map_attrs);
 
         Ok(Self {
             idx: 0,

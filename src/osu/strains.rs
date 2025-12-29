@@ -28,6 +28,7 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<OsuStrains, Con
     let map = map.convert_ref(GameMode::Osu, difficulty.get_mods())?;
 
     let DifficultyValues {
+        osu_objects: _,
         skills:
             OsuSkills {
                 aim,
