@@ -281,7 +281,7 @@ impl<'map> CatchPerformance<'map> {
     }
 
     /// Provide parameters through an [`CatchScoreState`].
-    #[expect(clippy::needless_pass_by_value)]
+    #[expect(clippy::needless_pass_by_value, reason = "more sensible")]
     pub const fn state(mut self, state: CatchScoreState) -> Self {
         let CatchScoreState {
             max_combo,

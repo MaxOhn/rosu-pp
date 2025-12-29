@@ -1,4 +1,7 @@
-#[allow(unused, reason = "false positive")]
+#[allow(
+    unused,
+    reason = "false positive (also 'expect' doesn't seem to work so we use 'allow'"
+)]
 pub use self::{mods::*, paths::*};
 
 /// Paths to .osu files
@@ -11,7 +14,10 @@ mod paths {
 
 /// Bit values for mods
 mod mods {
-    #![allow(unused)]
+    #![allow(
+        unused,
+        reason = "false positive (also 'expect' doesn't seem to work so we use 'allow'"
+    )]
 
     pub const NM: u32 = 0;
     pub const NF: u32 = 1 << 0;
@@ -31,7 +37,10 @@ pub fn assert_eq_float<F: Float>(a: F, b: F) {
 }
 
 #[track_caller]
-#[allow(unused, reason = "false positive")]
+#[allow(
+    unused,
+    reason = "false positive (also 'expect' doesn't seem to work so we use 'allow'"
+)]
 pub fn assert_eq_option<F: Float>(a: Option<F>, b: Option<F>) {
     match (a, b) {
         (Some(a), Some(b)) => assert!((a - b).less_than_eps(), "{a} != {b}"),
@@ -71,7 +80,10 @@ macro_rules! impl_float {
 impl_float!(f32 f64);
 
 /// Trait to compare two instances and panic if they are not equal.
-#[allow(unused)]
+#[allow(
+    unused,
+    reason = "false positive (also 'expect' doesn't seem to work so we use 'allow'"
+)]
 pub trait AssertEq {
     fn assert_eq(&self, expected: &Self);
 }

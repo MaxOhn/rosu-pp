@@ -197,7 +197,7 @@ fn target_columns(map: &Beatmap, mods: &GameMods) -> f32 {
         }
     }
 
-    #[allow(clippy::manual_clamp, reason = "keeping it in-sync with lazer")]
+    #[expect(clippy::manual_clamp, reason = "staying in-sync with lazer")]
     {
         ((rounded_od as i32) + 1).min(7).max(4) as f32
     }

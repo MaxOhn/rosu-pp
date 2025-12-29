@@ -39,7 +39,7 @@ impl RhythmData {
     }
 }
 
-#[allow(clippy::eq_op, reason = "keeping it in-sync with lazer")]
+#[expect(clippy::eq_op, reason = "staying in-sync with lazer")]
 static COMMON_RATIOS: [f64; 9] = [
     1.0 / 1.0,
     2.0 / 1.0,

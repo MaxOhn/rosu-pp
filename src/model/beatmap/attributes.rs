@@ -391,8 +391,7 @@ impl From<&Beatmap> for BeatmapAttributesBuilder {
     }
 }
 
-// False positive? Value looks consumed to me...
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value, reason = "more sensible")]
 fn difficulty_range(difficulty: f64, windows: GameModeHitWindows) -> f64 {
     let GameModeHitWindows { min, avg: mid, max } = windows;
 
@@ -436,7 +435,7 @@ impl ModsDependentKind {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::float_cmp)]
+    #![expect(clippy::float_cmp, reason = "we're just testing here")]
 
     use rosu_mods::{
         GameMod, GameMods,

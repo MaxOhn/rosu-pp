@@ -176,7 +176,7 @@ impl RhythmEvaluator {
     const RHYTHM_OVERALL_MULTIPLIER: f64 = 1.0;
     const RHYTHM_RATIO_MULTIPLIER: f64 = 15.0;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "staying in-sync with lazer")]
     fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
@@ -263,8 +263,6 @@ impl RhythmEvaluator {
                 let mut effective_ratio = window_penalty * curr_ratio * difference_multiplier;
 
                 if first_delta_switch {
-                    // Keep in-sync with lazer
-                    #[allow(clippy::if_not_else)]
                     if (prev_delta - curr_delta).abs() < delta_difference_eps {
                         // * island is still progressing
                         island.add_delta(curr_delta as i32);

@@ -64,7 +64,7 @@ impl Stamina {
         } else if self.is_convert {
             self.current_strain
         } else {
-            #[allow(clippy::manual_clamp)]
+            #[expect(clippy::manual_clamp, reason = "staying in-sync with lazer")]
             let monolength_bonus = 1.0 + f64::min(f64::max((index - 5) as f64 / 50.0, 0.0), 0.30);
 
             self.current_strain * monolength_bonus

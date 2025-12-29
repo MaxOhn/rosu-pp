@@ -141,7 +141,11 @@ impl TaikoPerformanceCalculator<'_> {
             return None;
         }
 
-        #[allow(clippy::items_after_statements, clippy::unreadable_literal)]
+        #[expect(
+            clippy::items_after_statements,
+            clippy::unreadable_literal,
+            reason = "staying in-sync with lazer"
+        )]
         // * 99% critical value for the normal distribution (one-tailed).
         const Z: f64 = 2.32634787404;
 

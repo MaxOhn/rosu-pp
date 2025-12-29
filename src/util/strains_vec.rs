@@ -1,3 +1,6 @@
+// TODO: remove; suspicion checks should now be used to prevent calculation on
+// malicious maps
+
 pub use inner::*;
 
 #[cfg(not(feature = "raw_strains"))]

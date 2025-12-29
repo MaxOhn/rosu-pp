@@ -93,7 +93,7 @@ impl ManiaGradualPerformance {
     ///
     /// Note that the count is zero-indexed, so `n=0` will process 1 object,
     /// `n=1` will process 2, and so on.
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc, reason = "unreachable")]
     pub fn nth(&mut self, state: ManiaScoreState, n: usize) -> Option<ManiaPerformanceAttributes> {
         let performance = self
             .difficulty
@@ -109,7 +109,7 @@ impl ManiaGradualPerformance {
     }
 
     /// Returns the amount of remaining objects.
-    #[allow(clippy::len_without_is_empty)]
+    #[expect(clippy::len_without_is_empty, reason = "TODO")]
     pub fn len(&self) -> usize {
         self.difficulty.len()
     }

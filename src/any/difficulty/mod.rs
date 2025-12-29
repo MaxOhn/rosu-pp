@@ -266,7 +266,7 @@ impl Difficulty {
     }
 
     /// Perform the difficulty calculation.
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc, reason = "unreachable")]
     pub fn calculate(&self, map: &Beatmap) -> DifficultyAttributes {
         match map.mode {
             GameMode::Osu => DifficultyAttributes::Osu(
@@ -296,7 +296,7 @@ impl Difficulty {
     /// strains, return them as is.
     ///
     /// Suitable to plot the difficulty of a map over time.
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc, reason = "unreachable")]
     pub fn strains(&self, map: &Beatmap) -> Strains {
         match map.mode {
             GameMode::Osu => Strains::Osu(Osu::strains(self, map).expect("no conversion required")),

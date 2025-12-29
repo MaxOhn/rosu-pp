@@ -596,7 +596,7 @@ impl DecodeBeatmap for Beatmap {
         Ok(())
     }
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "staying in-sync with lazer")]
     fn parse_hit_objects(state: &mut Self::State, line: &str) -> Result<(), Self::Error> {
         let mut split = line.trim_comment().split(',');
 

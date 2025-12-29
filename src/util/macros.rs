@@ -178,7 +178,6 @@ macro_rules! define_skill {
         }
 
         impl $name {
-            #[allow(unused)]
             $vis fn new(
                 $( $arg_name: $arg_type, )*
             ) -> Self {
@@ -191,7 +190,7 @@ macro_rules! define_skill {
         }
 
         const _: () = {
-            #[allow(unused_imports)]
+            #[expect(unused_imports, reason = "fine for macros")]
             use crate::{
                 any::difficulty::{
                     object::{IDifficultyObject, IDifficultyObjects, HasStartTime},

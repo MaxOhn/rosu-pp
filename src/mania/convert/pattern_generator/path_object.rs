@@ -30,7 +30,7 @@ pub struct PathObjectPatternGenerator<'h> {
 }
 
 impl<'h> PathObjectPatternGenerator<'h> {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason = "it is what it is /shrug")]
     pub fn new(
         random: &'h mut Random,
         hit_object: &'h HitObject,
@@ -107,8 +107,7 @@ impl<'h> PathObjectPatternGenerator<'h> {
         for obj in orig_pattern.hit_objects {
             let col = ManiaObject::column(obj.pos.x, self.inner.total_columns as f32) as u8;
 
-            // Keeping it in-sync with lazer
-            #[allow(clippy::if_not_else)]
+            #[expect(clippy::if_not_else, reason = "staying in-sync with lazer")]
             if self.end_time != obj.end_time().round_ties_even() as i32 {
                 intermediate_pattern.add_object(obj, col);
             } else {

@@ -534,7 +534,11 @@ impl OsuPerformanceCalculator<'_> {
         let n = f64::max(1.0, relevant_count_great + relevant_count_ok);
         let p = relevant_count_great / n;
 
-        #[allow(clippy::items_after_statements, clippy::unreadable_literal)]
+        #[expect(
+            clippy::items_after_statements,
+            clippy::unreadable_literal,
+            reason = "staying in-sync with lazer"
+        )]
         // * 99% critical value for the normal distribution (one-tailed).
         const Z: f64 = 2.32634787404;
 
@@ -591,7 +595,7 @@ impl OsuPerformanceCalculator<'_> {
             return 1.0;
         }
 
-        #[allow(clippy::items_after_statements)]
+        #[expect(clippy::items_after_statements, reason = "staying in-sync with lazer")]
         const SCALE: f64 = 50.0;
 
         let mut adjusted_speed_value = SCALE

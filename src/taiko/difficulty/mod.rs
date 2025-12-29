@@ -28,7 +28,7 @@ mod object;
 mod rhythm;
 mod skills;
 
-#[allow(clippy::unreadable_literal)]
+#[expect(clippy::unreadable_literal, reason = "staying in-sync with lazer")]
 const DIFFICULTY_MULTIPLIER: f64 = 0.084375;
 const RHYTHM_SKILL_MULTIPLIER: f64 = 0.65 * DIFFICULTY_MULTIPLIER;
 const READING_SKILL_MULTIPLIER: f64 = 0.100 * DIFFICULTY_MULTIPLIER;
@@ -70,7 +70,7 @@ pub fn difficulty(
     Ok(attrs)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, reason = "it is what it is /shrug")]
 fn combined_difficulty_value(
     rhythm: Rhythm,
     reading: Reading,
@@ -228,7 +228,7 @@ impl DifficultyValues {
         // * As we don't have pattern integration in osu!taiko, we apply the other two skills relative to rhythm.
         let pattern_multiplier = f64::powf(stamina_rating * color_rating, 0.10);
 
-        #[allow(clippy::manual_clamp)]
+        #[expect(clippy::manual_clamp, reason = "staying in-sync with lazer")]
         let strain_length_bonus =
             1.0 + f64::min(
                 f64::max((stamina_difficult_strains - 1000.0) / 3700.0, 0.0),

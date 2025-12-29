@@ -100,7 +100,7 @@ impl AimEvaluator {
     const VELOCITY_CHANGE_MULTIPLIER: f64 = 0.75;
     const WIGGLE_MULTIPLIER: f64 = 1.02;
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason = "staying in-sync with lazer")]
     fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
@@ -116,9 +116,9 @@ impl AimEvaluator {
             return 0.0;
         };
 
-        #[allow(clippy::items_after_statements)]
+        #[expect(clippy::items_after_statements, reason = "staying in-sync with lazer")]
         const RADIUS: i32 = OsuDifficultyObject::NORMALIZED_RADIUS;
-        #[allow(clippy::items_after_statements)]
+        #[expect(clippy::items_after_statements, reason = "staying in-sync with lazer")]
         const DIAMETER: i32 = OsuDifficultyObject::NORMALIZED_DIAMETER;
 
         // * Calculate the velocity to the current hitobject, which starts

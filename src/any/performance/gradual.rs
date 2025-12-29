@@ -88,9 +88,10 @@ use crate::{
 /// [`next`]: GradualPerformance::next
 /// [`nth`]: GradualPerformance::nth
 /// [`GradualDifficulty`]: crate::GradualDifficulty
-// 504 vs 184 bytes is an acceptable difference and the Osu variant (424 bytes)
-// is likely the most used one anyway.
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "the largest variant (osu) is likely the most used one anyway"
+)]
 pub enum GradualPerformance {
     Osu(OsuGradualPerformance),
     Taiko(TaikoGradualPerformance),
@@ -100,7 +101,7 @@ pub enum GradualPerformance {
 
 impl GradualPerformance {
     /// Create a [`GradualPerformance`] for a map of any mode.
-    #[allow(clippy::missing_panics_doc)]
+    #[expect(clippy::missing_panics_doc, reason = "unreachable")]
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Self {
         Self::new_with_mode(difficulty, map, map.mode).expect("no conversion required")
     }
@@ -154,7 +155,7 @@ impl GradualPerformance {
     }
 
     /// Returns the amount of remaining objects.
-    #[allow(clippy::len_without_is_empty)]
+    #[expect(clippy::len_without_is_empty, reason = "TODO")]
     pub fn len(&self) -> usize {
         match self {
             GradualPerformance::Osu(gradual) => gradual.len(),

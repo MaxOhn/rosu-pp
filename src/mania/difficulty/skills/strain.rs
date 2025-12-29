@@ -8,7 +8,7 @@ use crate::{
 };
 
 define_skill! {
-    #[allow(clippy::struct_field_names)]
+    #[expect(clippy::struct_field_names, reason = "using lazer's names")]
     pub struct Strain: StrainDecaySkill => [RefCount<ManiaDifficultyObject>][ManiaDifficultyObject] {
         individual_strains: Box<[f64]>,
         highest_individual_strain: f64 = 0.0,

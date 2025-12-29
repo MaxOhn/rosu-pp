@@ -2,7 +2,8 @@
     clippy::excessive_precision,
     clippy::too_many_lines,
     clippy::unreadable_literal,
-    clippy::many_single_char_names
+    clippy::many_single_char_names,
+    reason = "staying in-sync with lazer"
 )]
 
 #[rustfmt::skip]
@@ -52,7 +53,7 @@ mod consts {
    pub const ERV_INV_IMP_GD: &[f64] = &[ 1.0, 0.0845746234001899436914, 0.00282092984726264681981, 0.468292921940894236786e-4, 0.399968812193862100054e-6, 0.161809290887904476097e-8, 0.231558608310259605225e-11 ];
 }
 
-#[allow(clippy::wildcard_imports)]
+#[expect(clippy::wildcard_imports, reason = "convenience")]
 use consts::*;
 
 pub fn erf(x: f64) -> f64 {

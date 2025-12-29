@@ -14,7 +14,7 @@ define_skill! {
     pub struct Flashlight: StrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         current_strain: f64,
         has_hidden_mod: bool,
-        evaluator: FlashlightEvaluator = todo!(),
+        evaluator: FlashlightEvaluator,
     }
 
     pub fn new(mods: &GameMods, radius: f64, time_preempt: f64, time_fade_in: f64) -> Self {
@@ -61,7 +61,7 @@ impl Flashlight {
         self.current_strain
     }
 
-    #[allow(
+    #[expect(
         clippy::needless_pass_by_value,
         reason = "function definition needs to stay in-sync with `StrainSkill::difficulty_value`"
     )]
