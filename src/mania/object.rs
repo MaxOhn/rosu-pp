@@ -26,7 +26,9 @@ impl ManiaObject {
             HitObjectKind::Slider(ref slider) => {
                 const BASE_SCORING_DIST: f32 = 100.0;
 
-                let dist = slider.curve(GameMode::Mania, &mut params.curve_bufs).dist();
+                let dist = slider
+                    .borrowed_curve(GameMode::Mania, &mut params.curve_bufs)
+                    .dist();
 
                 let beat_len = params
                     .map

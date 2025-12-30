@@ -44,7 +44,7 @@ impl<'a> JuiceStream<'a> {
                 point.slider_velocity
             });
 
-        let path = slider.curve(GameMode::Catch, &mut bufs.curve);
+        let path = slider.borrowed_curve(GameMode::Catch, &mut bufs.curve);
 
         let velocity = JuiceStream::BASE_SCORING_DIST * slider_multiplier
             / get_precision_adjusted_beat_len(slider_velocity, beat_len);
