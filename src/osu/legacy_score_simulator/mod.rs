@@ -23,19 +23,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
         map_attrs: &'a BeatmapAttributes,
         passed_objects: usize,
     ) -> Self {
-        let mut count_normal = 0;
-        let mut count_slider = 0;
-        let mut count_spinner = 0;
-
-        for obj in osu_objects.iter().take(passed_objects) {
-            match obj.kind {
-                OsuObjectKind::Slider(_) => count_slider += 1,
-                OsuObjectKind::Spinner(_) => count_spinner += 1,
-                OsuObjectKind::Circle => count_normal += 1,
-            }
-        }
-
-        let object_count = count_normal + count_slider + count_spinner;
+        let object_count = osu_objects.iter().take(passed_objects).count() as i32;
 
         let mut drain_len = 0;
 
