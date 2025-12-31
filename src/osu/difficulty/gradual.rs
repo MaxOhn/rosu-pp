@@ -8,8 +8,9 @@ use crate::{
     model::mode::ConvertError,
     osu::{
         convert::convert_objects,
-        legacy_score_simulator::gradual::OsuGradualLegacyScoreSimulator,
+        legacy_score_simulator::gradual::GradualLegacyScoreSimulator,
         object::{OsuObject, OsuObjectKind},
+        utils::legacy_score::GradualNestedScorePerObject,
     },
 };
 
@@ -63,7 +64,9 @@ pub struct OsuGradualDifficulty {
     // `osu_objects` will immediately invalidate `diff_objects`.
     diff_objects: Box<[OsuDifficultyObject<'static>]>,
     osu_objects: OsuObjects,
-    score_simulator: OsuGradualLegacyScoreSimulator,
+    // Boxed to reduce the field's size
+    score_simulator: Box<GradualLegacyScoreSimulator>,
+    nested_score: GradualNestedScorePerObject,
     // Additional safety measure that this type can't be cloned as it would
     // invalidate `diff_objects`.
     _not_clonable: NotClonable,
@@ -113,7 +116,8 @@ impl OsuGradualDifficulty {
 
         let skills = OsuSkills::new(mods, &scaling_factor, &map_attrs, time_preempt);
         let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
-        let score_simulator = OsuGradualLegacyScoreSimulator::new(map.breaks.clone(), map_attrs);
+        let score_simulator = GradualLegacyScoreSimulator::new(map.breaks.clone(), map_attrs);
+        let nested_score = GradualNestedScorePerObject::default();
 
         Ok(Self {
             idx: 0,
@@ -122,7 +126,8 @@ impl OsuGradualDifficulty {
             skills,
             diff_objects,
             osu_objects,
-            score_simulator,
+            score_simulator: Box::new(score_simulator),
+            nested_score,
             _not_clonable: NotClonable,
         })
     }
@@ -160,6 +165,9 @@ impl Iterator for OsuGradualDifficulty {
             self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
             self.attrs.legacy_score_base_multiplier =
                 self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
+
+            let slider_nested_score_per_object = self.nested_score.calculate_next(h);
+            self.attrs.nested_score_per_object = slider_nested_score_per_object;
         }
 
         // The first difficulty object belongs to the second note since each
@@ -206,6 +214,9 @@ impl Iterator for OsuGradualDifficulty {
                 self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
                 self.attrs.legacy_score_base_multiplier =
                     self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
+
+                let slider_nested_score_per_object = self.nested_score.calculate_next(h);
+                self.attrs.nested_score_per_object = slider_nested_score_per_object;
             }
 
             take -= 1;
@@ -218,6 +229,9 @@ impl Iterator for OsuGradualDifficulty {
                 self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
                 self.attrs.legacy_score_base_multiplier =
                     self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
+
+                let slider_nested_score_per_object = self.nested_score.calculate_next(h);
+                self.attrs.nested_score_per_object = slider_nested_score_per_object;
             }
 
             self.skills.process(curr, &self.diff_objects);

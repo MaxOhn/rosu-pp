@@ -288,6 +288,13 @@ impl OsuSlider {
             .count()
     }
 
+    pub fn tick_count(&self) -> usize {
+        self.nested_objects
+            .iter()
+            .filter(|nested| matches!(nested.kind, NestedSliderObjectKind::Tick))
+            .count()
+    }
+
     /// Counts both ticks and repeats
     pub fn large_tick_count(&self) -> usize {
         self.nested_objects

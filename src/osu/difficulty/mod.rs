@@ -16,6 +16,7 @@ use crate::{
         legacy_score_simulator::OsuLegacyScoreSimulator,
         object::OsuObject,
         performance::PERFORMANCE_BASE_MULTIPLIER,
+        utils::legacy_score::NestedScorePerObject,
     },
 };
 
@@ -48,19 +49,20 @@ pub fn difficulty(
     } = DifficultyValues::calculate(difficulty, &map);
 
     let mods = difficulty.get_mods();
+    let passed_objects = difficulty.get_passed_objects();
 
     DifficultyValues::eval(&mut attrs, mods, &skills);
 
-    let mut simulator = OsuLegacyScoreSimulator::new(
-        &osu_objects,
-        &map.breaks,
-        &map_attrs,
-        difficulty.get_passed_objects(),
-    );
+    let mut simulator =
+        OsuLegacyScoreSimulator::new(&osu_objects, &map.breaks, &map_attrs, passed_objects);
 
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
     attrs.legacy_score_base_multiplier = simulator.score_multiplier;
+
+    let slider_nested_score_per_object =
+        NestedScorePerObject::calculate(&osu_objects, passed_objects);
+    attrs.nested_score_per_object = slider_nested_score_per_object;
 
     Ok(attrs)
 }
@@ -215,8 +217,6 @@ impl DifficultyValues {
         } else {
             0.0
         };
-
-        // TODO: sliderNestedScorePerObject
 
         let base_aim_performance = Aim::difficulty_to_performance(aim_rating);
         let base_speed_performance = Speed::difficulty_to_performance(speed_rating);

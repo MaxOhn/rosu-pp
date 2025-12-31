@@ -88,10 +88,6 @@ use crate::{
 /// [`next`]: GradualPerformance::next
 /// [`nth`]: GradualPerformance::nth
 /// [`GradualDifficulty`]: crate::GradualDifficulty
-#[expect(
-    clippy::large_enum_variant,
-    reason = "the largest variant (osu) is likely the most used one anyway"
-)]
 pub enum GradualPerformance {
     Osu(OsuGradualPerformance),
     Taiko(TaikoGradualPerformance),

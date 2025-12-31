@@ -12,7 +12,7 @@ pub mod gradual;
 pub struct OsuLegacyScoreSimulator<'a> {
     osu_objects: &'a [OsuObject],
     passed_objects: usize,
-    inner: OsuLegacyScoreSimulatorInner,
+    inner: LegacyScoreSimulatorInner,
     pub score_multiplier: f64,
 }
 
@@ -65,7 +65,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
         Self {
             osu_objects,
             passed_objects,
-            inner: OsuLegacyScoreSimulatorInner::default(),
+            inner: LegacyScoreSimulatorInner::default(),
             score_multiplier: f64::from(calculate_difficulty_peppy_stars(
                 map_attrs,
                 object_count,
@@ -227,7 +227,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
 }
 
 #[derive(Default)]
-struct OsuLegacyScoreSimulatorInner {
+struct LegacyScoreSimulatorInner {
     legacy_bonus_score: i32,
     standardised_bonus_score: i32,
     combo: u32,
@@ -254,7 +254,7 @@ enum IncreaseCombo {
     No,
 }
 
-impl OsuLegacyScoreSimulatorInner {
+impl LegacyScoreSimulatorInner {
     fn unrolled_recursion(
         &mut self,
         attrs: &mut LegacyScoreAttributes,

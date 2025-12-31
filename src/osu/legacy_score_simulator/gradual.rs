@@ -8,17 +8,17 @@ use crate::{
     osu::{
         legacy_score_simulator::{
             AddScoreComboMultiplier, IncreaseCombo, IsBonus, LegacyScoreAttributes,
-            OsuLegacyScoreSimulatorInner,
+            LegacyScoreSimulatorInner,
         },
         object::{NestedSliderObjectKind, OsuObject, OsuObjectKind},
     },
     util::ruleset_ext::calculate_difficulty_peppy_stars,
 };
 
-pub struct OsuGradualLegacyScoreSimulator {
+pub struct GradualLegacyScoreSimulator {
     map_attrs: BeatmapAttributes,
     attrs: LegacyScoreAttributes,
-    inner: super::OsuLegacyScoreSimulatorInner,
+    inner: super::LegacyScoreSimulatorInner,
     combo_score_factors: Vec<f64>,
 
     breaks: Peekable<vec::IntoIter<BreakPeriod>>,
@@ -30,12 +30,12 @@ pub struct OsuGradualLegacyScoreSimulator {
     pub prev_score_multiplier: Option<f64>,
 }
 
-impl OsuGradualLegacyScoreSimulator {
+impl GradualLegacyScoreSimulator {
     pub fn new(breaks: Vec<BreakPeriod>, map_attrs: BeatmapAttributes) -> Self {
         Self {
             map_attrs,
             attrs: LegacyScoreAttributes::default(),
-            inner: OsuLegacyScoreSimulatorInner::default(),
+            inner: LegacyScoreSimulatorInner::default(),
             combo_score_factors: Vec::new(),
             breaks: breaks.into_iter().peekable(),
             elapsed_curr_break: None,
