@@ -16,6 +16,7 @@ use super::{
     object::palpable::PalpableObject,
 };
 
+mod evaluators;
 pub mod gradual;
 mod object;
 mod skills;

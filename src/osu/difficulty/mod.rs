@@ -24,6 +24,7 @@ use self::skills::OsuSkills;
 
 use super::attributes::OsuDifficultyAttributes;
 
+mod evaluators;
 pub mod gradual;
 mod object;
 pub mod rating;

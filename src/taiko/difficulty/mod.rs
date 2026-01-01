@@ -23,6 +23,7 @@ pub(crate) use self::skills::TaikoSkills;
 use super::{attributes::TaikoDifficultyAttributes, convert};
 
 mod color;
+mod evaluators;
 pub mod gradual;
 mod object;
 mod rhythm;
