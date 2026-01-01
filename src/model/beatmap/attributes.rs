@@ -355,10 +355,19 @@ impl BeatmapAttributesBuilder {
         } = hit_windows;
 
         // AR
-        let ar = if ar > 1200.0 {
-            (1800.0 - ar) / 120.0
-        } else {
-            (1200.0 - ar) / 150.0 + 5.0
+        let ar = {
+            let difficulty_value = ar;
+            let GameModeHitWindows {
+                min: diff0,
+                avg: diff5,
+                max: diff10,
+            } = AR_WINDOWS;
+
+            if (difficulty_value - diff5).signum() == (diff10 - diff0).signum() {
+                (difficulty_value - diff5) / (diff10 - diff5) * 5.0 + 5.0
+            } else {
+                (difficulty_value - diff5) / (diff5 - diff0) * 5.0 + 5.0
+            }
         };
 
         // OD
