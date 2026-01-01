@@ -23,7 +23,7 @@ pub fn convert_objects(
     let mut osu_objects: Box<[_]> = map
         .hit_objects
         .iter()
-        .map(|h| OsuObject::new(h, map, &mut curve_bufs, &mut ticks_buf))
+        .map(|h| OsuObject::new(h, map, reflection, &mut curve_bufs, &mut ticks_buf))
         .inspect(|h| {
             if take == 0 {
                 return;

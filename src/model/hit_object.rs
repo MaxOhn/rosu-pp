@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{borrow::Cow, cmp::Ordering};
 
 use rosu_map::section::{
     general::GameMode,
@@ -9,6 +9,8 @@ pub use rosu_map::{
     section::hit_objects::{PathControlPoint, PathType, SplineType, hit_samples::HitSoundType},
     util::Pos,
 };
+
+use crate::model::mods::Reflection;
 
 /// All hitobject related data required for difficulty and performance
 /// calculation except for the [`HitSoundType`].
@@ -86,15 +88,34 @@ impl Slider {
 
     /// Creates the [`Curve`] of a [`Slider`].
     ///
-    /// Consider using the cheaper method [`Slider::borrowed_curve`] whenever
-    /// possible.
-    pub(crate) fn curve(&self, mode: GameMode, bufs: &mut CurveBuffers) -> Curve {
-        Curve::new(mode, &self.control_points, self.expected_dist, bufs)
+    /// Applies the [`Reflection`] onto control points before creating the
+    /// curve.
+    pub(crate) fn curve(
+        &self,
+        mode: GameMode,
+        reflection: Reflection,
+        bufs: &mut CurveBuffers,
+    ) -> Curve {
+        fn reflect<F: Fn(Pos) -> Pos>(points: &mut Cow<'_, [PathControlPoint]>, f: F) {
+            points
+                .to_mut()
+                .iter_mut()
+                .for_each(|point| point.pos = f(point.pos));
+        }
+
+        let mut points = Cow::Borrowed(self.control_points.as_ref());
+
+        match reflection {
+            Reflection::None => {}
+            Reflection::Vertical => reflect(&mut points, |pos| Pos::new(pos.x, -pos.y)),
+            Reflection::Horizontal => reflect(&mut points, |pos| Pos::new(-pos.x, pos.y)),
+            Reflection::Both => reflect(&mut points, |pos| Pos::new(-pos.x, -pos.y)),
+        }
+
+        Curve::new(mode, points.as_ref(), self.expected_dist, bufs)
     }
 
     /// Creates the [`BorrowedCurve`] of a [`Slider`].
-    ///
-    /// Cheaper than [`Slider::curve`].
     pub(crate) fn borrowed_curve<'bufs>(
         &self,
         mode: GameMode,

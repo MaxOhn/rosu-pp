@@ -11,6 +11,7 @@ use crate::{
     model::{
         control_point::{DifficultyPoint, TimingPoint},
         hit_object::{HitObject, HitObjectKind, HoldNote, Slider, Spinner},
+        mods::Reflection,
     },
     util::{get_precision_adjusted_beat_len, sort},
 };
@@ -34,14 +35,15 @@ impl OsuObject {
     pub fn new(
         h: &HitObject,
         map: &Beatmap,
+        reflection: Reflection,
         curve_bufs: &mut CurveBuffers,
         ticks_buf: &mut Vec<SliderEvent>,
     ) -> Self {
         let kind = match h.kind {
             HitObjectKind::Circle => OsuObjectKind::Circle,
-            HitObjectKind::Slider(ref slider) => {
-                OsuObjectKind::Slider(OsuSlider::new(h, slider, map, curve_bufs, ticks_buf))
-            }
+            HitObjectKind::Slider(ref slider) => OsuObjectKind::Slider(OsuSlider::new(
+                h, slider, map, reflection, curve_bufs, ticks_buf,
+            )),
             HitObjectKind::Spinner(spinner) => OsuObjectKind::Spinner(spinner),
             HitObjectKind::Hold(HoldNote { duration }) => {
                 OsuObjectKind::Spinner(Spinner { duration })
@@ -63,14 +65,7 @@ impl OsuObject {
         }
 
         reflect_y(&mut self.pos.y);
-
-        if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            for nested in slider.nested_objects.iter_mut() {
-                let mut nested_pos = self.pos; // already reflected at this point
-                nested_pos += Pos::new(nested.pos.x, -nested.pos.y);
-                nested.pos = nested_pos;
-            }
-        }
+        self.finalize_nested();
     }
 
     pub fn reflect_horizontally(&mut self) {
@@ -79,14 +74,7 @@ impl OsuObject {
         }
 
         reflect_x(&mut self.pos.x);
-
-        if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            for nested in slider.nested_objects.iter_mut() {
-                let mut nested_pos = self.pos; // already reflected at this point
-                nested_pos += Pos::new(-nested.pos.x, nested.pos.y);
-                nested.pos = nested_pos;
-            }
-        }
+        self.finalize_nested();
     }
 
     pub fn reflect_both_axes(&mut self) {
@@ -96,20 +84,13 @@ impl OsuObject {
         }
 
         reflect(&mut self.pos);
-
-        if let OsuObjectKind::Slider(ref mut slider) = self.kind {
-            for nested in slider.nested_objects.iter_mut() {
-                let mut nested_pos = self.pos; // already reflected at this point
-                nested_pos += Pos::new(-nested.pos.x, -nested.pos.y);
-                nested.pos = nested_pos;
-            }
-        }
+        self.finalize_nested();
     }
 
     pub fn finalize_nested(&mut self) {
         if let OsuObjectKind::Slider(ref mut slider) = self.kind {
             for nested in slider.nested_objects.iter_mut() {
-                nested.pos += self.pos;
+                nested.pos = self.pos + nested.pos;
             }
         }
     }
@@ -176,6 +157,7 @@ impl OsuSlider {
         h: &HitObject,
         slider: &Slider,
         map: &Beatmap,
+        reflection: Reflection,
         curve_bufs: &mut CurveBuffers,
         ticks_buf: &mut Vec<SliderEvent>,
     ) -> Self {
@@ -195,7 +177,7 @@ impl OsuSlider {
             |point| (point.slider_velocity, point.generate_ticks),
         );
 
-        let path = slider.curve(GameMode::Osu, curve_bufs);
+        let path = slider.curve(GameMode::Osu, reflection, curve_bufs);
 
         let span_count = slider.span_count() as f64;
 
