@@ -66,8 +66,6 @@ impl GradualLegacyScoreSimulator {
         // malicious case anyway.
         // Another unhandled case are breaks *after* the last object.
         while let Some(b) = self.breaks.peek() {
-            // TODO: Apply clock rate from mods to break start & end?
-
             if b.start_time >= obj.start_time {
                 break;
             }

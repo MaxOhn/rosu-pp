@@ -28,12 +28,12 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
         let mut drain_len = 0;
 
         let first = osu_objects.first();
+
         let last = osu_objects
             .get(passed_objects.saturating_sub(1))
             .or(osu_objects.last());
 
         if let Some((first, last)) = first.zip(last) {
-            // TODO: Apply clock rate from mods to breaks?
             let break_len: i32 = breaks
                 .iter()
                 // Note that this does not account for notes appearing during
@@ -50,15 +50,13 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
             drain_len = (full_len - break_len) / 1000;
         }
 
+        let score_multiplier = calculate_difficulty_peppy_stars(map_attrs, object_count, drain_len);
+
         Self {
             osu_objects,
             passed_objects,
             inner: LegacyScoreSimulatorInner::default(),
-            score_multiplier: f64::from(calculate_difficulty_peppy_stars(
-                map_attrs,
-                object_count,
-                drain_len,
-            )),
+            score_multiplier: f64::from(score_multiplier),
         }
     }
 
