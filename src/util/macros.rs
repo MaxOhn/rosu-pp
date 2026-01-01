@@ -27,11 +27,7 @@ macro_rules! define_skill {
         }
 
         $_new_vis:vis fn new( $( $arg_name:ident: $arg_type:ty ),* ) -> Self {
-            $( { $( $setup:tt )* } )?
-
-            Self {
-                $( $assign_name:ident: $assign_expr:expr, )*
-            }
+            $( $body:tt )*
         }
     ) => {
         define_skill! {
@@ -40,9 +36,64 @@ macro_rules! define_skill {
             fields { $( $field_name $field_type |, )* }
             struct { $( #[$meta] )* $vis $skill }
             new {
-                setup { $( $( $setup )* )? }
+                setup_body { $( $body )* }
+                setup {}
                 args { $( $arg_name $arg_type, )* }
-                assigns { $( $assign_name $assign_expr, )* }
+            }
+        }
+    };
+
+    // Processing `new` function: Found the final `Self` return value
+    (
+        @$trait:ident $objects:ty[$object:ty]
+        extend_fields $extend_fields:ident
+        fields { $( $fields:tt )* }
+        struct { $( $struct:tt )* }
+        new {
+            setup_body {
+                Self { $( $assign_name:ident: $assign_expr:expr, )* } // <-
+            }
+            setup { $( $setup:tt )* }
+            args { $( $args:tt )* }
+        }
+    ) => {
+        define_skill! {
+            @$trait $objects[$object]
+            extend_fields $trait
+            fields { $( $fields )* }
+            struct { $( $struct )* }
+            new {
+                setup { $( $setup )* }
+                args { $( $args )* }
+                assigns { $( $assign_name $assign_expr, )* } // <-
+            }
+        }
+    };
+
+    // Processing `new` function: Pop next statement from body and continue
+    (
+        @$trait:ident $objects:ty[$object:ty]
+        extend_fields $extend_fields:ident
+        fields { $( $fields:tt )* }
+        struct { $( $struct:tt )* }
+        new {
+            setup_body {
+                $stmt:stmt; // <-
+                $( $rest:tt )+
+            }
+            setup { $( $setup:tt )* }
+            args { $( $args:tt )* }
+        }
+    ) => {
+        define_skill! {
+            @$trait $objects[$object]
+            extend_fields $trait
+            fields { $( $fields )* }
+            struct { $( $struct )* }
+            new {
+                setup_body { $( $rest )* }   // <-
+                setup { $( $setup )* $stmt } // <-
+                args { $( $args )* }
             }
         }
     };
@@ -167,7 +218,7 @@ macro_rules! define_skill {
             $( $field_name:ident $field_type:ty, )*
         }
         new {
-            setup { $( $setup:tt )* }
+            setup { $( $setup:stmt )* }
             args { $( $arg_name:ident $arg_type:ty, )* }
             assigns { $( $assign_name:ident $( $assign_expr:expr )?, )* }
         }

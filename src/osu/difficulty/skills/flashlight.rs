@@ -16,9 +16,7 @@ define_skill! {
     }
 
     pub fn new(mods: &GameMods, radius: f64, time_preempt: f64, time_fade_in: f64) -> Self {
-        {
-            let scaling_factor = 52.0 / radius;
-        }
+        let scaling_factor = 52.0 / radius;
 
         Self {
             current_strain: 0.0,
