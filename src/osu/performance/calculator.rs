@@ -11,9 +11,8 @@ use crate::{
         legacy_score_miss_calc::OsuLegacyScoreMissCalculator,
     },
     util::{
-        difficulty::{logistic, reverse_lerp, smoothstep},
+        difficulty::{erf, erf_inv, logistic, reverse_lerp, smoothstep},
         float_ext::FloatExt,
-        special_functions::{erf, erf_inv},
     },
 };
 

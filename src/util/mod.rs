@@ -7,7 +7,6 @@ pub mod map_or_attrs;
 pub mod random;
 pub mod ruleset_ext;
 pub mod sort;
-pub mod special_functions;
 pub mod strains_vec;
 pub mod sync;
 
