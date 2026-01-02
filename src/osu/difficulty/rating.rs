@@ -125,8 +125,6 @@ impl OsuRatingCalculator<'_> {
             0.0
         } else if self.approach_rate > 10.33 {
             0.3 * (self.approach_rate - 10.33)
-        } else if self.approach_rate < 8.0 {
-            0.05 * (8.0 - self.approach_rate)
         } else {
             0.0
         };
