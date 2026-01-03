@@ -1,6 +1,7 @@
-use rosu_map::section::{events::BreakPeriod, general::GameMode};
+use rosu_map::section::general::GameMode;
 
 use crate::{
+    Beatmap,
     any::hit_result::HitResult,
     model::beatmap::BeatmapAttributes,
     osu::object::{NestedSliderObjectKind, OsuObject, OsuObjectKind},
@@ -13,28 +14,45 @@ pub struct OsuLegacyScoreSimulator<'a> {
     osu_objects: &'a [OsuObject],
     passed_objects: usize,
     inner: LegacyScoreSimulatorInner,
-    pub score_multiplier: f64,
+    score_multiplier: f64,
 }
 
 impl<'a> OsuLegacyScoreSimulator<'a> {
-    pub fn new(
-        osu_objects: &'a [OsuObject],
-        breaks: &[BreakPeriod],
-        map_attrs: &'a BeatmapAttributes,
+    pub fn new(osu_objects: &'a [OsuObject], map: &Beatmap, passed_objects: usize) -> Self {
+        // Note that no mods are being applied here. Apparently, this is how
+        // lazer wants to it /shrug
+        let map_attrs = map.attributes().build();
+
+        let score_multiplier = Self::score_multiplier(map, &map_attrs, passed_objects);
+
+        Self {
+            osu_objects,
+            passed_objects,
+            inner: LegacyScoreSimulatorInner::default(),
+            score_multiplier: f64::from(score_multiplier),
+        }
+    }
+
+    pub fn score_multiplier(
+        map: &Beatmap,
+        map_attrs: &BeatmapAttributes,
         passed_objects: usize,
-    ) -> Self {
-        let object_count = osu_objects.iter().take(passed_objects).count() as i32;
+    ) -> i32 {
+        let hit_objects = &map.hit_objects;
+
+        let object_count = hit_objects.iter().take(passed_objects).count() as i32;
 
         let mut drain_len = 0;
 
-        let first = osu_objects.first();
+        let first = hit_objects.first();
 
-        let last = osu_objects
+        let last = hit_objects
             .get(passed_objects.saturating_sub(1))
-            .or(osu_objects.last());
+            .or(hit_objects.last());
 
         if let Some((first, last)) = first.zip(last) {
-            let break_len: i32 = breaks
+            let break_len: i32 = map
+                .breaks
                 .iter()
                 // Note that this does not account for notes appearing during
                 // breaks or overlapping breaks.
@@ -50,14 +68,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
             drain_len = (full_len - break_len) / 1000;
         }
 
-        let score_multiplier = calculate_difficulty_peppy_stars(map_attrs, object_count, drain_len);
-
-        Self {
-            osu_objects,
-            passed_objects,
-            inner: LegacyScoreSimulatorInner::default(),
-            score_multiplier: f64::from(score_multiplier),
-        }
+        calculate_difficulty_peppy_stars(&map_attrs, object_count, drain_len)
     }
 
     pub fn simulate(&mut self) -> LegacyScoreAttributes {

@@ -116,7 +116,7 @@ impl OsuGradualDifficulty {
 
         let skills = OsuSkills::new(mods, &scaling_factor, &map_attrs, time_preempt);
         let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
-        let score_simulator = GradualLegacyScoreSimulator::new(map.breaks.clone(), map_attrs);
+        let score_simulator = GradualLegacyScoreSimulator::new(&map, map_attrs);
         let nested_score = GradualNestedScorePerObject::default();
 
         Ok(Self {
@@ -163,8 +163,12 @@ impl Iterator for OsuGradualDifficulty {
         if let Some(h) = self.osu_objects.get(self.idx) {
             let score_attrs = self.score_simulator.simulate_next(h);
             self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
+
+            // Importantly, the `score_multipler` method is called *after*
+            // `simulate_next` so that the simulator's internal fields have
+            // been adjusted to the current object.
             self.attrs.legacy_score_base_multiplier =
-                self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
+                self.score_simulator.score_multiplier(h, false);
 
             let slider_nested_score_per_object = self.nested_score.calculate_next(h);
             self.attrs.nested_score_per_object = slider_nested_score_per_object;
@@ -213,7 +217,7 @@ impl Iterator for OsuGradualDifficulty {
                 let score_attrs = self.score_simulator.simulate_next(h);
                 self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
                 self.attrs.legacy_score_base_multiplier =
-                    self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
+                    self.score_simulator.score_multiplier(h, false);
 
                 let slider_nested_score_per_object = self.nested_score.calculate_next(h);
                 self.attrs.nested_score_per_object = slider_nested_score_per_object;
@@ -228,7 +232,7 @@ impl Iterator for OsuGradualDifficulty {
                 let score_attrs = self.score_simulator.simulate_next(h);
                 self.attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
                 self.attrs.legacy_score_base_multiplier =
-                    self.score_simulator.prev_score_multiplier.unwrap_or(0.0);
+                    self.score_simulator.score_multiplier(h, false);
 
                 let slider_nested_score_per_object = self.nested_score.calculate_next(h);
                 self.attrs.nested_score_per_object = slider_nested_score_per_object;

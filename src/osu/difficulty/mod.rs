@@ -54,12 +54,16 @@ pub fn difficulty(
 
     DifficultyValues::eval(&mut attrs, mods, &skills);
 
-    let mut simulator =
-        OsuLegacyScoreSimulator::new(&osu_objects, &map.breaks, &map_attrs, passed_objects);
+    let mut simulator = OsuLegacyScoreSimulator::new(&osu_objects, &map, passed_objects);
 
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
-    attrs.legacy_score_base_multiplier = simulator.score_multiplier;
+
+    attrs.legacy_score_base_multiplier = f64::from(OsuLegacyScoreSimulator::score_multiplier(
+        &map,
+        &map_attrs,
+        passed_objects,
+    ));
 
     let slider_nested_score_per_object =
         NestedScorePerObject::calculate(&osu_objects, passed_objects);

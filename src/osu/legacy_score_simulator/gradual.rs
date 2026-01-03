@@ -3,6 +3,7 @@ use std::{cmp, iter::Peekable, vec};
 use rosu_map::section::events::BreakPeriod;
 
 use crate::{
+    Beatmap,
     any::hit_result::HitResult,
     model::beatmap::BeatmapAttributes,
     osu::{
@@ -17,6 +18,7 @@ use crate::{
 
 pub struct GradualLegacyScoreSimulator {
     map_attrs: BeatmapAttributes,
+    map_attrs_nomod: BeatmapAttributes,
     attrs: LegacyScoreAttributes,
     inner: super::LegacyScoreSimulatorInner,
     combo_score_factors: Vec<f64>,
@@ -26,23 +28,21 @@ pub struct GradualLegacyScoreSimulator {
     break_len_prelim: i32,
     object_count: i32,
     start_time: Option<i32>,
-
-    pub prev_score_multiplier: Option<f64>,
 }
 
 impl GradualLegacyScoreSimulator {
-    pub fn new(breaks: Vec<BreakPeriod>, map_attrs: BeatmapAttributes) -> Self {
+    pub fn new(map: &Beatmap, map_attrs: BeatmapAttributes) -> Self {
         Self {
             map_attrs,
+            map_attrs_nomod: map.attributes().build(),
             attrs: LegacyScoreAttributes::default(),
             inner: LegacyScoreSimulatorInner::default(),
             combo_score_factors: Vec::new(),
-            breaks: breaks.into_iter().peekable(),
+            breaks: map.breaks.clone().into_iter().peekable(),
             elapsed_curr_break: None,
             break_len_prelim: 0,
             object_count: 0,
             start_time: None,
-            prev_score_multiplier: None,
         }
     }
 
@@ -56,11 +56,25 @@ impl GradualLegacyScoreSimulator {
             }
     }
 
-    fn score_multiplier(&mut self, obj: &OsuObject) -> f64 {
-        const fn round_time(time: f64) -> i32 {
-            time.round_ties_even() as i32
-        }
+    pub fn score_multiplier(&self, obj: &OsuObject, nomod: bool) -> f64 {
+        let start_time = self.start_time.unwrap_or(round_time(obj.start_time));
+        let end_time = round_time(obj.start_time);
+        let drain_len = (end_time - start_time - self.break_len()) / 1000;
 
+        let map_attrs = if nomod {
+            &self.map_attrs_nomod
+        } else {
+            &self.map_attrs
+        };
+
+        f64::from(calculate_difficulty_peppy_stars(
+            map_attrs,
+            self.object_count,
+            drain_len,
+        ))
+    }
+
+    fn prepare_score_multiplier(&mut self, obj: &OsuObject) {
         // Note that this logic does not handle the case properly when
         // breaks are overlapping but that seems like a pathological /
         // malicious case anyway.
@@ -85,22 +99,11 @@ impl GradualLegacyScoreSimulator {
         }
 
         self.object_count += 1;
-
-        let start_time = *self.start_time.get_or_insert(round_time(obj.start_time));
-        let end_time = round_time(obj.start_time);
-        let drain_len = (end_time - start_time - self.break_len()) / 1000;
-
-        let score_multiplier = f64::from(calculate_difficulty_peppy_stars(
-            &self.map_attrs,
-            self.object_count,
-            drain_len,
-        ));
-
-        *self.prev_score_multiplier.insert(score_multiplier)
     }
 
     pub fn simulate_next(&mut self, obj: &OsuObject) -> LegacyScoreAttributes {
-        let score_multiplier = self.score_multiplier(obj);
+        self.prepare_score_multiplier(obj);
+        let score_multiplier = self.score_multiplier(obj, true);
         self.simulate_hit(obj);
 
         let combo_score = self
@@ -246,4 +249,8 @@ impl GradualLegacyScoreSimulator {
             self.combo_score_factors.push(factor);
         }
     }
+}
+
+const fn round_time(time: f64) -> i32 {
+    time.round_ties_even() as i32
 }
