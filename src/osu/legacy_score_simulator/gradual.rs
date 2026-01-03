@@ -99,6 +99,7 @@ impl GradualLegacyScoreSimulator {
         }
 
         self.object_count += 1;
+        self.start_time.get_or_insert(round_time(obj.start_time));
     }
 
     pub fn simulate_next(&mut self, obj: &OsuObject) -> LegacyScoreAttributes {
