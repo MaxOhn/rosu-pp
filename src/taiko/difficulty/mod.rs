@@ -158,6 +158,7 @@ fn combined_difficulty_value(
     (difficulty, consistency_factor)
 }
 
+#[expect(clippy::too_many_arguments, reason = "it is what it is /shrug")]
 fn combine_peaks<I>(
     rhythm_peaks: I,
     reading_peaks: I,
@@ -173,6 +174,7 @@ where
     I: IntoIterator<Item = f64>,
 {
     // Combatting size bloat by monomorphization due to generics
+    #[expect(clippy::too_many_arguments, reason = "it is what it is /shrug")]
     fn iteration(
         rhythm_peak: &mut f64,
         reading_peak: &mut f64,

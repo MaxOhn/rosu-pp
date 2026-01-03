@@ -39,8 +39,7 @@ impl SameRhythmHitObjectGrouping {
             .get(1)
             .and_then(|h| normalized_hit_objects.get(h))
             .copied()
-            .map(f64::round)
-            .unwrap_or(0.0);
+            .map_or(0.0, f64::round);
 
         // * Calculate the average interval between hitobjects.
         let hit_object_interval = if normalized_hit_object_delta_time_count > 0 {

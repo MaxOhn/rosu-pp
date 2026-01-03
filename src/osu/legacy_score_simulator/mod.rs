@@ -68,7 +68,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
             drain_len = (full_len - break_len) / 1000;
         }
 
-        calculate_difficulty_peppy_stars(&map_attrs, object_count, drain_len)
+        calculate_difficulty_peppy_stars(map_attrs, object_count, drain_len)
     }
 
     pub fn simulate(&mut self) -> LegacyScoreAttributes {

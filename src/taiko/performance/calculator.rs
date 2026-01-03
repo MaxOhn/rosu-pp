@@ -190,11 +190,7 @@ impl TaikoPerformanceCalculator<'_> {
     // * and the hit judgements, assuming the player's mean hit error is 0. The estimation is consistent in that
     // * two SS scores on the same map with the same settings will always return the same deviation.
     fn compute_deviation_upper_bound(&self, accuracy: f64) -> f64 {
-        #[expect(
-            clippy::items_after_statements,
-            clippy::unreadable_literal,
-            reason = "staying in-sync with lazer"
-        )]
+        #[expect(clippy::unreadable_literal, reason = "staying in-sync with lazer")]
         // * 99% critical value for the normal distribution (one-tailed).
         const Z: f64 = 2.32634787404;
 
