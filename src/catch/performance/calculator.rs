@@ -21,9 +21,9 @@ impl<'a> CatchPerformanceCalculator<'a> {
 
 impl CatchPerformanceCalculator<'_> {
     pub fn calculate(self) -> CatchPerformanceAttributes {
-        let attributes = &self.attrs;
-        let stars = attributes.stars;
-        let max_combo = attributes.max_combo();
+        let attrs = &self.attrs;
+        let stars = attrs.stars;
+        let max_combo = attrs.max_combo();
 
         // Relying heavily on aim
         let mut pp = (5.0 * (stars / 0.0049).max(1.0) - 4.0).powf(2.0) / 100_000.0;
@@ -53,7 +53,12 @@ impl CatchPerformanceCalculator<'_> {
         }
 
         // AR scaling
-        let ar = attributes.ar;
+        let ar = if attrs.preempt > 1200.0 {
+            -(attrs.preempt - 1800.0) / 120.0
+        } else {
+            -(attrs.preempt - 1200.0) / 150.0 + 5.0
+        };
+
         let mut ar_factor = 1.0;
         if ar > 9.0 {
             ar_factor += 0.1 * (ar - 9.0) + f64::from(u8::from(ar > 10.0)) * 0.1 * (ar - 10.0);

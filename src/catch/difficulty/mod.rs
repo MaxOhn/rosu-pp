@@ -49,7 +49,7 @@ impl CatchDifficultySetup {
         let map_attrs = map.attributes().difficulty(difficulty).build();
 
         let attrs = CatchDifficultyAttributes {
-            ar: map_attrs.ar,
+            preempt: map_attrs.hit_windows.ar,
             is_convert: map.is_convert,
             ..Default::default()
         };

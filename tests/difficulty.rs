@@ -112,7 +112,7 @@ macro_rules! test_cases {
     };
     ( @Catch {
         stars: $stars:literal,
-        ar: $ar:literal,
+        preempt: $preempt:literal,
         n_fruits: $n_fruits:literal,
         n_droplets: $n_droplets:literal,
         n_tiny_droplets: $n_tiny_droplets:literal,
@@ -120,7 +120,7 @@ macro_rules! test_cases {
     }) => {
         CatchDifficultyAttributes {
             stars: $stars,
-            ar: $ar,
+            preempt: $preempt,
             n_fruits: $n_fruits,
             n_droplets: $n_droplets,
             n_tiny_droplets: $n_tiny_droplets,
@@ -430,7 +430,7 @@ fn basic_catch() {
         Catch: CATCH {
             NM => {
                 stars: 3.250266313373984,
-                ar: 8.0,
+                preempt: 750.0,
                 n_fruits: 728,
                 n_droplets: 2,
                 n_tiny_droplets: 263,
@@ -438,7 +438,7 @@ fn basic_catch() {
             };
             HR => {
                 stars: 4.313360856186517,
-                ar: 10.0,
+                preempt: 450.0,
                 n_fruits: 728,
                 n_droplets: 2,
                 n_tiny_droplets: 263,
@@ -446,7 +446,7 @@ fn basic_catch() {
             };
             EZ => {
                 stars: 4.06522224010957,
-                ar: 4.0,
+                preempt: 1320.0,
                 n_fruits: 728,
                 n_droplets: 2,
                 n_tiny_droplets: 263,
@@ -454,7 +454,7 @@ fn basic_catch() {
             };
             DT => {
                 stars: 4.635262826575386,
-                ar: 9.666666666666668,
+                preempt: 500.0,
                 n_fruits: 728,
                 n_droplets: 2,
                 n_tiny_droplets: 263,
@@ -470,7 +470,7 @@ fn convert_catch() {
         Catch: OSU {
             NM => {
                 stars: 4.528720977989276,
-                ar: 9.300000190734863,
+                preempt: 554.9999713897705,
                 n_fruits: 908,
                 n_droplets: 0,
                 n_tiny_droplets: 159,
@@ -478,7 +478,7 @@ fn convert_catch() {
             };
             HR => {
                 stars: 5.076698043567007,
-                ar: 10.0,
+                preempt: 450.0,
                 n_fruits: 908,
                 n_droplets: 0,
                 n_tiny_droplets: 159,
@@ -486,7 +486,7 @@ fn convert_catch() {
             };
             EZ => {
                 stars: 3.593264064535228,
-                ar: 4.650000095367432,
+                preempt: 1241.9999885559082,
                 n_fruits: 908,
                 n_droplets: 0,
                 n_tiny_droplets: 159,
@@ -494,7 +494,7 @@ fn convert_catch() {
             };
             DT => {
                 stars: 6.15540143757313,
-                ar: 10.53333346048991,
+                preempt: 369.9999809265137,
                 n_fruits: 908,
                 n_droplets: 0,
                 n_tiny_droplets: 159,
@@ -667,7 +667,7 @@ impl AssertEq for CatchDifficultyAttributes {
     fn assert_eq(&self, expected: &Self) {
         let Self {
             stars,
-            ar,
+            preempt,
             n_fruits,
             n_droplets,
             n_tiny_droplets,
@@ -675,7 +675,7 @@ impl AssertEq for CatchDifficultyAttributes {
         } = self;
 
         assert_eq_float(*stars, expected.stars);
-        assert_eq_float(*ar, expected.ar);
+        assert_eq_float(*preempt, expected.preempt);
         assert_eq!(*n_fruits, expected.n_fruits);
         assert_eq!(*n_droplets, expected.n_droplets);
         assert_eq!(*n_tiny_droplets, expected.n_tiny_droplets);

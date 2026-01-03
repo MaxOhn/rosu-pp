@@ -7,8 +7,8 @@ use crate::catch::performance::CatchPerformance;
 pub struct CatchDifficultyAttributes {
     /// The final star rating
     pub stars: f64,
-    /// The approach rate.
-    pub ar: f64,
+    /// Time preempt (AR time window).
+    pub preempt: f64,
     /// The amount of fruits.
     pub n_fruits: u32,
     /// The amount of droplets.
