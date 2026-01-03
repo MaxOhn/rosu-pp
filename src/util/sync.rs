@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 pub use inner::*;
 
@@ -142,9 +145,43 @@ impl<T: fmt::Debug> fmt::Debug for RefCount<T> {
     }
 }
 
+impl<T: PartialEq> PartialEq for RefCount<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get().eq(&other.get())
+    }
+}
+
+impl<T: Eq> Eq for RefCount<T> {}
+
+impl<T: Hash> Hash for RefCount<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.get().hash(state);
+    }
+}
+
+impl<T> Clone for Weak<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
 impl<T: fmt::Debug> fmt::Debug for Weak<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.0, f)
+    }
+}
+
+impl<T: PartialEq> PartialEq for Weak<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.upgrade().eq(&other.upgrade())
+    }
+}
+
+impl<T: Eq> Eq for Weak<T> {}
+
+impl<T: Hash> Hash for Weak<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.upgrade().hash(state);
     }
 }
 

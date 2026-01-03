@@ -315,7 +315,12 @@ impl<'map> TaikoPerformance<'map> {
             MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Taiko>(map)?,
         };
 
-        Ok(TaikoPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state).calculate())
+        let is_classic = !self.difficulty.get_lazer() || self.difficulty.get_mods().cl();
+
+        let calculator =
+            TaikoPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state, is_classic);
+
+        Ok(calculator.calculate())
     }
 
     pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Taiko>) -> Self {

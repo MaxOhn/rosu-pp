@@ -1,9 +1,16 @@
-use crate::util::float_ext::FloatExt;
+use crate::{
+    taiko::difficulty::utils::has_interval::HasInterval,
+    util::{
+        float_ext::FloatExt,
+        sync::{RefCount, Weak},
+    },
+};
 
-use super::sync::{RefCount, Weak};
+pub struct IntervalGroupingUtils;
 
-pub trait HasInterval {
-    fn interval(&self) -> f64;
+impl IntervalGroupingUtils {
+    // * The margin of error when comparing intervals for grouping, or snapping intervals to a common value.
+    pub const MARGIN_OF_ERROR: f64 = 5.0;
 }
 
 pub const fn group_by_interval<T: HasInterval>(
@@ -44,7 +51,7 @@ impl<T: HasInterval> Iterator for GroupedByIntervalIter<'_, T> {
 
 impl<T: HasInterval> GroupedByIntervalIter<'_, T> {
     fn create_next_group(&mut self) -> Vec<Weak<T>> {
-        const MARGIN_OF_ERROR: f64 = 5.0;
+        const MARGIN_OF_ERROR: f64 = IntervalGroupingUtils::MARGIN_OF_ERROR;
 
         let &mut Self { objects, ref mut i } = self;
 

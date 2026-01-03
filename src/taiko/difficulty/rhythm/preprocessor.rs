@@ -1,6 +1,9 @@
 use crate::{
-    taiko::difficulty::object::{TaikoDifficultyObject, TaikoDifficultyObjects},
-    util::{interval_grouping::group_by_interval, sync::RefCount},
+    taiko::difficulty::{
+        object::{TaikoDifficultyObject, TaikoDifficultyObjects},
+        utils::interval_grouping::group_by_interval,
+    },
+    util::sync::RefCount,
 };
 
 use super::data::{

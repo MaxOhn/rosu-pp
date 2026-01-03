@@ -1,11 +1,17 @@
-use std::slice::Iter;
+use std::{
+    hash::{Hash, Hasher},
+    slice::Iter,
+};
 
 use crate::{
     Beatmap,
     any::difficulty::object::{HasStartTime, IDifficultyObject, IDifficultyObjects},
     model::control_point::{EffectPoint, TimingPoint},
-    taiko::object::{HitType, TaikoObject},
-    util::{interval_grouping::HasInterval, sync::RefCount},
+    taiko::{
+        difficulty::utils::has_interval::HasInterval,
+        object::{HitType, TaikoObject},
+    },
+    util::sync::RefCount,
 };
 
 use super::{color::color_data::ColorData, rhythm::rhythm_data::RhythmData};
@@ -228,5 +234,13 @@ impl HasStartTime for RefCount<TaikoDifficultyObject> {
 impl PartialEq for TaikoDifficultyObject {
     fn eq(&self, other: &Self) -> bool {
         self.idx == other.idx
+    }
+}
+
+impl Eq for TaikoDifficultyObject {}
+
+impl Hash for TaikoDifficultyObject {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.idx.hash(state);
     }
 }

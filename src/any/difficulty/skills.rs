@@ -13,6 +13,8 @@ pub trait StrainSkill: Sized {
         objects: &Self::DifficultyObjects<'a>,
     );
 
+    fn object_strains(&self) -> &[f64];
+
     fn count_top_weighted_strains(&self, difficulty_value: f64) -> f64;
 
     fn save_current_peak(&mut self);

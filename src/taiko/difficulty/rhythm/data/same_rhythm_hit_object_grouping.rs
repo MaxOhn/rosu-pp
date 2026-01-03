@@ -1,9 +1,12 @@
 use crate::{
-    taiko::difficulty::object::TaikoDifficultyObject,
-    util::{
-        interval_grouping::HasInterval,
-        sync::{RefCount, Weak},
+    taiko::difficulty::{
+        object::TaikoDifficultyObject,
+        utils::{
+            delta_time_normalizer::DeltaTimeNormalizer, has_interval::HasInterval,
+            interval_grouping::IntervalGroupingUtils,
+        },
     },
+    util::sync::{RefCount, Weak},
 };
 
 #[derive(Debug)]
@@ -17,36 +20,69 @@ pub struct SameRhythmHitObjectGrouping {
 }
 
 impl SameRhythmHitObjectGrouping {
+    const SNAP_TOLERANCE: f64 = IntervalGroupingUtils::MARGIN_OF_ERROR;
+
     pub fn new(
         previous: Option<Weak<Self>>,
         hit_objects: Vec<Weak<TaikoDifficultyObject>>,
     ) -> Self {
-        // * Calculate the average interval between hitobjects, or null if there are fewer than two
-        let hit_object_interval = if hit_objects.len() < 2 {
-            None
-        } else {
-            duration(&hit_objects).map(|duration| duration / (hit_objects.len() - 1) as f64)
-        };
-
         let upgraded_prev = upgraded_previous(previous.as_ref());
 
+        // * Cluster and normalise each hitobjects delta-time.
+        let normalized_hit_objects =
+            DeltaTimeNormalizer::normalize(&hit_objects, Self::SNAP_TOLERANCE);
+
+        let normalized_hit_object_delta_time_count = hit_objects.len().saturating_sub(1);
+
+        // * Secondary check to ensure there isn't any 'noise' or outliers by taking the modal delta time.
+        let modal_delta = hit_objects
+            .get(1)
+            .and_then(|h| normalized_hit_objects.get(h))
+            .copied()
+            .map(f64::round)
+            .unwrap_or(0.0);
+
+        // * Calculate the average interval between hitobjects.
+        let hit_object_interval = if normalized_hit_object_delta_time_count > 0 {
+            if let Some(previous_delta) = upgraded_prev
+                .as_ref()
+                .and_then(|rc| rc.get().hit_object_interval)
+                && f64::abs(modal_delta - previous_delta) <= Self::SNAP_TOLERANCE
+            {
+                Some(previous_delta)
+            } else {
+                Some(modal_delta)
+            }
+        } else {
+            None
+        };
+
         // * Calculate the ratio between this group's interval and the previous group's interval
-        let hit_object_interval_ratio = if let Some((prev, curr)) = upgraded_prev
-            .as_ref()
-            .and_then(|prev| prev.get().hit_object_interval)
-            .zip(hit_object_interval)
+        let hit_object_interval_ratio = if let Some((previous_interval, current_interval)) =
+            upgraded_prev
+                .as_ref()
+                .and_then(|rc| rc.get().hit_object_interval)
+                .zip(hit_object_interval)
         {
-            curr / prev
+            current_interval / previous_interval
         } else {
             1.0
         };
 
         // * Calculate the interval from the previous group's start time
-        let interval = upgraded_prev
+        let interval = if let Some((prev, curr)) = upgraded_prev
             .as_ref()
             .and_then(|prev| prev.get().start_time())
             .zip(start_time(&hit_objects))
-            .map_or(f64::INFINITY, |(prev, curr)| curr - prev);
+        {
+            if f64::abs(curr - prev) <= Self::SNAP_TOLERANCE {
+                0.0
+            } else {
+                curr - prev
+            }
+        } else {
+            f64::INFINITY
+        };
 
         Self {
             hit_objects,

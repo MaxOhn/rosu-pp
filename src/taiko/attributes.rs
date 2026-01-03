@@ -18,6 +18,12 @@ pub struct TaikoDifficultyAttributes {
     /// The ratio of stamina difficulty from mono-color (single color) streams to total
     /// stamina difficulty.
     pub mono_stamina_factor: f64,
+    /// The difficulty corresponding to the mechanical skills.
+    ///
+    /// This includes colour and stamina combined.
+    pub mechanical_difficulty: f64,
+    /// The factor corresponding to the consistency of a map.
+    pub consistency_factor: f64,
     /// The final star rating.
     pub stars: f64,
     /// The maximum combo.
@@ -58,8 +64,6 @@ pub struct TaikoPerformanceAttributes {
     pub pp_acc: f64,
     /// The strain portion of the final pp.
     pub pp_difficulty: f64,
-    /// Scaled miss count based on total hits.
-    pub effective_miss_count: f64,
     /// Upper bound on the player's tap deviation.
     pub estimated_unstable_rate: Option<f64>,
 }

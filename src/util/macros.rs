@@ -291,6 +291,10 @@ macro_rules! define_skill {
                 self.strain_skill_object_strains.push(strain);
             }
 
+            fn object_strains(&self) -> &[f64] {
+                &self.strain_skill_object_strains
+            }
+
             fn count_top_weighted_strains(&self, difficulty_value: f64) -> f64 {
                 crate::any::difficulty::skills::count_top_weighted_strains(
                     &self.strain_skill_object_strains,

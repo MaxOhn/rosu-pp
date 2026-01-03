@@ -15,7 +15,7 @@ use crate::{
         },
         object::TaikoObject,
     },
-    util::difficulty::norm,
+    util::difficulty::{norm, reverse_lerp},
 };
 
 pub(crate) use self::skills::TaikoSkills;
@@ -28,10 +28,11 @@ pub mod gradual;
 mod object;
 mod rhythm;
 mod skills;
+mod utils;
 
 #[expect(clippy::unreadable_literal, reason = "staying in-sync with lazer")]
 const DIFFICULTY_MULTIPLIER: f64 = 0.084375;
-const RHYTHM_SKILL_MULTIPLIER: f64 = 0.65 * DIFFICULTY_MULTIPLIER;
+const RHYTHM_SKILL_MULTIPLIER: f64 = 0.75 * DIFFICULTY_MULTIPLIER;
 const READING_SKILL_MULTIPLIER: f64 = 0.100 * DIFFICULTY_MULTIPLIER;
 const COLOR_SKILL_MULTIPLIER: f64 = 0.375 * DIFFICULTY_MULTIPLIER;
 const STAMINA_SKILL_MULTIPLIER: f64 = 0.445 * DIFFICULTY_MULTIPLIER;
@@ -71,6 +72,7 @@ pub fn difficulty(
     Ok(attrs)
 }
 
+/// Returns the combined rating and the consistency factor
 #[expect(clippy::too_many_arguments, reason = "it is what it is /shrug")]
 fn combined_difficulty_value(
     rhythm: Rhythm,
@@ -81,59 +83,46 @@ fn combined_difficulty_value(
     is_convert: bool,
     pattern_multiplier: f64,
     strain_length_bonus: f64,
-) -> f64 {
+) -> (f64, f64) {
+    let mut hit_object_strain_peaks = combine_peaks(
+        rhythm.object_strains().iter().copied(),
+        reading.object_strains().iter().copied(),
+        color.object_strains().iter().copied(),
+        stamina.object_strains().iter().copied(),
+        rhythm.object_strains().len(),
+        is_relax,
+        is_convert,
+        pattern_multiplier,
+        strain_length_bonus,
+    );
+
     let rhythm_peaks = rhythm.into_current_strain_peaks();
     let reading_peaks = reading.into_current_strain_peaks();
     let color_peaks = color.into_current_strain_peaks();
     let stamina_peaks = stamina.into_current_strain_peaks();
 
-    let cap = cmp::min(
+    let len = cmp::min(
         rhythm_peaks.len(),
         cmp::min(
             reading_peaks.len(),
             cmp::min(color_peaks.len(), stamina_peaks.len()),
         ),
     );
-    let mut peaks = Vec::with_capacity(cap);
 
-    let iter = rhythm_peaks
-        .iter()
-        .zip(reading_peaks.iter())
-        .zip(color_peaks.iter())
-        .zip(stamina_peaks.iter());
+    let mut peaks = combine_peaks(
+        rhythm_peaks.iter(),
+        reading_peaks.iter(),
+        color_peaks.iter(),
+        stamina_peaks.iter(),
+        len,
+        is_relax,
+        is_convert,
+        pattern_multiplier,
+        strain_length_bonus,
+    );
 
-    for (((mut rhythm_peak, mut reading_peak), mut color_peak), mut stamina_peak) in iter {
-        rhythm_peak *= RHYTHM_SKILL_MULTIPLIER;
-        rhythm_peak *= pattern_multiplier;
-
-        reading_peak *= READING_SKILL_MULTIPLIER;
-
-        color_peak *= if is_relax {
-            0.0 // * There is no colour difficulty in relax.
-        } else {
-            COLOR_SKILL_MULTIPLIER
-        };
-
-        stamina_peak *= STAMINA_SKILL_MULTIPLIER;
-        stamina_peak *= strain_length_bonus;
-
-        // * Available finger count is increased by 150%, thus we adjust accordingly.
-        stamina_peak /= if is_convert || is_relax { 1.5 } else { 1.0 };
-
-        let peak = norm(
-            2.0,
-            [
-                norm(1.5, [color_peak, stamina_peak]),
-                rhythm_peak,
-                reading_peak,
-            ],
-        );
-
-        // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
-        // * These sections will not contribute to the difficulty.
-        if peak > 0.0 {
-            peaks.push(peak);
-        }
+    if peaks.is_empty() {
+        return (0.0, 0.0);
     }
 
     let mut difficulty = 0.0;
@@ -146,7 +135,111 @@ fn combined_difficulty_value(
         weight *= 0.9;
     }
 
-    difficulty
+    if hit_object_strain_peaks.is_empty() {
+        return (0.0, 0.0);
+    }
+
+    // * The average of the top 5% of strain peaks from hit objects.
+    let take = cmp::min(
+        1 + hit_object_strain_peaks.len() / 20,
+        hit_object_strain_peaks.len(),
+    );
+
+    let (bigger, nth, _) =
+        hit_object_strain_peaks.select_nth_unstable_by(take - 1, |a, b| b.total_cmp(a));
+
+    let top_average_hit_object_strain = (bigger.iter().sum::<f64>() + *nth) / take as f64;
+
+    // * Calculates a consistency factor as the sum of difficulty from hit objects compared to if every object were as hard as the hardest.
+    // * The top average strain is used instead of the very hardest to prevent exceptionally hard objects lowering the factor.
+    let consistency_factor = hit_object_strain_peaks.iter().sum::<f64>()
+        / (top_average_hit_object_strain * hit_object_strain_peaks.len() as f64);
+
+    (difficulty, consistency_factor)
+}
+
+fn combine_peaks<I>(
+    rhythm_peaks: I,
+    reading_peaks: I,
+    color_peaks: I,
+    stamina_peaks: I,
+    len: usize,
+    is_relax: bool,
+    is_convert: bool,
+    pattern_multiplier: f64,
+    strain_length_bonus: f64,
+) -> Vec<f64>
+where
+    I: IntoIterator<Item = f64>,
+{
+    // Combatting size bloat by monomorphization due to generics
+    fn iteration(
+        rhythm_peak: &mut f64,
+        reading_peak: &mut f64,
+        color_peak: &mut f64,
+        stamina_peak: &mut f64,
+        is_relax: bool,
+        is_convert: bool,
+        pattern_multiplier: f64,
+        strain_length_bonus: f64,
+        combined_peaks: &mut Vec<f64>,
+    ) {
+        *rhythm_peak *= RHYTHM_SKILL_MULTIPLIER;
+        *rhythm_peak *= pattern_multiplier;
+
+        *color_peak *= if is_relax {
+            0.0 // * There is no colour difficulty in relax.
+        } else {
+            COLOR_SKILL_MULTIPLIER
+        };
+
+        *reading_peak *= READING_SKILL_MULTIPLIER;
+
+        *stamina_peak *= STAMINA_SKILL_MULTIPLIER;
+        *stamina_peak *= strain_length_bonus;
+
+        // * Available finger count is increased by 150%, thus we adjust accordingly.
+        *stamina_peak /= if is_convert || is_relax { 1.5 } else { 1.0 };
+
+        let peak = norm(
+            2.0,
+            [
+                norm(1.5, [*color_peak, *stamina_peak]),
+                *rhythm_peak,
+                *reading_peak,
+            ],
+        );
+
+        // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+        // * These sections will not contribute to the difficulty.
+        if peak > 0.0 {
+            combined_peaks.push(peak);
+        }
+    }
+
+    let mut combined_peaks = Vec::with_capacity(len);
+
+    let iter = rhythm_peaks
+        .into_iter()
+        .zip(reading_peaks)
+        .zip(color_peaks)
+        .zip(stamina_peaks);
+
+    for (((mut rhythm_peak, mut reading_peak), mut color_peak), mut stamina_peak) in iter {
+        iteration(
+            &mut rhythm_peak,
+            &mut reading_peak,
+            &mut color_peak,
+            &mut stamina_peak,
+            is_relax,
+            is_convert,
+            pattern_multiplier,
+            strain_length_bonus,
+            &mut combined_peaks,
+        );
+    }
+
+    combined_peaks
 }
 
 fn rescale(stars: f64) -> f64 {
@@ -211,14 +304,14 @@ impl DifficultyValues {
         let color_difficulty_value = color.cloned_difficulty_value();
         let stamina_difficulty_value = stamina.cloned_difficulty_value();
 
-        let rhythm_rating = rhythm_difficulty_value * RHYTHM_SKILL_MULTIPLIER;
-        let reading_rating = reading_difficulty_value * READING_SKILL_MULTIPLIER;
-        let color_rating = color_difficulty_value * COLOR_SKILL_MULTIPLIER;
-        let stamina_rating = stamina_difficulty_value * STAMINA_SKILL_MULTIPLIER;
+        let rhythm_skill = rhythm_difficulty_value * RHYTHM_SKILL_MULTIPLIER;
+        let reading_skill = reading_difficulty_value * READING_SKILL_MULTIPLIER;
+        let color_skill = color_difficulty_value * COLOR_SKILL_MULTIPLIER;
+        let stamina_skill = stamina_difficulty_value * STAMINA_SKILL_MULTIPLIER;
         let mono_stamina_rating =
             single_color_stamina.into_difficulty_value() * STAMINA_SKILL_MULTIPLIER;
-        let mono_stamina_factor = if stamina_rating.abs() >= f64::EPSILON {
-            (mono_stamina_rating / stamina_rating).powf(5.0)
+        let mono_stamina_factor = if stamina_skill.abs() >= f64::EPSILON {
+            (mono_stamina_rating / stamina_skill).powf(5.0)
         } else {
             1.0
         };
@@ -227,16 +320,13 @@ impl DifficultyValues {
             stamina.count_top_weighted_strains(stamina_difficulty_value);
 
         // * As we don't have pattern integration in osu!taiko, we apply the other two skills relative to rhythm.
-        let pattern_multiplier = f64::powf(stamina_rating * color_rating, 0.10);
+        let pattern_multiplier = f64::powf(stamina_skill * color_skill, 0.10);
 
-        #[expect(clippy::manual_clamp, reason = "staying in-sync with lazer")]
         let strain_length_bonus =
-            1.0 + f64::min(
-                f64::max((stamina_difficult_strains - 1000.0) / 3700.0, 0.0),
-                0.15,
-            ) + f64::min(f64::max((stamina_rating - 7.0) / 1.0, 0.0), 0.05);
+            1.0 + 0.15 * reverse_lerp(stamina_difficult_strains, 1000.0, 1555.0);
 
-        let combined_rating = combined_difficulty_value(
+        // TODO: UPDATE ME
+        let (combined_rating, consistency_factor) = combined_difficulty_value(
             rhythm,
             reading,
             color,
@@ -248,11 +338,24 @@ impl DifficultyValues {
         );
         let star_rating = rescale(combined_rating * 1.4);
 
-        attrs.rhythm = rhythm_rating;
-        attrs.reading = reading_rating;
-        attrs.color = color_rating;
-        attrs.stamina = stamina_rating;
+        // * Calculate proportional contribution of each skill to the combinedRating.
+        let skill_rating =
+            star_rating / (rhythm_skill + reading_skill + color_skill + stamina_skill);
+        let rhythm_difficulty = rhythm_skill * skill_rating;
+        let reading_difficulty = reading_skill * skill_rating;
+        let color_difficulty = color_skill * skill_rating;
+        let stamina_difficulty = stamina_skill * skill_rating;
+
+        // * Mechanical difficulty is the sum of colour and stamina difficulties.
+        let mechanical_difficulty = color_difficulty + stamina_difficulty;
+
+        attrs.rhythm = rhythm_difficulty;
+        attrs.reading = reading_difficulty;
+        attrs.color = color_difficulty;
+        attrs.stamina = stamina_difficulty;
         attrs.mono_stamina_factor = mono_stamina_factor;
+        attrs.mechanical_difficulty = mechanical_difficulty;
+        attrs.consistency_factor = consistency_factor;
         attrs.stars = star_rating;
     }
 

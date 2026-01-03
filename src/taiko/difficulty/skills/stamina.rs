@@ -4,7 +4,10 @@ use crate::{
         evaluators::StaminaEvaluator,
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     },
-    util::{difficulty::logistic_exp, sync::Weak},
+    util::{
+        difficulty::{logistic_exp, reverse_lerp},
+        sync::Weak,
+    },
 };
 
 define_skill! {
@@ -43,7 +46,7 @@ impl Stamina {
         objects: &TaikoDifficultyObjects,
     ) -> f64 {
         self.current_strain *= strain_decay(curr.delta_time, Self::STRAIN_DECAY_BASE);
-        self.current_strain +=
+        let mut stamina_difficulty =
             StaminaEvaluator::evaluate_diff_of(curr, objects) * Self::SKILL_MULTIPLIER;
 
         // * Safely prevents previous strains from shifting as new notes are added.
@@ -62,15 +65,25 @@ impl Stamina {
             })
             .unwrap_or(0) as isize;
 
+        let mono_length_bonus = if self.is_convert {
+            1.0
+        } else {
+            1.0 + 0.5 * reverse_lerp(index as f64, 5.0, 20.0)
+        };
+
+        // * Mono-streak bonus is only applied to colour-based stamina to reward longer sequences of same-colour hits within patterns.
+        if !self.single_color {
+            stamina_difficulty *= mono_length_bonus;
+        }
+
+        self.current_strain += stamina_difficulty;
+
+        // * For converted maps, difficulty often comes entirely from long mono streams with no colour variation.
+        // * To avoid over-rewarding these maps based purely on stamina strain, we dampen the strain value once the index exceeds 10.
         if self.single_color {
             logistic_exp(-(index - 10) as f64 / 2.0, Some(self.current_strain))
-        } else if self.is_convert {
-            self.current_strain
         } else {
-            #[expect(clippy::manual_clamp, reason = "staying in-sync with lazer")]
-            let monolength_bonus = 1.0 + f64::min(f64::max((index - 5) as f64 / 50.0, 0.0), 0.30);
-
-            self.current_strain * monolength_bonus
+            self.current_strain
         }
     }
 }
