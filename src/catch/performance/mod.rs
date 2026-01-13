@@ -573,8 +573,6 @@ mod test {
             ..Default::default()
         };
 
-        let mut best_dist = f64::INFINITY;
-
         let (new_fruits, new_droplets) = match (n_fruits, n_droplets) {
             (Some(mut n_fruits), Some(mut n_droplets)) => {
                 let n_remaining =
@@ -639,25 +637,26 @@ mod test {
             (None, None) => (0, N_TINY_DROPLETS),
         };
 
-        for new_tiny_droplets in min_tiny_droplets..=max_tiny_droplets {
-            let new_tiny_droplet_misses = N_TINY_DROPLETS - new_tiny_droplets;
+        // Optimization: Use direct calculation instead of a loop.
+        // Catch Accuracy = (Fruits + Droplets + Tiny) / TotalObjects
+        // This is a linear equation, so we can solve for Tiny directly.
 
-            let curr_acc = accuracy(
-                new_fruits,
-                new_droplets,
-                new_tiny_droplets,
-                new_tiny_droplet_misses,
-                misses,
-            );
+        let total_objects = N_FRUITS + N_DROPLETS + N_TINY_DROPLETS;
+        let current_hits = new_fruits + new_droplets;
 
-            let curr_dist = (acc - curr_acc).abs();
+        // Calculate the ideal number of tiny droplets to match the target accuracy.
+        // We round the result because hit counts must be integers.
+        let ideal_tiny_droplets = (acc * f64::from(total_objects) - f64::from(current_hits)).round();
 
-            if curr_dist < best_dist {
-                best_dist = curr_dist;
-                best_state.tiny_droplets = new_tiny_droplets;
-                best_state.tiny_droplet_misses = new_tiny_droplet_misses;
-            }
-        }
+        // Clamp the result to the valid range [min, max] determined above.
+        // Also ensure it doesn't go below 0 (though min_tiny_droplets handles that).
+        let best_tiny_droplets = (ideal_tiny_droplets as i32).clamp(
+            min_tiny_droplets as i32,
+            max_tiny_droplets as i32
+        ) as u32;
+
+        best_state.tiny_droplets = best_tiny_droplets;
+        best_state.tiny_droplet_misses = N_TINY_DROPLETS - best_tiny_droplets;
 
         best_state
     }

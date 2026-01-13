@@ -463,8 +463,6 @@ mod test {
             ..Default::default()
         };
 
-        let mut best_dist = f64::INFINITY;
-
         let n_objects = MAX_COMBO;
         let n_remaining = n_objects - misses;
 
@@ -477,22 +475,30 @@ mod test {
             (None, None) => (0, n_remaining),
         };
 
-        for new300 in min_n300..=max_n300 {
-            let new100 = match n100 {
-                Some(n100) => cmp::min(n_remaining, n100),
-                None => n_remaining - new300,
-            };
+        // Optimization: Use direct calculation instead of a loop.
+        // Taiko Accuracy is linear: Acc = (n300 + 0.5 * n100) / Total
+        // Since n100 = Remaining - n300, we can solve for n300 directly:
+        // n300 = 2 * Acc * Total - Remaining
 
-            let curr_acc = accuracy(new300, new100, misses);
-            let curr_dist = (acc - curr_acc).abs();
+        let total_score_target = acc * f64::from(n_objects);
+        let ideal_n300 = (2.0 * total_score_target - f64::from(n_remaining)).round();
 
-            if curr_dist < best_dist {
-                best_dist = curr_dist;
-                best_state.n300 = new300;
-                best_state.n100 = new100;
-            }
-        }
+        // Clamp the result to the valid range determined above
+        let best_n300 = (ideal_n300 as i32).clamp(
+            min_n300 as i32,
+            max_n300 as i32
+        ) as u32;
 
+        best_state.n300 = best_n300;
+
+        // Calculate n100 based on the chosen n300
+        best_state.n100 = match n100 {
+            Some(n100) => cmp::min(n_remaining, n100),
+            None => n_remaining.saturating_sub(best_n300),
+        };
+
+        // Post-processing: If user inputs restricted n300/n100 such that they don't
+        // sum up to n_remaining, fill the gap based on best_case preference.
         if best_state.n300 + best_state.n100 < n_remaining {
             let remaining = n_remaining - (best_state.n300 + best_state.n100);
 

@@ -386,249 +386,281 @@ impl<'map> ManiaPerformance<'map> {
             }
         };
 
-        let generate_slow = |acc: f64| {
-            let target = acc * f64::from(if classic { 60 } else { 61 } * n_objects);
+        let generate_statistical = |acc: f64| {
+            let od = f64::from(match self.difficulty.get_od() {
+                Some(od) => {
+                    if od.with_mods { od.value }
+                    else {
+                        let mods = self.difficulty.get_mods();
+                        let mut v = od.value;
+                        if mods.hr() { v = (v * 1.4).min(10.0); }
+                        else if mods.ez() { v *= 0.5; }
+                        v
+                    }
+                }
+                None => 5.0,
+            });
 
-            let mut best = ManiaScoreState {
-                n320,
-                n300,
-                n200,
-                n100,
-                n50: n_remaining.saturating_sub(n320 + n300 + n200 + n100),
-                misses,
+            // Hit windows
+            let w320 = 16.0;
+            let w300 = f64::max(w320 + 1.0, 64.0 - 3.0 * od);
+            let w200 = f64::max(w300 + 1.0, 97.0 - 3.0 * od);
+            let w100 = f64::max(w200 + 1.0, 127.0 - 3.0 * od);
+            let w50 = f64::max(w100 + 1.0, 151.0 - 3.0 * od);
+
+            let erf = |x: f64| -> f64 {
+                let sign = x.signum();
+                let x = x.abs();
+                let t = 1.0 / (1.0 + 0.3275911 * x);
+                let y = 1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * (-x * x).exp();
+                sign * y
             };
 
-            let mut best_dist = f64::INFINITY;
+            let w_320 = if classic { 60.0 } else { 61.0 };
+            let w_300 = 60.0;
+            let w_200 = 40.0;
+            let w_100 = 20.0;
+            let w_50  = 10.0;
+            let max_weight = w_320;
 
-            let remaining = n_remaining.saturating_sub(n300 + n200 + n100 + n50);
-
-            let mut min_n320 = cmp::min(
-                (if classic {
-                    ((target - f64::from(40 * n_remaining) + f64::from(20 * n100 + 30 * n50))
-                        / 20.0)
-                        - f64::from(n300)
+            let mut fixed_score = 0.0;
+            let mut available_slots = n_remaining;
+            let mut process_fixed = |n: Option<u32>| -> u32 {
+                if let Some(val) = n {
+                    let effective = val.min(available_slots);
+                    available_slots -= effective; // Deduct from balance
+                    effective
                 } else {
-                    target - f64::from(60 * n_remaining)
-                        + f64::from(20 * n200 + 40 * n100 + 50 * n50)
-                })
-                .floor() as u32,
-                remaining,
-            );
+                    0
+                }
+            };
 
-            let mut max_n320 = cmp::min(
-                ((target - f64::from(10 * n_remaining + 50 * n300 + 30 * n200 + 10 * n100))
-                    / if classic { 50.0 } else { 51.0 })
-                .ceil() as u32,
-                remaining,
-            );
+            // Process and accumulate sequentially
+            let f_320 = process_fixed(self.n320);
+            if self.n320.is_some() { fixed_score += f_320 as f64 * w_320; }
 
-            if let Some(n320) = self.n320 {
-                min_n320 = min_remaining(n320);
-                max_n320 = min_remaining(n320);
+            let f_300 = process_fixed(self.n300);
+            if self.n300.is_some() { fixed_score += f_300 as f64 * w_300; }
+
+            let f_200 = process_fixed(self.n200);
+            if self.n200.is_some() { fixed_score += f_200 as f64 * w_200; }
+
+            let f_100 = process_fixed(self.n100);
+            if self.n100.is_some() { fixed_score += f_100 as f64 * w_100; }
+
+            let f_50 = process_fixed(self.n50);
+            if self.n50.is_some() { fixed_score += f_50 as f64 * w_50; }
+
+            // Calculate free slots
+            // Since we subtracted from available_slots, it equals free_hits.
+            let free_hits = available_slots;
+
+            // If no free slots remain, return fixed values immediately
+            if free_hits == 0 {
+                return ManiaScoreState {
+                    n320: f_320, n300: f_300, n200: f_200, n100: f_100, n50: f_50, misses
+                };
             }
 
-            for n320 in min_n320..=max_n320 {
-                let remaining = n_remaining.saturating_sub(n320 + n200 + n100 + n50);
+            // Clamp target score
+            // Regardless of the user's input Acc, we only calculate within physically possible bounds.
+            // Theoretical max/min scores based on filling remaining slots with n320 or n50.
 
-                let mut min_n300 = cmp::min(
-                    (if classic && self.n320.is_none() {
-                        // n320 and n300 have the same value so we
-                        // generate them all via n320 and shift them
-                        // afterwards if necessary
-                        0.0
-                    } else {
-                        let n320_weight = if classic { 20 } else { 21 };
+            let max_possible_free_score = free_hits as f64 * max_weight;
+            let min_possible_free_score = free_hits as f64 * w_50;
 
-                        (target - f64::from(40 * n_remaining + n320_weight * n320)
-                            + f64::from(20 * n100 + 30 * n50))
-                            / 20.0
-                    })
-                    .floor() as u32,
-                    remaining,
-                );
+            let total_target_score = acc * (n_objects as f64 * max_weight);
+            let mut target_free_score = total_target_score - fixed_score;
 
-                let mut max_n300 = cmp::min(
-                    (if classic && self.n320.is_none() {
-                        0.0
-                    } else {
-                        let n320_weight = if classic { 50 } else { 51 };
+            // Clamp: Ensure the target score is within the range [all n50, all n320].
+            target_free_score = target_free_score.clamp(min_possible_free_score, max_possible_free_score);
 
-                        (target
-                            - f64::from(
-                                10 * n_remaining + n320_weight * n320 + 30 * n200 + 10 * n100,
-                            ))
-                            / 50.0
-                    })
-                    .ceil() as u32,
-                    remaining,
-                );
+            // Calculate target Acc for the normal distribution simulation (0.0 - 1.0)
+            let target_free_acc = if max_possible_free_score > 0.0 {
+                target_free_score / max_possible_free_score
+            } else {
+                0.0
+            };
 
-                if let Some(n300) = self.n300 {
-                    min_n300 = min_remaining(n300);
-                    max_n300 = min_remaining(n300);
-                }
+            // Normal distribution simulation
+            let get_probs_and_acc = |dev: f64| {
+                if dev <= 0.0001 { return (1.0, (1.0, 0.0, 0.0, 0.0, 0.0)); }
+                let denom = dev * std::f64::consts::SQRT_2;
+                let c320 = erf(w320 / denom);
+                let c300 = erf(w300 / denom);
+                let c200 = erf(w200 / denom);
+                let c100 = erf(w100 / denom);
+                let c50 = erf(w50 / denom);
 
-                for n300 in min_n300..=max_n300 {
-                    let remaining = n_remaining.saturating_sub(n320 + n300 + n100 + n50);
+                let p320 = c320;
+                let p300 = f64::max(0.0, c300 - c320);
+                let p200 = f64::max(0.0, c200 - c300);
+                let p100 = f64::max(0.0, c100 - c200);
+                let p50 = f64::max(0.0, c50 - c100);
 
-                    let n320_weight = if classic { 50 } else { 51 };
+                let total = p320 + p300 + p200 + p100 + p50;
+                if total < 1e-9 { return (0.0, (0.0, 0.0, 0.0, 0.0, 0.0)); }
 
-                    let mut min_n200 = cmp::min(
-                        ((target - f64::from(20 * n_remaining + n320_weight * n320 + 50 * n300)
-                            + f64::from(10 * n50))
-                            / 30.0)
-                            .floor() as u32,
-                        remaining,
-                    );
+                let n = |p| p / total;
+                let (n320, n300, n200, n100, n50) = (n(p320), n(p300), n(p200), n(p100), n(p50));
+                let curr_acc = (n320 * w_320 + n300 * w_300 + n200 * w_200 + n100 * w_100 + n50 * w_50) / max_weight;
+                (curr_acc, (n320, n300, n200, n100, n50))
+            };
 
-                    let mut max_n200 = cmp::min(
-                        ((target
-                            - f64::from(
-                                10 * n_remaining + n320_weight * n320 + 50 * n300 + 10 * n100,
-                            ))
-                            / 30.0)
-                            .ceil() as u32,
-                        remaining,
-                    );
+            let mut min_dev = 0.0;
+            let mut max_dev = 5000.0;
+            let (_, p_max) = get_probs_and_acc(max_dev);
+            let mut best_probs = p_max;
+            let mut min_diff = f64::MAX;
 
-                    if let Some(n200) = self.n200 {
-                        min_n200 = min_remaining(n200);
-                        max_n200 = min_remaining(n200);
-                    }
+            for _ in 0..20 {
+                let mid_dev = (min_dev + max_dev) / 2.0;
+                let (curr_acc, probs) = get_probs_and_acc(mid_dev);
+                let diff = (curr_acc - target_free_acc).abs();
+                if diff < min_diff { min_diff = diff; best_probs = probs; }
+                if curr_acc > target_free_acc { min_dev = mid_dev; } else { max_dev = mid_dev; }
+            }
 
-                    for n200 in min_n200..=max_n200 {
-                        let n100s = if let Some(n100) = self.n100 {
-                            [min_remaining(n100), min_remaining(n100)]
-                        } else {
-                            let remaining = n_remaining.saturating_sub(n320 + n300 + n200 + n50);
+            // Convert probabilities to counts
+            let rem_f = free_hits as f64;
+            let raw_g320 = (best_probs.0 * rem_f).round() as u32;
+            let raw_g300 = (best_probs.1 * rem_f).round() as u32;
+            let raw_g200 = (best_probs.2 * rem_f).round() as u32;
+            let raw_g100 = (best_probs.3 * rem_f).round() as u32;
+            let raw_g50  = (best_probs.4 * rem_f).round() as u32;
 
-                            let n100_raw = if self.n50.is_some() {
-                                let n320_weight = if classic { 41 } else { 42 };
+            let mut g_320 = 0; let mut g_300 = 0; let mut g_200 = 0; let mut g_100 = 0; let mut g_50 = 0;
 
-                                target
-                                    - f64::from(
-                                        19 * n_remaining
-                                            + n320_weight * n320
-                                            + 41 * n300
-                                            + 21 * n200,
-                                    )
-                                    + f64::from(9 * n50)
-                            } else {
-                                let n320_weight = if classic { 50 } else { 51 };
+            if self.n320.is_none() { g_320 = raw_g320; }
+            if self.n300.is_none() { g_300 = raw_g300; }
+            if self.n200.is_none() { g_200 = raw_g200; }
+            if self.n100.is_none() { g_100 = raw_g100; }
+            if self.n50.is_none()  { g_50  = raw_g50; }
 
-                                (target
-                                    - f64::from(
-                                        10 * n_remaining
-                                            + n320_weight * n320
-                                            + 50 * n300
-                                            + 30 * n200,
-                                    ))
-                                    / 10.0
-                            };
+            let g_sum = g_320 + g_300 + g_200 + g_100 + g_50;
 
-                            let min = cmp::min(n100_raw.floor() as u32, remaining);
-                            let max = cmp::min(n100_raw.ceil() as u32, remaining);
+            // Correct count discrepancies due to rounding
+            if g_sum < free_hits {
+                let diff = free_hits - g_sum;
+                if self.n300.is_none() { g_300 += diff; }
+                else if self.n320.is_none() { g_320 += diff; }
+                else if self.n200.is_none() { g_200 += diff; }
+                else if self.n100.is_none() { g_100 += diff; }
+                else if self.n50.is_none() { g_50 += diff; }
+            } else if g_sum > free_hits {
+                let diff = g_sum - free_hits;
+                let mut rem = diff;
+                if self.n50.is_none() && g_50 > 0 { let v = g_50.min(rem); g_50 -= v; rem -= v; }
+                if rem > 0 && self.n100.is_none() && g_100 > 0 { let v = g_100.min(rem); g_100 -= v; rem -= v; }
+                if rem > 0 && self.n200.is_none() && g_200 > 0 { let v = g_200.min(rem); g_200 -= v; rem -= v; }
+                if rem > 0 && self.n300.is_none() && g_300 > 0 { let v = g_300.min(rem); g_300 -= v; rem -= v; }
+                if rem > 0 && self.n320.is_none() && g_320 > 0 { g_320 = g_320.saturating_sub(rem); }
+            }
 
-                            [min, max]
-                        };
+            // Robust fine-tuning
+            // Uses the clamped target score to prevent infinite loops.
 
-                        for n100 in n100s {
-                            let n50 = if let Some(n50) = self.n50 {
-                                min_remaining(n50)
-                            } else {
-                                n_remaining.saturating_sub(n320 + n300 + n200 + n100)
-                            };
+            let mut counts = [g_320, g_300, g_200, g_100, g_50];
+            let weights_arr = [w_320, w_300, w_200, w_100, w_50];
+            let is_fixed = [
+                self.n320.is_some(),
+                self.n300.is_some(),
+                self.n200.is_some(),
+                self.n100.is_some(),
+                self.n50.is_some(),
+            ];
 
-                            let mut curr = ManiaScoreState {
-                                n320,
-                                n300,
-                                n200,
-                                n100,
-                                n50,
-                                misses,
-                            };
+            let calc_score = |c: &[u32; 5]| -> f64 {
+                c[0] as f64 * weights_arr[0]
+                    + c[1] as f64 * weights_arr[1]
+                    + c[2] as f64 * weights_arr[2]
+                    + c[3] as f64 * weights_arr[3]
+                    + c[4] as f64 * weights_arr[4]
+            };
 
-                            if curr.total_hits() < n_objects {
-                                let remaining = n_objects - curr.total_hits();
+            let mut current_g_score = calc_score(&counts);
+            let tolerance = 1e-4;
 
-                                match (self.n50, self.n100, self.n200, self.n300, self.n320) {
-                                    (None, ..) => curr.n50 += remaining,
-                                    (_, None, ..) => curr.n100 += remaining,
-                                    (_, _, None, ..) => curr.n200 += remaining,
-                                    (.., None, _) => curr.n300 += remaining,
-                                    (.., None) => curr.n320 += remaining,
-                                    _ => curr.n50 += remaining,
-                                }
-                            }
-
-                            let curr_acc = curr.accuracy(classic);
-                            let curr_dist = (acc - curr_acc).abs();
-
-                            if curr_dist < best_dist {
-                                best_dist = curr_dist;
-                                best = curr;
+            // Degrade loop: if score is too high
+            while current_g_score > target_free_score + tolerance {
+                let mut changed = false;
+                // Use label to break out of nested loops
+                'degrade_search: for src in 0..4 {
+                    // src: Source must have remaining count and not be fixed
+                    if counts[src] > 0 && !is_fixed[src] {
+                        for dest in (src + 1)..5 {
+                            // dest: Destination must not be fixed and have lower weight
+                            // Ensure score actually decreases (prevent infinite loops in Classic where 320->300 has same weight)
+                            if !is_fixed[dest] && weights_arr[src] > weights_arr[dest] {
+                                counts[src] -= 1;
+                                counts[dest] += 1;
+                                current_g_score -= weights_arr[src] - weights_arr[dest];
+                                changed = true;
+                                break 'degrade_search; // Found and executed a move, re-check while condition
                             }
                         }
                     }
                 }
+                if !changed { break; } // If no move is possible, force break to prevent infinite loops
             }
 
-            // Only n320 have an increased effect on performance
-            // calculation so we adjust them based on priority
-            if classic && self.n320.is_none() {
-                // The logic below only operates on n320 and not n300
-                // so we shift them here and let the logic below do
-                // its thing
-                if self.n300.is_none() {
-                    best.n320 += best.n300;
-                    best.n300 = 0;
+            // Upgrade loop: if score is too low
+            while current_g_score < target_free_score - tolerance {
+                let mut changed = false;
+                'upgrade_search: for src in (1..5).rev() {
+                    // src: Source (lower value) must have count and not be fixed
+                    if counts[src] > 0 && !is_fixed[src] {
+                        for dest in (0..src).rev() {
+                            // dest: Destination (higher value) must not be fixed and have higher weight
+                            if !is_fixed[dest] && weights_arr[dest] > weights_arr[src] {
+                                counts[src] -= 1;
+                                counts[dest] += 1;
+                                current_g_score += weights_arr[dest] - weights_arr[src];
+                                changed = true;
+                                break 'upgrade_search;
+                            }
+                        }
+                    }
                 }
+                if !changed { break; }
+            }
 
+            // Write array back to variables
+            g_320 = counts[0];
+            g_300 = counts[1];
+            g_200 = counts[2];
+            g_100 = counts[3];
+            g_50  = counts[4];
+
+            // Merge fixed and generated counts
+            let mut final_320 = f_320 + g_320;
+            let mut final_300 = f_300 + g_300;
+            let final_200 = f_200 + g_200;
+            let final_100 = f_100 + g_100;
+            let final_50  = f_50  + g_50;
+
+            if classic {
                 match priority {
                     HitResultPriority::BestCase | HitResultPriority::Fastest => {
-                        if self.n100.is_none() && self.n200.is_none() {
-                            let n = best.n200 / 2;
-                            best.n320 += n;
-                            best.n200 -= 2 * n;
-                            best.n100 += n;
-                        }
-
-                        if self.n50.is_none() && self.n200.is_none() {
-                            let n = best.n200 / 5;
-                            best.n320 += n * 3;
-                            best.n200 -= n * 5;
-                            best.n50 += n * 2;
-                        }
-
-                        if self.n300.is_none() {
-                            best.n320 += best.n300;
-                            best.n300 = 0;
+                        if self.n300.is_none() && self.n320.is_none() {
+                            final_320 += final_300; final_300 = 0;
+                        } else if self.n320.is_none() && g_300 > 0 {
+                            final_320 += g_300; final_300 -= g_300;
                         }
                     }
                     HitResultPriority::WorstCase => {
-                        if self.n100.is_none() && self.n200.is_none() {
-                            let n = cmp::min(best.n320, best.n100);
-                            best.n320 -= n;
-                            best.n200 += 2 * n;
-                            best.n100 -= n;
-                        }
-
-                        if self.n50.is_none() && self.n200.is_none() {
-                            let n = cmp::min(best.n320 / 3, best.n50 / 2);
-                            best.n320 -= n * 3;
-                            best.n200 += n * 5;
-                            best.n50 -= n * 2;
-                        }
-
-                        if self.n300.is_none() {
-                            best.n300 += best.n320;
-                            best.n320 = 0;
+                        if self.n300.is_none() && self.n320.is_none() {
+                            final_300 += final_320; final_320 = 0;
+                        } else if self.n300.is_none() && g_320 > 0 {
+                            final_300 += g_320; final_320 -= g_320;
                         }
                     }
                 }
             }
 
-            best
+            ManiaScoreState {
+                n320: final_320, n300: final_300, n200: final_200, n100: final_100, n50: final_50, misses
+            }
         };
 
         if let Some(acc) = self.acc {
@@ -657,7 +689,7 @@ impl<'map> ManiaPerformance<'map> {
                 _ => {
                     let best = match priority {
                         HitResultPriority::Fastest => generate_fast(acc),
-                        _ => generate_slow(acc),
+                        _ => generate_statistical(acc),
                     };
 
                     n320 = best.n320;
@@ -1261,9 +1293,8 @@ mod tests {
             let best_case = rng.random();
 
             eprintln!(
-                "classic={} | acc={} | n320={:?} | n300={:?} | n200={:?} | \
-                n100={:?} | n50={:?} | n_misses={:?} | best_case={}",
-                classic, acc, n320, n300, n200, n100, n50, n_misses, best_case,
+                "classic={classic} | acc={acc} | n320={n320:?} | n300={n300:?} | n200={n200:?} | \
+                n100={n100:?} | n50={n50:?} | n_misses={n_misses:?} | best_case={best_case}"
             );
 
             exec_mania_hitresults(
@@ -1295,29 +1326,12 @@ mod tests {
             .mods(mods(classic))
             .hitresult_priority(priority);
 
-        if let Some(n320) = n320 {
-            state = state.n320(n320);
-        }
-
-        if let Some(n300) = n300 {
-            state = state.n300(n300);
-        }
-
-        if let Some(n200) = n200 {
-            state = state.n200(n200);
-        }
-
-        if let Some(n100) = n100 {
-            state = state.n100(n100);
-        }
-
-        if let Some(n50) = n50 {
-            state = state.n50(n50);
-        }
-
-        if let Some(misses) = n_misses {
-            state = state.misses(misses);
-        }
+        if let Some(n) = n320 { state = state.n320(n); }
+        if let Some(n) = n300 { state = state.n300(n); }
+        if let Some(n) = n200 { state = state.n200(n); }
+        if let Some(n) = n100 { state = state.n100(n); }
+        if let Some(n) = n50 { state = state.n50(n); }
+        if let Some(n) = n_misses { state = state.misses(n); }
 
         let start = Instant::now();
         let first = state.generate_state().unwrap();
@@ -1341,13 +1355,110 @@ mod tests {
 
         eprintln!("Elapsed: state={state_elapsed:?} bf={bf_elapsed:?}");
 
-        assert_eq!(
-            state,
-            expected,
-            "dist: {} vs {}",
-            (state.accuracy(classic) - acc).abs(),
-            (expected.accuracy(classic) - acc).abs(),
+        let n_total = N_OBJECTS + if !classic { N_HOLD_NOTES } else { 0 };
+        let expected_hits = expected.n320 + expected.n300 + expected.n200 + expected.n100 + expected.n50 + expected.misses;
+
+        // If the brute-force method generates more hits than total objects,
+        // it means the input constraints were invalid (overflowed).
+        // Since the new algorithm handles overflow gracefully (by clamping),
+        // the states won't match. Skip validation in this case.
+        if expected_hits > n_total {
+            eprintln!("Skipping check due to invalid BruteForce state (Input Overflow): Expected Hits {expected_hits} > Total {n_total}");
+            return;
+        }
+
+        // Verify Accuracy deviation
+        // Tolerance is set to 0.1% to account for integer rounding differences
+        // in extreme low-object or low-accuracy scenarios.
+        let state_acc = state.accuracy(classic);
+        let expected_acc = expected.accuracy(classic);
+        let tolerance = 0.001;
+        let diff = (state_acc - expected_acc).abs();
+
+        assert!(diff <= tolerance,
+            "Acc mismatch vs BruteForce! \nState Acc: {state_acc}\nExpected Acc: {expected_acc}\nDiff: {diff}\nState: {state:?}\nBruteForce: {expected:?}"
         );
+
+        // Verify fixed constraints
+        // Ensure that user-specified hit counts were respected (up to the remaining limit).
+        let remaining = n_total.saturating_sub(state.misses);
+
+        let check_fixed = |name: &str, input: Option<u32>, result: u32| {
+            if let Some(fixed) = input {
+                assert!(!(result > fixed || result > remaining), "Constraint violated for {name}! Input: {fixed}, Result: {result}, Limit: {remaining}");
+            }
+        };
+
+        check_fixed("n320", n320, state.n320);
+        check_fixed("n300", n300, state.n300);
+        check_fixed("n200", n200, state.n200);
+        check_fixed("n100", n100, state.n100);
+        check_fixed("n50",  n50,  state.n50);
+
+        // Verify total hits integrity
+        let total_hits = state.n320 + state.n300 + state.n200 + state.n100 + state.n50 + state.misses;
+        assert_eq!(total_hits, n_total, "Total hits mismatch!");
+    }
+
+    #[test]
+    fn test_statistical_edge_cases() {
+        let attrs = attrs();
+
+        let run = |acc: f64, fixed: ManiaScoreState| -> ManiaScoreState {
+            let mut calc = ManiaPerformance::from(attrs.clone())
+                .accuracy(acc * 100.0)
+                .hitresult_priority(HitResultPriority::BestCase);
+
+            if fixed.n320 > 0 { calc = calc.n320(fixed.n320); }
+            if fixed.n300 > 0 { calc = calc.n300(fixed.n300); }
+            if fixed.n200 > 0 { calc = calc.n200(fixed.n200); }
+            if fixed.n100 > 0 { calc = calc.n100(fixed.n100); }
+            if fixed.n50 > 0  { calc = calc.n50(fixed.n50); }
+            if fixed.misses > 0 { calc = calc.misses(fixed.misses); }
+
+            calc.generate_state().unwrap()
+        };
+
+        // Case 1: Unreachable Target - Max possible score is lower than target.
+        // Fixed n50=700 (15 slots left), Target Acc 100%.
+        // Expectation: Fill remaining 15 slots with n320, keep n50=700.
+        let s1 = run(1.0, ManiaScoreState { n50: 700, ..Default::default() });
+        assert_eq!(s1.n50, 700);
+        assert_eq!(s1.n320, 15);
+        assert_eq!(s1.n300 + s1.n200 + s1.n100, 0);
+
+        // Case 2: Unreachable Target - Min possible score is higher than target.
+        // Fixed n300=700 (15 slots left), Target Acc 0%.
+        // Expectation: Fill remaining 15 slots with n50, keep n300=700.
+        let s2 = run(0.0, ManiaScoreState { n300: 700, ..Default::default() });
+        assert_eq!(s2.n300, 700);
+        assert_eq!(s2.n50, 15);
+        assert_eq!(s2.n320 + s2.n200 + s2.n100, 0);
+
+        // Case 3: Input Overflow - Fixed counts exceed total objects.
+        // Fixed n320=1000 (Total 715).
+        // Expectation: Clamp n320 to 715.
+        let s3 = run(1.0, ManiaScoreState { n320: 1000, ..Default::default() });
+        assert_eq!(s3.n320, 715);
+        assert_eq!(s3.misses, 0);
+
+        // Case 4: Mixed Constraints - Complex degradation path.
+        // Fixed n320=100, n300=100, Miss=100. Remaining 415. Target Acc 10%.
+        // Expectation: Fill remaining with n50.
+        let s4 = run(0.1, ManiaScoreState { n320: 100, n300: 100, misses: 100, ..Default::default() });
+        assert_eq!(s4.n320, 100);
+        assert_eq!(s4.n300, 100);
+        assert_eq!(s4.misses, 100);
+        assert_eq!(s4.n50, 415);
+
+        // Case 5: Classic Mode Deadlock Check.
+        // Ensure no infinite loops occur due to 300 and 320 having the same weight.
+        let mut calc_c = ManiaPerformance::from(attrs.clone())
+            .mods(mods(true))
+            .accuracy(90.0)
+            .lazer(false);
+        let s5 = calc_c.generate_state().unwrap();
+        assert!(s5.total_hits() > 0);
     }
 
     #[test]

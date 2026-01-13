@@ -1027,7 +1027,30 @@ mod test {
             ),
         };
 
+        let mut process_state = |new300: u32, new100: u32, new50: u32| {
+            let state = NoComboState {
+                n300: new300,
+                n100: new100,
+                n50: new50,
+                misses,
+                large_tick_hits,
+                small_tick_hits,
+                slider_end_hits,
+            };
+
+            let curr_acc = state.accuracy(origin);
+            let curr_dist = (acc - curr_acc).abs();
+
+            if curr_dist < best_dist {
+                best_dist = curr_dist;
+                best_state.n300 = new300;
+                best_state.n100 = new100;
+                best_state.n50 = new50;
+            }
+        };
+
         for new300 in min_n300..=max_n300 {
+            // Calculate the possible range of n100 given the current n300
             let (min_n100, max_n100) = match (n100, n50) {
                 (Some(n100), _) => (cmp::min(n_remaining, n100), cmp::min(n_remaining, n100)),
                 (None, Some(n50)) => (
@@ -1037,30 +1060,69 @@ mod test {
                 (None, None) => (0, n_remaining - new300),
             };
 
-            for new100 in min_n100..=max_n100 {
+            // If n100 range is fixed (i.e., n100 or n50 was specified), calculate directly once
+            if min_n100 == max_n100 {
                 let new50 = match n50 {
                     Some(n50) => cmp::min(n_remaining, n50),
-                    None => n_remaining.saturating_sub(new300 + new100),
+                    None => n_remaining.saturating_sub(new300 + min_n100),
                 };
+                process_state(new300, min_n100, new50);
+                continue;
+            }
 
-                let state = NoComboState {
-                    n300: new300,
-                    n100: new100,
-                    n50: new50,
-                    misses,
-                    large_tick_hits,
-                    small_tick_hits,
-                    slider_end_hits,
-                };
+            // Optimization: Use linear interpolation to eliminate the inner loop.
+            // At this point, n100 and n50 are both None. We can freely distribute
+            // hits between min_n100 (all 50s) and max_n100 (all 100s).
 
-                let curr_acc = state.accuracy(origin);
-                let curr_dist = (acc - curr_acc).abs();
+            // Calculate lower bound accuracy (n100 is minimized, the rest are 50s)
+            let state_min = NoComboState {
+                n300: new300,
+                n100: min_n100,
+                n50: n_remaining - new300 - min_n100,
+                misses,
+                large_tick_hits,
+                small_tick_hits,
+                slider_end_hits,
+            };
+            let acc_min = state_min.accuracy(origin);
 
-                if curr_dist < best_dist {
-                    best_dist = curr_dist;
-                    best_state.n300 = new300;
-                    best_state.n100 = new100;
-                    best_state.n50 = new50;
+            // If target Acc is lower than minimum Acc, the best solution is definitely min_n100
+            if acc <= acc_min {
+                process_state(new300, state_min.n100, state_min.n50);
+                continue;
+            }
+
+            // Calculate upper bound accuracy (n100 is maximized, remainder are 50s - implies n50 is 0)
+            let state_max = NoComboState {
+                n300: new300,
+                n100: max_n100,
+                n50: n_remaining - new300 - max_n100,
+                misses,
+                large_tick_hits,
+                small_tick_hits,
+                slider_end_hits,
+            };
+            let acc_max = state_max.accuracy(origin);
+
+            // If target Acc is higher than maximum Acc, the best solution is definitely max_n100
+            if acc >= acc_max {
+                process_state(new300, state_max.n100, state_max.n50);
+                continue;
+            }
+
+            // Perform linear interpolation within the range.
+            // acc(n100) is linear: acc = acc_min + (n100 - min_n100) / (max_n100 - min_n100) * (acc_max - acc_min)
+            // Solve for n100:
+            let t = (acc - acc_min) / (acc_max - acc_min);
+            let ideal_n100 = min_n100 as f64 + t * (max_n100 - min_n100) as f64;
+
+            // Check the two integer points around the interpolated result (floor and ceil)
+            let candidates = [ideal_n100.floor() as u32, ideal_n100.ceil() as u32];
+
+            for c_100 in candidates {
+                if c_100 >= min_n100 && c_100 <= max_n100 {
+                    let c_50 = n_remaining - new300 - c_100;
+                    process_state(new300, c_100, c_50);
                 }
             }
         }
