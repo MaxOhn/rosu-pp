@@ -29,7 +29,8 @@ impl TaikoPerformanceCalculator<'_> {
         let estimated_unstable_rate = self.compute_deviation_upper_bound().map(|v| v * 10.0);
 
         let effective_miss_count = if total_successful_hits > 0 {
-            (1000.0 / f64::from(total_successful_hits)).max(1.0) * f64::from(self.state.misses)
+            (1000.0 / f64::from(total_successful_hits)).max(1.0)
+                * f64::from(self.state.hitresults.misses)
         } else {
             0.0
         };
@@ -136,7 +137,7 @@ impl TaikoPerformanceCalculator<'_> {
     // * and the hit judgements, assuming the player's mean hit error is 0. The estimation is consistent in that
     // * two SS scores on the same map with the same settings will always return the same deviation.
     fn compute_deviation_upper_bound(&self) -> Option<f64> {
-        if self.state.n300 == 0 || self.attrs.great_hit_window <= 0.0 {
+        if self.state.hitresults.n300 == 0 || self.attrs.great_hit_window <= 0.0 {
             return None;
         }
 
@@ -147,7 +148,7 @@ impl TaikoPerformanceCalculator<'_> {
         let n = self.total_hits();
 
         // * Proportion of greats hit.
-        let p = f64::from(self.state.n300) / n;
+        let p = f64::from(self.state.hitresults.n300) / n;
 
         // * We can be 99% confident that p is at least this value.
         let p_lower_bound = (n * p + Z * Z / 2.0) / (n + Z * Z)
@@ -158,10 +159,10 @@ impl TaikoPerformanceCalculator<'_> {
     }
 
     const fn total_hits(&self) -> f64 {
-        self.state.total_hits() as f64
+        self.state.hitresults.total_hits() as f64
     }
 
     const fn total_successful_hits(&self) -> u32 {
-        self.state.n300 + self.state.n100
+        self.state.hitresults.n300 + self.state.hitresults.n100
     }
 }

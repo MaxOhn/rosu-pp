@@ -1,11 +1,8 @@
 use crate::util::{float_ext::FloatExt, hint::unlikely};
 
-/// Aggregation for a score's current state.
+/// osu!standard hitresults.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OsuScoreState {
-    /// Maximum combo that the score has had so far. **Not** the maximum
-    /// possible combo of the map so far.
-    pub max_combo: u32,
+pub struct OsuHitResults {
     /// "Large tick" hits.
     ///
     /// The meaning depends on the kind of score:
@@ -38,11 +35,10 @@ pub struct OsuScoreState {
     pub misses: u32,
 }
 
-impl OsuScoreState {
-    /// Create a new empty score state.
+impl OsuHitResults {
+    /// Create new empty hitresults.
     pub const fn new() -> Self {
         Self {
-            max_combo: 0,
             large_tick_hits: 0,
             small_tick_hits: 0,
             slider_end_hits: 0,
@@ -95,6 +91,32 @@ impl OsuScoreState {
     }
 }
 
+impl Default for OsuHitResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Aggregation for a score's current state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OsuScoreState {
+    /// Maximum combo that the score has had so far. **Not** the maximum
+    /// possible combo of the map so far.
+    pub max_combo: u32,
+    /// Hitresults of a score.
+    pub hitresults: OsuHitResults,
+}
+
+impl OsuScoreState {
+    /// Create a new empty score state.
+    pub const fn new() -> Self {
+        Self {
+            max_combo: 0,
+            hitresults: OsuHitResults::new(),
+        }
+    }
+}
+
 impl Default for OsuScoreState {
     fn default() -> Self {
         Self::new()
@@ -116,4 +138,38 @@ pub enum OsuScoreOrigin {
         max_large_ticks: u32,
         max_small_ticks: u32,
     },
+}
+
+impl OsuScoreOrigin {
+    /// Returns the tick score and tick max for this origin based on the
+    /// accuracy formula:
+    ///
+    /// ```
+    /// acc = (300*n300 + 100*n100 + 50*n50 + tick_score) / (300*total_hits + tick_max)
+    /// // => returns (tick_score, tick_max)
+    /// ```
+    pub(crate) fn tick_scores(
+        &self,
+        large_tick_hits: u32,
+        small_tick_hits: u32,
+        slider_end_hits: u32,
+    ) -> (u32, u32) {
+        match self {
+            Self::Stable => (0, 0),
+            Self::WithSliderAcc {
+                max_large_ticks,
+                max_slider_ends,
+            } => (
+                150 * slider_end_hits + 30 * large_tick_hits,
+                150 * max_slider_ends + 30 * max_large_ticks,
+            ),
+            Self::WithoutSliderAcc {
+                max_large_ticks,
+                max_small_ticks,
+            } => (
+                30 * large_tick_hits + 10 * small_tick_hits,
+                30 * max_large_ticks + 10 * max_small_ticks,
+            ),
+        }
+    }
 }

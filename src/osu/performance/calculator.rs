@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use crate::{
     GameMods,
     osu::{
-        OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState,
+        OsuDifficultyAttributes, OsuHitResults, OsuPerformanceAttributes, OsuScoreState,
         difficulty::skills::{
             aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill,
         },
@@ -51,7 +51,7 @@ impl<'a> OsuPerformanceCalculator<'a> {
 
 impl OsuPerformanceCalculator<'_> {
     pub fn calculate(mut self) -> OsuPerformanceAttributes {
-        let total_hits = self.state.total_hits();
+        let total_hits = self.state.hitresults.total_hits();
 
         if total_hits == 0 {
             return OsuPerformanceAttributes {
@@ -90,8 +90,8 @@ impl OsuPerformanceCalculator<'_> {
             // * As we're adding Oks and Mehs to an approximated number of combo breaks the result can be
             // * higher than total hits in specific scenarios (which breaks some calculations) so we need to clamp it.
             self.effective_miss_count = (self.effective_miss_count
-                + f64::from(self.state.n100) * n100_mult
-                + f64::from(self.state.n50) * n50_mult)
+                + f64::from(self.state.hitresults.n100) * n100_mult
+                + f64::from(self.state.hitresults.n50) * n50_mult)
                 .min(total_hits);
         }
 
@@ -132,7 +132,7 @@ impl OsuPerformanceCalculator<'_> {
             let estimate_improperly_followed_difficult_sliders = if self.using_classic_slider_acc {
                 // * When the score is considered classic (regardless if it was made on old client or not)
                 // * we consider all missing combo to be dropped difficult sliders
-                let maximum_possible_dropped_sliders = total_imperfect_hits(&self.state);
+                let maximum_possible_dropped_sliders = total_imperfect_hits(&self.state.hitresults);
 
                 f64::clamp(
                     f64::min(
@@ -262,12 +262,13 @@ impl OsuPerformanceCalculator<'_> {
 
         // * Calculate accuracy assuming the worst case scenario
         let relevant_total_diff = f64::max(0.0, total_hits - self.attrs.speed_note_count);
-        let relevant_n300 = (f64::from(self.state.n300) - relevant_total_diff).max(0.0);
-        let relevant_n100 = (f64::from(self.state.n100)
-            - (relevant_total_diff - f64::from(self.state.n300)).max(0.0))
+        let hitresults = &self.state.hitresults;
+        let relevant_n300 = (f64::from(hitresults.n300) - relevant_total_diff).max(0.0);
+        let relevant_n100 = (f64::from(hitresults.n100)
+            - (relevant_total_diff - f64::from(hitresults.n300)).max(0.0))
         .max(0.0);
-        let relevant_n50 = (f64::from(self.state.n50)
-            - (relevant_total_diff - f64::from(self.state.n300 + self.state.n100)).max(0.0))
+        let relevant_n50 = (f64::from(hitresults.n50)
+            - (relevant_total_diff - f64::from(hitresults.n300 + hitresults.n100)).max(0.0))
         .max(0.0);
 
         let relevant_acc = if self.attrs.speed_note_count.eq(0.0) {
@@ -299,16 +300,18 @@ impl OsuPerformanceCalculator<'_> {
             amount_hit_objects_with_acc += self.attrs.n_sliders;
         }
 
+        let hitresults = &self.state.hitresults;
+
         let mut better_acc_percentage = if amount_hit_objects_with_acc > 0 {
             f64::from(
-                (self.state.n300 as i32
+                (hitresults.n300 as i32
                     - (i32::max(
-                        self.state.total_hits() as i32 - amount_hit_objects_with_acc as i32,
+                        hitresults.total_hits() as i32 - amount_hit_objects_with_acc as i32,
                         0,
                     )))
                     * 6
-                    + self.state.n100 as i32 * 2
-                    + self.state.n50 as i32,
+                    + hitresults.n100 as i32 * 2
+                    + hitresults.n50 as i32,
             ) / f64::from(amount_hit_objects_with_acc * 6)
         } else {
             0.0
@@ -378,23 +381,25 @@ impl OsuPerformanceCalculator<'_> {
     }
 
     fn calculate_speed_deviation(&self) -> Option<f64> {
-        if total_successful_hits(&self.state) == 0 {
+        if total_successful_hits(&self.state.hitresults) == 0 {
             return None;
         }
+
+        let hitresults = &self.state.hitresults;
 
         // * Calculate accuracy assuming the worst case scenario
         let mut speed_note_count = self.attrs.speed_note_count;
         speed_note_count +=
-            (f64::from(self.state.total_hits()) - self.attrs.speed_note_count) * 0.1;
+            (f64::from(hitresults.total_hits()) - self.attrs.speed_note_count) * 0.1;
 
         // * Assume worst case: all mistakes were on speed notes
-        let relevant_count_miss = f64::min(f64::from(self.state.misses), speed_note_count);
+        let relevant_count_miss = f64::min(f64::from(hitresults.misses), speed_note_count);
         let relevant_count_meh = f64::min(
-            f64::from(self.state.n50),
+            f64::from(hitresults.n50),
             speed_note_count - relevant_count_miss,
         );
         let relevant_count_ok = f64::min(
-            f64::from(self.state.n100),
+            f64::from(hitresults.n100),
             speed_note_count - relevant_count_miss - relevant_count_meh,
         );
         let relevant_count_great = f64::max(
@@ -521,10 +526,10 @@ impl OsuPerformanceCalculator<'_> {
     }
 
     const fn total_hits(&self) -> f64 {
-        self.state.total_hits() as f64
+        self.state.hitresults.total_hits() as f64
     }
 }
 
-const fn total_successful_hits(state: &OsuScoreState) -> u32 {
+const fn total_successful_hits(state: &OsuHitResults) -> u32 {
     state.n300 + state.n100 + state.n50
 }

@@ -149,7 +149,7 @@ mod tests {
         let hit_objects_len = map.hit_objects.len();
 
         for i in 1.. {
-            state.misses += 1;
+            state.hitresults.misses += 1;
 
             let Some(next_gradual) = gradual.next(state.clone()) else {
                 assert_eq!(i, hit_objects_len + 1);

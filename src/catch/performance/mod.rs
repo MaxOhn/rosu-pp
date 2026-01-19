@@ -477,6 +477,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
             n50,
             misses,
             hitresult_priority: _,
+            hitresult_generator: _,
         } = osu;
 
         Ok(Self {

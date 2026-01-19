@@ -161,9 +161,9 @@ impl<'map> ManiaPerformance<'map> {
         self
     }
 
-    /// Specify how hitresults should be generated.
+    /// Specify the priority of hitresults.
     ///
-    /// Defauls to [`HitResultPriority::BestCase`].
+    /// TODO: explain more detailed
     pub const fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
         self.hitresult_priority = priority;
 
@@ -772,6 +772,7 @@ impl<'map> TryFrom<OsuPerformance<'map>> for ManiaPerformance<'map> {
             n50,
             misses,
             hitresult_priority,
+            hitresult_generator: _,
         } = osu;
 
         Ok(Self {

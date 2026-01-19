@@ -11,8 +11,8 @@ use crate::{
 pub use self::{
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
     difficulty::gradual::OsuGradualDifficulty,
-    performance::{OsuPerformance, gradual::OsuGradualPerformance},
-    score_state::{OsuScoreOrigin, OsuScoreState},
+    performance::{OsuHitResultParams, OsuPerformance, gradual::OsuGradualPerformance},
+    score_state::{OsuHitResults, OsuScoreOrigin, OsuScoreState},
     strains::OsuStrains,
 };
 

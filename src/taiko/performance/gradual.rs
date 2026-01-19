@@ -151,7 +151,7 @@ mod tests {
         let n_hits = map.hit_objects.iter().filter(|h| h.is_circle()).count();
 
         for i in 1.. {
-            state.misses += 1;
+            state.hitresults.misses += 1;
 
             let Some(next_gradual) = gradual.next(state) else {
                 assert_eq!(i, n_hits + 1);
