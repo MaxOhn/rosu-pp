@@ -1,21 +1,24 @@
-/// Aggregation for a score's current state.
+/// osu!mania hitresults.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ManiaScoreState {
-    /// Amount of current 320s.
+pub struct ManiaHitResults {
+    /// Amount of 320s.
     pub n320: u32,
-    /// Amount of current 300s.
+    /// Amount of 300s.
     pub n300: u32,
-    /// Amount of current 200s.
+    /// Amount of 200s.
     pub n200: u32,
-    /// Amount of current 100s.
+    /// Amount of 100s.
     pub n100: u32,
-    /// Amount of current 50s.
+    /// Amount of 50s.
     pub n50: u32,
-    /// Amount of current misses.
+    /// Amount of misses.
     pub misses: u32,
 }
 
-impl ManiaScoreState {
+/// Aggregation for a score's current state.
+pub type ManiaScoreState = ManiaHitResults;
+
+impl ManiaHitResults {
     /// Create a new empty score state.
     pub const fn new() -> Self {
         Self {
@@ -55,7 +58,7 @@ impl ManiaScoreState {
     }
 }
 
-impl Default for ManiaScoreState {
+impl Default for ManiaHitResults {
     fn default() -> Self {
         Self::new()
     }

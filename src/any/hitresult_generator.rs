@@ -46,4 +46,4 @@ impl_composable_generator!(Osu: crate::osu::OsuHitResultParams);
 impl_composable_generator!(Taiko: crate::taiko::TaikoHitResultParams);
 // TODO: uncomment
 // impl_composable_generator!(Catch: crate::catch::CatchHitResultParams);
-// impl_composable_generator!(Mania: crate::mania::ManiaHitResultParams);
+impl_composable_generator!(Mania: crate::mania::ManiaHitResultParams);

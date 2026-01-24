@@ -82,22 +82,27 @@ impl HitResultGenerator<OsuHitResultParams> for Fast {
                 // Each n300 increases by 5 (6-1), each n100 increases by 1 (2-1)
                 // delta = 5*n300 + 1*n100
 
-                let n300 = params.n300.unwrap_or_else(|| cmp::min(remain, delta / 5));
+                let n300 = params
+                    .n300
+                    .map_or_else(|| cmp::min(remain, delta / 5), |n| cmp::min(n, remain));
 
-                let n100 = params.n100.unwrap_or_else(|| {
-                    let remain_after_n300 = remain - n300;
+                let n100 = params.n100.map_or_else(
+                    || {
+                        let remain_after_n300 = remain - n300;
 
-                    if params.n300.is_some() {
-                        // If n300 was provided, recalculate delta for remaining hits
-                        let used_by_n300 = 5 * n300;
-                        let remain_delta = delta.saturating_sub(used_by_n300);
+                        if params.n300.is_some() {
+                            // If n300 was provided, recalculate delta for remaining hits
+                            let used_by_n300 = 5 * n300;
+                            let remain_delta = delta.saturating_sub(used_by_n300);
 
-                        cmp::min(remain_after_n300, remain_delta)
-                    } else {
-                        // If n300 was calculated, use modulo
-                        cmp::min(remain_after_n300, delta % 5)
-                    }
-                });
+                            cmp::min(remain_after_n300, remain_delta)
+                        } else {
+                            // If n300 was calculated, use modulo
+                            cmp::min(remain_after_n300, delta % 5)
+                        }
+                    },
+                    |n| cmp::min(n, remain - n300),
+                );
 
                 let n50 = params.n50.unwrap_or_else(|| remain - n300 - n100);
 

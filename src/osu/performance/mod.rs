@@ -512,22 +512,123 @@ impl<'map> OsuPerformance<'map> {
                     }
                 };
 
-            let mut remain = total_hits - misses;
+            let remain = total_hits - misses;
 
-            let mut n300 = self.n300.map_or(0, |n| cmp::min(n, remain));
-            remain -= n300;
+            let (n300, n100, n50) = match (self.n300, self.n100, self.n50) {
+                // Three specified
+                (Some(n300), Some(n100), Some(n50)) => match self.hitresult_priority {
+                    HitResultPriority::BestCase => {
+                        let n300 = cmp::min(n300, remain);
+                        let n100 = cmp::min(n100, remain - n300);
+                        let n50 = cmp::min(n50, remain - n300 - n100);
 
-            let n100 = self.n100.map_or(0, |n| cmp::min(n, remain));
-            remain -= n100;
+                        (n300, n100, n50)
+                    }
+                    HitResultPriority::WorstCase => {
+                        let n50 = cmp::min(n50, remain);
+                        let n100 = cmp::min(n100, remain - n50);
+                        let n300 = cmp::min(n300, remain - n50 - n100);
 
-            let mut n50 = self.n50.map_or(0, |n| cmp::min(n, remain));
-            remain -= n50;
+                        (n300, n100, n50)
+                    }
+                    HitResultPriority::Fastest => todo!(),
+                },
 
-            match self.hitresult_priority {
-                HitResultPriority::BestCase => n300 += remain,
-                HitResultPriority::WorstCase => n50 += remain,
-                HitResultPriority::Fastest => unimplemented!(),
-            }
+                // Two specified
+                (Some(n300), Some(n100), None) => {
+                    let (n300, n100) = match self.hitresult_priority {
+                        HitResultPriority::BestCase => {
+                            let n300 = cmp::min(n300, remain);
+                            let n100 = cmp::min(n100, remain - n300);
+
+                            (n300, n100)
+                        }
+                        HitResultPriority::WorstCase => {
+                            let n100 = cmp::min(n100, remain);
+                            let n300 = cmp::min(n300, remain - n100);
+
+                            (n300, n100)
+                        }
+                        HitResultPriority::Fastest => todo!(),
+                    };
+
+                    (n300, n100, remain - n300 - n100)
+                }
+                (Some(n300), None, Some(n50)) => {
+                    let (n300, n50) = match self.hitresult_priority {
+                        HitResultPriority::BestCase => {
+                            let n300 = cmp::min(n300, remain);
+                            let n50 = cmp::min(n50, remain - n300);
+
+                            (n300, n50)
+                        }
+                        HitResultPriority::WorstCase => {
+                            let n50 = cmp::min(n50, remain);
+                            let n300 = cmp::min(n300, remain - n50);
+
+                            (n300, n50)
+                        }
+                        HitResultPriority::Fastest => todo!(),
+                    };
+
+                    (n300, remain - n300 - n50, n50)
+                }
+                (None, Some(n100), Some(n50)) => {
+                    let (n100, n50) = match self.hitresult_priority {
+                        HitResultPriority::BestCase => {
+                            let n100 = cmp::min(n100, remain);
+                            let n50 = cmp::min(n50, remain - n100);
+
+                            (n100, n50)
+                        }
+                        HitResultPriority::WorstCase => {
+                            let n50 = cmp::min(n50, remain);
+                            let n100 = cmp::min(n100, remain - n50);
+
+                            (n100, n50)
+                        }
+                        HitResultPriority::Fastest => todo!(),
+                    };
+
+                    (remain - n100 - n50, n100, n50)
+                }
+
+                // One specified
+                (Some(n300), None, None) => {
+                    let n300 = cmp::min(n300, remain);
+
+                    match self.hitresult_priority {
+                        HitResultPriority::BestCase => (n300, remain - n300, 0),
+                        HitResultPriority::WorstCase => (n300, 0, remain - n300),
+                        HitResultPriority::Fastest => todo!(),
+                    }
+                }
+                (None, Some(n100), None) => {
+                    let n100 = cmp::min(n100, remain);
+
+                    match self.hitresult_priority {
+                        HitResultPriority::BestCase => (remain - n100, n100, 0),
+                        HitResultPriority::WorstCase => (0, n100, remain - n100),
+                        HitResultPriority::Fastest => todo!(),
+                    }
+                }
+                (None, None, Some(n50)) => {
+                    let n50 = cmp::min(n50, remain);
+
+                    match self.hitresult_priority {
+                        HitResultPriority::BestCase => (remain - n50, 0, n50),
+                        HitResultPriority::WorstCase => (0, remain - n50, n50),
+                        HitResultPriority::Fastest => todo!(),
+                    }
+                }
+
+                // None specified
+                (None, None, None) => match self.hitresult_priority {
+                    HitResultPriority::BestCase => (remain, 0, 0),
+                    HitResultPriority::WorstCase => (0, 0, remain),
+                    HitResultPriority::Fastest => todo!(),
+                },
+            };
 
             OsuHitResults {
                 large_tick_hits,
@@ -545,16 +646,16 @@ impl<'map> OsuPerformance<'map> {
         match self.hitresult_priority {
             HitResultPriority::BestCase | HitResultPriority::Fastest => {
                 match (self.n300, self.n100, self.n50) {
-                    (None, ..) => hitresults.n300 = remain,
-                    (_, None, _) => hitresults.n100 = remain,
-                    (.., None) => hitresults.n50 = remain,
+                    (None, ..) => hitresults.n300 += remain,
+                    (_, None, _) => hitresults.n100 += remain,
+                    (.., None) => hitresults.n50 += remain,
                     _ => hitresults.n300 += remain,
                 }
             }
             HitResultPriority::WorstCase => match (self.n50, self.n100, self.n300) {
-                (None, ..) => hitresults.n50 = remain,
-                (_, None, _) => hitresults.n100 = remain,
-                (.., None) => hitresults.n300 = remain,
+                (None, ..) => hitresults.n50 += remain,
+                (_, None, _) => hitresults.n100 += remain,
+                (.., None) => hitresults.n300 += remain,
                 _ => hitresults.n50 += remain,
             },
         }

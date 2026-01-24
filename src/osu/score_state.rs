@@ -25,13 +25,13 @@ pub struct OsuHitResults {
     ///
     /// Only relevant for osu!lazer.
     pub slider_end_hits: u32,
-    /// Amount of current 300s.
+    /// Amount of 300s.
     pub n300: u32,
-    /// Amount of current 100s.
+    /// Amount of 100s.
     pub n100: u32,
-    /// Amount of current 50s.
+    /// Amount of 50s.
     pub n50: u32,
-    /// Amount of current misses.
+    /// Amount of misses.
     pub misses: u32,
 }
 

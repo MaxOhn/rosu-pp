@@ -11,8 +11,8 @@ use crate::{
 pub use self::{
     attributes::{ManiaDifficultyAttributes, ManiaPerformanceAttributes},
     difficulty::gradual::ManiaGradualDifficulty,
-    performance::{ManiaPerformance, gradual::ManiaGradualPerformance},
-    score_state::ManiaScoreState,
+    performance::{ManiaHitResultParams, ManiaPerformance, gradual::ManiaGradualPerformance},
+    score_state::{ManiaHitResults, ManiaScoreState},
     strains::ManiaStrains,
 };
 

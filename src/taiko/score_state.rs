@@ -1,11 +1,11 @@
 /// osu!taiko hitresults..
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct TaikoHitResults {
-    /// Amount of current 300s.
+    /// Amount of 300s.
     pub n300: u32,
-    /// Amount of current 100s.
+    /// Amount of 100s.
     pub n100: u32,
-    /// Amount of current misses.
+    /// Amount of misses.
     pub misses: u32,
 }
 
