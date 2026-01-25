@@ -16,6 +16,8 @@ use super::{Catch, attributes::CatchPerformanceAttributes, score_state::CatchSco
 
 mod calculator;
 pub mod gradual;
+mod hitresult_generator;
+mod inspect;
 
 /// Performance calculator on osu!catch maps.
 #[derive(Clone, Debug, PartialEq)]
@@ -264,14 +266,10 @@ impl<'map> CatchPerformance<'map> {
     /// Create the [`CatchScoreState`] that will be used for performance calculation.
     #[allow(clippy::too_many_lines)]
     pub fn generate_state(&mut self) -> Result<CatchScoreState, ConvertError> {
-        let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => {
-                let attrs = self.difficulty.calculate_for_mode::<Catch>(map)?;
+        self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
-                self.map_or_attrs.insert_attrs(attrs)
-            }
-            MapOrAttrs::Attrs(ref attrs) => attrs,
-        };
+        // SAFETY: We just calculated and inserted the attributes.
+        let attrs = unsafe { self.map_or_attrs.get_attrs() };
 
         let misses = self
             .misses

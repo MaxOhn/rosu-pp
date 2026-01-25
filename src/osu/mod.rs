@@ -11,7 +11,7 @@ use crate::{
 pub use self::{
     attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
     difficulty::gradual::OsuGradualDifficulty,
-    performance::{OsuHitResultParams, OsuPerformance, gradual::OsuGradualPerformance},
+    performance::{InspectOsuPerformance, OsuPerformance, gradual::OsuGradualPerformance},
     score_state::{OsuHitResults, OsuScoreOrigin, OsuScoreState},
     strains::OsuStrains,
 };
@@ -35,6 +35,7 @@ impl IGameMode for Osu {
     type DifficultyAttributes = OsuDifficultyAttributes;
     type Strains = OsuStrains;
     type Performance<'map> = OsuPerformance<'map>;
+    type HitResults = OsuHitResults;
     type GradualDifficulty = OsuGradualDifficulty;
     type GradualPerformance = OsuGradualPerformance;
 

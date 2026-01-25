@@ -3,7 +3,10 @@ use std::{
     fmt::{Debug, Formatter, Result as FmtResult},
 };
 
-use crate::{Beatmap, model::mode::IGameMode};
+use crate::{
+    Beatmap, Difficulty,
+    model::mode::{ConvertError, IGameMode},
+};
 
 pub enum MapOrAttrs<'map, M: IGameMode> {
     Map(Cow<'map, Beatmap>),
@@ -11,15 +14,32 @@ pub enum MapOrAttrs<'map, M: IGameMode> {
 }
 
 impl<M: IGameMode> MapOrAttrs<'_, M> {
-    /// Insert `attrs` into `self` and return a mutable reference to them.
-    pub fn insert_attrs(&mut self, attrs: M::DifficultyAttributes) -> &mut M::DifficultyAttributes {
-        *self = Self::Attrs(attrs);
+    pub fn insert_attrs(&mut self, difficulty: &Difficulty) -> Result<(), ConvertError> {
+        match self {
+            Self::Map(map) => {
+                let attrs = difficulty.calculate_for_mode::<M>(map)?;
+                *self = Self::Attrs(attrs);
+            }
+            Self::Attrs(_) => {}
+        }
 
-        let Self::Attrs(attrs) = self else {
-            unreachable!()
-        };
+        Ok(())
+    }
 
-        attrs
+    /// Get a reference to the attributes.
+    ///
+    /// # Safety
+    /// Caller must ensure that this [`MapOrAttrs`] contains attributes.
+    pub const unsafe fn get_attrs(&self) -> &M::DifficultyAttributes {
+        // Returning an immutable reference while requiring a mutable reference
+        // as argument, unfortunately, makes it impossible to pass another
+        // mutable reference later on so instead we split it up into two
+        // functions: first `insert_attrs` and then `get_attrs`.
+        match self {
+            Self::Attrs(attrs) => attrs,
+            // SAFETY: Up to the caller to uphold
+            Self::Map(_) => unsafe { std::hint::unreachable_unchecked() },
+        }
     }
 }
 

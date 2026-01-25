@@ -21,7 +21,9 @@ rosu-map = { version = "0.2.1" }
 rosu-mods = { version = "0.3.0" }
 
 [dev-dependencies]
-proptest = "1.8.0"
+divan = { version = "0.1.21" }
+proptest = { version = "1.8.0" }
+rosu-mods = { version = "0.3.0", features = ["macros"] }
 
 [profile.test.package.proptest]
 opt-level = 3

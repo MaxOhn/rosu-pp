@@ -43,6 +43,7 @@ impl IGameMode for Catch {
     type DifficultyAttributes = CatchDifficultyAttributes;
     type Strains = CatchStrains;
     type Performance<'map> = CatchPerformance<'map>;
+    type HitResults = (); // TODO
     type GradualDifficulty = CatchGradualDifficulty;
     type GradualPerformance = CatchGradualPerformance;
 

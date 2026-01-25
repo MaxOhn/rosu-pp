@@ -7,6 +7,7 @@ pub use self::{
     performance::{
         HitResultPriority, Performance,
         gradual::GradualPerformance,
+        inspectable::InspectablePerformance,
         into::{IntoModePerformance, IntoPerformance},
     },
     score_state::ScoreState,

@@ -1,14 +1,23 @@
 use std::cmp;
 
 use crate::{
-    any::{HitResultGenerator, HitResultPriority, hitresult_generator::Fast},
-    mania::{ManiaHitResults, performance::hitresult_generator::ManiaHitResultParams},
+    any::{
+        HitResultGenerator, HitResultPriority,
+        hitresult_generator::{Fast, IgnoreAccuracy},
+    },
+    mania::{Mania, ManiaHitResults, performance::InspectManiaPerformance},
 };
 
-impl HitResultGenerator<ManiaHitResultParams> for Fast {
-    fn generate_hitresults(params: &ManiaHitResultParams) -> ManiaHitResults {
-        let misses = cmp::min(params.misses, params.total_hits);
-        let remain = params.total_hits - misses;
+impl HitResultGenerator<Mania> for Fast {
+    #[expect(clippy::too_many_lines, reason = "it is what it is /shrug")]
+    fn generate_hitresults(inspect: InspectManiaPerformance<'_>) -> ManiaHitResults {
+        let Some(acc) = inspect.acc else {
+            return <IgnoreAccuracy as HitResultGenerator<Mania>>::generate_hitresults(inspect);
+        };
+
+        let total_hits = inspect.total_hits();
+        let misses = inspect.misses();
+        let remain = total_hits - misses;
 
         if remain == 0 {
             return ManiaHitResults {
@@ -21,15 +30,15 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
             };
         }
 
-        let prelim_320 = params.n320.map_or(0, |n| cmp::min(n, remain));
-        let prelim_300 = params.n300.map_or(0, |n| cmp::min(n, remain - prelim_320));
-        let prelim_200 = params
+        let prelim_320 = inspect.n320.map_or(0, |n| cmp::min(n, remain));
+        let prelim_300 = inspect.n300.map_or(0, |n| cmp::min(n, remain - prelim_320));
+        let prelim_200 = inspect
             .n200
             .map_or(0, |n| cmp::min(n, remain - prelim_320 - prelim_300));
-        let prelim_100 = params.n100.map_or(0, |n| {
+        let prelim_100 = inspect.n100.map_or(0, |n| {
             cmp::min(n, remain - prelim_320 - prelim_300 - prelim_200)
         });
-        let prelim_50 = params.n50.map_or(0, |n| {
+        let prelim_50 = inspect.n50.map_or(0, |n| {
             cmp::min(
                 n,
                 remain - prelim_320 - prelim_300 - prelim_200 - prelim_100,
@@ -38,14 +47,14 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
 
         // Handle cases based on how many values are provided
         let num_provided = [
-            params.n320,
-            params.n300,
-            params.n200,
-            params.n100,
-            params.n50,
+            inspect.n320,
+            inspect.n300,
+            inspect.n200,
+            inspect.n100,
+            inspect.n50,
         ]
         .into_iter()
-        .filter(Option::is_some)
+        .flatten()
         .count();
 
         if num_provided == 5 {
@@ -67,31 +76,31 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
             let used = prelim_320 + prelim_300 + prelim_200 + prelim_100 + prelim_50;
             let left = remain - used;
 
-            let n320 = if params.n320.is_none() {
+            let n320 = if inspect.n320.is_none() {
                 left
             } else {
                 prelim_320
             };
 
-            let n300 = if params.n300.is_none() {
+            let n300 = if inspect.n300.is_none() {
                 left
             } else {
                 prelim_300
             };
 
-            let n200 = if params.n200.is_none() {
+            let n200 = if inspect.n200.is_none() {
                 left
             } else {
                 prelim_200
             };
 
-            let n100 = if params.n100.is_none() {
+            let n100 = if inspect.n100.is_none() {
                 left
             } else {
                 prelim_100
             };
 
-            let n50 = if params.n50.is_none() {
+            let n50 = if inspect.n50.is_none() {
                 left
             } else {
                 prelim_50
@@ -107,10 +116,12 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
             };
         }
 
+        let is_classic = inspect.is_classic();
+
         // For 3 or fewer provided values, use Fast algorithm
         // Accuracy formula: acc = (w*n320 + 60*n300 + 40*n200 + 20*n100 + 10*n50) / (w*total_hits)
         // where w = 60 (classic) or 61 (non-classic)
-        let perfect_weight = if params.is_classic { 60 } else { 61 };
+        let perfect_weight = if is_classic { 60 } else { 61 };
 
         let numerator = perfect_weight * prelim_320
             + 60 * prelim_300
@@ -118,11 +129,10 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
             + 20 * prelim_100
             + 10 * prelim_50;
 
-        let denominator = perfect_weight * params.total_hits;
+        let denominator = perfect_weight * total_hits;
 
         let target_total =
-            f64::round(((params.acc * f64::from(denominator)) - f64::from(numerator)).max(0.0))
-                as u32;
+            f64::round(((acc * f64::from(denominator)) - f64::from(numerator)).max(0.0)) as u32;
 
         // Start by assuming every non-miss is an n50 (baseline)
         let baseline =
@@ -140,39 +150,39 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
         // Greedy approach: maximize higher-value hits first
         let n320 = cmp::min(
             remain - prelim_300 - prelim_200 - prelim_100 - prelim_50,
-            params.n320.unwrap_or(delta / n320_increase),
+            inspect.n320.unwrap_or(delta / n320_increase),
         );
 
-        if params.n320.is_none() {
+        if inspect.n320.is_none() {
             delta = delta.saturating_sub(n320_increase * n320);
         }
 
         let n300 = cmp::min(
             remain - n320 - prelim_200 - prelim_100 - prelim_50,
-            params.n300.unwrap_or(delta / 50),
+            inspect.n300.unwrap_or(delta / 50),
         );
 
-        if params.n300.is_none() {
+        if inspect.n300.is_none() {
             delta = delta.saturating_sub(50 * n300);
         }
 
         let n200 = cmp::min(
             remain - n320 - n300 - prelim_100 - prelim_50,
-            params.n200.unwrap_or(delta / 30),
+            inspect.n200.unwrap_or(delta / 30),
         );
 
-        if params.n200.is_none() {
+        if inspect.n200.is_none() {
             delta = delta.saturating_sub(30 * n200);
         }
 
         let n100 = cmp::min(
             remain - n320 - n300 - n200 - prelim_50,
-            params.n100.unwrap_or(delta / 10),
+            inspect.n100.unwrap_or(delta / 10),
         );
 
         let n50 = cmp::min(
             remain - n320 - n300 - n200 - n100,
-            params.n50.unwrap_or(remain),
+            inspect.n50.unwrap_or(remain),
         );
 
         let mut hitresults = ManiaHitResults {
@@ -184,22 +194,22 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
             misses,
         };
 
-        if hitresults.total_hits() < params.total_hits {
-            let left = params.total_hits - hitresults.total_hits();
+        if hitresults.total_hits() < total_hits {
+            let left = total_hits - hitresults.total_hits();
 
-            match params.priority {
-                HitResultPriority::BestCase => match params {
-                    ManiaHitResultParams { n320: None, .. } => hitresults.n320 += left,
-                    ManiaHitResultParams { n300: None, .. } => hitresults.n300 += left,
-                    ManiaHitResultParams { n200: None, .. } => hitresults.n200 += left,
-                    ManiaHitResultParams { n100: None, .. } => hitresults.n100 += left,
+            match inspect.hitresult_priority {
+                HitResultPriority::BestCase => match inspect {
+                    InspectManiaPerformance { n320: None, .. } => hitresults.n320 += left,
+                    InspectManiaPerformance { n300: None, .. } => hitresults.n300 += left,
+                    InspectManiaPerformance { n200: None, .. } => hitresults.n200 += left,
+                    InspectManiaPerformance { n100: None, .. } => hitresults.n100 += left,
                     _ => hitresults.n50 += left,
                 },
-                HitResultPriority::WorstCase => match params {
-                    ManiaHitResultParams { n50: None, .. } => hitresults.n50 += left,
-                    ManiaHitResultParams { n100: None, .. } => hitresults.n100 += left,
-                    ManiaHitResultParams { n200: None, .. } => hitresults.n200 += left,
-                    ManiaHitResultParams { n300: None, .. } => hitresults.n300 += left,
+                HitResultPriority::WorstCase => match inspect {
+                    InspectManiaPerformance { n50: None, .. } => hitresults.n50 += left,
+                    InspectManiaPerformance { n100: None, .. } => hitresults.n100 += left,
+                    InspectManiaPerformance { n200: None, .. } => hitresults.n200 += left,
+                    InspectManiaPerformance { n300: None, .. } => hitresults.n300 += left,
                     _ => hitresults.n320 += left,
                 },
                 HitResultPriority::Fastest => {
@@ -214,24 +224,29 @@ impl HitResultGenerator<ManiaHitResultParams> for Fast {
 
 #[cfg(test)]
 mod tests {
+    use crate::{Difficulty, mania::ManiaDifficultyAttributes};
+
     use super::*;
 
     #[test]
     fn test_perfect_accuracy_non_classic() {
-        let params = ManiaHitResultParams {
-            total_hits: 100,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 1.0,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(1.0),
             n320: None,
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 0,
+            misses: Some(0),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 100);
         assert_eq!(result.n300, 0);
@@ -244,20 +259,23 @@ mod tests {
 
     #[test]
     fn test_perfect_accuracy_classic() {
-        let params = ManiaHitResultParams {
-            total_hits: 100,
-            is_classic: true,
-            priority: HitResultPriority::BestCase,
-            acc: 1.0,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(1.0),
             n320: None,
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 0,
+            misses: Some(0),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 100);
         assert_eq!(result.n300, 0);
@@ -270,20 +288,23 @@ mod tests {
 
     #[test]
     fn test_high_accuracy_non_classic() {
-        let params = ManiaHitResultParams {
-            total_hits: 500,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.95,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 500,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.95),
             n320: None,
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 10,
+            misses: Some(10),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.total_hits(), 500);
         assert_eq!(result.misses, 10);
@@ -298,20 +319,23 @@ mod tests {
 
     #[test]
     fn test_medium_accuracy_classic() {
-        let params = ManiaHitResultParams {
-            total_hits: 400,
-            is_classic: true,
-            priority: HitResultPriority::BestCase,
-            acc: 0.80,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 400,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.80),
             n320: None,
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 20,
+            misses: Some(20),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.total_hits(), 400);
         assert_eq!(result.misses, 20);
@@ -326,20 +350,23 @@ mod tests {
 
     #[test]
     fn test_low_accuracy() {
-        let params = ManiaHitResultParams {
-            total_hits: 300,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.60,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 300,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.60),
             n320: None,
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 30,
+            misses: Some(30),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.total_hits(), 300);
         assert_eq!(result.misses, 30);
@@ -357,20 +384,23 @@ mod tests {
 
     #[test]
     fn test_all_misses() {
-        let params = ManiaHitResultParams {
-            total_hits: 50,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.0,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 50,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.0),
             n320: None,
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 50,
+            misses: Some(50),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 0);
         assert_eq!(result.n300, 0);
@@ -383,20 +413,23 @@ mod tests {
 
     #[test]
     fn test_all_five_provided() {
-        let params = ManiaHitResultParams {
-            total_hits: 100,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.90,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.90),
             n320: Some(50),
             n300: Some(30),
             n200: Some(10),
             n100: Some(5),
             n50: Some(5),
-            misses: 0,
+            misses: Some(0),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 50);
         assert_eq!(result.n300, 30);
@@ -408,20 +441,23 @@ mod tests {
 
     #[test]
     fn test_four_provided_n50_missing() {
-        let params = ManiaHitResultParams {
-            total_hits: 150,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.88,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 150,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.88),
             n320: Some(80),
             n300: Some(40),
             n200: Some(15),
             n100: Some(10),
             n50: None,
-            misses: 5,
+            misses: Some(5),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 80);
         assert_eq!(result.n300, 40);
@@ -433,20 +469,23 @@ mod tests {
 
     #[test]
     fn test_four_provided_n320_missing() {
-        let params = ManiaHitResultParams {
-            total_hits: 200,
-            is_classic: true,
-            priority: HitResultPriority::BestCase,
-            acc: 0.85,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 200,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.85),
             n320: None,
             n300: Some(100),
             n200: Some(50),
             n100: Some(20),
             n50: Some(10),
-            misses: 20,
+            misses: Some(20),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 0); // 200 - 100 - 50 - 20 - 10 - 20
         assert_eq!(result.n300, 100);
@@ -458,28 +497,31 @@ mod tests {
 
     #[test]
     fn test_three_provided_n320_n300_missing() {
-        const PARAMS: ManiaHitResultParams = ManiaHitResultParams {
-            total_hits: 200,
-            is_classic: true,
-            priority: HitResultPriority::BestCase,
-            acc: 0.65,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 200,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.65),
             n320: None,
             n300: None,
             n200: Some(50),
             n100: Some(20),
             n50: Some(10),
-            misses: 10,
+            misses: Some(10),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&PARAMS);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.total_hits(), PARAMS.total_hits);
-        assert_eq!(result.n200, PARAMS.n200.unwrap());
-        assert_eq!(result.n100, PARAMS.n100.unwrap());
-        assert_eq!(result.n50, PARAMS.n50.unwrap());
-        assert_eq!(result.misses, PARAMS.misses);
+        assert_eq!(result.total_hits(), inspect.total_hits());
+        assert_eq!(result.n200, inspect.n200.unwrap());
+        assert_eq!(result.n100, inspect.n100.unwrap());
+        assert_eq!(result.n50, inspect.n50.unwrap());
+        assert_eq!(result.misses, inspect.misses());
 
-        let actual_acc = result.accuracy(PARAMS.is_classic);
+        let actual_acc = result.accuracy(inspect.is_classic());
 
         // The algorithm realizes too late that n200 to n50 are already assigned
         // and adds the missing values to n320, resulting in a higher accuracy
@@ -491,20 +533,23 @@ mod tests {
 
     #[test]
     fn test_two_provided_n200_n100_n50_missing() {
-        let params = ManiaHitResultParams {
-            total_hits: 180,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.92,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 180,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.92),
             n320: Some(100),
             n300: Some(50),
             n200: None,
             n100: None,
             n50: None,
-            misses: 10,
+            misses: Some(10),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 100);
         assert_eq!(result.n300, 50);
@@ -521,20 +566,23 @@ mod tests {
 
     #[test]
     fn test_two_provided_n320_n300_n50_missing() {
-        let params = ManiaHitResultParams {
-            total_hits: 120,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.75,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 120,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.75),
             n320: None,
             n300: None,
             n200: Some(30),
             n100: Some(5),
             n50: None,
-            misses: 15,
+            misses: Some(15),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n200, 30);
         assert_eq!(result.n100, 5);
@@ -551,20 +599,23 @@ mod tests {
 
     #[test]
     fn test_one_provided_n320_only() {
-        let params = ManiaHitResultParams {
-            total_hits: 100,
-            is_classic: true,
-            priority: HitResultPriority::BestCase,
-            acc: 0.88,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.88),
             n320: Some(60),
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 8,
+            misses: Some(8),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.n320, 60);
         assert_eq!(result.total_hits(), 100);
@@ -580,20 +631,23 @@ mod tests {
 
     #[test]
     fn test_edge_case_more_misses_than_hits() {
-        let params = ManiaHitResultParams {
-            total_hits: 50,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.5,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 50,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.5),
             n320: None,
             n300: None,
             n200: None,
             n100: None,
             n50: None,
-            misses: 100, // More than total_hits
+            misses: Some(100), // More than total_hits
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         assert_eq!(result.misses, 50); // Should be clamped
         assert_eq!(result.n320, 0);
@@ -605,20 +659,23 @@ mod tests {
 
     #[test]
     fn test_clamping_provided_values_exceed_remain() {
-        let params = ManiaHitResultParams {
-            total_hits: 100,
-            is_classic: false,
-            priority: HitResultPriority::BestCase,
-            acc: 0.90,
+        let inspect = InspectManiaPerformance {
+            attrs: &ManiaDifficultyAttributes {
+                n_objects: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.90),
             n320: Some(150), // Exceeds total
             n300: Some(50),
             n200: Some(30),
             n100: Some(20),
             n50: Some(10),
-            misses: 10,
+            misses: Some(10),
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
         // n320 should be clamped to remain (90)
         assert_eq!(result.n320, 90);
@@ -633,20 +690,23 @@ mod tests {
     fn test_accuracy_difference_classic_vs_non_classic() {
         // Test that the algorithm handles classic vs non-classic correctly
         for is_classic in [false, true] {
-            let params = ManiaHitResultParams {
-                total_hits: 200,
-                is_classic,
-                priority: HitResultPriority::BestCase,
-                acc: 0.90,
+            let inspect = InspectManiaPerformance {
+                attrs: &ManiaDifficultyAttributes {
+                    n_objects: 200,
+                    ..Default::default()
+                },
+                difficulty: &Difficulty::new().lazer(!is_classic),
+                acc: Some(0.90),
                 n320: None,
                 n300: None,
                 n200: None,
                 n100: None,
                 n50: None,
-                misses: 5,
+                misses: Some(5),
+                hitresult_priority: HitResultPriority::BestCase,
             };
 
-            let result = Fast::generate_hitresults(&params);
+            let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
             assert_eq!(result.total_hits(), 200);
             assert_eq!(result.misses, 5);
@@ -663,20 +723,23 @@ mod tests {
     #[test]
     fn test_various_accuracies_non_classic() {
         for acc in [0.50, 0.65, 0.75, 0.85, 0.95, 0.98] {
-            let params = ManiaHitResultParams {
-                total_hits: 400,
-                is_classic: false,
-                priority: HitResultPriority::BestCase,
-                acc,
+            let inspect = InspectManiaPerformance {
+                attrs: &ManiaDifficultyAttributes {
+                    n_objects: 400,
+                    ..Default::default()
+                },
+                difficulty: &Difficulty::new(),
+                acc: Some(acc),
                 n320: None,
                 n300: None,
                 n200: None,
                 n100: None,
                 n50: None,
-                misses: 8,
+                misses: Some(8),
+                hitresult_priority: HitResultPriority::BestCase,
             };
 
-            let result = Fast::generate_hitresults(&params);
+            let result = <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect);
 
             assert_eq!(result.total_hits(), 400);
             assert_eq!(result.misses, 8);

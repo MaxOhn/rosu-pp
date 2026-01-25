@@ -3,13 +3,14 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use self::calculator::TaikoPerformanceCalculator;
-pub use self::hitresult_generator::TaikoHitResultParams;
+
+pub use self::inspect::InspectTaikoPerformance;
 
 use crate::{
     Performance,
     any::{
-        Difficulty, HitResultGenerator, HitResultPriority, IntoModePerformance, IntoPerformance,
-        hitresult_generator::Closest,
+        Difficulty, HitResultGenerator, HitResultPriority, InspectablePerformance,
+        IntoModePerformance, IntoPerformance, hitresult_generator::Closest,
     },
     model::{mode::ConvertError, mods::GameMods},
     osu::OsuPerformance,
@@ -22,6 +23,7 @@ use super::{Taiko, attributes::TaikoPerformanceAttributes, score_state::TaikoSco
 mod calculator;
 pub mod gradual;
 mod hitresult_generator;
+mod inspect;
 
 /// Performance calculator on osu!taiko maps.
 #[derive(Clone, Debug)]
@@ -35,7 +37,7 @@ pub struct TaikoPerformance<'map> {
     n100: Option<u32>,
     misses: Option<u32>,
     hitresult_priority: HitResultPriority,
-    hitresult_generator: Option<fn(&TaikoHitResultParams) -> TaikoHitResults>,
+    hitresult_generator: Option<fn(InspectTaikoPerformance<'_>) -> TaikoHitResults>,
 }
 
 // Manual implementation because of the `hitresult_generator` function pointer
@@ -135,9 +137,7 @@ impl<'map> TaikoPerformance<'map> {
     }
 
     /// Specify how hitresults should be generated.
-    pub fn hitresult_generator<H: HitResultGenerator<TaikoHitResultParams>>(
-        self,
-    ) -> TaikoPerformance<'map> {
+    pub fn hitresult_generator<H: HitResultGenerator<Taiko>>(self) -> TaikoPerformance<'map> {
         TaikoPerformance {
             map_or_attrs: self.map_or_attrs,
             difficulty: self.difficulty,
@@ -269,74 +269,21 @@ impl<'map> TaikoPerformance<'map> {
 
     /// Create the [`TaikoScoreState`] that will be used for performance calculation.
     pub fn generate_state(&mut self) -> Result<TaikoScoreState, ConvertError> {
-        let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => {
-                let attrs = self.difficulty.calculate_for_mode::<Taiko>(map)?;
+        self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
-                self.map_or_attrs.insert_attrs(attrs)
-            }
-            MapOrAttrs::Attrs(ref attrs) => attrs,
-        };
+        // SAFETY: We just calculated and inserted the attributes.
+        let attrs = unsafe { self.map_or_attrs.get_attrs() };
 
-        let max_combo = attrs.max_combo();
-        let total_hits = cmp::min(self.difficulty.get_passed_objects() as u32, max_combo);
+        let inspect = Taiko::inspect_performance(self, attrs);
 
-        let misses = self.misses.map_or(0, |n| cmp::min(n, total_hits));
+        let max_combo = inspect.max_combo();
+        let misses = inspect.misses();
 
-        let hitresults = if let Some(acc) = self.acc {
-            let params = TaikoHitResultParams {
-                total_hits,
-                acc,
-                n300: self.n300,
-                n100: self.n100,
-                misses,
-            };
-
-            match self.hitresult_generator {
-                Some(generator) => generator(&params),
-                // Closest is still pretty quick for taiko so it should be fine
-                // to default to it rather than Fast
-                None => Closest::generate_hitresults(&params),
-            }
-        } else {
-            let remain = total_hits - misses;
-
-            let (n300, n100) = match (self.n300, self.n100) {
-                (Some(n300), Some(n100)) => match self.hitresult_priority {
-                    HitResultPriority::BestCase => {
-                        let n300 = cmp::min(n300, remain);
-                        let n100 = cmp::min(n100, remain - n300);
-
-                        (n300, n100)
-                    }
-                    HitResultPriority::WorstCase => {
-                        let n100 = cmp::min(n100, remain);
-                        let n300 = cmp::min(n300, remain - n100);
-
-                        (n300, n100)
-                    }
-                    HitResultPriority::Fastest => todo!(),
-                },
-                (Some(n300), None) => {
-                    let n300 = cmp::min(n300, remain);
-                    let n100 = remain - n300;
-
-                    (n300, n100)
-                }
-                (None, Some(n100)) => {
-                    let n100 = cmp::min(n100, remain);
-                    let n300 = remain - n100;
-
-                    (n300, n100)
-                }
-                (None, None) => match self.hitresult_priority {
-                    HitResultPriority::BestCase => (remain, 0),
-                    HitResultPriority::WorstCase => (0, remain),
-                    HitResultPriority::Fastest => todo!(),
-                },
-            };
-
-            TaikoHitResults { n300, n100, misses }
+        let hitresults = match self.hitresult_generator {
+            Some(generator) => generator(inspect),
+            // Closest is still pretty quick for taiko so it should be fine
+            // to default to it rather than Fast
+            None => <Closest as HitResultGenerator<Taiko>>::generate_hitresults(inspect),
         };
 
         let max_possible_combo = max_combo.saturating_sub(misses);

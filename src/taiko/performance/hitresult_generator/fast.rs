@@ -1,16 +1,24 @@
 use std::cmp;
 
 use crate::{
-    any::{HitResultGenerator, hitresult_generator::Fast},
-    taiko::{TaikoHitResults, performance::hitresult_generator::TaikoHitResultParams},
+    any::{
+        HitResultGenerator,
+        hitresult_generator::{Fast, IgnoreAccuracy},
+    },
+    taiko::{Taiko, TaikoHitResults, performance::InspectTaikoPerformance},
 };
 
-impl HitResultGenerator<TaikoHitResultParams> for Fast {
-    fn generate_hitresults(params: &TaikoHitResultParams) -> TaikoHitResults {
-        let misses = cmp::min(params.misses, params.total_hits);
-        let remain = params.total_hits - misses;
+impl HitResultGenerator<Taiko> for Fast {
+    fn generate_hitresults(inspect: InspectTaikoPerformance<'_>) -> TaikoHitResults {
+        let Some(acc) = inspect.acc else {
+            return <IgnoreAccuracy as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
+        };
 
-        let (n300, n100) = match (params.n300, params.n100) {
+        let total_hits = inspect.total_hits();
+        let misses = inspect.misses();
+        let remain = total_hits - misses;
+
+        let (n300, n100) = match (inspect.n300, inspect.n100) {
             (Some(n300), Some(n100)) => {
                 let n300 = cmp::min(n300, remain);
                 let n100 = cmp::min(n100, remain - n300);
@@ -42,7 +50,7 @@ impl HitResultGenerator<TaikoHitResultParams> for Fast {
                 // Simplify by multiplying by total_hits:
                 // acc * (2*total_hits) = 2*n300 + n100
 
-                let target_total = f64::round(params.acc * f64::from(2 * params.total_hits)) as u32;
+                let target_total = f64::round(acc * f64::from(2 * total_hits)) as u32;
 
                 // Start by assuming every non-miss is an n100
                 // delta is how much we need to increase from the baseline (all n100s)
@@ -65,19 +73,27 @@ impl HitResultGenerator<TaikoHitResultParams> for Fast {
 
 #[cfg(test)]
 mod tests {
+    use crate::{Difficulty, any::HitResultPriority, taiko::TaikoDifficultyAttributes};
+
     use super::*;
 
     #[test]
     fn test_both_provided() {
-        let params = TaikoHitResultParams {
-            total_hits: 100,
-            acc: 0.95,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.95),
             n300: Some(90),
             n100: Some(10),
-            misses: 0,
+            misses: Some(0),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300, 90);
         assert_eq!(result.n100, 10);
@@ -87,15 +103,21 @@ mod tests {
 
     #[test]
     fn test_n300_provided_n100_missing() {
-        let params = TaikoHitResultParams {
-            total_hits: 150,
-            acc: 0.90,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 150,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.90),
             n300: Some(120),
             n100: None,
-            misses: 10,
+            misses: Some(10),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300, 120);
         assert_eq!(result.n100, 20); // 150 - 120 - 10
@@ -105,15 +127,21 @@ mod tests {
 
     #[test]
     fn test_n100_provided_n300_missing() {
-        let params = TaikoHitResultParams {
-            total_hits: 200,
-            acc: 0.85,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 200,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.85),
             n300: None,
             n100: Some(50),
-            misses: 15,
+            misses: Some(15),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300, 135); // 200 - 50 - 15
         assert_eq!(result.n100, 50);
@@ -123,15 +151,21 @@ mod tests {
 
     #[test]
     fn test_both_missing_perfect_accuracy() {
-        let params = TaikoHitResultParams {
-            total_hits: 100,
-            acc: 1.0,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(1.0),
             n300: None,
             n100: None,
-            misses: 0,
+            misses: Some(0),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300, 100);
         assert_eq!(result.n100, 0);
@@ -143,15 +177,21 @@ mod tests {
 
     #[test]
     fn test_both_missing_high_accuracy() {
-        let params = TaikoHitResultParams {
-            total_hits: 500,
-            acc: 0.95,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 500,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.95),
             n300: None,
             n100: None,
-            misses: 10,
+            misses: Some(10),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300 + result.n100 + result.misses, 500);
         assert_eq!(result.misses, 10);
@@ -165,15 +205,21 @@ mod tests {
 
     #[test]
     fn test_both_missing_medium_accuracy() {
-        let params = TaikoHitResultParams {
-            total_hits: 400,
-            acc: 0.75,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 400,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.75),
             n300: None,
             n100: None,
-            misses: 20,
+            misses: Some(20),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300 + result.n100 + result.misses, 400);
         assert_eq!(result.misses, 20);
@@ -187,15 +233,21 @@ mod tests {
 
     #[test]
     fn test_both_missing_low_accuracy() {
-        let params = TaikoHitResultParams {
-            total_hits: 300,
-            acc: 0.60,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 300,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.60),
             n300: None,
             n100: None,
-            misses: 50,
+            misses: Some(50),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300 + result.n100 + result.misses, 300);
         assert_eq!(result.misses, 50);
@@ -211,15 +263,21 @@ mod tests {
 
     #[test]
     fn test_all_misses() {
-        let params = TaikoHitResultParams {
-            total_hits: 100,
-            acc: 0.0,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.0),
             n300: None,
             n100: None,
-            misses: 100,
+            misses: Some(100),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300, 0);
         assert_eq!(result.n100, 0);
@@ -229,15 +287,21 @@ mod tests {
 
     #[test]
     fn test_edge_case_more_misses_than_hits() {
-        let params = TaikoHitResultParams {
-            total_hits: 50,
-            acc: 0.5,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 50,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.5),
             n300: None,
             n100: None,
-            misses: 100, // More than total_hits
+            misses: Some(100), // More than total_hits
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         // Should clamp misses to total_hits
         assert_eq!(result.misses, 50);
@@ -247,15 +311,21 @@ mod tests {
 
     #[test]
     fn test_clamping_n300_exceeds_remain() {
-        let params = TaikoHitResultParams {
-            total_hits: 100,
-            acc: 0.90,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.90),
             n300: Some(200), // More than total_hits
             n100: Some(50),
-            misses: 10,
+            misses: Some(10),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300 + result.n100 + result.misses, 100);
         assert!(result.n300 <= 90); // Can't exceed remain
@@ -263,15 +333,21 @@ mod tests {
 
     #[test]
     fn test_clamping_n100_exceeds_remain() {
-        let params = TaikoHitResultParams {
-            total_hits: 100,
-            acc: 0.85,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.85),
             n300: None,
             n100: Some(200), // More than total_hits
-            misses: 15,
+            misses: Some(15),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300 + result.n100 + result.misses, 100);
         assert!(result.n100 <= 85); // Can't exceed remain
@@ -279,15 +355,21 @@ mod tests {
 
     #[test]
     fn test_50_percent_accuracy() {
-        let params = TaikoHitResultParams {
-            total_hits: 200,
-            acc: 0.50,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 200,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.50),
             n300: None,
             n100: None,
-            misses: 0,
+            misses: Some(0),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300 + result.n100 + result.misses, 200);
         assert_eq!(result.misses, 0);
@@ -303,15 +385,21 @@ mod tests {
         // Verify that the Fast algorithm produces results that match the accuracy formula
         // Note: With 5 misses out of 100, max accuracy is (2*95)/(2*100) = 0.95
         for acc in [0.55, 0.65, 0.75, 0.85, 0.90, 0.93] {
-            let params = TaikoHitResultParams {
-                total_hits: 100,
-                acc,
+            let inspect = InspectTaikoPerformance {
+                attrs: &TaikoDifficultyAttributes {
+                    max_combo: 100,
+                    ..Default::default()
+                },
+                difficulty: &Difficulty::new(),
+                acc: Some(acc),
                 n300: None,
                 n100: None,
-                misses: 5,
+                misses: Some(5),
+                combo: None,
+                hitresult_priority: HitResultPriority::BestCase,
             };
 
-            let result = Fast::generate_hitresults(&params);
+            let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
             let actual_acc = result.accuracy();
 
             assert!(
@@ -325,15 +413,21 @@ mod tests {
 
     #[test]
     fn test_small_total_hits() {
-        let params = TaikoHitResultParams {
-            total_hits: 10,
-            acc: 0.80,
+        let inspect = InspectTaikoPerformance {
+            attrs: &TaikoDifficultyAttributes {
+                max_combo: 10,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.80),
             n300: None,
             n100: None,
-            misses: 1,
+            misses: Some(1),
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Fast::generate_hitresults(&params);
+        let result = <Fast as HitResultGenerator<Taiko>>::generate_hitresults(inspect);
 
         assert_eq!(result.n300 + result.n100 + result.misses, 10);
         assert_eq!(result.misses, 1);

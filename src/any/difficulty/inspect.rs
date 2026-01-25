@@ -2,6 +2,7 @@ use crate::{Difficulty, model::mods::GameMods};
 
 use super::ModsDependent;
 
+// TODO: use Inspectable impl
 /// [`Difficulty`] but all fields are public for inspection.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct InspectDifficulty {

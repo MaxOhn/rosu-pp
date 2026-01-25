@@ -1,13 +1,10 @@
 use std::marker::PhantomData;
 
-/// TODO: docs
-pub trait HitResultGenerator<P: HitResultParams> {
-    fn generate_hitresults(params: &P) -> P::HitResults;
-}
+use crate::any::InspectablePerformance;
 
 /// TODO: docs
-pub trait HitResultParams {
-    type HitResults;
+pub trait HitResultGenerator<M: InspectablePerformance> {
+    fn generate_hitresults(inspect: M::InspectPerformance<'_>) -> M::HitResults;
 }
 
 /// [`HitResultGenerator`] whose result is generated as fast as possible.
@@ -26,24 +23,29 @@ pub struct Closest;
 pub struct Statistical;
 
 /// TODO: docs
+pub struct IgnoreAccuracy;
+
+/// TODO: docs
 pub struct Composable<Osu, Taiko, Catch, Mania>(PhantomData<(Osu, Taiko, Catch, Mania)>);
 
 macro_rules! impl_composable_generator {
-    ( $mode:ident: $params:path ) => {
-        impl<Osu, Taiko, Catch, Mania> HitResultGenerator<$params>
+    ( $module:ident :: $mode:ident ) => {
+        impl<Osu, Taiko, Catch, Mania> HitResultGenerator<crate::$module::$mode>
             for Composable<Osu, Taiko, Catch, Mania>
         where
-            $mode: HitResultGenerator<$params>,
+            $mode: HitResultGenerator<crate::$module::$mode>,
         {
-            fn generate_hitresults(params: &$params) -> <$params as HitResultParams>::HitResults {
-                $mode::generate_hitresults(params)
+            fn generate_hitresults(
+                inspect: <crate::$module::$mode as crate::any::InspectablePerformance>::InspectPerformance<'_>,
+            ) -> <crate::$module::$mode as crate::model::mode::IGameMode>::HitResults {
+                $mode::generate_hitresults(inspect)
             }
         }
     };
 }
 
-impl_composable_generator!(Osu: crate::osu::OsuHitResultParams);
-impl_composable_generator!(Taiko: crate::taiko::TaikoHitResultParams);
+impl_composable_generator!(osu::Osu);
+impl_composable_generator!(taiko::Taiko);
 // TODO: uncomment
-// impl_composable_generator!(Catch: crate::catch::CatchHitResultParams);
-impl_composable_generator!(Mania: crate::mania::ManiaHitResultParams);
+// impl_composable_generator!(catch::Catch);
+impl_composable_generator!(mania::Mania);

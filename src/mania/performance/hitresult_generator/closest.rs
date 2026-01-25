@@ -1,10 +1,10 @@
 use crate::{
     any::{HitResultGenerator, hitresult_generator::Closest},
-    mania::{ManiaHitResults, performance::hitresult_generator::ManiaHitResultParams},
+    mania::{Mania, ManiaHitResults, performance::InspectManiaPerformance},
 };
 
-impl HitResultGenerator<ManiaHitResultParams> for Closest {
-    fn generate_hitresults(params: &ManiaHitResultParams) -> ManiaHitResults {
+impl HitResultGenerator<Mania> for Closest {
+    fn generate_hitresults(inspect: InspectManiaPerformance<'_>) -> ManiaHitResults {
         todo!()
     }
 }

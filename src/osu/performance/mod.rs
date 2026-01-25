@@ -3,13 +3,14 @@ use std::{borrow::Cow, cmp};
 use rosu_map::section::general::GameMode;
 
 use self::calculator::OsuPerformanceCalculator;
-pub use self::{calculator::PERFORMANCE_BASE_MULTIPLIER, hitresult_generator::OsuHitResultParams};
+
+pub use self::{calculator::PERFORMANCE_BASE_MULTIPLIER, inspect::InspectOsuPerformance};
 
 use crate::{
     Beatmap,
     any::{
-        Difficulty, HitResultGenerator, HitResultPriority, IntoModePerformance, IntoPerformance,
-        Performance, hitresult_generator::Fast,
+        Difficulty, HitResultGenerator, HitResultPriority, InspectablePerformance,
+        IntoModePerformance, IntoPerformance, Performance, hitresult_generator::Fast,
     },
     catch::CatchPerformance,
     mania::ManiaPerformance,
@@ -28,6 +29,7 @@ use super::{
 mod calculator;
 pub mod gradual;
 mod hitresult_generator;
+mod inspect;
 
 /// Performance calculator on osu!standard maps.
 #[derive(Clone, Debug)]
@@ -45,7 +47,7 @@ pub struct OsuPerformance<'map> {
     pub(crate) n50: Option<u32>,
     pub(crate) misses: Option<u32>,
     pub(crate) hitresult_priority: HitResultPriority,
-    pub(crate) hitresult_generator: Option<fn(&OsuHitResultParams) -> OsuHitResults>,
+    pub(crate) hitresult_generator: Option<fn(InspectOsuPerformance<'_>) -> OsuHitResults>,
 }
 
 // Manual implementation because of the `hitresult_generator` function pointer
@@ -198,9 +200,7 @@ impl<'map> OsuPerformance<'map> {
     }
 
     /// Specify how hitresults should be generated.
-    pub fn hitresult_generator<H: HitResultGenerator<OsuHitResultParams>>(
-        self,
-    ) -> OsuPerformance<'map> {
+    pub fn hitresult_generator<H: HitResultGenerator<Osu>>(self) -> OsuPerformance<'map> {
         OsuPerformance {
             map_or_attrs: self.map_or_attrs,
             difficulty: self.difficulty,
@@ -433,212 +433,19 @@ impl<'map> OsuPerformance<'map> {
     /// Create the [`OsuScoreState`] that will be used for performance calculation.
     #[allow(clippy::too_many_lines)]
     pub fn generate_state(&mut self) -> Result<OsuScoreState, ConvertError> {
-        let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => {
-                let attrs = self.difficulty.calculate_for_mode::<Osu>(map)?;
+        self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
-                self.map_or_attrs.insert_attrs(attrs)
-            }
-            MapOrAttrs::Attrs(ref attrs) => attrs,
-        };
+        // SAFETY: We just calculated and inserted the attributes.
+        let attrs = unsafe { self.map_or_attrs.get_attrs() };
 
-        let total_hits = cmp::min(
-            self.difficulty.get_passed_objects() as u32,
-            attrs.n_objects(),
-        );
+        let inspect = Osu::inspect_performance(self, attrs);
 
-        let misses = self.misses.map_or(0, |n| cmp::min(n, total_hits));
+        let total_hits = inspect.total_hits();
+        let misses = inspect.misses();
 
-        let lazer = self.difficulty.get_lazer();
-        let using_classic_slider_acc = self.difficulty.get_mods().no_slider_head_acc(lazer);
-
-        let mut hitresults = if let Some(acc) = self.acc {
-            let origin = match (lazer, using_classic_slider_acc) {
-                (false, _) => OsuScoreOrigin::Stable,
-                (true, false) => OsuScoreOrigin::WithSliderAcc {
-                    max_large_ticks: attrs.n_large_ticks,
-                    max_slider_ends: attrs.n_sliders,
-                },
-                (true, true) => OsuScoreOrigin::WithoutSliderAcc {
-                    max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
-                    max_small_ticks: attrs.n_sliders,
-                },
-            };
-
-            let params = OsuHitResultParams {
-                total_hits,
-                origin,
-                acc,
-                large_tick_hits: self.large_tick_hits,
-                small_tick_hits: self.small_tick_hits,
-                slider_end_hits: self.slider_end_hits,
-                n300: self.n300,
-                n100: self.n100,
-                n50: self.n50,
-                misses,
-            };
-
-            match self.hitresult_generator {
-                Some(generator) => generator(&params),
-                None => Fast::generate_hitresults(&params),
-            }
-        } else {
-            let (slider_end_hits, large_tick_hits, small_tick_hits) =
-                match (lazer, using_classic_slider_acc) {
-                    (false, _) => (0, 0, 0),
-                    (true, false) => {
-                        let slider_end_hits = self
-                            .slider_end_hits
-                            .map_or(attrs.n_sliders, |n| cmp::min(n, attrs.n_sliders));
-
-                        let large_tick_hits = self
-                            .large_tick_hits
-                            .map_or(attrs.n_large_ticks, |n| cmp::min(n, attrs.n_large_ticks));
-
-                        (slider_end_hits, large_tick_hits, 0)
-                    }
-                    (true, true) => {
-                        let small_tick_hits = self
-                            .small_tick_hits
-                            .map_or(attrs.n_sliders, |n| cmp::min(n, attrs.n_sliders));
-
-                        let large_tick_hits = self
-                            .large_tick_hits
-                            .map_or(attrs.n_sliders + attrs.n_large_ticks, |n| {
-                                cmp::min(n, attrs.n_sliders + attrs.n_large_ticks)
-                            });
-
-                        (0, large_tick_hits, small_tick_hits)
-                    }
-                };
-
-            let remain = total_hits - misses;
-
-            let (n300, n100, n50) = match (self.n300, self.n100, self.n50) {
-                // Three specified
-                (Some(n300), Some(n100), Some(n50)) => match self.hitresult_priority {
-                    HitResultPriority::BestCase => {
-                        let n300 = cmp::min(n300, remain);
-                        let n100 = cmp::min(n100, remain - n300);
-                        let n50 = cmp::min(n50, remain - n300 - n100);
-
-                        (n300, n100, n50)
-                    }
-                    HitResultPriority::WorstCase => {
-                        let n50 = cmp::min(n50, remain);
-                        let n100 = cmp::min(n100, remain - n50);
-                        let n300 = cmp::min(n300, remain - n50 - n100);
-
-                        (n300, n100, n50)
-                    }
-                    HitResultPriority::Fastest => todo!(),
-                },
-
-                // Two specified
-                (Some(n300), Some(n100), None) => {
-                    let (n300, n100) = match self.hitresult_priority {
-                        HitResultPriority::BestCase => {
-                            let n300 = cmp::min(n300, remain);
-                            let n100 = cmp::min(n100, remain - n300);
-
-                            (n300, n100)
-                        }
-                        HitResultPriority::WorstCase => {
-                            let n100 = cmp::min(n100, remain);
-                            let n300 = cmp::min(n300, remain - n100);
-
-                            (n300, n100)
-                        }
-                        HitResultPriority::Fastest => todo!(),
-                    };
-
-                    (n300, n100, remain - n300 - n100)
-                }
-                (Some(n300), None, Some(n50)) => {
-                    let (n300, n50) = match self.hitresult_priority {
-                        HitResultPriority::BestCase => {
-                            let n300 = cmp::min(n300, remain);
-                            let n50 = cmp::min(n50, remain - n300);
-
-                            (n300, n50)
-                        }
-                        HitResultPriority::WorstCase => {
-                            let n50 = cmp::min(n50, remain);
-                            let n300 = cmp::min(n300, remain - n50);
-
-                            (n300, n50)
-                        }
-                        HitResultPriority::Fastest => todo!(),
-                    };
-
-                    (n300, remain - n300 - n50, n50)
-                }
-                (None, Some(n100), Some(n50)) => {
-                    let (n100, n50) = match self.hitresult_priority {
-                        HitResultPriority::BestCase => {
-                            let n100 = cmp::min(n100, remain);
-                            let n50 = cmp::min(n50, remain - n100);
-
-                            (n100, n50)
-                        }
-                        HitResultPriority::WorstCase => {
-                            let n50 = cmp::min(n50, remain);
-                            let n100 = cmp::min(n100, remain - n50);
-
-                            (n100, n50)
-                        }
-                        HitResultPriority::Fastest => todo!(),
-                    };
-
-                    (remain - n100 - n50, n100, n50)
-                }
-
-                // One specified
-                (Some(n300), None, None) => {
-                    let n300 = cmp::min(n300, remain);
-
-                    match self.hitresult_priority {
-                        HitResultPriority::BestCase => (n300, remain - n300, 0),
-                        HitResultPriority::WorstCase => (n300, 0, remain - n300),
-                        HitResultPriority::Fastest => todo!(),
-                    }
-                }
-                (None, Some(n100), None) => {
-                    let n100 = cmp::min(n100, remain);
-
-                    match self.hitresult_priority {
-                        HitResultPriority::BestCase => (remain - n100, n100, 0),
-                        HitResultPriority::WorstCase => (0, n100, remain - n100),
-                        HitResultPriority::Fastest => todo!(),
-                    }
-                }
-                (None, None, Some(n50)) => {
-                    let n50 = cmp::min(n50, remain);
-
-                    match self.hitresult_priority {
-                        HitResultPriority::BestCase => (remain - n50, 0, n50),
-                        HitResultPriority::WorstCase => (0, remain - n50, n50),
-                        HitResultPriority::Fastest => todo!(),
-                    }
-                }
-
-                // None specified
-                (None, None, None) => match self.hitresult_priority {
-                    HitResultPriority::BestCase => (remain, 0, 0),
-                    HitResultPriority::WorstCase => (0, 0, remain),
-                    HitResultPriority::Fastest => todo!(),
-                },
-            };
-
-            OsuHitResults {
-                large_tick_hits,
-                small_tick_hits,
-                slider_end_hits,
-                n300,
-                n100,
-                n50,
-                misses,
-            }
+        let mut hitresults = match self.hitresult_generator {
+            Some(generator) => generator(inspect),
+            None => <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect),
         };
 
         let remain = total_hits.saturating_sub(hitresults.total_hits());

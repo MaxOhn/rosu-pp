@@ -1,26 +1,33 @@
 use std::cmp;
 
 use crate::{
-    any::{HitResultGenerator, hitresult_generator::Closest},
-    osu::{OsuHitResults, performance::hitresult_generator::OsuHitResultParams},
+    any::{
+        HitResultGenerator,
+        hitresult_generator::{Closest, IgnoreAccuracy},
+    },
+    osu::{InspectOsuPerformance, Osu, OsuHitResults},
 };
 
-impl HitResultGenerator<OsuHitResultParams> for Closest {
+impl HitResultGenerator<Osu> for Closest {
     #[expect(clippy::too_many_lines, reason = "it's pretty clean though")]
-    fn generate_hitresults(params: &OsuHitResultParams) -> OsuHitResults {
-        let large_tick_hits = params.large_tick_hits.unwrap_or(0);
-        let small_tick_hits = params.small_tick_hits.unwrap_or(0);
-        let slider_end_hits = params.slider_end_hits.unwrap_or(0);
+    fn generate_hitresults(inspect: InspectOsuPerformance) -> OsuHitResults {
+        let Some(acc) = inspect.acc else {
+            return <IgnoreAccuracy as HitResultGenerator<Osu>>::generate_hitresults(inspect);
+        };
 
-        let misses = cmp::min(params.misses, params.total_hits);
-        let remain = params.total_hits - misses;
+        let large_tick_hits = inspect.large_tick_hits.unwrap_or(0);
+        let small_tick_hits = inspect.small_tick_hits.unwrap_or(0);
+        let slider_end_hits = inspect.slider_end_hits.unwrap_or(0);
+
+        let total_hits = inspect.total_hits();
+        let misses = inspect.misses();
+        let remain = total_hits - misses;
+        let origin = inspect.origin();
 
         let (tick_score, tick_max) =
-            params
-                .origin
-                .tick_scores(large_tick_hits, small_tick_hits, slider_end_hits);
+            origin.tick_scores(large_tick_hits, small_tick_hits, slider_end_hits);
 
-        let target_total = params.acc * f64::from(300 * params.total_hits + tick_max);
+        let target_total = acc * f64::from(300 * total_hits + tick_max);
 
         let compute_n100_n50 = |n300| {
             //     target_total = 300*n300 + 100*n100 + 50*n50 + tick_score
@@ -53,7 +60,7 @@ impl HitResultGenerator<OsuHitResultParams> for Closest {
                     misses,
                 };
 
-                let dist = f64::abs(params.acc - state.accuracy(params.origin));
+                let dist = f64::abs(acc - state.accuracy(origin));
 
                 if dist < best_dist {
                     best_dist = dist;
@@ -96,7 +103,7 @@ impl HitResultGenerator<OsuHitResultParams> for Closest {
                     misses,
                 };
 
-                let dist = f64::abs(params.acc - state.accuracy(params.origin));
+                let dist = f64::abs(acc - state.accuracy(origin));
 
                 if dist < best_dist {
                     best_dist = dist;
@@ -140,7 +147,7 @@ impl HitResultGenerator<OsuHitResultParams> for Closest {
                     misses,
                 };
 
-                let dist = f64::abs(params.acc - state.accuracy(params.origin));
+                let dist = f64::abs(acc - state.accuracy(origin));
 
                 if dist < best_dist {
                     best_dist = dist;
@@ -152,7 +159,7 @@ impl HitResultGenerator<OsuHitResultParams> for Closest {
             (n300, n100, n50)
         };
 
-        let (n300, n100, n50) = match (params.n300, params.n100, params.n50) {
+        let (n300, n100, n50) = match (inspect.n300, inspect.n100, inspect.n50) {
             // None missing
             (Some(n300), Some(n100), Some(n50)) => {
                 let n300 = cmp::min(n300, remain);
@@ -227,7 +234,7 @@ impl HitResultGenerator<OsuHitResultParams> for Closest {
                         misses,
                     };
 
-                    let dist = f64::abs(params.acc - state.accuracy(params.origin));
+                    let dist = f64::abs(acc - state.accuracy(origin));
 
                     if dist < best_dist {
                         best_dist = dist;
@@ -255,16 +262,23 @@ impl HitResultGenerator<OsuHitResultParams> for Closest {
 
 #[cfg(test)]
 mod tests {
-    use crate::osu::OsuScoreOrigin;
+    use rosu_mods::{GameMod, generated_mods::ClassicOsu};
+
+    use crate::{Difficulty, any::HitResultPriority, osu::OsuDifficultyAttributes};
 
     use super::*;
 
     // Helper function to verify that the result is the closest possible
-    fn verify_is_closest(params: &OsuHitResultParams, result: &OsuHitResults) {
-        let result_acc = result.accuracy(params.origin);
-        let result_dist = f64::abs(params.acc - result_acc);
+    fn verify_is_closest(inspect: &InspectOsuPerformance, result: &OsuHitResults) {
+        let acc = inspect.acc.unwrap();
 
-        let remain = params.total_hits - result.misses;
+        let total_hits = inspect.total_hits();
+        let origin = inspect.origin();
+
+        let result_acc = result.accuracy(origin);
+        let result_dist = f64::abs(acc - result_acc);
+
+        let remain = total_hits - result.misses;
 
         // Check all possible combinations of n300, n100, n50
         for n300 in 0..=remain {
@@ -272,19 +286,19 @@ mod tests {
                 let n50 = remain - n300 - n100;
 
                 // Skip if any provided constraints are violated
-                if let Some(expected_n300) = params.n300 {
+                if let Some(expected_n300) = inspect.n300 {
                     if n300 != expected_n300 {
                         continue;
                     }
                 }
 
-                if let Some(expected_n100) = params.n100 {
+                if let Some(expected_n100) = inspect.n100 {
                     if n100 != expected_n100 {
                         continue;
                     }
                 }
 
-                if let Some(expected_n50) = params.n50 {
+                if let Some(expected_n50) = inspect.n50 {
                     if n50 != expected_n50 {
                         continue;
                     }
@@ -300,8 +314,8 @@ mod tests {
                     misses: result.misses,
                 };
 
-                let candidate_acc = candidate.accuracy(params.origin);
-                let candidate_dist = f64::abs(params.acc - candidate_acc);
+                let candidate_acc = candidate.accuracy(origin);
+                let candidate_dist = f64::abs(acc - candidate_acc);
 
                 assert!(
                     result_dist <= candidate_dist + 1e-10, // Small epsilon for floating point
@@ -314,20 +328,25 @@ mod tests {
 
     #[test]
     fn test_none_missing_all_provided() {
-        let params = OsuHitResultParams {
-            total_hits: 100,
-            acc: 0.95,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.95),
             n300: Some(90),
             n100: Some(8),
             n50: Some(2),
-            misses: 0,
+            misses: Some(0),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300, 90);
         assert_eq!(result.n100, 8);
@@ -337,227 +356,283 @@ mod tests {
 
     #[test]
     fn test_one_missing_n50() {
-        let params = OsuHitResultParams {
-            total_hits: 50,
-            acc: 0.95,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 50,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.95),
             n300: Some(45),
             n100: Some(3),
             n50: None,
-            misses: 2,
+            misses: Some(2),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300, 45);
         assert_eq!(result.n100, 3);
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 50);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_two_missing_n100_n50_given_n300() {
-        let params = OsuHitResultParams {
-            total_hits: 80,
-            acc: 0.90,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 80,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.90),
             n300: Some(60),
             n100: None,
             n50: None,
-            misses: 5,
+            misses: Some(5),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300, 60);
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 80);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_two_missing_n300_n50_given_n100() {
-        let params = OsuHitResultParams {
-            total_hits: 70,
-            acc: 0.85,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 70,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.85),
             n300: None,
             n100: Some(15),
             n50: None,
-            misses: 8,
+            misses: Some(8),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n100, 15);
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 70);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_two_missing_n300_n100_given_n50() {
-        let params = OsuHitResultParams {
-            total_hits: 60,
-            acc: 0.80,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 60,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.80),
             n300: None,
             n100: None,
             n50: Some(12),
-            misses: 6,
+            misses: Some(6),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n50, 12);
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 60);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_all_missing_high_accuracy() {
-        let params = OsuHitResultParams {
-            total_hits: 100,
-            acc: 0.98,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.98),
             n300: None,
             n100: None,
             n50: None,
-            misses: 2,
+            misses: Some(2),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
         assert_eq!(result.misses, 2);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_all_missing_medium_accuracy() {
-        let params = OsuHitResultParams {
-            total_hits: 100,
-            acc: 0.75,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.75),
             n300: None,
             n100: None,
             n50: None,
-            misses: 10,
+            misses: Some(10),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
         assert_eq!(result.misses, 10);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_all_missing_perfect_accuracy() {
-        let params = OsuHitResultParams {
-            total_hits: 50,
-            acc: 1.0,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 50,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(1.0),
             n300: None,
             n100: None,
             n50: None,
-            misses: 0,
+            misses: Some(0),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300, 50);
         assert_eq!(result.n100, 0);
         assert_eq!(result.n50, 0);
         assert_eq!(result.misses, 0);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_with_slider_acc_all_missing() {
-        let params = OsuHitResultParams {
-            total_hits: 80,
-            acc: 0.96,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 80,
+                n_sliders: 15,
+                n_large_ticks: 20,
+
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: Some(0.96),
             n300: None,
             n100: None,
             n50: None,
-            misses: 2,
+            misses: Some(2),
             large_tick_hits: Some(20),
             small_tick_hits: None,
             slider_end_hits: Some(15),
-            origin: OsuScoreOrigin::WithSliderAcc {
-                max_large_ticks: 20,
-                max_slider_ends: 15,
-            },
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 80);
         assert_eq!(result.misses, 2);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_without_slider_acc_two_missing() {
-        let params = OsuHitResultParams {
-            total_hits: 70,
-            acc: 0.88,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 70,
+                n_sliders: 15,
+                n_large_ticks: 10,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().mods(
+                [GameMod::ClassicOsu(ClassicOsu {
+                    no_slider_head_accuracy: Some(true),
+                    ..Default::default()
+                })]
+                .into_iter()
+                .collect::<rosu_mods::GameMods>(),
+            ),
+            acc: Some(0.88),
             n300: Some(50),
             n100: None,
             n50: None,
-            misses: 5,
+            misses: Some(5),
             large_tick_hits: Some(15),
             small_tick_hits: Some(25),
             slider_end_hits: None,
-            origin: OsuScoreOrigin::WithoutSliderAcc {
-                max_large_ticks: 15,
-                max_small_ticks: 25,
-            },
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300, 50);
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 70);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_clamping_when_values_exceed_remain() {
-        let params = OsuHitResultParams {
-            total_hits: 100,
-            acc: 0.90,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 100,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.90),
             n300: Some(200), // More than total_hits
             n100: Some(50),
             n50: Some(30),
-            misses: 10,
+            misses: Some(10),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
         assert!(result.n300 <= 90);
@@ -565,42 +640,52 @@ mod tests {
 
     #[test]
     fn test_edge_case_low_accuracy_many_50s() {
-        let params = OsuHitResultParams {
-            total_hits: 60,
-            acc: 0.55,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 60,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.55),
             n300: None,
             n100: None,
             n50: None,
-            misses: 10,
+            misses: Some(10),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 60);
         assert_eq!(result.misses, 10);
-        verify_is_closest(&params, &result);
+        verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_all_misses() {
-        let params = OsuHitResultParams {
-            total_hits: 50,
-            acc: 0.0,
+        let inspect = InspectOsuPerformance {
+            attrs: &OsuDifficultyAttributes {
+                n_circles: 50,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new().lazer(false),
+            acc: Some(0.0),
             n300: None,
             n100: None,
             n50: None,
-            misses: 50,
+            misses: Some(50),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
-            origin: OsuScoreOrigin::Stable,
+            combo: None,
+            hitresult_priority: HitResultPriority::BestCase,
         };
 
-        let result = Closest::generate_hitresults(&params);
+        let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
         assert_eq!(result.n300, 0);
         assert_eq!(result.n100, 0);

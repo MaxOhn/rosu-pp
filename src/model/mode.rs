@@ -28,6 +28,9 @@ pub trait IGameMode: Sized {
     /// The type of a performance calculator.
     type Performance<'map>;
 
+    /// The hitresults of a score.
+    type HitResults;
+
     /// The type of a gradual difficulty calculator.
     type GradualDifficulty;
 

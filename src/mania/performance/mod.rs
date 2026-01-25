@@ -3,7 +3,8 @@ use std::cmp;
 use rosu_map::section::general::GameMode;
 
 use self::calculator::ManiaPerformanceCalculator;
-pub use self::hitresult_generator::ManiaHitResultParams;
+
+pub use self::inspect::InspectManiaPerformance;
 
 use crate::{
     Performance,
@@ -18,6 +19,7 @@ use super::{Mania, attributes::ManiaPerformanceAttributes, score_state::ManiaSco
 mod calculator;
 pub mod gradual;
 mod hitresult_generator;
+mod inspect;
 
 /// Performance calculator on osu!mania maps.
 #[derive(Clone, Debug, PartialEq)]
@@ -255,14 +257,10 @@ impl<'map> ManiaPerformance<'map> {
     /// Create the [`ManiaScoreState`] that will be used for performance calculation.
     #[allow(clippy::too_many_lines, clippy::similar_names)]
     pub fn generate_state(&mut self) -> Result<ManiaScoreState, ConvertError> {
-        let attrs = match self.map_or_attrs {
-            MapOrAttrs::Map(ref map) => {
-                let attrs = self.difficulty.calculate_for_mode::<Mania>(map)?;
+        self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
-                self.map_or_attrs.insert_attrs(attrs)
-            }
-            MapOrAttrs::Attrs(ref attrs) => attrs,
-        };
+        // SAFETY: We just calculated and inserted the attributes.
+        let attrs = unsafe { self.map_or_attrs.get_attrs() };
 
         let priority = self.hitresult_priority;
         let mut n_objects = cmp::min(self.difficulty.get_passed_objects() as u32, attrs.n_objects);

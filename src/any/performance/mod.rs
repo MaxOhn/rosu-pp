@@ -3,10 +3,10 @@ use rosu_map::section::general::GameMode;
 use crate::{
     Difficulty, GameMods,
     any::HitResultGenerator,
-    catch::CatchPerformance,
-    mania::ManiaPerformance,
-    osu::{OsuHitResultParams, OsuPerformance},
-    taiko::{TaikoHitResultParams, TaikoPerformance},
+    catch::{Catch, CatchPerformance},
+    mania::{Mania, ManiaPerformance},
+    osu::{Osu, OsuPerformance},
+    taiko::{Taiko, TaikoPerformance},
 };
 
 use self::into::IntoPerformance;
@@ -14,6 +14,7 @@ use self::into::IntoPerformance;
 use super::{attributes::PerformanceAttributes, score_state::ScoreState};
 
 pub mod gradual;
+pub mod inspectable;
 pub mod into;
 
 /// Performance calculator on maps of any mode.
@@ -314,7 +315,10 @@ impl<'map> Performance<'map> {
     /// TODO: example of what to do if only some modes should be supported
     pub fn hitresult_generator<H>(self) -> Self
     where
-        H: HitResultGenerator<OsuHitResultParams> + HitResultGenerator<TaikoHitResultParams>,
+        H: HitResultGenerator<Osu>
+            + HitResultGenerator<Taiko>
+            + HitResultGenerator<Catch>
+            + HitResultGenerator<Mania>,
     {
         match self {
             Performance::Osu(o) => Self::Osu(o.hitresult_generator::<H>()),
