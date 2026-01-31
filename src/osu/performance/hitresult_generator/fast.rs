@@ -143,13 +143,17 @@ mod tests {
 
     #[test]
     fn perfect_accuracy_no_misses() {
+        const N_CIRCLES: u32 = 100;
+
+        const ACC: f64 = 1.0;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(1.0),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
@@ -163,26 +167,31 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 100);
+        assert_eq!(result.n300, N_CIRCLES);
         assert_eq!(result.n100, 0);
         assert_eq!(result.n50, 0);
         assert_eq!(result.misses, 0);
-        assert_eq!(result.accuracy(OsuScoreOrigin::Stable), 1.0);
+        assert_eq!(result.accuracy(OsuScoreOrigin::Stable), ACC);
     }
 
     #[test]
     fn high_accuracy_stable() {
+        const N_CIRCLES: u32 = 1000;
+
+        const ACC: f64 = 0.95;
+        const N_MISSES: u32 = 10;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 1000,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.95),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
-            misses: Some(10),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -193,30 +202,38 @@ mod tests {
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
         // Verify total adds up
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 1000);
-        assert_eq!(result.misses, 10);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, N_MISSES);
 
         // Verify accuracy is close to target
         let actual_acc = result.accuracy(OsuScoreOrigin::Stable);
         assert!(
-            (actual_acc - 0.95).abs() < 0.001,
-            "Expected ~0.95, got {actual_acc}",
+            (actual_acc - ACC).abs() < 0.001,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     #[test]
     fn medium_accuracy_stable() {
+        const N_CIRCLES: u32 = 500;
+
+        const ACC: f64 = 0.85;
+        const N_MISSES: u32 = 25;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 500,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.85),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
-            misses: Some(25),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -226,34 +243,44 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 500);
-        assert_eq!(result.misses, 25);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, N_MISSES);
 
         let actual_acc = result.accuracy(OsuScoreOrigin::Stable);
         assert!(
-            (actual_acc - 0.85).abs() < 0.001,
-            "Expected ~0.85, got {actual_acc}",
+            (actual_acc - ACC).abs() < 0.001,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     #[test]
     fn with_slider_acc() {
+        const N_CIRCLES: u32 = 160;
+        const N_SLIDERS: u32 = 40;
+        const N_LARGE_TICKS: u32 = 50;
+
+        const ACC: f64 = 0.98;
+        const N_MISSES: u32 = 2;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 160,
-                n_sliders: 40,
-                n_large_ticks: 50,
+                n_circles: N_CIRCLES,
+                n_sliders: N_SLIDERS,
+                n_large_ticks: N_LARGE_TICKS,
                 ..Default::default()
             },
             difficulty: &Difficulty::new(),
-            acc: Some(0.98),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
-            misses: Some(2),
-            large_tick_hits: Some(50),
+            misses: Some(N_MISSES),
+            large_tick_hits: Some(N_LARGE_TICKS),
             small_tick_hits: None,
-            slider_end_hits: Some(40),
+            slider_end_hits: Some(N_SLIDERS),
             combo: None,
             hitresult_priority: HitResultPriority::BestCase,
         };
@@ -262,25 +289,35 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 200);
-        assert_eq!(result.misses, 2);
-        assert_eq!(result.large_tick_hits, 50);
-        assert_eq!(result.slider_end_hits, 40);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES + N_SLIDERS
+        );
+        assert_eq!(result.misses, N_MISSES);
+        assert_eq!(result.large_tick_hits, N_LARGE_TICKS);
+        assert_eq!(result.slider_end_hits, N_SLIDERS);
 
         let actual_acc = result.accuracy(origin);
         assert!(
-            (actual_acc - 0.98).abs() < 0.002,
-            "Expected ~0.98, got {actual_acc}",
+            (actual_acc - ACC).abs() < 0.002,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     #[test]
     fn without_slider_acc() {
+        const N_CIRCLES: u32 = 240;
+        const N_SLIDERS: u32 = 60;
+        const N_LARGE_TICKS: u32 = 40;
+
+        const ACC: f64 = 0.92;
+        const N_MISSES: u32 = 5;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 240,
-                n_sliders: 60,
-                n_large_ticks: 40,
+                n_circles: N_CIRCLES,
+                n_sliders: N_SLIDERS,
+                n_large_ticks: N_LARGE_TICKS,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().mods(
@@ -291,13 +328,13 @@ mod tests {
                 .into_iter()
                 .collect::<rosu_mods::GameMods>(),
             ),
-            acc: Some(0.92),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
-            misses: Some(5),
-            large_tick_hits: Some(60),
-            small_tick_hits: Some(100),
+            misses: Some(N_MISSES),
+            large_tick_hits: Some(N_SLIDERS),
+            small_tick_hits: Some(N_SLIDERS + N_LARGE_TICKS),
             slider_end_hits: None,
             combo: None,
             hitresult_priority: HitResultPriority::BestCase,
@@ -307,31 +344,39 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 300);
-        assert_eq!(result.misses, 5);
-        assert_eq!(result.large_tick_hits, 60);
-        assert_eq!(result.small_tick_hits, 100);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES + N_SLIDERS
+        );
+        assert_eq!(result.misses, N_MISSES);
+        assert_eq!(result.large_tick_hits, N_SLIDERS);
+        assert_eq!(result.small_tick_hits, N_SLIDERS + N_LARGE_TICKS);
 
         let actual_acc = result.accuracy(origin);
         assert!(
-            (actual_acc - 0.92).abs() < 0.002,
-            "Expected ~0.92, got {actual_acc}",
+            (actual_acc - ACC).abs() < 0.002,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     #[test]
     fn all_misses() {
+        const N_CIRCLES: u32 = 50;
+
+        const ACC: f64 = 0.0;
+        const N_MISSES: u32 = 50;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 50,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.0),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
-            misses: Some(50),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -344,23 +389,28 @@ mod tests {
         assert_eq!(result.n300, 0);
         assert_eq!(result.n100, 0);
         assert_eq!(result.n50, 0);
-        assert_eq!(result.misses, 50);
-        assert_eq!(result.accuracy(OsuScoreOrigin::Stable), 0.0);
+        assert_eq!(result.misses, N_MISSES);
+        assert_eq!(result.accuracy(OsuScoreOrigin::Stable), ACC);
     }
 
     #[test]
     fn low_accuracy_many_50s() {
+        const N_CIRCLES: u32 = 400;
+
+        const ACC: f64 = 0.60;
+        const N_MISSES: u32 = 50;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 400,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.60),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
-            misses: Some(50),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -370,31 +420,40 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 400);
-        assert_eq!(result.misses, 50);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, N_MISSES);
         // At 60% accuracy with many misses, we should have a lot of 50s
         assert!(result.n50 > 0, "Expected some n50s at low accuracy");
 
         let actual_acc = result.accuracy(OsuScoreOrigin::Stable);
         assert!(
-            (actual_acc - 0.60).abs() < 0.002,
-            "Expected ~0.60, got {actual_acc}",
+            (actual_acc - ACC).abs() < 0.002,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     #[test]
     fn edge_case_more_misses_than_hits() {
+        const N_CIRCLES: u32 = 100;
+
+        const ACC: f64 = 0.5;
+        // More misses than total hits
+        const N_MISSES: u32 = 150;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.5),
+            acc: Some(ACC),
             n300: None,
             n100: None,
             n50: None,
-            misses: Some(150), // More misses than total hits
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -405,26 +464,33 @@ mod tests {
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
         // Should clamp misses to total_hits
-        assert_eq!(result.misses, 100);
+        assert_eq!(result.misses, N_CIRCLES);
         assert_eq!(result.n300, 0);
         assert_eq!(result.n100, 0);
         assert_eq!(result.n50, 0);
     }
 
-    // Tests for "None missing" case
     #[test]
     fn all_three_provided() {
+        const N_CIRCLES: u32 = 100;
+
+        const ACC: f64 = 0.90;
+        const N300: u32 = 80;
+        const N100: u32 = 15;
+        const N50: u32 = 5;
+        const N_MISSES: u32 = 0; // No misses
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.90),
-            n300: Some(80),
-            n100: Some(15),
-            n50: Some(5),
-            misses: Some(0),
+            acc: Some(ACC),
+            n300: Some(N300),
+            n100: Some(N100),
+            n50: Some(N50),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -434,25 +500,33 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 80);
-        assert_eq!(result.n100, 15);
-        assert_eq!(result.n50, 5);
-        assert_eq!(result.misses, 0);
+        assert_eq!(result.n300, N300);
+        assert_eq!(result.n100, N100);
+        assert_eq!(result.n50, N50);
+        assert_eq!(result.misses, N_MISSES);
     }
 
     #[test]
     fn all_three_provided_with_clamping() {
+        const N_CIRCLES: u32 = 100;
+
+        const ACC: f64 = 0.90;
+        const N300: u32 = 200; // Exceeds remain
+        const N100: u32 = 50;
+        const N50: u32 = 30;
+        const N_MISSES: u32 = 10;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.90),
-            n300: Some(200), // Exceeds remain
-            n100: Some(50),
-            n50: Some(30),
-            misses: Some(10),
+            acc: Some(ACC),
+            n300: Some(N300),
+            n100: Some(N100),
+            n50: Some(N50),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -462,29 +536,37 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        // n300 should be clamped to remain (90)
-        // n100 should be clamped to 0 (no room left)
-        // n50 should be clamped to 0 (no room left)
-        assert_eq!(result.n300, 90);
-        assert_eq!(result.n100, 0);
-        assert_eq!(result.n50, 0);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
+        assert_eq!(result.misses, N_MISSES);
+        assert_eq!(result.n300, 90); // clamped to remaining 90
+        assert_eq!(result.n100, 0); // no room left, clamped to 0
+        assert_eq!(result.n50, 0); // no room left, clamped to 0
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
     }
 
     // Tests for "Only one missing" cases
     #[test]
     fn n50_missing() {
+        const N_CIRCLES: u32 = 150;
+
+        const ACC: f64 = 0.88;
+        const N300: u32 = 100;
+        const N100: u32 = 30;
+        const N_MISSES: u32 = 10;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 150,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.88),
-            n300: Some(100),
-            n100: Some(30),
+            acc: Some(ACC),
+            n300: Some(N300),
+            n100: Some(N100),
             n50: None,
-            misses: Some(10),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -494,25 +576,32 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 100);
-        assert_eq!(result.n100, 30);
-        assert_eq!(result.n50, 10); // 150 - 100 - 30 - 10
-        assert_eq!(result.misses, 10);
+        assert_eq!(result.n300, N300);
+        assert_eq!(result.n100, N100);
+        assert_eq!(result.n50, 10); // N_CIRCLES - N300 - N100 - N_MISSES
+        assert_eq!(result.misses, N_MISSES);
     }
 
     #[test]
     fn n100_missing() {
+        const N_CIRCLES: u32 = 200;
+
+        const ACC: f64 = 0.85;
+        const N300: u32 = 140;
+        const N50: u32 = 20;
+        const N_MISSES: u32 = 15;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 200,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.85),
-            n300: Some(140),
+            acc: Some(ACC),
+            n300: Some(N300),
             n100: None,
-            n50: Some(20),
-            misses: Some(15),
+            n50: Some(N50),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -522,25 +611,32 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 140);
-        assert_eq!(result.n100, 25); // 200 - 140 - 20 - 15
-        assert_eq!(result.n50, 20);
-        assert_eq!(result.misses, 15);
+        assert_eq!(result.n300, N300);
+        assert_eq!(result.n100, 25); // N_CIRCLES - N300 - N50 - N_MISSES
+        assert_eq!(result.n50, N50);
+        assert_eq!(result.misses, N_MISSES);
     }
 
     #[test]
     fn n300_missing() {
+        const N_CIRCLES: u32 = 180;
+
+        const ACC: f64 = 0.80;
+        const N100: u32 = 40;
+        const N50: u32 = 30;
+        const N_MISSES: u32 = 20;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 180,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.80),
+            acc: Some(ACC),
             n300: None,
-            n100: Some(40),
-            n50: Some(30),
-            misses: Some(20),
+            n100: Some(N100),
+            n50: Some(N50),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -550,26 +646,32 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 90); // 180 - 40 - 30 - 20
-        assert_eq!(result.n100, 40);
-        assert_eq!(result.n50, 30);
-        assert_eq!(result.misses, 20);
+        assert_eq!(result.n300, 90); // N_CIRCLES - N100 - N50 - N_MISSES
+        assert_eq!(result.n100, N100);
+        assert_eq!(result.n50, N50);
+        assert_eq!(result.misses, N_MISSES);
     }
 
     // Tests for "Two missing" cases with n300 provided
     #[test]
     fn n300_provided_n100_n50_missing() {
+        const N_CIRCLES: u32 = 200;
+
+        const ACC: f64 = 0.90;
+        const N300: u32 = 150;
+        const N_MISSES: u32 = 10;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 200,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.90),
-            n300: Some(150),
+            acc: Some(ACC),
+            n300: Some(N300),
             n100: None,
             n50: None,
-            misses: Some(10),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -579,33 +681,41 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 150);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 200);
-        assert_eq!(result.misses, 10);
+        assert_eq!(result.n300, N300);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, N_MISSES);
 
         // Fast is an approximation, so just verify it's reasonably close
         let actual_acc = result.accuracy(OsuScoreOrigin::Stable);
         assert!(
-            (actual_acc - 0.90).abs() < 0.05,
-            "Expected ~0.90, got {}",
-            actual_acc
+            (actual_acc - ACC).abs() < 0.05,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     // Tests for "Two missing" cases with n100 provided
     #[test]
     fn n100_provided_n300_n50_missing() {
+        const N_CIRCLES: u32 = 150;
+
+        const ACC: f64 = 0.85;
+        const N100: u32 = 30;
+        const N_MISSES: u32 = 8;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 150,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.85),
+            acc: Some(ACC),
             n300: None,
-            n100: Some(30),
+            n100: Some(N100),
             n50: None,
-            misses: Some(8),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -615,33 +725,41 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n100, 30);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 150);
-        assert_eq!(result.misses, 8);
+        assert_eq!(result.n100, N100);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, N_MISSES);
 
         // Fast is an approximation
         let actual_acc = result.accuracy(OsuScoreOrigin::Stable);
         assert!(
-            (actual_acc - 0.85).abs() < 0.05,
-            "Expected ~0.85, got {}",
-            actual_acc
+            (actual_acc - ACC).abs() < 0.05,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     // Tests for "Two missing" cases with n50 provided
     #[test]
     fn n50_provided_n300_n100_missing() {
+        const N_CIRCLES: u32 = 120;
+
+        const ACC: f64 = 0.80;
+        const N50: u32 = 25;
+        const N_MISSES: u32 = 5;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 120,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.80),
+            acc: Some(ACC),
             n300: None,
             n100: None,
-            n50: Some(25),
-            misses: Some(5),
+            n50: Some(N50),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -651,64 +769,84 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n50, 25);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 120);
-        assert_eq!(result.misses, 5);
+        assert_eq!(result.n50, N50);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, N_MISSES);
 
         // Fast is an approximation
         let actual_acc = result.accuracy(OsuScoreOrigin::Stable);
         assert!(
-            (actual_acc - 0.80).abs() < 0.05,
-            "Expected ~0.80, got {}",
-            actual_acc
+            (actual_acc - ACC).abs() < 0.05,
+            "Expected ~{ACC}, got {actual_acc}",
         );
     }
 
     // Test with slider accuracy and some values provided
     #[test]
     fn with_slider_acc_n300_provided() {
+        const N_CIRCLES: u32 = 125;
+        const N_SLIDERS: u32 = 25;
+        const N_LARGE_TICKS: u32 = 30;
+
+        const ACC: f64 = 0.95;
+        const N300: u32 = 120;
+        const N_MISSES: u32 = 3;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 125,
-                n_sliders: 25,
-                n_large_ticks: 30,
+                n_circles: N_CIRCLES,
+                n_sliders: N_SLIDERS,
+                n_large_ticks: N_LARGE_TICKS,
                 ..Default::default()
             },
             difficulty: &Difficulty::new(),
-            acc: Some(0.95),
-            n300: Some(120),
+            acc: Some(ACC),
+            n300: Some(N300),
             n100: None,
             n50: None,
-            misses: Some(3),
-            large_tick_hits: Some(30),
+            misses: Some(N_MISSES),
+            large_tick_hits: Some(N_LARGE_TICKS),
             small_tick_hits: None,
-            slider_end_hits: Some(25),
+            slider_end_hits: Some(N_SLIDERS),
             combo: None,
             hitresult_priority: HitResultPriority::BestCase,
         };
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 120);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 150);
-        assert_eq!(result.large_tick_hits, 30);
-        assert_eq!(result.slider_end_hits, 25);
+        assert_eq!(result.n300, N300);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES + N_SLIDERS
+        );
+        assert_eq!(result.large_tick_hits, N_LARGE_TICKS);
+        assert_eq!(result.slider_end_hits, N_SLIDERS);
     }
 
     // Test edge case where provided values leave no room
     #[test]
     fn provided_values_fill_all_remain() {
+        const N_CIRCLES: u32 = 100;
+
+        const ACC: f64 = 0.95;
+        const N300: u32 = 85;
+        const N100: u32 = 10;
+        const N_MISSES: u32 = 5;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.95),
-            n300: Some(85),
-            n100: Some(10),
+            acc: Some(ACC),
+            n300: Some(N300),
+            n100: Some(N100),
             n50: None,
-            misses: Some(5),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -718,26 +856,32 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 85);
-        assert_eq!(result.n100, 10);
+        assert_eq!(result.n300, N300);
+        assert_eq!(result.n100, N100);
         assert_eq!(result.n50, 0); // No room left
-        assert_eq!(result.misses, 5);
+        assert_eq!(result.misses, N_MISSES);
     }
 
     // Test that algorithm handles very low accuracy with provided n300
     #[test]
     fn low_accuracy_with_high_n300_provided() {
+        const N_CIRCLES: u32 = 100;
+
+        const ACC: f64 = 0.60;
+        const N300: u32 = 10;
+        const N_MISSES: u32 = 20;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
-            acc: Some(0.60),
-            n300: Some(10),
+            acc: Some(ACC),
+            n300: Some(N300),
             n100: None,
             n50: None,
-            misses: Some(20),
+            misses: Some(N_MISSES),
             large_tick_hits: None,
             small_tick_hits: None,
             slider_end_hits: None,
@@ -747,8 +891,12 @@ mod tests {
 
         let result = <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect);
 
-        assert_eq!(result.n300, 10);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
+        assert_eq!(result.n300, N300);
+        assert_eq!(result.misses, N_MISSES);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
         // With low accuracy and only 10 n300s out of 80 remaining, we expect mostly n50s
         // But the Fast algorithm might not produce many n50s - just verify totals add up
         assert_eq!(result.n100 + result.n50, 70);
