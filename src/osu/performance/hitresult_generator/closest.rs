@@ -201,15 +201,15 @@ impl HitResultGenerator<Osu> for Closest {
             (None, None, None) => {
                 // Deriving bounds on n300:
                 // - Lower bound: minimize n300 by maximizing n50 (n100 = 0)
-                //     target_total = 300*n300 + 100*n100 + 50*n50 + tick_score
-                // <=> target_total = 300*n300 + 50*(remaing - n300) + tick_score
-                // <=> target_total - 50*remain - tick_score = 250*n300
-                // <=> (target_total - 50*remain - tick_score) / 250 = n300
+                //       target_total = 300*n300 + 100*n100 + 50*n50 + tick_score
+                //   <=> target_total = 300*n300 + 50*(remaing - n300) + tick_score
+                //   <=> target_total - 50*remain - tick_score = 250*n300
+                //   <=> (target_total - 50*remain - tick_score) / 250 = n300
                 let raw_min300 = (target_total - f64::from(50 * remain + tick_score)) / 250.0;
 
                 // - Upper bound: maximize n300 by minimizing n100 and n50 (both = 0)
-                //     target_total = 300*n300 + 100*n100 + 50*n50 + tick_score
-                // <=> (target_total - tick_score) / 300 = n300
+                //       target_total = 300*n300 + 100*n100 + 50*n50 + tick_score
+                //   <=> (target_total - tick_score) / 300 = n300
                 let raw_max300 = (target_total - f64::from(tick_score)) / 300.0;
 
                 let min300 = f64::floor(raw_min300).max(0.0) as u32;
@@ -248,7 +248,7 @@ impl HitResultGenerator<Osu> for Closest {
             }
         };
 
-        OsuHitResults {
+        let hitresults = OsuHitResults {
             large_tick_hits,
             small_tick_hits,
             slider_end_hits,
@@ -256,7 +256,11 @@ impl HitResultGenerator<Osu> for Closest {
             n100,
             n50,
             misses,
-        }
+        };
+
+        println!("{hitresults:#?}");
+
+        hitresults
     }
 }
 
@@ -348,17 +352,19 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300, 90);
-        assert_eq!(result.n100, 8);
-        assert_eq!(result.n50, 2);
-        assert_eq!(result.misses, 0);
+        assert_eq!(result.n300, inspect.n300.unwrap());
+        assert_eq!(result.n100, inspect.n100.unwrap());
+        assert_eq!(result.n50, inspect.n50.unwrap());
+        assert_eq!(result.misses, inspect.misses.unwrap());
     }
 
     #[test]
     fn test_one_missing_n50() {
+        const N_CIRCLES: u32 = 50;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 50,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -376,17 +382,22 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300, 45);
-        assert_eq!(result.n100, 3);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 50);
+        assert_eq!(result.n300, inspect.n300.unwrap());
+        assert_eq!(result.n100, inspect.n100.unwrap());
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_two_missing_n100_n50_given_n300() {
+        const N_CIRCLES: u32 = 80;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 80,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -404,16 +415,21 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300, 60);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 80);
+        assert_eq!(result.n300, inspect.n300.unwrap());
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_two_missing_n300_n50_given_n100() {
+        const N_CIRCLES: u32 = 70;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 70,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -431,16 +447,21 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n100, 15);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 70);
+        assert_eq!(result.n100, inspect.n100.unwrap());
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_two_missing_n300_n100_given_n50() {
+        const N_CIRCLES: u32 = 60;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 60,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -458,16 +479,21 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n50, 12);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 60);
+        assert_eq!(result.n50, inspect.n50.unwrap());
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_all_missing_high_accuracy() {
+        const N_CIRCLES: u32 = 100;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -485,16 +511,21 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
-        assert_eq!(result.misses, 2);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, inspect.misses.unwrap());
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_all_missing_medium_accuracy() {
+        const N_CIRCLES: u32 = 100;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -512,16 +543,21 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
-        assert_eq!(result.misses, 10);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, inspect.misses.unwrap());
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_all_missing_perfect_accuracy() {
+        const N_CIRCLES: u32 = 50;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 50,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -539,21 +575,23 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300, 50);
+        assert_eq!(result.n300, N_CIRCLES);
         assert_eq!(result.n100, 0);
         assert_eq!(result.n50, 0);
-        assert_eq!(result.misses, 0);
+        assert_eq!(result.misses, inspect.misses.unwrap());
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_with_slider_acc_all_missing() {
+        const N_CIRCLES: u32 = 80;
+        const N_SLIDERS: u32 = 15;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 80,
-                n_sliders: 15,
+                n_circles: N_CIRCLES,
+                n_sliders: N_SLIDERS,
                 n_large_ticks: 20,
-
                 ..Default::default()
             },
             difficulty: &Difficulty::new(),
@@ -571,17 +609,23 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 80);
-        assert_eq!(result.misses, 2);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES + N_SLIDERS
+        );
+        assert_eq!(result.misses, inspect.misses.unwrap());
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_without_slider_acc_two_missing() {
+        const N_CIRCLES: u32 = 70;
+        const N_SLIDERS: u32 = 15;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 70,
-                n_sliders: 15,
+                n_circles: N_CIRCLES,
+                n_sliders: N_SLIDERS,
                 n_large_ticks: 10,
                 ..Default::default()
             },
@@ -607,16 +651,21 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300, 50);
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 70);
+        assert_eq!(result.n300, inspect.n300.unwrap());
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES + N_SLIDERS
+        );
         verify_is_closest(&inspect, &result);
     }
 
     #[test]
     fn test_clamping_when_values_exceed_remain() {
+        const N_CIRCLES: u32 = 100;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 100,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -634,15 +683,20 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 100);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
         assert!(result.n300 <= 90);
     }
 
     #[test]
     fn test_edge_case_low_accuracy_many_50s() {
+        const N_CIRCLES: u32 = 60;
+
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
-                n_circles: 60,
+                n_circles: N_CIRCLES,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().lazer(false),
@@ -660,8 +714,11 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Osu>>::generate_hitresults(inspect.clone());
 
-        assert_eq!(result.n300 + result.n100 + result.n50 + result.misses, 60);
-        assert_eq!(result.misses, 10);
+        assert_eq!(
+            result.n300 + result.n100 + result.n50 + result.misses,
+            N_CIRCLES
+        );
+        assert_eq!(result.misses, inspect.misses.unwrap());
         verify_is_closest(&inspect, &result);
     }
 
@@ -690,6 +747,6 @@ mod tests {
         assert_eq!(result.n300, 0);
         assert_eq!(result.n100, 0);
         assert_eq!(result.n50, 0);
-        assert_eq!(result.misses, 50);
+        assert_eq!(result.misses, inspect.misses.unwrap());
     }
 }

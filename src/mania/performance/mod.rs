@@ -805,7 +805,7 @@ mod tests {
         test_runner::{RngAlgorithm, TestRng},
     };
     use rosu_map::section::general::GameMode;
-    use rosu_mods::GameMod;
+    use rosu_mods::{GameMod, generated_mods::ClassicMania};
 
     use crate::{
         Beatmap,
@@ -847,7 +847,7 @@ mod tests {
     fn mods(classic: bool) -> rosu_mods::GameMods {
         if classic {
             let mut mods = rosu_mods::GameMods::new();
-            mods.insert(GameMod::ClassicMania(Default::default()));
+            mods.insert(GameMod::ClassicMania(ClassicMania::default()));
 
             mods
         } else {
