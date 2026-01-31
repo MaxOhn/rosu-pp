@@ -132,7 +132,7 @@ impl HitResultGenerator<Mania> for Fast {
         let denominator = perfect_weight * total_hits;
 
         let target_total =
-            f64::round(((acc * f64::from(denominator)) - f64::from(numerator)).max(0.0)) as u32;
+            f64::round((acc * f64::from(denominator) - f64::from(numerator)).max(0.0)) as u32;
 
         // Start by assuming every non-miss is an n50 (baseline)
         let baseline =
@@ -147,7 +147,6 @@ impl HitResultGenerator<Mania> for Fast {
 
         let n320_increase = perfect_weight - 10;
 
-        // Greedy approach: maximize higher-value hits first
         let n320 = cmp::min(
             remain - prelim_300 - prelim_200 - prelim_100 - prelim_50,
             inspect.n320.unwrap_or(delta / n320_increase),
