@@ -55,6 +55,41 @@ impl InspectOsuPerformance<'_> {
             },
         }
     }
+
+    /// Returns the number of slider end hits, large tick hits, and small tick
+    /// hits.
+    pub fn tick_hits(&self) -> (u32, u32, u32) {
+        let lazer = self.lazer();
+        let using_classic_slider_acc = self.using_classic_slider_acc();
+
+        match (lazer, using_classic_slider_acc) {
+            (false, _) => (0, 0, 0),
+            (true, false) => {
+                let slider_end_hits = self
+                    .slider_end_hits
+                    .map_or(self.attrs.n_sliders, |n| cmp::min(n, self.attrs.n_sliders));
+
+                let large_tick_hits = self.large_tick_hits.map_or(self.attrs.n_large_ticks, |n| {
+                    cmp::min(n, self.attrs.n_large_ticks)
+                });
+
+                (slider_end_hits, large_tick_hits, 0)
+            }
+            (true, true) => {
+                let small_tick_hits = self
+                    .small_tick_hits
+                    .map_or(self.attrs.n_sliders, |n| cmp::min(n, self.attrs.n_sliders));
+
+                let large_tick_hits = self
+                    .large_tick_hits
+                    .map_or(self.attrs.n_sliders + self.attrs.n_large_ticks, |n| {
+                        cmp::min(n, self.attrs.n_sliders + self.attrs.n_large_ticks)
+                    });
+
+                (0, large_tick_hits, small_tick_hits)
+            }
+        }
+    }
 }
 
 impl InspectablePerformance for Osu {

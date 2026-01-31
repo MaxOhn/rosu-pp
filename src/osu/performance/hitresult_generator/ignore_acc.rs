@@ -8,47 +8,10 @@ use crate::{
 impl HitResultGenerator<Osu> for IgnoreAccuracy {
     #[expect(clippy::too_many_lines, reason = "it is what it is /shrug")]
     fn generate_hitresults(inspect: InspectOsuPerformance<'_>) -> OsuHitResults {
-        let lazer = inspect.lazer();
-        let using_classic_slider_acc = inspect.using_classic_slider_acc();
+        let (slider_end_hits, large_tick_hits, small_tick_hits) = inspect.tick_hits();
 
         let total_hits = inspect.total_hits();
         let misses = inspect.misses();
-
-        let (slider_end_hits, large_tick_hits, small_tick_hits) =
-            match (lazer, using_classic_slider_acc) {
-                (false, _) => (0, 0, 0),
-                (true, false) => {
-                    let slider_end_hits = inspect
-                        .slider_end_hits
-                        .map_or(inspect.attrs.n_sliders, |n| {
-                            cmp::min(n, inspect.attrs.n_sliders)
-                        });
-
-                    let large_tick_hits = inspect
-                        .large_tick_hits
-                        .map_or(inspect.attrs.n_large_ticks, |n| {
-                            cmp::min(n, inspect.attrs.n_large_ticks)
-                        });
-
-                    (slider_end_hits, large_tick_hits, 0)
-                }
-                (true, true) => {
-                    let small_tick_hits = inspect
-                        .small_tick_hits
-                        .map_or(inspect.attrs.n_sliders, |n| {
-                            cmp::min(n, inspect.attrs.n_sliders)
-                        });
-
-                    let large_tick_hits = inspect
-                        .large_tick_hits
-                        .map_or(inspect.attrs.n_sliders + inspect.attrs.n_large_ticks, |n| {
-                            cmp::min(n, inspect.attrs.n_sliders + inspect.attrs.n_large_ticks)
-                        });
-
-                    (0, large_tick_hits, small_tick_hits)
-                }
-            };
-
         let remain = total_hits - misses;
 
         let (n300, n100, n50) = match (inspect.n300, inspect.n100, inspect.n50) {
