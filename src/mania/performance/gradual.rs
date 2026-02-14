@@ -149,6 +149,7 @@ mod tests {
                 assert_eq!(i, hit_objects_len + 1);
                 assert!(gradual_2nd.last(state.clone()).is_some() || hit_objects_len % 2 == 0);
                 assert!(gradual_3rd.last(state.clone()).is_some() || hit_objects_len % 3 == 0);
+
                 break;
             };
 
@@ -168,11 +169,11 @@ mod tests {
                 .state(state.clone());
 
             let regular_state = regular_calc.generate_state().unwrap();
-            assert_eq!(state, regular_state);
+            assert_eq!(state, regular_state, "i={i}");
 
             let expected = regular_calc.calculate().unwrap();
 
-            assert_eq!(next_gradual, expected);
+            assert_eq!(next_gradual, expected, "i={i}");
         }
     }
 }

@@ -23,10 +23,16 @@ pub struct InspectManiaPerformance<'a> {
 
 impl InspectManiaPerformance<'_> {
     pub fn total_hits(&self) -> u32 {
-        cmp::min(
+        let total_hits = cmp::min(
             self.difficulty.get_passed_objects() as u32,
             self.attrs.n_objects,
-        )
+        );
+
+        if self.is_classic() {
+            total_hits
+        } else {
+            total_hits + self.attrs.n_hold_notes
+        }
     }
 
     pub fn misses(&self) -> u32 {
