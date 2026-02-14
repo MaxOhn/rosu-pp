@@ -324,7 +324,7 @@ impl<'map> Performance<'map> {
             Performance::Osu(o) => Self::Osu(o.hitresult_generator::<H>()),
             Performance::Taiko(t) => Self::Taiko(t.hitresult_generator::<H>()),
             Performance::Catch(c) => todo!(),
-            Performance::Mania(m) => todo!(),
+            Performance::Mania(m) => Self::Mania(m.hitresult_generator::<H>()),
         }
     }
 

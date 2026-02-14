@@ -2,7 +2,8 @@ use std::marker::PhantomData;
 
 use crate::any::InspectablePerformance;
 
-/// TODO: docs
+/// Provides flexible hitresult generation based on mode and whether it should
+/// focus on performance, accuracy, or other factors.
 pub trait HitResultGenerator<M: InspectablePerformance> {
     fn generate_hitresults(inspect: M::InspectPerformance<'_>) -> M::HitResults;
 }
@@ -19,13 +20,17 @@ pub struct Fast;
 /// other results that are *closer* to the target accuracy.
 pub struct Closest;
 
-/// TODO: docs
+/// [`HitResultGenerator`] that strives for a middleground between performance
+/// and accuracy through a statistical approach.
 pub struct Statistical;
 
-/// TODO: docs
+/// [`HitResultGenerator`] that ignores accuracy and generates solely based on
+/// [`HitResultPriority`].
+///
+/// [`HitResultPriority`]: crate::any::HitResultPriority
 pub struct IgnoreAccuracy;
 
-/// TODO: docs
+/// [`HitResultGenerator`] consisting of a dedicated generator for each mode.
 pub struct Composable<Osu, Taiko, Catch, Mania>(PhantomData<(Osu, Taiko, Catch, Mania)>);
 
 macro_rules! impl_composable_generator {

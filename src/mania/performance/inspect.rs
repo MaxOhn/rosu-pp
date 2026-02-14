@@ -6,7 +6,7 @@ use crate::{
     mania::{Mania, ManiaDifficultyAttributes},
 };
 
-/// TODO: docs
+/// Inspectable [`ManiaPerformance`] to expose all of its internal details.
 #[derive(Clone, Debug)]
 pub struct InspectManiaPerformance<'a> {
     pub attrs: &'a ManiaDifficultyAttributes,
