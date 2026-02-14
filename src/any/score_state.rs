@@ -1,7 +1,7 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    catch::CatchScoreState,
+    catch::{CatchHitResults, CatchScoreState},
     mania::ManiaScoreState,
     osu::{OsuHitResults, OsuScoreState},
     taiko::{TaikoHitResults, TaikoScoreState},
@@ -124,11 +124,13 @@ impl From<ScoreState> for CatchScoreState {
     fn from(state: ScoreState) -> Self {
         Self {
             max_combo: state.max_combo,
-            fruits: state.n300,
-            droplets: state.n100,
-            tiny_droplets: state.n50,
-            tiny_droplet_misses: state.n_katu,
-            misses: state.misses,
+            hitresults: CatchHitResults {
+                fruits: state.n300,
+                droplets: state.n100,
+                tiny_droplets: state.n50,
+                tiny_droplet_misses: state.n_katu,
+                misses: state.misses,
+            },
         }
     }
 }
@@ -188,11 +190,11 @@ impl From<CatchScoreState> for ScoreState {
             osu_small_tick_hits: 0,
             slider_end_hits: 0,
             n_geki: 0,
-            n_katu: state.tiny_droplet_misses,
-            n300: state.fruits,
-            n100: state.droplets,
-            n50: state.tiny_droplets,
-            misses: state.misses,
+            n_katu: state.hitresults.tiny_droplet_misses,
+            n300: state.hitresults.fruits,
+            n100: state.hitresults.droplets,
+            n50: state.hitresults.tiny_droplets,
+            misses: state.hitresults.misses,
         }
     }
 }

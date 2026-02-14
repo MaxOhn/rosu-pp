@@ -207,6 +207,7 @@ impl<'map> ManiaPerformance<'map> {
         self
     }
 
+    /// TODO: docs
     pub fn hitresult_generator<H: HitResultGenerator<Mania>>(self) -> ManiaPerformance<'map> {
         ManiaPerformance {
             map_or_attrs: self.map_or_attrs,

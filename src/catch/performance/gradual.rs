@@ -156,7 +156,7 @@ mod tests {
         let mut state = CatchScoreState::default();
 
         for i in 1.. {
-            state.misses += 1;
+            state.hitresults.misses += 1;
 
             let Some(next_gradual) = gradual.next(state.clone()) else {
                 assert_eq!(i, 731);

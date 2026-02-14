@@ -44,7 +44,7 @@ impl CatchPerformanceCalculator<'_> {
         pp *= len_bonus;
 
         // Penalize misses exponentially
-        pp *= 0.97_f64.powf(f64::from(self.state.misses));
+        pp *= 0.97_f64.powf(f64::from(self.state.hitresults.misses));
 
         // Combo scaling
         if self.state.max_combo > 0 {
@@ -77,11 +77,11 @@ impl CatchPerformanceCalculator<'_> {
         }
 
         // Accuracy scaling
-        pp *= self.state.accuracy().powf(5.5);
+        pp *= self.state.hitresults.accuracy().powf(5.5);
 
         // NF penalty
         if self.mods.nf() {
-            pp *= (1.0 - 0.02 * f64::from(self.state.misses)).max(0.9);
+            pp *= (1.0 - 0.02 * f64::from(self.state.hitresults.misses)).max(0.9);
         }
 
         CatchPerformanceAttributes {
@@ -91,6 +91,6 @@ impl CatchPerformanceCalculator<'_> {
     }
 
     const fn combo_hits(&self) -> u32 {
-        self.state.fruits + self.state.droplets + self.state.misses
+        self.state.hitresults.fruits + self.state.hitresults.droplets + self.state.hitresults.misses
     }
 }

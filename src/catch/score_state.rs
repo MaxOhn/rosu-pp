@@ -1,11 +1,6 @@
-/// Aggregation for a score's current state.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CatchScoreState {
-    /// Maximum combo that the score has had so far.
-    /// **Not** the maximum possible combo of the map so far.
-    ///
-    /// Note that only fruits and droplets are considered for osu!catch combo.
-    pub max_combo: u32,
+/// osu!catch hitresults.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct CatchHitResults {
     /// Amount of current fruits (300s).
     pub fruits: u32,
     /// Amount of current droplets (100s).
@@ -18,11 +13,10 @@ pub struct CatchScoreState {
     pub misses: u32,
 }
 
-impl CatchScoreState {
+impl CatchHitResults {
     /// Create a new empty score state.
     pub const fn new() -> Self {
         Self {
-            max_combo: 0,
             fruits: 0,
             droplets: 0,
             tiny_droplets: 0,
@@ -48,6 +42,34 @@ impl CatchScoreState {
         let denominator = total_hits;
 
         f64::from(numerator) / f64::from(denominator)
+    }
+}
+
+impl Default for CatchHitResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Aggregation for a score's current state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CatchScoreState {
+    /// Maximum combo that the score has had so far.
+    /// **Not** the maximum possible combo of the map so far.
+    ///
+    /// Note that only fruits and droplets are considered for osu!catch combo.
+    pub max_combo: u32,
+    /// Hitresults of a score.
+    pub hitresults: CatchHitResults,
+}
+
+impl CatchScoreState {
+    /// Create a new empty score state.
+    pub const fn new() -> Self {
+        Self {
+            max_combo: 0,
+            hitresults: CatchHitResults::new(),
+        }
     }
 }
 

@@ -12,7 +12,7 @@ pub use self::{
     attributes::{CatchDifficultyAttributes, CatchPerformanceAttributes},
     difficulty::gradual::CatchGradualDifficulty,
     performance::{CatchPerformance, gradual::CatchGradualPerformance},
-    score_state::CatchScoreState,
+    score_state::{CatchHitResults, CatchScoreState},
     strains::CatchStrains,
 };
 
@@ -43,7 +43,7 @@ impl IGameMode for Catch {
     type DifficultyAttributes = CatchDifficultyAttributes;
     type Strains = CatchStrains;
     type Performance<'map> = CatchPerformance<'map>;
-    type HitResults = (); // TODO
+    type HitResults = CatchHitResults;
     type GradualDifficulty = CatchGradualDifficulty;
     type GradualPerformance = CatchGradualPerformance;
 

@@ -323,7 +323,7 @@ impl<'map> Performance<'map> {
         match self {
             Performance::Osu(o) => Self::Osu(o.hitresult_generator::<H>()),
             Performance::Taiko(t) => Self::Taiko(t.hitresult_generator::<H>()),
-            Performance::Catch(c) => todo!(),
+            Performance::Catch(c) => Self::Catch(c.hitresult_generator::<H>()),
             Performance::Mania(m) => Self::Mania(m.hitresult_generator::<H>()),
         }
     }
