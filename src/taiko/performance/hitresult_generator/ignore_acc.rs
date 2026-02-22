@@ -50,7 +50,6 @@ impl HitResultGenerator<Taiko> for IgnoreAccuracy {
 
                 (n300, n100)
             }
-            HitResultPriority::Fastest => todo!(),
         };
 
         TaikoHitResults { n300, n100, misses }

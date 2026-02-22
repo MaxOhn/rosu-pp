@@ -325,7 +325,7 @@ impl<'map> ManiaPerformance<'map> {
         let remain = total_hits.saturating_sub(hitresults.total_hits());
 
         match self.hitresult_priority {
-            HitResultPriority::BestCase | HitResultPriority::Fastest => {
+            HitResultPriority::BestCase => {
                 match (self.n320, self.n300, self.n200, self.n100, self.n50) {
                     (None, ..) => hitresults.n320 += remain,
                     (_, None, ..) => hitresults.n300 += remain,

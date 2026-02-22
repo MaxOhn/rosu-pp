@@ -51,6 +51,5 @@ macro_rules! impl_composable_generator {
 
 impl_composable_generator!(osu::Osu);
 impl_composable_generator!(taiko::Taiko);
-// TODO: uncomment
-// impl_composable_generator!(catch::Catch);
+impl_composable_generator!(catch::Catch);
 impl_composable_generator!(mania::Mania);

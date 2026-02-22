@@ -114,7 +114,6 @@ impl HitResultGenerator<Osu> for Fast {
                     InspectOsuPerformance { n100: None, .. } => hitresults.n100 += left,
                     _ => hitresults.n300 += left,
                 },
-                HitResultPriority::Fastest => todo!(),
             }
         }
 

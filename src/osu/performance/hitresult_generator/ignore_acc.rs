@@ -56,7 +56,6 @@ impl HitResultGenerator<Osu> for IgnoreAccuracy {
 
                 (n300, n100, n50)
             }
-            HitResultPriority::Fastest => todo!(),
         };
 
         OsuHitResults {

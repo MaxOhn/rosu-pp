@@ -461,9 +461,6 @@ pub enum HitResultPriority {
     BestCase,
     /// Prioritize bad hitresults over good ones
     WorstCase,
-    /// Prioritize fast hitresults generation
-    // TODO: remove variant
-    Fastest,
 }
 
 impl HitResultPriority {

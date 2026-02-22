@@ -451,14 +451,12 @@ impl<'map> OsuPerformance<'map> {
         let remain = total_hits.saturating_sub(hitresults.total_hits());
 
         match self.hitresult_priority {
-            HitResultPriority::BestCase | HitResultPriority::Fastest => {
-                match (self.n300, self.n100, self.n50) {
-                    (None, ..) => hitresults.n300 += remain,
-                    (_, None, _) => hitresults.n100 += remain,
-                    (.., None) => hitresults.n50 += remain,
-                    _ => hitresults.n300 += remain,
-                }
-            }
+            HitResultPriority::BestCase => match (self.n300, self.n100, self.n50) {
+                (None, ..) => hitresults.n300 += remain,
+                (_, None, _) => hitresults.n100 += remain,
+                (.., None) => hitresults.n50 += remain,
+                _ => hitresults.n300 += remain,
+            },
             HitResultPriority::WorstCase => match (self.n50, self.n100, self.n300) {
                 (None, ..) => hitresults.n50 += remain,
                 (_, None, _) => hitresults.n100 += remain,

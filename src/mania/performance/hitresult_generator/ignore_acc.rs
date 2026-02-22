@@ -62,7 +62,6 @@ impl HitResultGenerator<Mania> for IgnoreAccuracy {
 
                 (n320, n300, n200, n100, n50)
             }
-            HitResultPriority::Fastest => todo!(),
         };
 
         ManiaHitResults {

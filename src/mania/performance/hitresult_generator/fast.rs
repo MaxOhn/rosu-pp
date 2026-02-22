@@ -211,9 +211,6 @@ impl HitResultGenerator<Mania> for Fast {
                     InspectManiaPerformance { n300: None, .. } => hitresults.n300 += left,
                     _ => hitresults.n320 += left,
                 },
-                HitResultPriority::Fastest => {
-                    todo!()
-                }
             }
         }
 
