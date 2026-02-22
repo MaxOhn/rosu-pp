@@ -1,5 +1,3 @@
-use std::cmp::{self, Ordering};
-
 use rosu_map::section::general::GameMode;
 
 use self::calculator::CatchPerformanceCalculator;
@@ -330,157 +328,34 @@ impl<'map> CatchPerformance<'map> {
         // SAFETY: We just calculated and inserted the attributes.
         let attrs = unsafe { self.map_or_attrs.get_attrs() };
 
-        // TODO: replace old calc with this
         let inspect = Catch::inspect_performance(self, attrs);
 
-        let _hitresults = match self.hitresult_generator {
+        let misses = inspect.misses();
+        let max_combo = self.combo.unwrap_or_else(|| attrs.max_combo() - misses);
+
+        let hitresults = match self.hitresult_generator {
             Some(generator) => generator(inspect),
             None => <Fast as HitResultGenerator<Catch>>::generate_hitresults(inspect),
         };
 
-        let misses = self
-            .misses
-            .map_or(0, |n| cmp::min(n, attrs.n_fruits + attrs.n_droplets));
-
-        let max_combo = self.combo.unwrap_or_else(|| attrs.max_combo() - misses);
-
-        let mut best_hits = CatchHitResults {
+        let CatchHitResults {
+            fruits,
+            droplets,
+            tiny_droplets,
+            tiny_droplet_misses,
             misses,
-            ..Default::default()
-        };
-
-        let mut best_dist = f64::INFINITY;
-
-        let (n_fruits, n_droplets) = match (self.fruits, self.droplets) {
-            (Some(mut n_fruits), Some(mut n_droplets)) => {
-                let n_remaining = (attrs.n_fruits + attrs.n_droplets)
-                    .saturating_sub(n_fruits + n_droplets + misses);
-
-                let new_droplets =
-                    cmp::min(n_remaining, attrs.n_droplets.saturating_sub(n_droplets));
-                n_droplets += new_droplets;
-                n_fruits += n_remaining - new_droplets;
-
-                n_fruits = cmp::min(
-                    n_fruits,
-                    (attrs.n_fruits + attrs.n_droplets).saturating_sub(n_droplets + misses),
-                );
-                n_droplets = cmp::min(
-                    n_droplets,
-                    attrs.n_fruits + attrs.n_droplets - n_fruits - misses,
-                );
-
-                (n_fruits, n_droplets)
-            }
-            (Some(mut n_fruits), None) => {
-                let n_droplets = attrs
-                    .n_droplets
-                    .saturating_sub(misses.saturating_sub(attrs.n_fruits.saturating_sub(n_fruits)));
-
-                n_fruits = attrs.n_fruits + attrs.n_droplets - misses - n_droplets;
-
-                (n_fruits, n_droplets)
-            }
-            (None, Some(mut n_droplets)) => {
-                let n_fruits = attrs.n_fruits.saturating_sub(
-                    misses.saturating_sub(attrs.n_droplets.saturating_sub(n_droplets)),
-                );
-
-                n_droplets = attrs.n_fruits + attrs.n_droplets - misses - n_fruits;
-
-                (n_fruits, n_droplets)
-            }
-            (None, None) => {
-                let n_droplets = attrs.n_droplets.saturating_sub(misses);
-                let n_fruits =
-                    attrs.n_fruits - (misses - (attrs.n_droplets.saturating_sub(n_droplets)));
-
-                (n_fruits, n_droplets)
-            }
-        };
-
-        best_hits.fruits = n_fruits;
-        best_hits.droplets = n_droplets;
-
-        let mut find_best_tiny_droplets = |acc: f64| {
-            let raw_tiny_droplets = acc
-                * f64::from(attrs.n_fruits + attrs.n_droplets + attrs.n_tiny_droplets)
-                - f64::from(n_fruits + n_droplets);
-            let min_tiny_droplets =
-                cmp::min(attrs.n_tiny_droplets, raw_tiny_droplets.floor() as u32);
-            let max_tiny_droplets =
-                cmp::min(attrs.n_tiny_droplets, raw_tiny_droplets.ceil() as u32);
-
-            // Hopefully using `HitResultPriority::Fastest` wouldn't make a big
-            // difference here so let's be lazy and ignore it
-            for n_tiny_droplets in min_tiny_droplets..=max_tiny_droplets {
-                let n_tiny_droplet_misses = attrs.n_tiny_droplets - n_tiny_droplets;
-
-                let curr_acc = accuracy(
-                    n_fruits,
-                    n_droplets,
-                    n_tiny_droplets,
-                    n_tiny_droplet_misses,
-                    misses,
-                );
-                let curr_dist = (acc - curr_acc).abs();
-
-                if curr_dist < best_dist {
-                    best_dist = curr_dist;
-                    best_hits.tiny_droplets = n_tiny_droplets;
-                    best_hits.tiny_droplet_misses = n_tiny_droplet_misses;
-                }
-            }
-        };
-
-        #[allow(clippy::single_match_else)]
-        match (self.tiny_droplets, self.tiny_droplet_misses) {
-            (Some(n_tiny_droplets), Some(n_tiny_droplet_misses)) => match self.acc {
-                Some(acc) => {
-                    match (n_tiny_droplets + n_tiny_droplet_misses).cmp(&attrs.n_tiny_droplets) {
-                        Ordering::Equal => {
-                            best_hits.tiny_droplets = n_tiny_droplets;
-                            best_hits.tiny_droplet_misses = n_tiny_droplet_misses;
-                        }
-                        Ordering::Less | Ordering::Greater => find_best_tiny_droplets(acc),
-                    }
-                }
-                None => {
-                    let n_remaining = attrs
-                        .n_tiny_droplets
-                        .saturating_sub(n_tiny_droplets + n_tiny_droplet_misses);
-
-                    best_hits.tiny_droplets = n_tiny_droplets + n_remaining;
-                    best_hits.tiny_droplet_misses = n_tiny_droplet_misses;
-                }
-            },
-            (Some(n_tiny_droplets), None) => {
-                best_hits.tiny_droplets = cmp::min(attrs.n_tiny_droplets, n_tiny_droplets);
-                best_hits.tiny_droplet_misses =
-                    attrs.n_tiny_droplets.saturating_sub(n_tiny_droplets);
-            }
-            (None, Some(n_tiny_droplet_misses)) => {
-                best_hits.tiny_droplets =
-                    attrs.n_tiny_droplets.saturating_sub(n_tiny_droplet_misses);
-                best_hits.tiny_droplet_misses =
-                    cmp::min(attrs.n_tiny_droplets, n_tiny_droplet_misses);
-            }
-            (None, None) => match self.acc {
-                Some(acc) => find_best_tiny_droplets(acc),
-                None => best_hits.tiny_droplets = attrs.n_tiny_droplets,
-            },
-        }
+        } = hitresults;
 
         self.combo = Some(max_combo);
-        self.fruits = Some(best_hits.fruits);
-        self.droplets = Some(best_hits.droplets);
-        self.tiny_droplets = Some(best_hits.tiny_droplets);
-        self.tiny_droplet_misses = Some(best_hits.tiny_droplet_misses);
-        self.misses = Some(best_hits.misses);
+        self.fruits = Some(fruits);
+        self.droplets = Some(droplets);
+        self.tiny_droplets = Some(tiny_droplets);
+        self.tiny_droplet_misses = Some(tiny_droplet_misses);
+        self.misses = Some(misses);
 
         Ok(CatchScoreState {
             max_combo,
-            hitresults: best_hits,
+            hitresults,
         })
     }
 
@@ -567,19 +442,6 @@ impl<'map, T: IntoModePerformance<'map, Catch>> From<T> for CatchPerformance<'ma
     fn from(into: T) -> Self {
         into.into_performance()
     }
-}
-
-fn accuracy(
-    n_fruits: u32,
-    n_droplets: u32,
-    n_tiny_droplets: u32,
-    n_tiny_droplet_misses: u32,
-    misses: u32,
-) -> f64 {
-    let numerator = n_fruits + n_droplets + n_tiny_droplets;
-    let denominator = numerator + n_tiny_droplet_misses + misses;
-
-    f64::from(numerator) / f64::from(denominator)
 }
 
 #[cfg(test)]
