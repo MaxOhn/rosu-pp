@@ -321,7 +321,6 @@ impl<'map> CatchPerformance<'map> {
     }
 
     /// Create the [`CatchScoreState`] that will be used for performance calculation.
-    #[expect(clippy::too_many_lines)]
     pub fn generate_state(&mut self) -> Result<CatchScoreState, ConvertError> {
         self.map_or_attrs.insert_attrs(&self.difficulty)?;
 

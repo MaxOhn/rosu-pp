@@ -9,6 +9,7 @@ use crate::{
 };
 
 impl HitResultGenerator<Catch> for Fast {
+    #[expect(clippy::too_many_lines, reason = "it is what it is /shrug")]
     fn generate_hitresults(inspect: InspectCatchPerformance<'_>) -> CatchHitResults {
         let Some(acc) = inspect.acc else {
             return <IgnoreAccuracy as HitResultGenerator<Catch>>::generate_hitresults(inspect);
@@ -41,7 +42,7 @@ impl HitResultGenerator<Catch> for Fast {
         // Calculate how many successful catches we need for target accuracy
         // acc = catches / total_objects
         // catches = acc * total_objects
-        let catches_needed = (acc * total_objects as f64).round() as u32;
+        let catches_needed = (acc * f64::from(total_objects)).round() as u32;
 
         // Maximum possible catches considering misses
         let max_fruit_droplet_catches = (n_fruits + n_droplets).saturating_sub(misses);
