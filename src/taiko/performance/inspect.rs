@@ -6,7 +6,9 @@ use crate::{
     taiko::{Taiko, TaikoDifficultyAttributes},
 };
 
-/// TODO: docs
+/// Inspectable [`TaikoPerformance`] to expose all of its internal details.
+///
+/// [`TaikoPerformance`]: crate::taiko::performance::TaikoPerformance
 #[derive(Clone, Debug)]
 pub struct InspectTaikoPerformance<'a> {
     pub attrs: &'a TaikoDifficultyAttributes,

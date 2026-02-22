@@ -266,7 +266,7 @@ impl<'map> CatchPerformance<'map> {
         self
     }
 
-    /// TODO: docs
+    /// Specify how hitresults should be generated.
     pub fn hitresult_generator<H: HitResultGenerator<Catch>>(self) -> CatchPerformance<'map> {
         CatchPerformance {
             map_or_attrs: self.map_or_attrs,
@@ -335,7 +335,6 @@ impl<'map> CatchPerformance<'map> {
 
         let _hitresults = match self.hitresult_generator {
             Some(generator) => generator(inspect),
-            // TODO: other default?
             None => <Fast as HitResultGenerator<Catch>>::generate_hitresults(inspect),
         };
 

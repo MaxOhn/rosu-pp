@@ -312,7 +312,16 @@ impl<'map> Performance<'map> {
 
     /// Specify how hitresults should be generated.
     ///
-    /// TODO: example of what to do if only some modes should be supported
+    /// # Example
+    /// ```rust
+    /// use rosu_pp::any::hitresult_generator::{Closest, Composable, Fast}
+    ///
+    /// # let map = rosu_pp::catch::CatchDifficultyAttributes::default();
+    /// let attrs = Performance::new(map)
+    ///     // Use `Closest` for osu!, taiko, and catch, and `Fast` for mania
+    ///     .hitresult_generator::<Composable<Closest, Closest, Closest, Fast>>()
+    ///     .calculate();
+    /// ```
     pub fn hitresult_generator<H>(self) -> Self
     where
         H: HitResultGenerator<Osu>

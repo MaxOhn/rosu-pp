@@ -199,15 +199,13 @@ impl<'map> ManiaPerformance<'map> {
     }
 
     /// Specify the priority of hitresults.
-    ///
-    /// TODO: explain more detailed
     pub const fn hitresult_priority(mut self, priority: HitResultPriority) -> Self {
         self.hitresult_priority = priority;
 
         self
     }
 
-    /// TODO: docs
+    /// Specify how hitresults should be generated.
     pub fn hitresult_generator<H: HitResultGenerator<Mania>>(self) -> ManiaPerformance<'map> {
         ManiaPerformance {
             map_or_attrs: self.map_or_attrs,

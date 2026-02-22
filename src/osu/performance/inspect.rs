@@ -6,6 +6,9 @@ use crate::{
     osu::{Osu, OsuDifficultyAttributes, OsuScoreOrigin},
 };
 
+/// Inspectable [`OsuPerformance`] to expose all of its internal details.
+///
+/// [`OsuPerformance`]: crate::osu::performance::OsuPerformance
 #[derive(Clone, Debug)]
 pub struct InspectOsuPerformance<'a> {
     pub attrs: &'a OsuDifficultyAttributes,
