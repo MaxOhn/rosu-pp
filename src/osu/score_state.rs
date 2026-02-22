@@ -123,7 +123,7 @@ impl Default for OsuScoreState {
     }
 }
 
-/// Type to pass [`OsuScoreState::accuracy`] and specify the origin of a score.
+/// Type to pass [`OsuHitResults::accuracy`] and specify the origin of a score.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OsuScoreOrigin {
     /// For scores set on osu!stable

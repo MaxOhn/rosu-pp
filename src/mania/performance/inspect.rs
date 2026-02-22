@@ -7,6 +7,8 @@ use crate::{
 };
 
 /// Inspectable [`ManiaPerformance`] to expose all of its internal details.
+///
+/// [`ManiaPerformance`]: crate::mania::performance::ManiaPerformance
 #[derive(Clone, Debug)]
 pub struct InspectManiaPerformance<'a> {
     pub attrs: &'a ManiaDifficultyAttributes,
@@ -23,14 +25,14 @@ pub struct InspectManiaPerformance<'a> {
 
 impl InspectManiaPerformance<'_> {
     pub fn total_hits(&self) -> u32 {
-        let total_hits = cmp::min(
-            self.difficulty.get_passed_objects() as u32,
-            self.attrs.n_objects,
-        );
+        let passed_objects = self.difficulty.get_passed_objects() as u32;
+        let total_hits = cmp::min(passed_objects, self.attrs.n_objects);
 
         if self.is_classic() {
             total_hits
         } else {
+            // Note that we don't consider `passed_objects` here. Unsure if
+            // that's the correct behavior.
             total_hits + self.attrs.n_hold_notes
         }
     }

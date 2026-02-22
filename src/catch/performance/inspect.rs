@@ -1,10 +1,14 @@
+use std::cmp;
+
 use crate::{
     Difficulty,
     any::InspectablePerformance,
     catch::{Catch, CatchDifficultyAttributes},
 };
 
-/// TODO: docs
+/// Inspectable [`CatchPerformance`] to expose all of its internal details.
+///
+/// [`CatchPerformance`]: crate::catch::performance::CatchPerformance
 #[derive(Clone, Debug)]
 pub struct InspectCatchPerformance<'a> {
     pub attrs: &'a CatchDifficultyAttributes,
@@ -16,6 +20,20 @@ pub struct InspectCatchPerformance<'a> {
     pub tiny_droplets: Option<u32>,
     pub tiny_droplet_misses: Option<u32>,
     pub misses: Option<u32>,
+}
+
+impl InspectCatchPerformance<'_> {
+    /// Returns the clamped number of fruit and droplet misses.
+    pub fn misses(&self) -> u32 {
+        self.misses.map_or(0, |n| {
+            cmp::min(n, self.attrs.n_fruits + self.attrs.n_droplets)
+        })
+    }
+
+    /// Returns the total number of objects in the map.
+    pub const fn total_objects(&self) -> u32 {
+        self.attrs.n_fruits + self.attrs.n_droplets + self.attrs.n_tiny_droplets
+    }
 }
 
 impl InspectablePerformance for Catch {

@@ -331,13 +331,13 @@ impl<'map> CatchPerformance<'map> {
         let attrs = unsafe { self.map_or_attrs.get_attrs() };
 
         // TODO: replace old calc with this
-        // let inspect = Catch::inspect_performance(self, attrs);
+        let inspect = Catch::inspect_performance(self, attrs);
 
-        // let hitresults = match self.hitresult_generator {
-        //     Some(generator) => generator(inspect),
-        //     // TODO: other default?
-        //     None => <Fast as HitResultGenerator<Catch>>::generate_hitresults(inspect),
-        // };
+        let _hitresults = match self.hitresult_generator {
+            Some(generator) => generator(inspect),
+            // TODO: other default?
+            None => <Fast as HitResultGenerator<Catch>>::generate_hitresults(inspect),
+        };
 
         let misses = self
             .misses
