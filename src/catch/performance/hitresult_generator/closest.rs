@@ -389,9 +389,13 @@ mod tests {
 
         let result = <Closest as HitResultGenerator<Catch>>::generate_hitresults(inspect.clone());
 
-        // When all values provided, they should be respected (with pool constraint adjustments)
+        // When all values provided but don't sum correctly:
+        // Priority: misses > fruits > droplets
+        // fruits=25, droplets=12, misses=5 sum to 42, but pool needs 45
+        // So: keep misses=5, keep fruits=25, adjust droplets to 15
         assert_eq!(result.misses, 5);
-        // Pool constraint may adjust fruits if needed
+        assert_eq!(result.fruits, 25);
+        assert_eq!(result.droplets, 15); // Adjusted from 12 to satisfy pool constraint
         assert_eq!(result.total_hits(), N_FRUITS + N_DROPLETS + N_TINY_DROPLETS);
 
         verify_is_closest(&inspect, &result);

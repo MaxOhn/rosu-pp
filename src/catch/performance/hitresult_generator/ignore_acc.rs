@@ -68,6 +68,55 @@ impl HitResultGenerator<Catch> for IgnoreAccuracy {
 
         let tiny_droplet_misses = tiny_droplet_misses.unwrap_or(tiny_droplet_remain);
 
+        // Enforce pool constraints with priority
+        // Fruit/droplet pool: misses > fruits > droplets
+        let pool_total = n_fruits + n_droplets;
+        let current_sum = fruits + droplets + misses;
+
+        let (fruits, droplets) = if current_sum != pool_total {
+            if current_sum < pool_total {
+                // Need to add more - prioritize droplets (lower priority)
+                let needed = pool_total - current_sum;
+                let new_droplets = cmp::min(droplets + needed, n_droplets);
+                let still_needed = pool_total.saturating_sub(fruits + new_droplets + misses);
+                let new_fruits = cmp::min(fruits + still_needed, n_fruits);
+                (new_fruits, new_droplets)
+            } else {
+                // Have too many - reduce droplets first (lower priority)
+                let excess = current_sum - pool_total;
+                let new_droplets = droplets.saturating_sub(excess);
+                let still_excess = (fruits + new_droplets + misses).saturating_sub(pool_total);
+                let new_fruits = fruits.saturating_sub(still_excess);
+                (new_fruits, new_droplets)
+            }
+        } else {
+            (fruits, droplets)
+        };
+
+        // Tiny droplet pool: tiny_droplets > tiny_droplet_misses
+        let tiny_pool_total = n_tiny_droplets;
+        let tiny_current_sum = tiny_droplets + tiny_droplet_misses;
+
+        let (tiny_droplets, tiny_droplet_misses) = if tiny_current_sum != tiny_pool_total {
+            if tiny_current_sum < tiny_pool_total {
+                // Need to add more - prioritize tiny_droplets (higher priority)
+                let needed = tiny_pool_total - tiny_current_sum;
+                let new_tiny_droplets = cmp::min(tiny_droplets + needed, n_tiny_droplets);
+                let still_needed = tiny_pool_total.saturating_sub(new_tiny_droplets);
+                (new_tiny_droplets, still_needed)
+            } else {
+                // Have too many - reduce tiny_droplet_misses first (lower priority)
+                let excess = tiny_current_sum - tiny_pool_total;
+                let new_tiny_droplet_misses = tiny_droplet_misses.saturating_sub(excess);
+                let still_excess =
+                    (tiny_droplets + new_tiny_droplet_misses).saturating_sub(tiny_pool_total);
+                let new_tiny_droplets = tiny_droplets.saturating_sub(still_excess);
+                (new_tiny_droplets, new_tiny_droplet_misses)
+            }
+        } else {
+            (tiny_droplets, tiny_droplet_misses)
+        };
+
         CatchHitResults {
             fruits,
             droplets,
@@ -146,9 +195,11 @@ mod tests {
 
         // fruits=30, tiny_droplets=50 provided
         // Fruit/droplet pool: 75 - 10 misses = 65 available
-        // fruits=30 takes 30, leaving 35 for droplets
-        assert_eq!(result.fruits, 30);
-        assert_eq!(result.droplets, 25); // min(35, 25) = 25
+        // fruits=30 is unsatisfiable
+        // -> filling up 25 droplets (its max) still leaves 10
+        // -> increment fruits to 40
+        assert_eq!(result.fruits, 40);
+        assert_eq!(result.droplets, 25);
         assert_eq!(result.tiny_droplets, 50);
         assert_eq!(result.tiny_droplet_misses, 50); // 100 - 50 = 50
         assert_eq!(result.misses, 10);
@@ -181,9 +232,11 @@ mod tests {
 
         // droplets=15, tiny_droplet_misses=80 provided
         // Fruit/droplet pool: 75 - 8 misses = 67 available
-        // droplets=15 takes 15, leaving 52 for fruits
-        assert_eq!(result.fruits, 50); // min(52, 50) = 50
-        assert_eq!(result.droplets, 15);
+        // droplets=15 is unsatisfiable
+        // -> filling up 50 fruits (its max) still leaves 2
+        // -> increment droplets to 17
+        assert_eq!(result.fruits, 50);
+        assert_eq!(result.droplets, 17);
         assert_eq!(result.tiny_droplets, 20); // 100 - 80 = 20
         assert_eq!(result.tiny_droplet_misses, 80);
         assert_eq!(result.misses, 8);
@@ -214,12 +267,18 @@ mod tests {
 
         let result = <IgnoreAccuracy as HitResultGenerator<Catch>>::generate_hitresults(inspect);
 
-        // All values provided, just clamp them
-        assert_eq!(result.fruits, 35);
-        assert_eq!(result.droplets, 18);
+        // Pool constraints will be enforced:
+        // Fruit/droplet pool: 40 + 20 = 60, provided sum: 35 + 18 + 3 = 56 (missing 4)
+        // Priority: misses > fruits > droplets, so adjust droplets: 18 + 4 = 22
+        // But n_droplets = 20, so droplets = 20, still need 2 more
+        // So adjust fruits: 35 + 2 = 37
+        assert_eq!(result.fruits, 37);
+        assert_eq!(result.droplets, 20);
+        assert_eq!(result.misses, 3);
+
+        // Tiny droplet pool: 80, provided sum: 70 + 10 = 80 (correct)
         assert_eq!(result.tiny_droplets, 70);
         assert_eq!(result.tiny_droplet_misses, 10);
-        assert_eq!(result.misses, 3);
     }
 
     #[test]
@@ -289,5 +348,46 @@ mod tests {
         assert_eq!(result.tiny_droplets, 40); // min(200, 40)
         assert_eq!(result.tiny_droplet_misses, 0); // No space left in tiny pool
         assert_eq!(result.misses, 5);
+    }
+
+    #[test]
+    fn missing_objects() {
+        const N_FRUITS: u32 = 728;
+        const N_DROPLETS: u32 = 2;
+        const N_TINY_DROPLETS: u32 = 263;
+
+        let inspect = InspectCatchPerformance {
+            attrs: &CatchDifficultyAttributes {
+                n_fruits: N_FRUITS,
+                n_droplets: N_DROPLETS,
+                n_tiny_droplets: N_TINY_DROPLETS,
+                ..Default::default()
+            },
+            difficulty: &Difficulty::new(),
+            acc: None,
+            combo: None,
+            fruits: Some(N_FRUITS - 10),
+            droplets: Some(N_DROPLETS - 1),
+            tiny_droplets: Some(N_TINY_DROPLETS - 50),
+            tiny_droplet_misses: Some(20),
+            misses: Some(2),
+        };
+
+        let result = <IgnoreAccuracy as HitResultGenerator<Catch>>::generate_hitresults(inspect);
+
+        // Enforcing pool constraints:
+        // Fruit/droplet pool: 728 + 2 = 730, provided sum: 718 + 1 + 2 = 721 (missing 9)
+        // Priority: misses > fruits > droplets
+        // - droplets are capped to 2 so we assign 1 + 1 but have 8 left
+        // - fruits are capped to 728 so we can assign 8 + 718 = 726
+        assert_eq!(result.fruits, 726);
+        assert_eq!(result.droplets, 2);
+
+        // Tiny droplet pool: 263, provided sum: 213 + 20 = 233 (missing 30)
+        // Priority: tiny_droplets_misses > tiny_droplet, so adjust tiny_droplets:
+        //   213 + 30 = N_TINY_DROPLETS - 20
+        assert_eq!(result.tiny_droplets, 243);
+        assert_eq!(result.tiny_droplet_misses, 20);
+        assert_eq!(result.misses, 2);
     }
 }
