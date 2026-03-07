@@ -73,48 +73,52 @@ impl HitResultGenerator<Catch> for IgnoreAccuracy {
         let pool_total = n_fruits + n_droplets;
         let current_sum = fruits + droplets + misses;
 
-        let (fruits, droplets) = if current_sum != pool_total {
-            if current_sum < pool_total {
+        let (fruits, droplets) = match current_sum.cmp(&pool_total) {
+            cmp::Ordering::Less => {
                 // Need to add more - prioritize droplets (lower priority)
                 let needed = pool_total - current_sum;
                 let new_droplets = cmp::min(droplets + needed, n_droplets);
                 let still_needed = pool_total.saturating_sub(fruits + new_droplets + misses);
                 let new_fruits = cmp::min(fruits + still_needed, n_fruits);
+
                 (new_fruits, new_droplets)
-            } else {
+            }
+            cmp::Ordering::Equal => (fruits, droplets),
+            cmp::Ordering::Greater => {
                 // Have too many - reduce droplets first (lower priority)
                 let excess = current_sum - pool_total;
                 let new_droplets = droplets.saturating_sub(excess);
                 let still_excess = (fruits + new_droplets + misses).saturating_sub(pool_total);
                 let new_fruits = fruits.saturating_sub(still_excess);
+
                 (new_fruits, new_droplets)
             }
-        } else {
-            (fruits, droplets)
         };
 
         // Tiny droplet pool: tiny_droplets > tiny_droplet_misses
         let tiny_pool_total = n_tiny_droplets;
         let tiny_current_sum = tiny_droplets + tiny_droplet_misses;
 
-        let (tiny_droplets, tiny_droplet_misses) = if tiny_current_sum != tiny_pool_total {
-            if tiny_current_sum < tiny_pool_total {
+        let (tiny_droplets, tiny_droplet_misses) = match tiny_current_sum.cmp(&tiny_pool_total) {
+            cmp::Ordering::Less => {
                 // Need to add more - prioritize tiny_droplets (higher priority)
                 let needed = tiny_pool_total - tiny_current_sum;
                 let new_tiny_droplets = cmp::min(tiny_droplets + needed, n_tiny_droplets);
                 let still_needed = tiny_pool_total.saturating_sub(new_tiny_droplets);
+
                 (new_tiny_droplets, still_needed)
-            } else {
+            }
+            cmp::Ordering::Equal => (tiny_droplets, tiny_droplet_misses),
+            cmp::Ordering::Greater => {
                 // Have too many - reduce tiny_droplet_misses first (lower priority)
                 let excess = tiny_current_sum - tiny_pool_total;
                 let new_tiny_droplet_misses = tiny_droplet_misses.saturating_sub(excess);
                 let still_excess =
                     (tiny_droplets + new_tiny_droplet_misses).saturating_sub(tiny_pool_total);
                 let new_tiny_droplets = tiny_droplets.saturating_sub(still_excess);
+
                 (new_tiny_droplets, new_tiny_droplet_misses)
             }
-        } else {
-            (tiny_droplets, tiny_droplet_misses)
         };
 
         CatchHitResults {

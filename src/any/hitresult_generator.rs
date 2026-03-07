@@ -22,6 +22,8 @@ pub struct Closest;
 
 /// [`HitResultGenerator`] that strives for a middleground between performance
 /// and accuracy through a statistical approach.
+///
+/// Currently not implemented.
 pub struct Statistical;
 
 /// [`HitResultGenerator`] that ignores accuracy and generates solely based on

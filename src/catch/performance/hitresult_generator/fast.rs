@@ -76,43 +76,48 @@ impl HitResultGenerator<Catch> for Fast {
                 let pool_total = n_fruits + n_droplets;
                 let current_sum = clamped_fruits + clamped_droplets + misses;
 
-                let (final_fruits, final_droplets) = if current_sum != pool_total {
-                    if current_sum < pool_total {
+                let (final_fruits, final_droplets) = match current_sum.cmp(&pool_total) {
+                    cmp::Ordering::Less => {
                         // Need to add more - prioritize droplets (adjust lower priority first)
                         let needed = pool_total - current_sum;
                         let new_droplets = cmp::min(clamped_droplets + needed, n_droplets);
                         let still_needed =
                             pool_total.saturating_sub(clamped_fruits + new_droplets + misses);
                         let new_fruits = cmp::min(clamped_fruits + still_needed, n_fruits);
+
                         (new_fruits, new_droplets)
-                    } else {
+                    }
+                    cmp::Ordering::Equal => (clamped_fruits, clamped_droplets),
+                    cmp::Ordering::Greater => {
                         // Have too many - reduce droplets first (adjust lower priority first)
                         let excess = current_sum - pool_total;
                         let new_droplets = clamped_droplets.saturating_sub(excess);
                         let still_excess =
                             (clamped_fruits + new_droplets + misses).saturating_sub(pool_total);
                         let new_fruits = clamped_fruits.saturating_sub(still_excess);
+
                         (new_fruits, new_droplets)
                     }
-                } else {
-                    (clamped_fruits, clamped_droplets)
                 };
 
                 // Handle tiny droplet pool constraint
                 let tiny_pool_total = n_tiny_droplets;
                 let tiny_current_sum = provided_tiny_droplets + provided_tiny_droplet_misses;
 
-                let (final_tiny_droplets, final_tiny_droplet_misses) = if tiny_current_sum
-                    != tiny_pool_total
+                let (final_tiny_droplets, final_tiny_droplet_misses) = match tiny_current_sum
+                    .cmp(&tiny_pool_total)
                 {
-                    if tiny_current_sum < tiny_pool_total {
+                    cmp::Ordering::Less => {
                         // Need to add more - prioritize tiny_droplets (higher priority)
                         let needed = tiny_pool_total - tiny_current_sum;
                         let new_tiny_droplets =
                             cmp::min(provided_tiny_droplets + needed, n_tiny_droplets);
                         let still_needed = tiny_pool_total.saturating_sub(new_tiny_droplets);
+
                         (new_tiny_droplets, still_needed)
-                    } else {
+                    }
+                    cmp::Ordering::Equal => (provided_tiny_droplets, provided_tiny_droplet_misses),
+                    cmp::Ordering::Greater => {
                         // Have too many - reduce tiny_droplet_misses first (lower priority)
                         let excess = tiny_current_sum - tiny_pool_total;
                         let new_tiny_droplet_misses =
@@ -120,10 +125,9 @@ impl HitResultGenerator<Catch> for Fast {
                         let still_excess = (provided_tiny_droplets + new_tiny_droplet_misses)
                             .saturating_sub(tiny_pool_total);
                         let new_tiny_droplets = provided_tiny_droplets.saturating_sub(still_excess);
+
                         (new_tiny_droplets, new_tiny_droplet_misses)
                     }
-                } else {
-                    (provided_tiny_droplets, provided_tiny_droplet_misses)
                 };
 
                 CatchHitResults {
@@ -217,31 +221,28 @@ impl HitResultGenerator<Catch> for Fast {
                     clamped_fruits
                 };
 
-                let droplets = if inspect.droplets.is_none() {
-                    // If fruits is also missing, calculate based on remaining catches
-                    // Otherwise, use pool constraint
-                    if inspect.fruits.is_none() {
-                        // Both fruits and droplets are missing
-                        let max_by_pool = max_fruit_droplet_catches.saturating_sub(fruits);
-                        let max_droplets = cmp::min(n_droplets, max_by_pool);
-                        let caught = cmp::min(remain_catches, max_droplets);
-                        remain_catches = remain_catches.saturating_sub(caught);
-
-                        caught
-                    } else {
-                        // Only droplets is missing, fruits was provided
-                        // Use pool constraint: droplets = n_fruits + n_droplets - fruits - misses
-                        let droplets_by_pool =
-                            (n_fruits + n_droplets).saturating_sub(fruits + misses);
-                        let droplets = cmp::min(droplets_by_pool, n_droplets);
-
-                        // Decrement remaining_catches by the droplets we're catching
-                        remain_catches = remain_catches.saturating_sub(droplets);
-
-                        droplets
-                    }
-                } else {
+                let droplets = if inspect.droplets.is_some() {
                     clamped_droplets
+                } else if inspect.fruits.is_none() {
+                    // If fruits is also missing, calculate based on remaining catches
+
+                    // Both fruits and droplets are missing
+                    let max_by_pool = max_fruit_droplet_catches.saturating_sub(fruits);
+                    let max_droplets = cmp::min(n_droplets, max_by_pool);
+                    let caught = cmp::min(remain_catches, max_droplets);
+                    remain_catches = remain_catches.saturating_sub(caught);
+
+                    caught
+                } else {
+                    // Only droplets is missing, fruits was provided
+                    // Use pool constraint: droplets = n_fruits + n_droplets - fruits - misses
+                    let droplets_by_pool = (n_fruits + n_droplets).saturating_sub(fruits + misses);
+                    let droplets = cmp::min(droplets_by_pool, n_droplets);
+
+                    // Decrement remaining_catches by the droplets we're catching
+                    remain_catches = remain_catches.saturating_sub(droplets);
+
+                    droplets
                 };
 
                 // If fruits was provided but droplets couldn't fill the pool,

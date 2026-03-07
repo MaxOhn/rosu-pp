@@ -248,7 +248,7 @@ impl HitResultGenerator<Osu> for Closest {
             }
         };
 
-        let hitresults = OsuHitResults {
+        OsuHitResults {
             large_tick_hits,
             small_tick_hits,
             slider_end_hits,
@@ -256,9 +256,7 @@ impl HitResultGenerator<Osu> for Closest {
             n100,
             n50,
             misses,
-        };
-
-        hitresults
+        }
     }
 }
 
