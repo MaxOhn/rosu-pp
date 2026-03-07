@@ -314,7 +314,8 @@ impl<'map> Performance<'map> {
     ///
     /// # Example
     /// ```rust
-    /// use rosu_pp::any::hitresult_generator::{Closest, Composable, Fast}
+    /// use rosu_pp::any::hitresult_generator::{Closest, Composable, Fast};
+    /// # use rosu_pp::Performance;
     ///
     /// # let map = rosu_pp::catch::CatchDifficultyAttributes::default();
     /// let attrs = Performance::new(map)

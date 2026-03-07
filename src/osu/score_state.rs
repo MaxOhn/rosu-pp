@@ -144,7 +144,7 @@ impl OsuScoreOrigin {
     /// Returns the tick score and tick max for this origin based on the
     /// accuracy formula:
     ///
-    /// ```
+    /// ```ignore
     /// acc = (300*n300 + 100*n100 + 50*n50 + tick_score) / (300*total_hits + tick_max)
     /// // => returns (tick_score, tick_max)
     /// ```

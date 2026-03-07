@@ -32,7 +32,7 @@ use super::TaikoPerformanceAttributes;
 ///
 /// // The first 10 hitresults are 300s
 /// for _ in 0..10 {
-///     state.n300 += 1;
+///     state.hitresults.n300 += 1;
 ///     state.max_combo += 1;
 ///
 ///     let attrs = gradual.next(state.clone()).unwrap();
@@ -42,20 +42,20 @@ use super::TaikoPerformanceAttributes;
 /// // Then comes a miss.
 /// // Note that state's max combo won't be incremented for
 /// // the next few objects because the combo is reset.
-/// state.misses += 1;
+/// state.hitresults.misses += 1;
 /// let attrs = gradual.next(state.clone()).unwrap();
 /// println!("PP: {}", attrs.pp);
 ///
 /// // The next 10 objects will be a mixture of 300s and 100s.
 /// // Notice how all 10 objects will be processed in one go.
-/// state.n300 += 3;
-/// state.n100 += 7;
+/// state.hitresults.n300 += 3;
+/// state.hitresults.n100 += 7;
 /// // The `nth` method takes a zero-based value.
 /// let attrs = gradual.nth(state.clone(), 9).unwrap();
 /// println!("PP: {}", attrs.pp);
 ///
 /// // Now comes another 300. Note that the max combo gets incremented again.
-/// state.n300 += 1;
+/// state.hitresults.n300 += 1;
 /// state.max_combo += 1;
 /// let attrs = gradual.next(state.clone()).unwrap();
 /// println!("PP: {}", attrs.pp);
@@ -63,9 +63,9 @@ use super::TaikoPerformanceAttributes;
 /// // Skip to the end
 /// # /*
 /// state.max_combo = ...
-/// state.n300 = ...
-/// state.n100 = ...
-/// state.misses = ...
+/// state.hitresults.n300 = ...
+/// state.hitresults.n100 = ...
+/// state.hitresults.misses = ...
 /// # */
 /// let attrs = gradual.last(state.clone()).unwrap();
 /// println!("PP: {}", attrs.pp);
