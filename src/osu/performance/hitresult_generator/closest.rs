@@ -258,8 +258,6 @@ impl HitResultGenerator<Osu> for Closest {
             misses,
         };
 
-        println!("{hitresults:#?}");
-
         hitresults
     }
 }
