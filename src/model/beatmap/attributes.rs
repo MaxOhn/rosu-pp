@@ -339,8 +339,8 @@ impl BeatmapAttributesBuilder {
 
                 let raw_od = f64::from(raw_od);
 
-                let great = TAIKO_GREAT.difficulty_range(raw_od) / od_clock_rate;
-                let ok = TAIKO_OK.difficulty_range(raw_od) / od_clock_rate;
+                let great = (TAIKO_GREAT.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
+                let ok = (TAIKO_OK.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
 
                 (great, Some(ok), None)
             }

@@ -327,7 +327,6 @@ impl DifficultyValues {
         let strain_length_bonus =
             1.0 + 0.15 * reverse_lerp(stamina_difficult_strains, 1000.0, 1555.0);
 
-        // TODO: UPDATE ME
         let (combined_rating, consistency_factor) = combined_difficulty_value(
             rhythm,
             reading,
