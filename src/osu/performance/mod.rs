@@ -22,7 +22,7 @@ use crate::{
 
 use super::{
     Osu,
-    attributes::{OsuDifficultyAttributes, OsuPerformanceAttributes},
+    attributes::OsuPerformanceAttributes,
     score_state::{OsuScoreOrigin, OsuScoreState},
 };
 
@@ -592,18 +592,6 @@ impl<'map, T: IntoModePerformance<'map, Osu>> From<T> for OsuPerformance<'map> {
     }
 }
 
-fn total_imperfect_hits(state: &OsuScoreState) -> f64 {
-    f64::from(state.hitresults.n100 + state.hitresults.n50 + state.hitresults.misses)
-}
-
-const fn n_slider_ends_dropped(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
-    attrs.n_sliders - state.hitresults.slider_end_hits
-}
-
-const fn n_large_tick_miss(attrs: &OsuDifficultyAttributes, state: &OsuScoreState) -> u32 {
-    attrs.n_large_ticks - state.hitresults.large_tick_hits
-}
-
 #[cfg(test)]
 mod test {
     use std::sync::OnceLock;
@@ -611,6 +599,7 @@ mod test {
     use crate::{
         Beatmap,
         any::{DifficultyAttributes, PerformanceAttributes},
+        osu::OsuDifficultyAttributes,
         taiko::{TaikoDifficultyAttributes, TaikoPerformanceAttributes},
     };
 
