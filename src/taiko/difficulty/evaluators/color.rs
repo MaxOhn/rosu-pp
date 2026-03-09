@@ -1,6 +1,7 @@
-use std::f64::consts::E;
+use std::{f64::consts::E, ops::ControlFlow};
 
 use crate::{
+    any::difficulty::object::IDifficultyObject,
     taiko::difficulty::{
         color::data::{
             alternating_mono_pattern::AlternatingMonoPattern, mono_streak::MonoStreak,
@@ -9,7 +10,7 @@ use crate::{
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     },
     util::{
-        difficulty::logistic_exp,
+        difficulty::{logistic_exp, smootherstep},
         sync::{RefCount, Weak},
     },
 };
@@ -26,36 +27,87 @@ impl ColorEvaluator {
         let threshold = threshold.unwrap_or(0.01);
         let max_objects_to_check = max_objects_to_check.unwrap_or(64);
 
-        let curr = hit_object;
-
         let mut consistent_ratio_count = 0;
         let mut total_ratio_count = 0.0;
 
-        let prev_objects =
-            &objects.objects[curr.idx.saturating_sub(2 * max_objects_to_check)..=curr.idx];
+        let mut recent_ratios = Vec::new();
+        let current = hit_object;
 
-        for window in prev_objects.windows(3).rev().step_by(2) {
-            let [prev, _, curr] = window else {
-                unreachable!()
-            };
+        fn iteration(
+            current: &TaikoDifficultyObject,
+            previous_hit_object: &TaikoDifficultyObject,
+            recent_ratios: &mut Vec<f64>,
+            consistent_ratio_count: &mut i32,
+            total_ratio_count: &mut f64,
+            threshold: f64,
+        ) -> ControlFlow<()> {
+            if current.idx <= 1 {
+                return ControlFlow::Break(());
+            }
 
-            let curr = curr.get();
-            let prev = prev.get();
+            let current_ratio = current.rhythm_data.ratio;
+            let previous_ratio = previous_hit_object.rhythm_data.ratio;
 
-            let curr_ratio = curr.rhythm_data.ratio;
-            let prev_ratio = prev.rhythm_data.ratio;
+            recent_ratios.push(current_ratio);
 
-            // * A consistent interval is defined as the percentage difference between the two rhythmic ratios with the margin of error.
-            if f64::abs(1.0 - curr_ratio / prev_ratio) <= threshold {
-                consistent_ratio_count += 1;
-                total_ratio_count += curr_ratio;
+            if f64::abs(1.0 - current_ratio / previous_ratio) <= threshold {
+                *consistent_ratio_count += 1;
+                *total_ratio_count += current_ratio;
 
-                break;
+                return ControlFlow::Break(());
+            }
+
+            ControlFlow::Continue(())
+        }
+
+        // The lazer implementation is buggy and we want to translate this same
+        // buggy behavior.
+        if let Some(previous_hit_object) = current
+            .previous(1, objects)
+            .filter(|_| max_objects_to_check > 0)
+        {
+            let previous_hit_object = previous_hit_object.get();
+
+            let flow = iteration(
+                current,
+                &previous_hit_object,
+                &mut recent_ratios,
+                &mut consistent_ratio_count,
+                &mut total_ratio_count,
+                threshold,
+            );
+
+            if flow.is_continue() && max_objects_to_check > 1 {
+                let _ = iteration(
+                    &previous_hit_object,
+                    &previous_hit_object,
+                    &mut recent_ratios,
+                    &mut consistent_ratio_count,
+                    &mut total_ratio_count,
+                    threshold,
+                );
             }
         }
 
-        // * Ensure no division by zero
-        1.0 - total_ratio_count / f64::from(consistent_ratio_count + 1) * 0.8
+        if consistent_ratio_count > 0 {
+            return 1.0 - total_ratio_count / f64::from(consistent_ratio_count + 1) * 0.8;
+        }
+
+        if recent_ratios.len() <= 1 {
+            return 1.0;
+        }
+
+        // * As a fallback, calculate the maximum deviation from the average of
+        // * the recent ratios to ensure slightly off-snapped objects don't
+        // * bypass the penalty.
+        let avg = recent_ratios.iter().sum::<f64>() / recent_ratios.len() as f64;
+        let max_ratio_deviation = recent_ratios
+            .iter()
+            .fold(f64::MIN, |max, r| f64::max(max, f64::abs(r - avg)));
+
+        let consistent_ratio_penalty = 0.7 + 0.3 * smootherstep(max_ratio_deviation, 0.0, 1.0);
+
+        consistent_ratio_penalty
     }
 
     pub fn evaluate_difficulty_of(
