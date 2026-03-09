@@ -1,0 +1,3 @@
+disallowed-methods = [
+    { path = "f64::round", reason = "C# uses f64::round_ties_even"}
+]
