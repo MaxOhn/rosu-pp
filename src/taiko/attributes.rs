@@ -102,3 +102,52 @@ impl From<TaikoPerformanceAttributes> for TaikoDifficultyAttributes {
         attributes.difficulty
     }
 }
+
+#[cfg(test)]
+pub(super) mod tests {
+    use super::TaikoDifficultyAttributes;
+
+    /// Asserts equality for two [`TaikoDifficultyAttributes`] instances.
+    ///
+    /// `NaN` values are considered to be equal.
+    #[track_caller]
+    pub fn assert_eq_attrs(a: &TaikoDifficultyAttributes, b: &TaikoDifficultyAttributes) {
+        let TaikoDifficultyAttributes {
+            stamina,
+            rhythm,
+            color,
+            reading,
+            great_hit_window,
+            ok_hit_window,
+            mono_stamina_factor,
+            mechanical_difficulty,
+            consistency_factor,
+            stars,
+            max_combo,
+            is_convert,
+        } = a;
+
+        macro_rules! assert_eq_nan {
+            ( $field:ident ) => {
+                if *$field != b.$field {
+                    if $field.is_nan() != b.$field.is_nan() {
+                        assert_eq!(*$field, b.$field);
+                    }
+                }
+            };
+        }
+
+        assert_eq_nan!(stamina);
+        assert_eq_nan!(rhythm);
+        assert_eq_nan!(color);
+        assert_eq_nan!(reading);
+        assert_eq_nan!(great_hit_window);
+        assert_eq_nan!(ok_hit_window);
+        assert_eq_nan!(mono_stamina_factor);
+        assert_eq_nan!(mechanical_difficulty);
+        assert_eq_nan!(consistency_factor);
+        assert_eq_nan!(stars);
+        assert_eq!(*max_combo, b.max_combo);
+        assert_eq!(*is_convert, b.is_convert);
+    }
+}

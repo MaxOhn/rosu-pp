@@ -269,8 +269,8 @@ impl ExactSizeIterator for TaikoGradualDifficulty {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::{Beatmap, taiko::Taiko};
+pub(super) mod tests {
+    use crate::{Beatmap, taiko::Taiko, taiko::attributes::tests::assert_eq_attrs};
 
     use super::*;
 
@@ -305,12 +305,12 @@ mod tests {
 
             if i % 2 == 0 {
                 let next_gradual_2nd = gradual_2nd.nth(1).unwrap();
-                assert_eq!(next_gradual, next_gradual_2nd);
+                assert_eq_attrs(&next_gradual, &next_gradual_2nd);
             }
 
             if i % 3 == 0 {
                 let next_gradual_3rd = gradual_3rd.nth(2).unwrap();
-                assert_eq!(next_gradual, next_gradual_3rd);
+                assert_eq_attrs(&next_gradual, &next_gradual_3rd);
             }
 
             let expected = difficulty
@@ -319,7 +319,7 @@ mod tests {
                 .calculate_for_mode::<Taiko>(&map)
                 .unwrap();
 
-            assert_eq!(next_gradual, expected);
+            assert_eq_attrs(&next_gradual, &expected);
         }
     }
 }
