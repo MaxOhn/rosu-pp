@@ -139,20 +139,28 @@ fn combined_difficulty_value(
         return (0.0, 0.0);
     }
 
+    let hit_object_strain_peaks_sum = hit_object_strain_peaks.iter().sum::<f64>();
+
     // * The average of the top 5% of strain peaks from hit objects.
     let take = cmp::min(
         1 + hit_object_strain_peaks.len() / 20,
         hit_object_strain_peaks.len(),
     );
 
-    let (bigger, nth, _) =
-        hit_object_strain_peaks.select_nth_unstable_by(take - 1, |a, b| b.total_cmp(a));
+    // Put the `take` many largest strains to front (not necessarily sorted).
+    hit_object_strain_peaks.select_nth_unstable_by(take - 1, |a, b| b.total_cmp(a));
 
-    let top_average_hit_object_strain = (bigger.iter().sum::<f64>() + *nth) / take as f64;
+    // Sort the `take` many largest strains. Technically not necessary but
+    // affects the order in which they are added together resulting in very
+    // small differences.
+    let largest_strains = &mut hit_object_strain_peaks[..take];
+    largest_strains.sort_unstable_by(|a, b| b.total_cmp(a));
+
+    let top_average_hit_object_strain = (largest_strains.iter().sum::<f64>()) / take as f64;
 
     // * Calculates a consistency factor as the sum of difficulty from hit objects compared to if every object were as hard as the hardest.
     // * The top average strain is used instead of the very hardest to prevent exceptionally hard objects lowering the factor.
-    let consistency_factor = hit_object_strain_peaks.iter().sum::<f64>()
+    let consistency_factor = hit_object_strain_peaks_sum
         / (top_average_hit_object_strain * hit_object_strain_peaks.len() as f64);
 
     (difficulty, consistency_factor)
