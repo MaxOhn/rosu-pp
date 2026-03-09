@@ -42,7 +42,7 @@ impl HitResultGenerator<Catch> for Fast {
         // Calculate how many successful catches we need for target accuracy
         // acc = catches / total_objects
         // catches = acc * total_objects
-        let catches_needed = (acc * f64::from(total_objects)).round() as u32;
+        let catches_needed = (acc * f64::from(total_objects)).round_ties_even() as u32;
 
         // Maximum possible catches considering misses
         let max_fruit_droplet_catches = (n_fruits + n_droplets).saturating_sub(misses);

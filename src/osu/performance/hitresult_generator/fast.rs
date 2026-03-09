@@ -64,7 +64,8 @@ impl HitResultGenerator<Osu> for Fast {
 
                 let denominator = f64::from(6 * total_hits) + f64::from(tick_max) / 50.0;
 
-                let target_total = f64::round((acc * denominator - numerator).max(0.0)) as u32;
+                let target_total =
+                    f64::round_ties_even((acc * denominator - numerator).max(0.0)) as u32;
 
                 // Start by assuming every non-miss is an n50
                 // delta is how much we need to increase from the baseline (all n50s)

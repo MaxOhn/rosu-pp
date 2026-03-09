@@ -33,6 +33,7 @@ impl ColorEvaluator {
         let mut recent_ratios = Vec::new();
         let current = hit_object;
 
+        #[expect(clippy::items_after_statements, reason = "same order as lazer")]
         fn iteration(
             current: &TaikoDifficultyObject,
             previous_hit_object: &TaikoDifficultyObject,
@@ -105,9 +106,7 @@ impl ColorEvaluator {
             .iter()
             .fold(f64::MIN, |max, r| f64::max(max, f64::abs(r - avg)));
 
-        let consistent_ratio_penalty = 0.7 + 0.3 * smootherstep(max_ratio_deviation, 0.0, 1.0);
-
-        consistent_ratio_penalty
+        0.7 + 0.3 * smootherstep(max_ratio_deviation, 0.0, 1.0)
     }
 
     pub fn evaluate_difficulty_of(

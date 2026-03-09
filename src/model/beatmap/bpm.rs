@@ -56,7 +56,7 @@ impl BeatLenDuration {
     }
 
     fn add(&mut self, beat_len: f64, curr_time: f64, next_time: f64) {
-        let beat_len = (1000.0 * beat_len).round() / 1000.0;
+        let beat_len = (1000.0 * beat_len).round_ties_even() / 1000.0;
         let entry = self.map.entry(beat_len.to_bits()).or_default();
 
         if curr_time <= self.last_time {

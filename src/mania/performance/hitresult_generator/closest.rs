@@ -34,7 +34,7 @@ impl HitResultGenerator<Mania> for Closest {
         let w320: u32 = if is_classic { 60 } else { 61 };
 
         // Target numerator for the accuracy formula
-        let target_numerator = (acc * f64::from(w320 * total_hits)).round() as i64;
+        let target_numerator = (acc * f64::from(w320 * total_hits)).round_ties_even() as i64;
 
         // Handle cases where some hitresults are provided
         match (
@@ -490,7 +490,7 @@ fn optimize_last_three(
 
             // Solve: 20*n100 + 10*n50 = remaining_score, n100 + n50 = remaining
             let raw100 = (remaining_score - 10 * i64::from(remaining)) as f64 / 10.0;
-            let n100 = cmp::min(remaining, raw100.round().max(0.0) as u32);
+            let n100 = cmp::min(remaining, raw100.round_ties_even().max(0.0) as u32);
             let n50 = remaining.saturating_sub(n100);
 
             (n2, n100, n50)
@@ -501,7 +501,7 @@ fn optimize_last_three(
 
             // Solve: 40*n200 + 10*n50 = remaining_score, n200 + n50 = remaining
             let raw200 = (remaining_score - 10 * i64::from(remaining)) as f64 / 30.0;
-            let n200 = cmp::min(remaining, raw200.round().max(0.0) as u32);
+            let n200 = cmp::min(remaining, raw200.round_ties_even().max(0.0) as u32);
             let n50 = remaining.saturating_sub(n200);
 
             (n200, n1, n50)
@@ -512,7 +512,7 @@ fn optimize_last_three(
 
             // Solve: 40*n200 + 20*n100 = remaining_score, n200 + n100 = remaining
             let raw200 = (remaining_score - 20 * i64::from(remaining)) as f64 / 20.0;
-            let n200 = cmp::min(remaining, raw200.round().max(0.0) as u32);
+            let n200 = cmp::min(remaining, raw200.round_ties_even().max(0.0) as u32);
             let n100 = remaining.saturating_sub(n200);
 
             (n200, n100, n5)
@@ -535,7 +535,7 @@ fn optimize_last_three(
 
                 // Solve for n100 and n50
                 let raw100 = (remaining_score - 10 * i64::from(remaining)) as f64 / 10.0;
-                let n100 = cmp::min(remaining, raw100.round().max(0.0) as u32);
+                let n100 = cmp::min(remaining, raw100.round_ties_even().max(0.0) as u32);
                 let n50 = remaining.saturating_sub(n100);
 
                 let actual_score = 40 * n200 + 20 * n100 + 10 * n50;

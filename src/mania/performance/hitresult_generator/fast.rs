@@ -132,7 +132,8 @@ impl HitResultGenerator<Mania> for Fast {
         let denominator = perfect_weight * total_hits;
 
         let target_total =
-            f64::round((acc * f64::from(denominator) - f64::from(numerator)).max(0.0)) as u32;
+            f64::round_ties_even((acc * f64::from(denominator) - f64::from(numerator)).max(0.0))
+                as u32;
 
         // Start by assuming every non-miss is an n50 (baseline)
         let baseline =

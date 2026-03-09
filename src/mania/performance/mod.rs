@@ -303,7 +303,6 @@ impl<'map> ManiaPerformance<'map> {
     }
 
     /// Create the [`ManiaScoreState`] that will be used for performance calculation.
-    #[expect(clippy::too_many_lines, reason = "it is what it is /shrug")]
     pub fn generate_state(&mut self) -> Result<ManiaScoreState, ConvertError> {
         self.map_or_attrs.insert_attrs(&self.difficulty)?;
 

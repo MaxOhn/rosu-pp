@@ -50,7 +50,7 @@ impl HitResultGenerator<Taiko> for Fast {
                 // Simplify by multiplying by total_hits:
                 // acc * (2*total_hits) = 2*n300 + n100
 
-                let target_total = f64::round(acc * f64::from(2 * total_hits)) as u32;
+                let target_total = f64::round_ties_even(acc * f64::from(2 * total_hits)) as u32;
 
                 // Start by assuming every non-miss is an n100
                 // delta is how much we need to increase from the baseline (all n100s)

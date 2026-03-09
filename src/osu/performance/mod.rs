@@ -393,7 +393,6 @@ impl<'map> OsuPerformance<'map> {
     }
 
     /// Provide parameters through an [`OsuScoreState`].
-    #[expect(clippy::needless_pass_by_value, reason = "more sensible")]
     pub const fn state(mut self, state: OsuScoreState) -> Self {
         let OsuScoreState {
             max_combo,
@@ -440,7 +439,6 @@ impl<'map> OsuPerformance<'map> {
     }
 
     /// Create the [`OsuScoreState`] that will be used for performance calculation.
-    #[expect(clippy::too_many_lines, reason = "it is what it is /shrug")]
     pub fn generate_state(&mut self) -> Result<OsuScoreState, ConvertError> {
         self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
