@@ -183,7 +183,7 @@ impl OsuRatingCalculator<'_> {
             + 0.1 * (f64::from(self.total_hits) / 200.0).min(1.0)
             + f64::from(u8::from(self.total_hits > 200))
                 * 0.2
-                * (f64::from(self.total_hits - 200) / 200.0).min(1.0);
+                * (f64::from(self.total_hits.saturating_sub(200)) / 200.0).min(1.0);
 
         // * It is important to consider accuracy difficulty when scaling with accuracy.
         rating_multiplier *= 0.98 + self.overall_difficulty.max(0.0).powf(2.0) / 2500.0;
