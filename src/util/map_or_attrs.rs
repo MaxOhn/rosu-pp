@@ -33,7 +33,7 @@ impl<M: IGameMode> MapOrAttrs<'_, M> {
     pub const unsafe fn get_attrs(&self) -> &M::DifficultyAttributes {
         // Returning an immutable reference while requiring a mutable reference
         // as argument, unfortunately, makes it impossible to pass another
-        // mutable reference later on so instead we split it up into two
+        // mutable reference later on. Instead we split it up into two
         // functions: first `insert_attrs` and then `get_attrs`.
         match self {
             Self::Attrs(attrs) => attrs,
@@ -50,7 +50,7 @@ where
 {
     fn clone(&self) -> Self {
         match self {
-            Self::Map(converted) => Self::Map(converted.clone()),
+            Self::Map(map) => Self::Map(map.clone()),
             Self::Attrs(attrs) => Self::Attrs(attrs.clone()),
         }
     }
@@ -62,8 +62,54 @@ where
     M::DifficultyAttributes: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        /// Provides a more reasonable Debug implementation for [`Beatmap`] by
+        /// not printing list items in full, but rather their lengths.
+        struct SlimBeatmap<'a>(&'a Beatmap);
+
+        impl Debug for SlimBeatmap<'_> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+                let Beatmap {
+                    version,
+                    is_convert,
+                    stack_leniency,
+                    mode,
+                    ar,
+                    cs,
+                    hp,
+                    od,
+                    slider_multiplier,
+                    slider_tick_rate,
+                    breaks,
+                    timing_points,
+                    difficulty_points,
+                    effect_points,
+                    hit_objects,
+                    hit_sounds,
+                } = self.0;
+
+                f.debug_struct("Beatmap")
+                    .field("version", version)
+                    .field("is_convert", is_convert)
+                    .field("stack_leniency", stack_leniency)
+                    .field("mode", mode)
+                    .field("ar", ar)
+                    .field("cs", cs)
+                    .field("hp", hp)
+                    .field("od", od)
+                    .field("slider_multiplier", slider_multiplier)
+                    .field("slider_tick_rate", slider_tick_rate)
+                    .field("breaks", &breaks.len())
+                    .field("timing_points", &timing_points.len())
+                    .field("difficulty_points", &difficulty_points.len())
+                    .field("effect_points", &effect_points.len())
+                    .field("hit_objects", &hit_objects.len())
+                    .field("hit_sounds", &hit_sounds.len())
+                    .finish()
+            }
+        }
+
         match self {
-            Self::Map(converted) => f.debug_tuple("Map").field(converted).finish(),
+            Self::Map(map) => f.debug_tuple("Map").field(&SlimBeatmap(map)).finish(),
             Self::Attrs(attrs) => f.debug_tuple("Attrs").field(attrs).finish(),
         }
     }
