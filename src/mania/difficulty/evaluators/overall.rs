@@ -1,4 +1,7 @@
-use crate::{mania::difficulty::object::ManiaDifficultyObject, util::difficulty::logistic};
+use crate::{
+    mania::difficulty::object::ManiaDifficultyObject,
+    util::{difficulty::logistic, sync::Weak},
+};
 
 pub struct OverallStrainEvaluator;
 
@@ -18,7 +21,12 @@ impl OverallStrainEvaluator {
         // * Addition to the current note in case it's a hold and has to be released awkwardly
         let mut hold_addition = 0.0;
 
-        for mania_prev in mania_curr.prev_hit_objects.iter().flatten() {
+        for mania_prev in mania_curr
+            .prev_hit_objects
+            .iter()
+            .flatten()
+            .filter_map(Weak::upgrade)
+        {
             let mania_prev_ref = mania_prev.get();
 
             // * The current note is overlapped if a previous note or end is

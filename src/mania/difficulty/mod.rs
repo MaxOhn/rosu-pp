@@ -108,8 +108,8 @@ impl DifficultyValues {
 
             let column = curr_obj.column;
             let curr_obj = RefCount::new(curr_obj);
-            objects.push(RefCount::clone(&curr_obj));
-            per_column_objects[column].push(curr_obj);
+            per_column_objects[column].push(curr_obj.downgrade());
+            objects.push(curr_obj);
 
             prev = curr;
         }

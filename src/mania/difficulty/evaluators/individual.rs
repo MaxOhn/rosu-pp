@@ -1,4 +1,4 @@
-use crate::{mania::difficulty::object::ManiaDifficultyObject, util::sync::RefCount};
+use crate::{mania::difficulty::object::ManiaDifficultyObject, util::sync::Weak};
 
 pub struct IndividualStrainEvaluator;
 
@@ -13,8 +13,10 @@ impl IndividualStrainEvaluator {
             .prev_hit_objects
             .iter()
             .flatten()
-            .map(RefCount::get)
-            .any(|mania_prev| {
+            .filter_map(Weak::upgrade)
+            .any(|rc| {
+                let mania_prev = rc.get();
+
                 mania_prev.end_time > end_time + 1.0 && start_time > mania_prev.start_time + 1.0
             });
 
