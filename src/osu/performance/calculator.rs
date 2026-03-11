@@ -435,6 +435,21 @@ impl OsuPerformanceCalculator<'_> {
 
             // * In classic scores there can't be more misses than a sum of all non-perfect judgements
             miss_count = miss_count.min(self.total_imperfect_hits());
+
+            // * Every slider has *at least* 2 combo attributed in classic mechanics.
+            // * If they broke on a slider with a tick, then this still works since they would have lost at least 2 combo (the tick and the end)
+            // * Using this as a max means a score that loses 1 combo on a map can't possibly have been a slider break.
+            // * It must have been a slider end.
+            let max_possible_slider_breaks = u32::min(
+                attrs.n_sliders,
+                (attrs.max_combo.saturating_sub(state.max_combo)) / 2,
+            );
+
+            let slider_breaks = miss_count - f64::from(state.hitresults.misses);
+
+            if slider_breaks > f64::from(max_possible_slider_breaks) {
+                miss_count = f64::from(state.hitresults.misses + max_possible_slider_breaks);
+            }
         } else {
             let full_combo_threshold = f64::from(attrs.max_combo - self.n_slider_ends_dropped());
 
