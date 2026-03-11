@@ -1,5 +1,5 @@
 disallowed-methods = [
-    { path = "f64::round", reason = "C# uses f64::round_ties_even"}
+    { path = "f64::round", reason = "C# uses f64::round_ties_even"},
     { path = "std::cmp::Ord::min", reason = "too easy to misread `x.min(y)`; use `cmp::min` instead" },
     { path = "std::cmp::Ord::max", reason = "too easy to misread `x.max(y)`; use `cmp::max` instead" },
 ]
