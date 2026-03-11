@@ -71,6 +71,7 @@ impl AimEvaluator {
 
         // * Start strain with regular velocity.
         let mut aim_strain = curr_vel;
+
         if let Some((curr_angle, last_angle)) = osu_curr_obj.angle.zip(osu_last_obj.angle) {
             // * Rewarding angles, take the smaller velocity as base.
             let angle_bonus = curr_vel.min(prev_vel);
@@ -155,12 +156,11 @@ impl AimEvaluator {
                 * smootherstep(last_angle, f64::to_radians(110.0), f64::to_radians(60.0));
 
             if let Some(osu_last_2_obj) = curr.previous(2, diff_objects) {
-                let distance = f64::from(
-                    (osu_last_2_obj.base.stacked_pos() - osu_last_obj.base.stacked_pos()).length(),
-                );
+                let distance =
+                    (osu_last_2_obj.base.stacked_pos() - osu_last_obj.base.stacked_pos()).length();
 
                 if distance < 1.0 {
-                    wide_angle_bonus *= 1.0 - 0.35 * (1.0 - distance);
+                    wide_angle_bonus *= 1.0 - 0.35 * f64::from(1.0 - distance);
                 }
             }
         }
