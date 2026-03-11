@@ -233,14 +233,14 @@ impl RhythmIsland {
     fn new_with_delta(delta: i32, delta_difference_eps: f64) -> Self {
         Self {
             delta_difference_eps,
-            delta: delta.max(MIN_DELTA_TIME),
+            delta: cmp::max(delta, MIN_DELTA_TIME),
             delta_count: 1,
         }
     }
 
     fn add_delta(&mut self, delta: i32) {
         if self.delta == i32::MAX {
-            self.delta = delta.max(MIN_DELTA_TIME);
+            self.delta = cmp::max(delta, MIN_DELTA_TIME);
         }
 
         self.delta_count += 1;

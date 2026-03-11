@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::cmp::{self, Ordering};
 
 use rosu_map::{section::general::GameMode, util::Pos};
 
@@ -199,7 +199,7 @@ fn target_columns(map: &Beatmap, mods: &GameMods) -> f32 {
 
     #[expect(clippy::manual_clamp, reason = "staying in-sync with lazer")]
     {
-        ((rounded_od as i32) + 1).min(7).max(4) as f32
+        cmp::max(cmp::min((rounded_od as i32) + 1, 7), 4) as f32
     }
 }
 

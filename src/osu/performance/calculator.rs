@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::{cmp, f64::consts::PI};
 
 use crate::{
     GameMods,
@@ -342,7 +342,7 @@ impl OsuPerformanceCalculator<'_> {
         let mut better_acc_percentage = if amount_hit_objects_with_acc > 0 {
             f64::from(
                 (hitresults.n300 as i32
-                    - (i32::max(
+                    - (cmp::max(
                         hitresults.total_hits() as i32 - amount_hit_objects_with_acc as i32,
                         0,
                     )))
@@ -440,7 +440,7 @@ impl OsuPerformanceCalculator<'_> {
             // * If they broke on a slider with a tick, then this still works since they would have lost at least 2 combo (the tick and the end)
             // * Using this as a max means a score that loses 1 combo on a map can't possibly have been a slider break.
             // * It must have been a slider end.
-            let max_possible_slider_breaks = u32::min(
+            let max_possible_slider_breaks = cmp::min(
                 attrs.n_sliders,
                 (attrs.max_combo.saturating_sub(state.max_combo)) / 2,
             );

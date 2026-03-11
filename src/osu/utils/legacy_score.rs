@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     model::hit_object::Spinner,
     osu::object::{OsuObject, OsuObjectKind},
@@ -50,7 +52,7 @@ fn calculate_spinner_score(spinner: Spinner) -> f64 {
     let mut bonus_spins = (total_half_spins_possible - half_spins_required_before_bonus) / 2;
 
     // * Reduce amount of bonus spins because we want to represent the more average case, rather than the best one.
-    bonus_spins = (bonus_spins - full_spins / 2).max(0);
+    bonus_spins = cmp::max(bonus_spins - full_spins / 2, 0);
 
     score += i64::from(BONUS_SPIN_SCORE * bonus_spins);
 

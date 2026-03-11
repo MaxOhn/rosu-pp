@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::{
     GameMods,
     osu::{OsuDifficultyAttributes, OsuScoreState},
@@ -154,7 +156,7 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
         // * Using this as a max means a score that loses 1 combo on a map can't possibly have been a slider break.
         // * It must have been a slider end.
         let max_possible_slider_breaks =
-            ((attrs.max_combo - state.max_combo) / 2).min(attrs.n_sliders);
+            cmp::min((attrs.max_combo - state.max_combo) / 2, attrs.n_sliders);
 
         let slider_breaks = miss_count - f64::from(state.hitresults.misses);
 
