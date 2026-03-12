@@ -30,6 +30,11 @@ impl CatchHitResults {
         self.fruits + self.droplets + self.tiny_droplets + self.tiny_droplet_misses + self.misses
     }
 
+    /// Return the total amount of hits by adding everything up.
+    pub const fn total_successful_hits(&self) -> u32 {
+        self.fruits + self.droplets + self.tiny_droplets
+    }
+
     /// Calculate the accuracy between `0.0` and `1.0` for this state.
     pub fn accuracy(&self) -> f64 {
         let total_hits = self.total_hits();
@@ -38,7 +43,7 @@ impl CatchHitResults {
             return 0.0;
         }
 
-        let numerator = self.fruits + self.droplets + self.tiny_droplets;
+        let numerator = self.total_successful_hits();
         let denominator = total_hits;
 
         f64::from(numerator) / f64::from(denominator)
