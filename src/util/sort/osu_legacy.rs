@@ -1,15 +1,13 @@
 use std::cmp::Ordering;
 
-use crate::model::hit_object::HitObject;
-
 const QUICK_SORT_DEPTH_THRESHOLD: usize = 32;
 
 /// osu!'s legacy sorting algorithm.
 ///
 /// <https://github.com/ppy/osu/blob/e669e28dc9b6d79d82a36053e6a279de8dafddd1/osu.Game.Rulesets.Mania/MathUtils/LegacySortHelper.cs#L19>
-pub fn sort_unstable_by<F>(keys: &mut [HitObject], comparer: F)
+pub fn sort_unstable_by<T, F>(keys: &mut [T], comparer: F)
 where
-    F: Fn(&HitObject, &HitObject) -> Ordering,
+    F: Fn(&T, &T) -> Ordering,
 {
     if keys.len() < 2 {
         return;
@@ -24,14 +22,14 @@ where
     );
 }
 
-fn depth_limited_quick_sort<F>(
-    keys: &mut [HitObject],
+fn depth_limited_quick_sort<T, F>(
+    keys: &mut [T],
     mut left: usize,
     mut right: usize,
     comparer: &F,
     mut depth_limit: usize,
 ) where
-    F: Fn(&HitObject, &HitObject) -> Ordering,
+    F: Fn(&T, &T) -> Ordering,
 {
     loop {
         if depth_limit == 0 {
