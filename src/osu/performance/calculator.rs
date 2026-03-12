@@ -649,7 +649,16 @@ impl OsuPerformanceCalculator<'_> {
         self.attrs.n_sliders - self.state.hitresults.slider_end_hits
     }
 
-    const fn n_large_tick_miss(&self) -> u32 {
-        self.attrs.n_large_ticks - self.state.hitresults.large_tick_hits
+    fn n_large_tick_miss(&self) -> u32 {
+        // Lazer unconditionally uses the "large tick miss" hitresult and
+        // relies on this value being correctly provided by the caller / user.
+        // On stable, this value should always be 0.
+        //
+        // This is a best-effort workaround to achieve the same behavior.
+        if self.using_classic_slider_acc {
+            0
+        } else {
+            self.attrs.n_large_ticks - self.state.hitresults.large_tick_hits
+        }
     }
 }
