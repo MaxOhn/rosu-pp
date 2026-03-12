@@ -309,10 +309,6 @@ impl From<BeatmapState> for Beatmap {
         sorter.sort(&mut state.hit_objects);
         sorter.sort(&mut state.hit_sounds);
 
-        if state.mode == GameMode::Mania {
-            sort::osu_legacy(&mut state.hit_objects);
-        }
-
         Beatmap {
             version: state.version,
             is_convert: false,

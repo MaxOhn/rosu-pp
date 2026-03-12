@@ -10,7 +10,7 @@ use crate::{
         object::{ManiaObject, ObjectParams},
     },
     model::mode::ConvertError,
-    util::sync::RefCount,
+    util::{sort, sync::RefCount},
 };
 
 use super::{attributes::ManiaDifficultyAttributes, convert};
@@ -39,6 +39,13 @@ pub fn difficulty(
     if let Some(seed) = difficulty.get_mods().random_seed() {
         convert::apply_random_to_beatmap(map.to_mut(), seed);
     }
+
+    let map = map.to_mut();
+
+    sort::osu_legacy(&mut map.hit_objects, |a, b| {
+        (f64::round_ties_even(a.start_time) as i32)
+            .cmp(&(f64::round_ties_even(b.start_time) as i32))
+    });
 
     let n_objects = cmp::min(difficulty.get_passed_objects(), map.hit_objects.len()) as u32;
 

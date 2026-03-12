@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 /// C#'s unstable sorting algorithm.
 ///
 /// <https://referencesource.microsoft.com/#mscorlib/system/collections/generic/list.cs,fc1bc8c930f6c93c,references>
-pub fn sort<T, F>(keys: &mut [T], cmp: F)
+pub fn sort_unstable_by<T, F>(keys: &mut [T], cmp: F)
 where
     F: Fn(&T, &T) -> Ordering,
 {

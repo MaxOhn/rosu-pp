@@ -13,7 +13,6 @@ use crate::{
     util::{
         limited_queue::LimitedQueue,
         random::{csharp::Random as CsharpRandom, osu::Random as OsuRandom},
-        sort,
     },
 };
 
@@ -143,7 +142,6 @@ pub fn convert(map: &mut Beatmap, mods: &GameMods) {
     map.hit_sounds.clear();
     map.hit_objects = new_hit_objects;
     map.hit_objects.sort_by(cmp_by_start_time);
-    sort::osu_legacy(&mut map.hit_objects);
 
     map.mode = GameMode::Mania;
     map.is_convert = true;
