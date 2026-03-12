@@ -7,7 +7,7 @@ use crate::{
     any::difficulty::skills::StrainSkill,
     mania::{convert, object::ObjectParams},
     model::{hit_object::HitObject, mode::ConvertError},
-    util::sync::RefCount,
+    util::{sort, sync::RefCount},
 };
 
 use super::{
@@ -79,6 +79,13 @@ impl ManiaGradualDifficulty {
         if let Some(seed) = difficulty.get_mods().random_seed() {
             convert::apply_random_to_beatmap(map.to_mut(), seed);
         }
+
+        let map = map.to_mut();
+
+        sort::osu_legacy(&mut map.hit_objects, |a, b| {
+            (f64::round_ties_even(a.start_time) as i32)
+                .cmp(&(f64::round_ties_even(b.start_time) as i32))
+        });
 
         let take = difficulty.get_passed_objects();
         let total_columns = map.cs.round_ties_even().max(1.0);
