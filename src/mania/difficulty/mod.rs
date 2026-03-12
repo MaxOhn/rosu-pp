@@ -49,7 +49,7 @@ pub fn difficulty(
 
     let n_objects = cmp::min(difficulty.get_passed_objects(), map.hit_objects.len()) as u32;
 
-    let values = DifficultyValues::calculate(difficulty, &map);
+    let values = DifficultyValues::calculate(difficulty, map);
 
     Ok(ManiaDifficultyAttributes {
         stars: values.strain.into_difficulty_value() * DIFFICULTY_MULTIPLIER,
