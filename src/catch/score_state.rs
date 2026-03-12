@@ -30,7 +30,8 @@ impl CatchHitResults {
         self.fruits + self.droplets + self.tiny_droplets + self.tiny_droplet_misses + self.misses
     }
 
-    /// Return the total amount of hits by adding everything up.
+    /// Return the total amount of successful hits by adding up fruits,
+    /// droplets, and tiny droplets.
     pub const fn total_successful_hits(&self) -> u32 {
         self.fruits + self.droplets + self.tiny_droplets
     }
