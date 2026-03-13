@@ -464,7 +464,6 @@ impl<'map> Performance<'map> {
 
 /// While generating remaining hitresults, decide how they should be distributed.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[non_exhaustive]
 pub enum HitResultPriority {
     /// Prioritize good hitresults over bad ones
     BestCase,
