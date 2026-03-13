@@ -9,7 +9,7 @@ pub use rosu_map::section::events::BreakPeriod;
 
 use crate::{
     Difficulty, GameMods, GradualDifficulty, GradualPerformance, Performance, catch::Catch,
-    mania::Mania, taiko::Taiko,
+    mania::Mania, taiko::Taiko, util::sort,
 };
 
 pub use self::{
@@ -183,6 +183,19 @@ impl Beatmap {
         }
 
         Ok(())
+    }
+
+    /// Sort hitobjects via [`sort::osu_legacy`] with a specific comparator.
+    ///
+    /// Mania's difficulty calculation applies this sorting *after* all mod
+    /// conversions have been applied to the hitobjects.
+    ///
+    /// <https://github.com/ppy/osu/blob/28c846b4d9366484792e27f4729cd1afa2cdeb66/osu.Game.Rulesets.Mania/Difficulty/ManiaDifficultyCalculator.cs#L70>
+    pub(crate) fn mania_hitobjects_legacy_sort(&mut self) {
+        sort::osu_legacy(&mut self.hit_objects, |a, b| {
+            (f64::round_ties_even(a.start_time) as i32)
+                .cmp(&(f64::round_ties_even(b.start_time) as i32))
+        });
     }
 
     /// Check whether hitobjects appear too suspicious for further calculation.
