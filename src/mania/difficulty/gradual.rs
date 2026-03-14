@@ -86,7 +86,7 @@ impl ManiaGradualDifficulty {
         let take = difficulty.get_passed_objects();
         let total_columns = map.cs.round_ties_even().max(1.0);
         let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(&map);
+        let mut params = ObjectParams::new(map);
 
         let mania_objects = map
             .hit_objects
