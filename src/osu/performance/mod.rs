@@ -392,6 +392,13 @@ impl<'map> OsuPerformance<'map> {
         self
     }
 
+    /// Specify the legacy total score.
+    pub const fn legacy_total_score(mut self, legacy_total_score: u32) -> Self {
+        self.legacy_total_score = Some(legacy_total_score);
+
+        self
+    }
+
     /// Provide parameters through an [`OsuScoreState`].
     pub const fn state(mut self, state: OsuScoreState) -> Self {
         let OsuScoreState {
