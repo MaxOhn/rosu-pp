@@ -15,9 +15,7 @@ impl HitResultGenerator<Osu> for Closest {
             return <IgnoreAccuracy as HitResultGenerator<Osu>>::generate_hitresults(inspect);
         };
 
-        let large_tick_hits = inspect.large_tick_hits.unwrap_or(0);
-        let small_tick_hits = inspect.small_tick_hits.unwrap_or(0);
-        let slider_end_hits = inspect.slider_end_hits.unwrap_or(0);
+        let (slider_end_hits, large_tick_hits, small_tick_hits) = inspect.tick_hits();
 
         let total_hits = inspect.total_hits();
         let misses = inspect.misses();
@@ -224,7 +222,7 @@ impl HitResultGenerator<Osu> for Closest {
                 for new300 in min300..=max300 {
                     let (new300, new100, new50) = compute_n100_n50(new300);
 
-                    let state = OsuHitResults {
+                    let hitresults = OsuHitResults {
                         large_tick_hits,
                         small_tick_hits,
                         slider_end_hits,
@@ -234,7 +232,7 @@ impl HitResultGenerator<Osu> for Closest {
                         misses,
                     };
 
-                    let dist = f64::abs(acc - state.accuracy(origin));
+                    let dist = f64::abs(acc - hitresults.accuracy(origin));
 
                     if dist < best_dist {
                         best_dist = dist;
@@ -617,12 +615,13 @@ mod tests {
     fn test_without_slider_acc_two_missing() {
         const N_CIRCLES: u32 = 70;
         const N_SLIDERS: u32 = 15;
+        const N_LARGE_TICKS: u32 = 10;
 
         let inspect = InspectOsuPerformance {
             attrs: &OsuDifficultyAttributes {
                 n_circles: N_CIRCLES,
                 n_sliders: N_SLIDERS,
-                n_large_ticks: 10,
+                n_large_ticks: N_LARGE_TICKS,
                 ..Default::default()
             },
             difficulty: &Difficulty::new().mods(
@@ -638,8 +637,8 @@ mod tests {
             n100: None,
             n50: None,
             misses: Some(5),
-            large_tick_hits: Some(15),
-            small_tick_hits: Some(25),
+            large_tick_hits: Some(N_SLIDERS + N_LARGE_TICKS - 1),
+            small_tick_hits: Some(N_SLIDERS + 1), // should be clamped to N_SLIDERS
             slider_end_hits: None,
             combo: None,
             hitresult_priority: HitResultPriority::BestCase,
@@ -652,6 +651,8 @@ mod tests {
             result.n300 + result.n100 + result.n50 + result.misses,
             N_CIRCLES + N_SLIDERS
         );
+        assert_eq!(result.large_tick_hits, N_SLIDERS + N_LARGE_TICKS - 1);
+        assert_eq!(result.small_tick_hits, N_SLIDERS);
         verify_is_closest(&inspect, &result);
     }
 
