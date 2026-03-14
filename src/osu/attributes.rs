@@ -101,7 +101,6 @@ pub struct OsuPerformanceAttributes {
     pub effective_miss_count: f64,
     /// Approximated unstable-rate
     pub speed_deviation: Option<f64>,
-    // TODO: docs?
     pub combo_based_estimated_miss_count: f64,
     pub score_based_estimated_miss_count: Option<f64>,
     pub aim_estimated_slider_breaks: f64,
