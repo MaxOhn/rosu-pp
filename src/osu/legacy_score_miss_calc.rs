@@ -81,10 +81,7 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
             state, acc, attrs, ..
         } = self;
 
-        let total_hits = state.hitresults.n300
-            + state.hitresults.n100
-            + state.hitresults.n50
-            + state.hitresults.misses;
+        let total_hits = state.hitresults.total_hits();
 
         let estimated_objects = f64::from(combo) / relevant_combo_per_object - 1.0;
 
@@ -123,7 +120,7 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
 
         // * Reverse the arithmetic progression to work out the amount of combo per object based on the score.
         let mut result = f64::from((attrs.max_combo as i32 - 2) * attrs.max_combo as i32);
-        result /= (f64::from(attrs.max_combo + 2) * (combo_score - 1.0)).max(1.0);
+        result /= (f64::from(attrs.max_combo) + 2.0 * (combo_score - 1.0)).max(1.0);
 
         result
     }
