@@ -450,6 +450,16 @@ impl<'map> Performance<'map> {
         }
     }
 
+    /// Specify the legacy total score.
+    ///
+    /// Only relevant for osu!standard.
+    pub fn legacy_total_score(self, legacy_total_score: u32) -> Self {
+        match self {
+            Self::Osu(o) => Self::Osu(o.legacy_total_score(legacy_total_score)),
+            _ => self,
+        }
+    }
+
     /// Create the [`ScoreState`] that will be used for performance calculation.
     #[expect(clippy::missing_panics_doc, reason = "unreachable")]
     pub fn generate_state(&mut self) -> ScoreState {
