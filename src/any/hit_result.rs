@@ -1,7 +1,7 @@
 use rosu_map::section::general::GameMode;
 
 #[derive(Copy, Clone)]
-#[allow(unused, reason = "staying in-sync with lazer")]
+#[expect(unused, reason = "staying in-sync with lazer")]
 pub enum HitResult {
     None,
     Miss,
