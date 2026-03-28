@@ -116,7 +116,10 @@ impl OsuGradualDifficulty {
 
         let skills = OsuSkills::new(mods, &scaling_factor, &map_attrs, time_preempt);
         let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
-        let score_simulator = GradualLegacyScoreSimulator::new(&map, map_attrs);
+
+        let map_attrs_peppy = map.attributes().difficulty(&difficulty).build_peppy_stars();
+
+        let score_simulator = GradualLegacyScoreSimulator::new(&map, map_attrs_peppy);
         let nested_score = GradualNestedScorePerObject::default();
 
         Ok(Self {

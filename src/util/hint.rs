@@ -1,3 +1,5 @@
+#![allow(unused, reason = "useful regardless")]
+
 #[inline]
 #[cold]
 const fn cold() {}

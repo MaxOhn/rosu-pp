@@ -46,7 +46,6 @@ pub fn difficulty(
         osu_objects,
         skills,
         mut attrs,
-        map_attrs,
     } = DifficultyValues::calculate(difficulty, &map);
 
     let mods = difficulty.get_mods();
@@ -59,9 +58,11 @@ pub fn difficulty(
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
 
+    let map_attrs_peppy = map.attributes().difficulty(difficulty).build_peppy_stars();
+
     attrs.legacy_score_base_multiplier = f64::from(OsuLegacyScoreSimulator::score_multiplier(
         &map,
-        &map_attrs,
+        &map_attrs_peppy,
         passed_objects,
     ));
 
@@ -109,7 +110,6 @@ pub struct DifficultyValues {
     pub osu_objects: Box<[OsuObject]>,
     pub skills: OsuSkills,
     pub attrs: OsuDifficultyAttributes,
-    pub map_attrs: BeatmapAttributes,
 }
 
 impl DifficultyValues {
@@ -151,7 +151,6 @@ impl DifficultyValues {
             osu_objects,
             skills,
             attrs,
-            map_attrs,
         }
     }
 

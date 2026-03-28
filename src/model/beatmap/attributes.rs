@@ -1,7 +1,10 @@
 use rosu_map::section::general::GameMode;
 
 use crate::{
-    Difficulty, any::difficulty::ModsDependent, model::mods::GameMods, util::float_ext::FloatExt,
+    Difficulty,
+    any::difficulty::ModsDependent,
+    model::mods::GameMods,
+    util::{float_ext::FloatExt, ruleset_ext::PeppyStarsBeatmapAttributes},
 };
 
 use super::Beatmap;
@@ -375,48 +378,44 @@ impl BeatmapAttributesBuilder {
         }
     }
 
+    /// Calculate the [`PeppyStarsBeatmapAttributes`].
+    ///
+    /// Importantly, the OD value will not consider adjusted clock rates.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the mode is not [`GameMode::Osu`].
+    pub fn build_peppy_stars(self) -> PeppyStarsBeatmapAttributes {
+        debug_assert_eq!(self.mode, GameMode::Osu);
+
+        let mut raw_od = self.od.value(&self.mods, GameMods::od);
+
+        if !self.od.with_mods() {
+            raw_od = apply_mods_mult(&self.mods, raw_od);
+        }
+
+        PeppyStarsBeatmapAttributes {
+            od: f64::from(raw_od),
+            cs: self.build_cs(),
+            hp: self.build_hp(),
+        }
+    }
+
     /// Calculate the [`BeatmapAttributes`].
     pub fn build(&self) -> BeatmapAttributes {
         let mods = &self.mods;
         let clock_rate = self.clock_rate.unwrap_or_else(|| mods.clock_rate());
 
-        // HP
-        let mut hp = self.hp.value(mods, GameMods::hp);
-
-        if !self.hp.with_mods() {
-            hp *= mods.od_ar_hp_multiplier() as f32;
-        }
-
-        hp = hp.min(10.0);
-
-        // CS
-        let mut cs = self.cs.value(mods, GameMods::cs);
-
-        if !self.cs.with_mods() {
-            if mods.hr() {
-                cs = (cs * 1.3).min(10.0);
-            } else if mods.ez() {
-                cs *= 0.5;
-            }
-        }
-
         let hit_windows = self.hit_windows();
 
-        // AR
-        let ar = AR_WINDOWS.inverse_difficulty_range(hit_windows.ar);
-
-        // OD
-        let mut raw_od = self.od.value(mods, GameMods::od);
-
         let od = match self.mode {
-            GameMode::Osu | GameMode::Taiko | GameMode::Catch => {
-                if !self.od.with_mods() {
-                    raw_od = apply_mods_mult(mods, raw_od);
-                }
-
-                f64::from(raw_od)
+            GameMode::Osu => Self::osu_great_hit_window_to_od(hit_windows.od_great),
+            GameMode::Taiko => {
+                (TAIKO_GREAT.min - hit_windows.od_great) / (TAIKO_GREAT.min - TAIKO_GREAT.mid) * 5.0
             }
+            GameMode::Catch => 5.0,
             GameMode::Mania => {
+                let raw_od = self.od.value(mods, GameMods::od);
                 let mut perfect_hit_window = MANIA_PERFECT.difficulty_range(f64::from(raw_od));
 
                 if mods.hr() {
@@ -430,10 +429,10 @@ impl BeatmapAttributesBuilder {
         };
 
         BeatmapAttributes {
-            ar,
+            ar: AR_WINDOWS.inverse_difficulty_range(hit_windows.ar),
             od,
-            cs: f64::from(cs),
-            hp: f64::from(hp),
+            cs: self.build_cs(),
+            hp: self.build_hp(),
             clock_rate,
             hit_windows,
         }
@@ -441,6 +440,30 @@ impl BeatmapAttributesBuilder {
 
     pub(crate) const fn osu_great_hit_window_to_od(hit_window: f64) -> f64 {
         (79.5 - hit_window) / 6.0
+    }
+
+    fn build_cs(&self) -> f64 {
+        let mut cs = self.cs.value(&self.mods, GameMods::cs);
+
+        if !self.cs.with_mods() {
+            if self.mods.hr() {
+                cs = (cs * 1.3).min(10.0);
+            } else if self.mods.ez() {
+                cs *= 0.5;
+            }
+        }
+
+        f64::from(cs)
+    }
+
+    fn build_hp(&self) -> f64 {
+        let mut hp = self.hp.value(&self.mods, GameMods::hp);
+
+        if !self.hp.with_mods() {
+            hp *= self.mods.od_ar_hp_multiplier() as f32;
+        }
+
+        f64::from(hp.min(10.0))
     }
 }
 
