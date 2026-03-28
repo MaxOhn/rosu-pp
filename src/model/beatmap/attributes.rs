@@ -86,68 +86,6 @@ pub struct BeatmapAttributesBuilder {
     clock_rate: Option<f64>,
 }
 
-struct GameModeHitWindows {
-    min: f64,
-    mid: f64,
-    max: f64,
-}
-
-const OSU_GREAT: GameModeHitWindows = GameModeHitWindows {
-    min: 80.0,
-    mid: 50.0,
-    max: 20.0,
-};
-
-const OSU_OK: GameModeHitWindows = GameModeHitWindows {
-    min: 140.0,
-    mid: 100.0,
-    max: 60.0,
-};
-
-const OSU_MEH: GameModeHitWindows = GameModeHitWindows {
-    min: 200.0,
-    mid: 150.0,
-    max: 100.0,
-};
-
-const TAIKO_GREAT: GameModeHitWindows = GameModeHitWindows {
-    min: 50.0,
-    mid: 35.0,
-    max: 20.0,
-};
-
-const TAIKO_OK: GameModeHitWindows = GameModeHitWindows {
-    min: 120.0,
-    mid: 80.0,
-    max: 50.0,
-};
-
-const AR_WINDOWS: GameModeHitWindows = GameModeHitWindows {
-    min: 1800.0,
-    mid: 1200.0,
-    max: 450.0,
-};
-
-const MANIA_PERFECT: GameModeHitWindows = GameModeHitWindows {
-    min: 22.4,
-    mid: 19.4,
-    max: 13.9,
-};
-
-impl GameModeHitWindows {
-    fn difficulty_range(&self, difficulty: f64) -> f64 {
-        let Self { min, mid, max } = *self;
-
-        BeatmapAttributesExt::difficulty_range(difficulty, min, mid, max)
-    }
-
-    fn inverse_difficulty_range(&self, difficulty_value: f64) -> f64 {
-        let Self { min, mid, max } = *self;
-
-        BeatmapAttributesExt::inverse_difficulty_range(difficulty_value, min, mid, max)
-    }
-}
-
 impl BeatmapAttributesBuilder {
     /// Create a new [`BeatmapAttributesBuilder`].
     ///
@@ -306,7 +244,7 @@ impl BeatmapAttributesBuilder {
             }
         };
 
-        let preempt = AR_WINDOWS.difficulty_range(f64::from(raw_ar)) / ar_clock_rate;
+        let preempt = hit_windows::AR.difficulty_range(f64::from(raw_ar)) / ar_clock_rate;
 
         // OD
         let (great, ok, meh) = match self.mode {
@@ -323,9 +261,12 @@ impl BeatmapAttributesBuilder {
 
                 let raw_od = f64::from(raw_od);
 
-                let great = (OSU_GREAT.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
-                let ok = (OSU_OK.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
-                let meh = (OSU_MEH.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
+                let great = (hit_windows::osu::GREAT.difficulty_range(raw_od).floor() - 0.5)
+                    / od_clock_rate;
+                let ok =
+                    (hit_windows::osu::OK.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
+                let meh =
+                    (hit_windows::osu::MEH.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
 
                 (great, Some(ok), Some(meh))
             }
@@ -342,8 +283,10 @@ impl BeatmapAttributesBuilder {
 
                 let raw_od = f64::from(raw_od);
 
-                let great = (TAIKO_GREAT.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
-                let ok = (TAIKO_OK.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
+                let great = (hit_windows::taiko::GREAT.difficulty_range(raw_od).floor() - 0.5)
+                    / od_clock_rate;
+                let ok =
+                    (hit_windows::taiko::OK.difficulty_range(raw_od).floor() - 0.5) / od_clock_rate;
 
                 (great, Some(ok), None)
             }
@@ -395,9 +338,9 @@ impl BeatmapAttributesBuilder {
         }
 
         PeppyStarsBeatmapAttributes {
-            od: f64::from(raw_od),
             cs: self.build_cs(),
             hp: self.build_hp(),
+            od: f64::from(raw_od),
         }
     }
 
@@ -411,12 +354,15 @@ impl BeatmapAttributesBuilder {
         let od = match self.mode {
             GameMode::Osu => Self::osu_great_hit_window_to_od(hit_windows.od_great),
             GameMode::Taiko => {
-                (TAIKO_GREAT.min - hit_windows.od_great) / (TAIKO_GREAT.min - TAIKO_GREAT.mid) * 5.0
+                (hit_windows::taiko::GREAT.min - hit_windows.od_great)
+                    / (hit_windows::taiko::GREAT.min - hit_windows::taiko::GREAT.mid)
+                    * 5.0
             }
-            GameMode::Catch => 5.0,
+            GameMode::Catch => 5.0, // osu!catch has no OD anyway
             GameMode::Mania => {
                 let raw_od = self.od.value(mods, GameMods::od);
-                let mut perfect_hit_window = MANIA_PERFECT.difficulty_range(f64::from(raw_od));
+                let mut perfect_hit_window =
+                    hit_windows::mania::PERFECT.difficulty_range(f64::from(raw_od));
 
                 if mods.hr() {
                     perfect_hit_window /= 1.4;
@@ -424,12 +370,12 @@ impl BeatmapAttributesBuilder {
                     perfect_hit_window /= 1.0 / 1.4;
                 }
 
-                MANIA_PERFECT.inverse_difficulty_range(perfect_hit_window)
+                hit_windows::mania::PERFECT.inverse_difficulty_range(perfect_hit_window)
             }
         };
 
         BeatmapAttributes {
-            ar: AR_WINDOWS.inverse_difficulty_range(hit_windows.ar),
+            ar: hit_windows::AR.inverse_difficulty_range(hit_windows.ar),
             od,
             cs: self.build_cs(),
             hp: self.build_hp(),
@@ -510,6 +456,84 @@ impl ModsDependentKind {
             ModsDependentKind::Custom(inner) => inner.value,
         }
     }
+}
+
+mod hit_windows {
+    use super::BeatmapAttributesExt;
+
+    pub(super) struct GameModeHitWindows {
+        pub min: f64,
+        pub mid: f64,
+        pub max: f64,
+    }
+
+    impl GameModeHitWindows {
+        pub fn difficulty_range(&self, difficulty: f64) -> f64 {
+            let Self { min, mid, max } = *self;
+
+            BeatmapAttributesExt::difficulty_range(difficulty, min, mid, max)
+        }
+
+        pub fn inverse_difficulty_range(&self, difficulty_value: f64) -> f64 {
+            let Self { min, mid, max } = *self;
+
+            BeatmapAttributesExt::inverse_difficulty_range(difficulty_value, min, mid, max)
+        }
+    }
+
+    pub mod osu {
+        use super::GameModeHitWindows;
+
+        pub const GREAT: GameModeHitWindows = GameModeHitWindows {
+            min: 80.0,
+            mid: 50.0,
+            max: 20.0,
+        };
+
+        pub const OK: GameModeHitWindows = GameModeHitWindows {
+            min: 140.0,
+            mid: 100.0,
+            max: 60.0,
+        };
+
+        pub const MEH: GameModeHitWindows = GameModeHitWindows {
+            min: 200.0,
+            mid: 150.0,
+            max: 100.0,
+        };
+    }
+
+    pub mod taiko {
+        use super::GameModeHitWindows;
+
+        pub const GREAT: GameModeHitWindows = GameModeHitWindows {
+            min: 50.0,
+            mid: 35.0,
+            max: 20.0,
+        };
+
+        pub const OK: GameModeHitWindows = GameModeHitWindows {
+            min: 120.0,
+            mid: 80.0,
+            max: 50.0,
+        };
+    }
+
+    pub mod mania {
+        use super::GameModeHitWindows;
+
+        pub const PERFECT: GameModeHitWindows = GameModeHitWindows {
+            min: 22.4,
+            mid: 19.4,
+            max: 13.9,
+        };
+    }
+
+    pub const AR: GameModeHitWindows = GameModeHitWindows {
+        min: 1800.0,
+        mid: 1200.0,
+        max: 450.0,
+    };
 }
 
 #[cfg(test)]
