@@ -1,7 +1,11 @@
-use crate::model::beatmap::BeatmapAttributes;
+pub struct PeppyStarsBeatmapAttributes {
+    pub cs: f64,
+    pub hp: f64,
+    pub od: f64,
+}
 
 pub fn calculate_difficulty_peppy_stars(
-    map_attrs: &BeatmapAttributes,
+    map_attrs: &PeppyStarsBeatmapAttributes,
     object_count: i32,
     drain_len: i32,
 ) -> i32 {

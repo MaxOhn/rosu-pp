@@ -37,7 +37,6 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<OsuStrains, Con
                 flashlight,
             },
         attrs: _,
-        map_attrs: _,
     } = DifficultyValues::calculate(difficulty, &map);
 
     Ok(OsuStrains {

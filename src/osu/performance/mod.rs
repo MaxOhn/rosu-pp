@@ -102,6 +102,8 @@ impl<'map> OsuPerformance<'map> {
     /// However, when passing previously calculated attributes, make sure they
     /// have been calculated for the same map and [`Difficulty`] settings.
     /// Otherwise, the final attributes will be incorrect.
+    ///
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
     pub fn new(map_or_attrs: impl IntoModePerformance<'map, Osu>) -> Self {
         map_or_attrs.into_performance()
     }
