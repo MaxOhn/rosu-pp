@@ -385,7 +385,7 @@ impl BeatmapAttributesBuilder {
     /// # Panics
     ///
     /// Panics if the mode is not [`GameMode::Osu`].
-    pub fn build_peppy_stars(self) -> PeppyStarsBeatmapAttributes {
+    pub(crate) fn build_peppy_stars(self) -> PeppyStarsBeatmapAttributes {
         debug_assert_eq!(self.mode, GameMode::Osu);
 
         let mut raw_od = self.od.value(&self.mods, GameMods::od);
