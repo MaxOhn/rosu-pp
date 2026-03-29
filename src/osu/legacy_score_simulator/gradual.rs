@@ -5,6 +5,7 @@ use rosu_map::section::events::BreakPeriod;
 use crate::{
     Beatmap,
     any::hit_result::HitResult,
+    model::beatmap::BeatmapAttributes,
     osu::{
         legacy_score_simulator::{
             AddScoreComboMultiplier, IncreaseCombo, IsBonus, LegacyScoreAttributes,
@@ -12,12 +13,12 @@ use crate::{
         },
         object::{NestedSliderObjectKind, OsuObject, OsuObjectKind},
     },
-    util::ruleset_ext::{PeppyStarsBeatmapAttributes, calculate_difficulty_peppy_stars},
+    util::ruleset_ext::calculate_difficulty_peppy_stars,
 };
 
 pub struct GradualLegacyScoreSimulator {
-    map_attrs: PeppyStarsBeatmapAttributes,
-    map_attrs_nomod: PeppyStarsBeatmapAttributes,
+    map_attrs: BeatmapAttributes,
+    map_attrs_nomod: BeatmapAttributes,
     attrs: LegacyScoreAttributes,
     inner: super::LegacyScoreSimulatorInner,
     combo_score_factors: Vec<f64>,
@@ -30,10 +31,10 @@ pub struct GradualLegacyScoreSimulator {
 }
 
 impl GradualLegacyScoreSimulator {
-    pub fn new(map: &Beatmap, map_attrs: PeppyStarsBeatmapAttributes) -> Self {
+    pub fn new(map: &Beatmap, map_attrs: BeatmapAttributes) -> Self {
         Self {
             map_attrs,
-            map_attrs_nomod: map.attributes().build_peppy_stars(),
+            map_attrs_nomod: map.attributes().build(),
             attrs: LegacyScoreAttributes::default(),
             inner: LegacyScoreSimulatorInner::default(),
             combo_score_factors: Vec::new(),

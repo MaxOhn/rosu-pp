@@ -5,7 +5,7 @@ use rosu_map::section::general::GameMode;
 use crate::{
     Beatmap, Difficulty,
     any::difficulty::skills::StrainSkill,
-    model::{beatmap::HitWindows, hit_object::HitObject, mode::ConvertError},
+    model::{hit_object::HitObject, mode::ConvertError},
     taiko::convert,
     util::sync::RefCount,
 };
@@ -89,12 +89,14 @@ impl TaikoGradualDifficulty {
             (Some(true), Some(true)) => FirstTwoCombos::Both,
         };
 
-        let HitWindows {
-            od_great,
-            od_ok,
-            od_meh: _,
-            ar: _,
-        } = map.attributes().difficulty(&difficulty).hit_windows();
+        let hit_windows = map
+            .attributes()
+            .difficulty(&difficulty)
+            .build()
+            .hit_windows();
+
+        let great_hit_window = hit_windows.od_great.unwrap_or(0.0);
+        let ok_hit_window = hit_windows.od_ok.unwrap_or(0.0);
 
         let mut n_diff_objects = 0;
         let mut max_combo = 0;
@@ -108,11 +110,11 @@ impl TaikoGradualDifficulty {
             difficulty.get_mods(),
         );
 
-        let skills = TaikoSkills::new(od_great, map.is_convert);
+        let skills = TaikoSkills::new(great_hit_window, map.is_convert);
 
         let attrs = TaikoDifficultyAttributes {
-            great_hit_window: od_great,
-            ok_hit_window: od_ok.unwrap_or(0.0),
+            great_hit_window,
+            ok_hit_window,
             is_convert: map.is_convert,
             ..Default::default()
         };

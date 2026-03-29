@@ -13,10 +13,15 @@ use crate::{
 };
 
 pub use self::{
-    attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
+    attributes::{
+        AdjustedBeatmapAttributes, BeatmapAttribute, BeatmapAttributes, BeatmapAttributesBuilder,
+        HitWindows,
+    },
     decode::{BeatmapState, ParseBeatmapError},
     suspicious::TooSuspicious,
 };
+
+pub(crate) use self::attributes::BeatmapAttributesExt;
 
 use super::{
     control_point::{
@@ -27,7 +32,7 @@ use super::{
     mode::ConvertError,
 };
 
-mod attributes;
+pub(crate) mod attributes;
 mod bpm;
 mod decode;
 mod suspicious;

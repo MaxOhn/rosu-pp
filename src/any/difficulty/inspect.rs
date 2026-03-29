@@ -1,6 +1,7 @@
-use crate::{Difficulty, model::mods::GameMods};
-
-use super::ModsDependent;
+use crate::{
+    Difficulty,
+    model::{beatmap::BeatmapAttribute, mods::GameMods},
+};
 
 /// [`Difficulty`] but all fields are public for inspection.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -14,15 +15,15 @@ pub struct InspectDifficulty {
     /// Override a beatmap's set AR.
     ///
     /// Only relevant for osu! and osu!catch.
-    pub ar: Option<ModsDependent>,
+    pub ar: BeatmapAttribute,
     /// Override a beatmap's set CS.
     ///
     /// Only relevant for osu! and osu!catch.
-    pub cs: Option<ModsDependent>,
+    pub cs: BeatmapAttribute,
     /// Override a beatmap's set HP.
-    pub hp: Option<ModsDependent>,
+    pub hp: BeatmapAttribute,
     /// Override a beatmap's set OD.
-    pub od: Option<ModsDependent>,
+    pub od: BeatmapAttribute,
     /// Adjust patterns as if the HR mod is enabled.
     ///
     /// Only relevant for osu!catch.
@@ -59,21 +60,20 @@ impl InspectDifficulty {
             difficulty = difficulty.clock_rate(clock_rate);
         }
 
-        if let Some(ar) = ar {
-            difficulty = difficulty.ar(ar.value, ar.with_mods);
+        macro_rules! set_attr {
+            ( $attr:ident ) => {
+                match $attr {
+                    BeatmapAttribute::None | BeatmapAttribute::Value(_) => {}
+                    BeatmapAttribute::Given(value) => difficulty = difficulty.$attr(value, false),
+                    BeatmapAttribute::Fixed(value) => difficulty = difficulty.$attr(value, true),
+                };
+            };
         }
 
-        if let Some(cs) = cs {
-            difficulty = difficulty.cs(cs.value, cs.with_mods);
-        }
-
-        if let Some(hp) = hp {
-            difficulty = difficulty.hp(hp.value, hp.with_mods);
-        }
-
-        if let Some(od) = od {
-            difficulty = difficulty.od(od.value, od.with_mods);
-        }
+        set_attr!(ar);
+        set_attr!(cs);
+        set_attr!(hp);
+        set_attr!(od);
 
         if let Some(hardrock_offsets) = hardrock_offsets {
             difficulty = difficulty.hardrock_offsets(hardrock_offsets);
