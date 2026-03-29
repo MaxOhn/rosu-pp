@@ -1,6 +1,6 @@
 use rosu_map::util::Pos;
 
-use crate::{model::beatmap::attributes::BeatmapAttributesExt, osu::object::OsuObject};
+use crate::{model::beatmap::BeatmapAttributesExt, osu::object::OsuObject};
 
 use super::object::OsuDifficultyObject;
 

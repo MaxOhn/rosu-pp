@@ -13,10 +13,14 @@ use crate::{
 };
 
 pub use self::{
-    attributes::{BeatmapAttributes, BeatmapAttributesBuilder, HitWindows},
+    attributes::{
+        AdjustedBeatmapAttributes, BeatmapAttributes, BeatmapAttributesBuilder, HitWindows,
+    },
     decode::{BeatmapState, ParseBeatmapError},
     suspicious::TooSuspicious,
 };
+
+pub(crate) use self::attributes::BeatmapAttributesExt;
 
 use super::{
     control_point::{

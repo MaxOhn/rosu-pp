@@ -1,4 +1,4 @@
-use crate::{model::beatmap::BeatmapAttributesBuilder, osu::performance::OsuPerformance};
+use crate::{model::beatmap::BeatmapAttributesExt, osu::performance::OsuPerformance};
 
 /// The result of a difficulty calculation on an osu!standard map.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -73,7 +73,7 @@ impl OsuDifficultyAttributes {
 
     /// The overall difficulty
     pub const fn od(&self) -> f64 {
-        BeatmapAttributesBuilder::osu_great_hit_window_to_od(self.great_hit_window)
+        BeatmapAttributesExt::osu_great_hit_window_to_od(self.great_hit_window)
     }
 
     /// Returns a builder for performance calculation.
