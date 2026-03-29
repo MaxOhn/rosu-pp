@@ -2,7 +2,7 @@
 ///
 /// It contains either:
 /// - the default value (5.0)
-/// - a value taken from a [`Beatmap`]
+/// - a value taken from a [`Beatmap`] or mutated default value
 /// - a user-given value that may be adjusted
 /// - a user-given *fixed* value that will stay as-is
 ///
@@ -14,8 +14,8 @@ pub enum BeatmapAttribute {
     /// Will be treated as the default value (5.0).
     #[default]
     None,
-    /// Variable value taken from a [`Beatmap`] that may be overriden and
-    /// adjusted based on mods and clock rate.
+    /// Variable value taken from a [`Beatmap`] or mutated default value that
+    /// may be overriden and adjusted based on mods and clock rate.
     ///
     /// [`Beatmap`]: crate::Beatmap
     Value(f32),
