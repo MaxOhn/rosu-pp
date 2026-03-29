@@ -77,7 +77,6 @@ impl BeatmapAttributes {
         match self.difficulty.ar {
             BeatmapAttribute::None => BeatmapAttribute::DEFAULT,
             BeatmapAttribute::Given(value) | BeatmapAttribute::Value(value) => value,
-            // TODO: test
             BeatmapAttribute::Fixed(fixed) => match self.mode {
                 GameMode::Osu | GameMode::Catch => hit_windows::AR.inverse_difficulty_range(
                     hit_windows::AR.difficulty_range(f64::from(fixed)) * self.clock_rate,
@@ -92,7 +91,6 @@ impl BeatmapAttributes {
         match self.difficulty.od {
             BeatmapAttribute::None => BeatmapAttribute::DEFAULT,
             BeatmapAttribute::Given(value) | BeatmapAttribute::Value(value) => value,
-            // TODO: test
             BeatmapAttribute::Fixed(fixed) => match self.mode {
                 GameMode::Osu => hit_windows::osu::GREAT.inverse_difficulty_range(
                     hit_windows::osu::GREAT.difficulty_range(f64::from(fixed)) * self.clock_rate,
@@ -483,6 +481,31 @@ mod tests {
                 .hit_windows();
 
             assert_eq!(fixed, given, "{mode:?}");
+        }
+    }
+
+    #[test]
+    fn getter_fixed_vs_given() {
+        for mode in [
+            GameMode::Osu,
+            GameMode::Taiko,
+            GameMode::Catch,
+            GameMode::Mania,
+        ] {
+            let fixed = BeatmapAttributes::builder()
+                .mode(mode, false)
+                .ar(7.1, true)
+                .od(7.1, true)
+                .build();
+
+            let given = BeatmapAttributes::builder()
+                .mode(mode, false)
+                .ar(7.1, false)
+                .od(7.1, false)
+                .build();
+
+            assert_eq!(fixed.ar(), given.ar(), "{mode:?}");
+            assert_eq!(fixed.od(), given.od(), "{mode:?}");
         }
     }
 }
