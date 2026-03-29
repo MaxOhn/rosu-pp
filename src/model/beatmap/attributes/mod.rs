@@ -1,15 +1,12 @@
 use rosu_map::section::general::GameMode;
 
-pub use self::{builder::BeatmapAttributesBuilder, hit_windows::HitWindows};
-
-pub(crate) use self::ext::BeatmapAttributesExt;
-
-use crate::{
-    GameMods,
-    model::beatmap::attributes::{
-        attribute::BeatmapAttribute, difficulty::BeatmapDifficulty, hit_windows::GameModeHitWindows,
-    },
+pub use self::{
+    attribute::BeatmapAttribute, builder::BeatmapAttributesBuilder, hit_windows::HitWindows,
 };
+
+pub(crate) use self::{difficulty::BeatmapDifficulty, ext::BeatmapAttributesExt};
+
+use crate::{GameMods, model::beatmap::attributes::hit_windows::GameModeHitWindows};
 
 mod attribute;
 mod builder;
@@ -78,6 +75,7 @@ impl BeatmapAttributes {
     /// The approach rate.
     pub fn ar(&self) -> f32 {
         match self.difficulty.ar {
+            BeatmapAttribute::None => BeatmapAttribute::DEFAULT,
             BeatmapAttribute::Given(value) | BeatmapAttribute::Value(value) => value,
             // TODO: test
             BeatmapAttribute::Fixed(fixed) => match self.mode {
@@ -92,6 +90,7 @@ impl BeatmapAttributes {
     /// The overall difficulty.
     pub fn od(&self) -> f32 {
         match self.difficulty.od {
+            BeatmapAttribute::None => BeatmapAttribute::DEFAULT,
             BeatmapAttribute::Given(value) | BeatmapAttribute::Value(value) => value,
             // TODO: test
             BeatmapAttribute::Fixed(fixed) => match self.mode {
@@ -137,26 +136,34 @@ impl BeatmapAttributes {
         let clock_rate = self.clock_rate;
 
         // Same for osu! and osu!catch (?)
-        let ar = || match self.difficulty.ar {
-            BeatmapAttribute::Value(value) | BeatmapAttribute::Given(value) => {
-                hit_windows::AR.difficulty_range(f64::from(value)) / clock_rate
-            }
-            BeatmapAttribute::Fixed(fixed) => hit_windows::AR.difficulty_range(f64::from(fixed)),
+        let ar = || {
+            let value = match self.difficulty.ar {
+                BeatmapAttribute::None => BeatmapAttribute::DEFAULT,
+                BeatmapAttribute::Value(value) | BeatmapAttribute::Given(value) => value,
+                BeatmapAttribute::Fixed(fixed) => {
+                    return hit_windows::AR.difficulty_range(f64::from(fixed));
+                }
+            };
+
+            hit_windows::AR.difficulty_range(f64::from(value)) / clock_rate
         };
 
         // See `{OsuHitWindows,TaikoHitWindows}.SetDifficulty`
-        let set_difficulty = |hit_windows: &GameModeHitWindows| match self.difficulty.od {
-            BeatmapAttribute::Value(value) | BeatmapAttribute::Given(value) => {
-                (f64::floor(hit_windows.difficulty_range(f64::from(value))) - 0.5) / clock_rate
-            }
-            BeatmapAttribute::Fixed(fixed) => {
-                //     Fixed           = f^-1(f(Value) / C)
-                // <=> f(Fixed)        = f(Value) / C
-                // <=> f(Fixed) * C    = f(Value)
-                let f_value = hit_windows.difficulty_range(f64::from(fixed)) * clock_rate;
+        let set_difficulty = |hit_windows: &GameModeHitWindows| {
+            let value = match self.difficulty.od {
+                BeatmapAttribute::None => BeatmapAttribute::DEFAULT,
+                BeatmapAttribute::Value(value) | BeatmapAttribute::Given(value) => value,
+                BeatmapAttribute::Fixed(fixed) => {
+                    //     Fixed           = f^-1(f(Value) / C)
+                    // <=> f(Fixed)        = f(Value) / C
+                    // <=> f(Fixed) * C    = f(Value)
+                    let f_value = hit_windows.difficulty_range(f64::from(fixed)) * clock_rate;
 
-                (f64::floor(f_value) - 0.5) / clock_rate
-            }
+                    return (f64::floor(f_value) - 0.5) / clock_rate;
+                }
+            };
+
+            (f64::floor(hit_windows.difficulty_range(f64::from(value))) - 0.5) / clock_rate
         };
 
         match self.mode {

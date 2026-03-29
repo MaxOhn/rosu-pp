@@ -14,7 +14,8 @@ use crate::{
 
 pub use self::{
     attributes::{
-        AdjustedBeatmapAttributes, BeatmapAttributes, BeatmapAttributesBuilder, HitWindows,
+        AdjustedBeatmapAttributes, BeatmapAttribute, BeatmapAttributes, BeatmapAttributesBuilder,
+        HitWindows,
     },
     decode::{BeatmapState, ParseBeatmapError},
     suspicious::TooSuspicious,

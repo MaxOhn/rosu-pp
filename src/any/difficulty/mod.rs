@@ -9,7 +9,11 @@ use crate::{
     GradualDifficulty, GradualPerformance,
     catch::Catch,
     mania::Mania,
-    model::{beatmap::Beatmap, mode::ConvertError, mods::GameMods},
+    model::{
+        beatmap::{Beatmap, BeatmapAttribute, attributes::BeatmapDifficulty},
+        mode::ConvertError,
+        mods::GameMods,
+    },
     osu::Osu,
     taiko::Taiko,
 };
@@ -48,33 +52,13 @@ pub struct Difficulty {
     /// This allows for an optimization to reduce the struct size by storing its
     /// bits as a [`NonZeroU64`].
     clock_rate: Option<NonZeroU64>,
-    ar: Option<ModsDependent>,
-    cs: Option<ModsDependent>,
-    hp: Option<ModsDependent>,
-    od: Option<ModsDependent>,
+    #[expect(
+        clippy::struct_field_names,
+        reason = "it's a different kind of difficulty"
+    )]
+    map_difficulty: BeatmapDifficulty,
     hardrock_offsets: Option<bool>,
     lazer: Option<bool>,
-}
-
-/// Wrapper for beatmap attributes in [`Difficulty`].
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
-pub struct ModsDependent {
-    /// Value of the beatmap attribute.
-    pub value: f32,
-    /// Whether `value` should be used as is or modified based on mods.
-    ///
-    /// `true` means "value already considers mods" i.e. use as is;
-    /// `false` means modify with mods.
-    pub with_mods: bool,
-}
-
-impl ModsDependent {
-    pub const fn new(value: f32) -> Self {
-        Self {
-            value,
-            with_mods: false,
-        }
-    }
 }
 
 impl Difficulty {
@@ -84,10 +68,7 @@ impl Difficulty {
             mods: GameMods::DEFAULT,
             passed_objects: None,
             clock_rate: None,
-            ar: None,
-            cs: None,
-            hp: None,
-            od: None,
+            map_difficulty: BeatmapDifficulty::DEFAULT,
             hardrock_offsets: None,
             lazer: None,
         }
@@ -100,10 +81,7 @@ impl Difficulty {
             mods,
             passed_objects,
             clock_rate,
-            ar,
-            cs,
-            hp,
-            od,
+            map_difficulty,
             hardrock_offsets,
             lazer,
         } = self;
@@ -112,10 +90,10 @@ impl Difficulty {
             mods,
             passed_objects,
             clock_rate: clock_rate.map(non_zero_u64_to_f64),
-            ar,
-            cs,
-            hp,
-            od,
+            ar: map_difficulty.ar,
+            cs: map_difficulty.cs,
+            hp: map_difficulty.hp,
+            od: map_difficulty.od,
             hardrock_offsets,
             lazer,
         }
@@ -170,80 +148,88 @@ impl Difficulty {
     ///
     /// Only relevant for osu! and osu!catch.
     ///
-    /// `with_mods` determines if the given value should be used before
-    /// or after accounting for mods, e.g. on `true` the value will be
-    /// used as is and on `false` it will be modified based on the mods.
+    /// `fixed` determines if the given value should be used before or after
+    /// accounting for mods, e.g. on `true` the value will be used as is and on
+    /// `false` it will be modified based on the mods.
     ///
     /// | Minimum | Maximum |
     /// | :-----: | :-----: |
     /// | -20     | 20      |
-    pub fn ar(self, ar: f32, with_mods: bool) -> Self {
-        Self {
-            ar: Some(ModsDependent {
-                value: ar.clamp(-20.0, 20.0),
-                with_mods,
-            }),
-            ..self
-        }
+    pub const fn ar(mut self, ar: f32, fixed: bool) -> Self {
+        let ar = f32::clamp(ar, -20.0, 20.0);
+
+        self.map_difficulty.ar = if fixed {
+            BeatmapAttribute::Fixed(ar)
+        } else {
+            BeatmapAttribute::Given(ar)
+        };
+
+        self
     }
 
     /// Override a beatmap's set CS.
     ///
     /// Only relevant for osu! and osu!catch.
     ///
-    /// `with_mods` determines if the given value should be used before
-    /// or after accounting for mods, e.g. on `true` the value will be
-    /// used as is and on `false` it will be modified based on the mods.
+    /// `fixed` determines if the given value should be used before or after
+    /// accounting for mods, e.g. on `true` the value will be used as is and on
+    /// `false` it will be modified based on the mods.
     ///
     /// | Minimum | Maximum |
     /// | :-----: | :-----: |
     /// | -20     | 20      |
-    pub fn cs(self, cs: f32, with_mods: bool) -> Self {
-        Self {
-            cs: Some(ModsDependent {
-                value: cs.clamp(-20.0, 20.0),
-                with_mods,
-            }),
-            ..self
-        }
+    pub const fn cs(mut self, cs: f32, fixed: bool) -> Self {
+        let cs = f32::clamp(cs, -20.0, 20.0);
+
+        self.map_difficulty.cs = if fixed {
+            BeatmapAttribute::Fixed(cs)
+        } else {
+            BeatmapAttribute::Given(cs)
+        };
+
+        self
     }
 
     /// Override a beatmap's set HP.
     ///
-    /// `with_mods` determines if the given value should be used before
-    /// or after accounting for mods, e.g. on `true` the value will be
-    /// used as is and on `false` it will be modified based on the mods.
+    /// `fixed` determines if the given value should be used before or after
+    /// accounting for mods, e.g. on `true` the value will be used as is and on
+    /// `false` it will be modified based on the mods.
     ///
     /// | Minimum | Maximum |
     /// | :-----: | :-----: |
     /// | -20     | 20      |
-    pub fn hp(self, hp: f32, with_mods: bool) -> Self {
-        Self {
-            hp: Some(ModsDependent {
-                value: hp.clamp(-20.0, 20.0),
-                with_mods,
-            }),
-            ..self
-        }
+    pub const fn hp(mut self, hp: f32, fixed: bool) -> Self {
+        let hp = f32::clamp(hp, -20.0, 20.0);
+
+        self.map_difficulty.hp = if fixed {
+            BeatmapAttribute::Fixed(hp)
+        } else {
+            BeatmapAttribute::Given(hp)
+        };
+
+        self
     }
 
     /// Override a beatmap's set OD.
     ///
-    /// `with_mods` determines if the given value should be used before
-    /// or after accounting for mods, e.g. on `true` the value will be
-    /// used as is and on `false` it will be modified based on the mods.
+    /// `fixed` determines if the given value should be used before or after
+    /// accounting for mods, e.g. on `true` the value will be used as is and on
+    /// `false` it will be modified based on the mods.
     ///
     /// | Minimum | Maximum |
     /// | :-----: | :-----: |
     /// | -20     | 20      |
-    pub fn od(self, od: f32, with_mods: bool) -> Self {
-        Self {
-            od: Some(ModsDependent {
-                value: od.clamp(-20.0, 20.0),
-                with_mods,
-            }),
-            ..self
-        }
+    pub const fn od(mut self, od: f32, fixed: bool) -> Self {
+        let od = f32::clamp(od, -20.0, 20.0);
+
+        self.map_difficulty.od = if fixed {
+            BeatmapAttribute::Fixed(od)
+        } else {
+            BeatmapAttribute::Given(od)
+        };
+
+        self
     }
 
     /// Adjust patterns as if the HR mod is enabled.
@@ -359,20 +345,8 @@ impl Difficulty {
         self.passed_objects.map_or(usize::MAX, |n| n as usize)
     }
 
-    pub(crate) const fn get_ar(&self) -> Option<ModsDependent> {
-        self.ar
-    }
-
-    pub(crate) const fn get_cs(&self) -> Option<ModsDependent> {
-        self.cs
-    }
-
-    pub(crate) const fn get_hp(&self) -> Option<ModsDependent> {
-        self.hp
-    }
-
-    pub(crate) const fn get_od(&self) -> Option<ModsDependent> {
-        self.od
+    pub(crate) const fn get_map_difficulty(&self) -> &BeatmapDifficulty {
+        &self.map_difficulty
     }
 
     pub(crate) fn get_hardrock_offsets(&self) -> bool {
@@ -395,10 +369,7 @@ impl Debug for Difficulty {
             mods,
             passed_objects,
             clock_rate,
-            ar,
-            cs,
-            hp,
-            od,
+            map_difficulty,
             hardrock_offsets,
             lazer,
         } = self;
@@ -407,10 +378,10 @@ impl Debug for Difficulty {
             .field("mods", mods)
             .field("passed_objects", passed_objects)
             .field("clock_rate", &clock_rate.map(non_zero_u64_to_f64))
-            .field("ar", ar)
-            .field("cs", cs)
-            .field("hp", hp)
-            .field("od", od)
+            .field("ar", &map_difficulty.ar)
+            .field("cs", &map_difficulty.cs)
+            .field("hp", &map_difficulty.hp)
+            .field("od", &map_difficulty.od)
             .field("hardrock_offsets", hardrock_offsets)
             .field("lazer", lazer)
             .finish()

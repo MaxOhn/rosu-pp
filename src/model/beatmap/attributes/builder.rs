@@ -142,22 +142,16 @@ impl BeatmapAttributesBuilder {
 
     /// Specify all settings through [`Difficulty`].
     pub fn difficulty(self, difficulty: &Difficulty) -> Self {
+        let map_diff = difficulty.get_map_difficulty();
+
         Self {
             mode: self.mode,
             is_convert: self.is_convert,
             difficulty: BeatmapDifficulty {
-                ar: difficulty
-                    .get_ar()
-                    .map_or(self.difficulty.ar, BeatmapAttribute::new),
-                od: difficulty
-                    .get_od()
-                    .map_or(self.difficulty.od, BeatmapAttribute::new),
-                cs: difficulty
-                    .get_cs()
-                    .map_or(self.difficulty.cs, BeatmapAttribute::new),
-                hp: difficulty
-                    .get_hp()
-                    .map_or(self.difficulty.hp, BeatmapAttribute::new),
+                ar: self.difficulty.ar.overwrite(map_diff.ar),
+                cs: self.difficulty.cs.overwrite(map_diff.cs),
+                hp: self.difficulty.hp.overwrite(map_diff.hp),
+                od: self.difficulty.od.overwrite(map_diff.od),
             },
             mods: difficulty.get_mods().clone(),
             clock_rate: Some(difficulty.get_clock_rate()),

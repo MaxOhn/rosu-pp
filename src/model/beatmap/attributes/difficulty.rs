@@ -13,10 +13,10 @@ pub struct BeatmapDifficulty {
 
 impl BeatmapDifficulty {
     pub const DEFAULT: Self = Self {
-        ar: BeatmapAttribute::DEFAULT,
-        cs: BeatmapAttribute::DEFAULT,
-        hp: BeatmapAttribute::DEFAULT,
-        od: BeatmapAttribute::DEFAULT,
+        ar: BeatmapAttribute::None,
+        cs: BeatmapAttribute::None,
+        hp: BeatmapAttribute::None,
+        od: BeatmapAttribute::None,
     };
 
     pub fn apply_mods(&mut self, mods: &GameMods, mode: GameMode) {

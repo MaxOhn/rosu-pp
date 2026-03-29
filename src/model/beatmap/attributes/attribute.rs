@@ -1,9 +1,23 @@
-use crate::any::ModsDependent;
-
-#[derive(Copy, Clone, Debug, PartialEq)]
+/// A beatmap attribute.
+///
+/// It contains either:
+/// - the default value (5.0)
+/// - a value taken from a [`Beatmap`]
+/// - a user-given value that may be adjusted
+/// - a user-given *fixed* value that will stay as-is
+///
+/// [`Beatmap`]: crate::Beatmap
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub enum BeatmapAttribute {
-    /// Variable value that may be overriden and adjusted based on mods and
-    /// clock rate.
+    /// No value has been set.
+    ///
+    /// Will be treated as the default value (5.0).
+    #[default]
+    None,
+    /// Variable value taken from a [`Beatmap`] that may be overriden and
+    /// adjusted based on mods and clock rate.
+    ///
+    /// [`Beatmap`]: crate::Beatmap
     Value(f32),
     /// Given by the user and may not be overriden by custom mod values.
     ///
@@ -20,18 +34,21 @@ pub enum BeatmapAttribute {
 }
 
 impl BeatmapAttribute {
-    pub const DEFAULT: Self = Self::Value(5.0);
+    /// The default value for a `BeatmapAttribute`.
+    pub const DEFAULT: f32 = 5.0;
 
-    pub const fn new(value: ModsDependent) -> Self {
-        if value.with_mods {
-            Self::Fixed(value.value)
-        } else {
-            Self::Given(value.value)
-        }
+    /// Overwrites `self` with `other` if `other` is not `None`.
+    #[must_use]
+    pub const fn overwrite(self, other: Self) -> Self {
+        if let Self::None = other { self } else { other }
     }
 
     /// Mutates the `Value` and `Given` variants.
     pub fn try_mutate(&mut self, f: impl Fn(&mut f32)) {
+        if let Self::None = self {
+            *self = Self::Value(Self::DEFAULT);
+        }
+
         if let Self::Value(value) | Self::Given(value) = self {
             f(value);
         }
@@ -39,8 +56,10 @@ impl BeatmapAttribute {
 
     /// Sets the `Value` variant only.
     pub const fn try_set(&mut self, value: f32) {
-        if let Self::Value(old) = self {
-            *old = value;
+        match self {
+            Self::None => *self = Self::Value(value),
+            Self::Value(old) => *old = value,
+            _ => {}
         }
     }
 
@@ -52,6 +71,7 @@ impl BeatmapAttribute {
         F: FnOnce(f32) -> U,
     {
         match self {
+            Self::None => f(Self::DEFAULT),
             Self::Value(value) | Self::Given(value) => f(value),
             Self::Fixed(fixed) => default(fixed),
         }
@@ -59,6 +79,7 @@ impl BeatmapAttribute {
 
     pub const fn get_raw(self) -> f32 {
         match self {
+            Self::None => Self::DEFAULT,
             Self::Value(value) | Self::Given(value) | Self::Fixed(value) => value,
         }
     }
