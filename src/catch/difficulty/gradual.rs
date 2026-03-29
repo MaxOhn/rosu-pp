@@ -79,16 +79,11 @@ impl CatchGradualDifficulty {
         let reflection = difficulty.get_mods().reflection();
         let mut count = ObjectCountBuilder::new_gradual();
 
-        let palpable_objects = convert_objects(
-            &map,
-            &mut count,
-            reflection,
-            hr_offsets,
-            map_attrs.cs as f32,
-        );
+        let palpable_objects =
+            convert_objects(&map, &mut count, reflection, hr_offsets, map_attrs.cs());
 
-        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs as f32) * 0.5;
-        half_catcher_width *= 1.0 - ((map_attrs.cs as f32 - 5.5).max(0.0) * 0.0625);
+        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs()) * 0.5;
+        half_catcher_width *= 1.0 - ((map_attrs.cs() - 5.5).max(0.0) * 0.0625);
 
         let diff_objects = DifficultyValues::create_difficulty_objects(
             clock_rate,

@@ -1,6 +1,6 @@
 use rosu_map::util::Pos;
 
-use crate::osu::object::OsuObject;
+use crate::{model::beatmap::attributes::BeatmapAttributesExt, osu::object::OsuObject};
 
 use super::object::OsuDifficultyObject;
 
@@ -18,8 +18,11 @@ pub struct ScalingFactor {
 }
 
 impl ScalingFactor {
-    pub fn new(cs: f64) -> Self {
-        let scale = (f64::from(1.0_f32) - f64::from(0.7_f32) * ((cs - 5.0) / 5.0)) as f32 / 2.0
+    pub fn new(cs: f32) -> Self {
+        let scale = (f64::from(1.0_f32)
+            - f64::from(0.7_f32) * BeatmapAttributesExt::difficulty_range_value(f64::from(cs)))
+            as f32
+            / 2.0
             * BROKEN_GAMEFIELD_ROUNDING_ALLOWANCE;
 
         let radius = f64::from(OsuObject::OBJECT_RADIUS * scale);

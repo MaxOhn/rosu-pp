@@ -27,7 +27,7 @@ use super::{
     mode::ConvertError,
 };
 
-mod attributes;
+pub(crate) mod attributes;
 mod bpm;
 mod decode;
 mod suspicious;

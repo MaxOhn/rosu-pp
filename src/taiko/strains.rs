@@ -35,8 +35,10 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<TaikoStrains, C
     let great_hit_window = map
         .attributes()
         .difficulty(difficulty)
+        .build()
         .hit_windows()
-        .od_great;
+        .od_great
+        .unwrap_or(0.0);
 
     let values = DifficultyValues::calculate(difficulty, &map, great_hit_window);
 

@@ -58,11 +58,11 @@ pub fn difficulty(
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
 
-    let map_attrs_peppy = map.attributes().difficulty(difficulty).build_peppy_stars();
+    let map_attrs = map.attributes().difficulty(difficulty).build();
 
     attrs.legacy_score_base_multiplier = f64::from(OsuLegacyScoreSimulator::score_multiplier(
         &map,
-        &map_attrs_peppy,
+        &map_attrs,
         passed_objects,
     ));
 
@@ -84,18 +84,19 @@ impl OsuDifficultySetup {
     pub fn new(difficulty: &Difficulty, map: &Beatmap) -> Self {
         let clock_rate = difficulty.get_clock_rate();
         let map_attrs = map.attributes().difficulty(difficulty).build();
-        let scaling_factor = ScalingFactor::new(map_attrs.cs);
+        let hit_windows = map_attrs.hit_windows();
+        let scaling_factor = ScalingFactor::new(map_attrs.cs());
 
         let attrs = OsuDifficultyAttributes {
-            ar: map_attrs.ar,
-            hp: map_attrs.hp,
-            great_hit_window: map_attrs.hit_windows.od_great,
-            ok_hit_window: map_attrs.hit_windows.od_ok.unwrap_or(0.0),
-            meh_hit_window: map_attrs.hit_windows.od_meh.unwrap_or(0.0),
+            ar: map_attrs.apply_clock_rate().ar,
+            hp: f64::from(map_attrs.hp()),
+            great_hit_window: hit_windows.od_great.unwrap_or(0.0),
+            ok_hit_window: hit_windows.od_ok.unwrap_or(0.0),
+            meh_hit_window: hit_windows.od_meh.unwrap_or(0.0),
             ..Default::default()
         };
 
-        let time_preempt = f64::from((map_attrs.hit_windows.ar * clock_rate) as f32);
+        let time_preempt = f64::from((hit_windows.ar.unwrap_or(0.0) * clock_rate) as f32);
 
         Self {
             scaling_factor,
@@ -138,7 +139,9 @@ impl DifficultyValues {
         let diff_objects =
             Self::create_difficulty_objects(difficulty, &scaling_factor, osu_object_iter);
 
-        let mut skills = OsuSkills::new(mods, &scaling_factor, &map_attrs, time_preempt);
+        let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
+
+        let mut skills = OsuSkills::new(mods, &scaling_factor, great_hit_window, time_preempt);
 
         // The first hit object has no difficulty object
         let take_diff_objects = cmp::min(map.hit_objects.len(), take).saturating_sub(1);

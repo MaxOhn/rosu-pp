@@ -3,8 +3,9 @@ use rosu_map::section::general::GameMode;
 use crate::{
     Beatmap,
     any::hit_result::HitResult,
+    model::beatmap::BeatmapAttributes,
     osu::object::{NestedSliderObjectKind, OsuObject, OsuObjectKind},
-    util::ruleset_ext::{PeppyStarsBeatmapAttributes, calculate_difficulty_peppy_stars},
+    util::ruleset_ext::calculate_difficulty_peppy_stars,
 };
 
 pub mod gradual;
@@ -20,7 +21,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
     pub fn new(osu_objects: &'a [OsuObject], map: &Beatmap, passed_objects: usize) -> Self {
         // Note that no mods are being applied here. Apparently, this is how
         // lazer wants to it /shrug
-        let map_attrs = map.attributes().build_peppy_stars();
+        let map_attrs = map.attributes().build();
         let score_multiplier = Self::score_multiplier(map, &map_attrs, passed_objects);
 
         Self {
@@ -33,7 +34,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
 
     pub fn score_multiplier(
         map: &Beatmap,
-        map_attrs: &PeppyStarsBeatmapAttributes,
+        map_attrs: &BeatmapAttributes,
         passed_objects: usize,
     ) -> i32 {
         let hit_objects = &map.hit_objects;

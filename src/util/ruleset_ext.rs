@@ -1,11 +1,7 @@
-pub struct PeppyStarsBeatmapAttributes {
-    pub cs: f64,
-    pub hp: f64,
-    pub od: f64,
-}
+use crate::model::beatmap::BeatmapAttributes;
 
 pub fn calculate_difficulty_peppy_stars(
-    map_attrs: &PeppyStarsBeatmapAttributes,
+    map_attrs: &BeatmapAttributes,
     object_count: i32,
     drain_len: i32,
 ) -> i32 {
@@ -40,9 +36,9 @@ pub fn calculate_difficulty_peppy_stars(
      * which is NOT what the x87 FPU does.
      */
 
-    let drain_rate = map_attrs.hp;
-    let overall_difficulty = map_attrs.od;
-    let circle_size = map_attrs.cs;
+    let drain_rate = f64::from(map_attrs.hp());
+    let overall_difficulty = f64::from(map_attrs.od());
+    let circle_size = f64::from(map_attrs.cs());
 
     ((drain_rate + overall_difficulty + circle_size + object_to_drain_ratio) / 38.0 * 5.0)
         .round_ties_even() as i32

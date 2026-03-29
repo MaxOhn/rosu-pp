@@ -49,7 +49,7 @@ impl CatchDifficultySetup {
         let map_attrs = map.attributes().difficulty(difficulty).build();
 
         let attrs = CatchDifficultyAttributes {
-            preempt: map_attrs.hit_windows.ar,
+            preempt: map_attrs.hit_windows().ar.unwrap_or(0.0),
             is_convert: map.is_convert,
             ..Default::default()
         };
@@ -78,10 +78,10 @@ impl DifficultyValues {
         let mut count = ObjectCountBuilder::new_regular(take);
 
         let palpable_objects =
-            convert_objects(map, &mut count, reflection, hr_offsets, map_attrs.cs as f32);
+            convert_objects(map, &mut count, reflection, hr_offsets, map_attrs.cs());
 
-        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs as f32) * 0.5;
-        half_catcher_width *= 1.0 - ((map_attrs.cs as f32 - 5.5).max(0.0) * 0.0625);
+        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs()) * 0.5;
+        half_catcher_width *= 1.0 - ((map_attrs.cs() - 5.5).max(0.0) * 0.0625);
 
         let diff_objects = Self::create_difficulty_objects(
             clock_rate,
