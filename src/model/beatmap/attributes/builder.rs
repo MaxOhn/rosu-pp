@@ -55,7 +55,7 @@ impl BeatmapAttributesBuilder {
     }
 
     /// Use the given [`Beatmap`]'s attributes, mode, and convert status.
-    pub fn map(&mut self, map: &Beatmap) -> &mut Self {
+    pub const fn map(&mut self, map: &Beatmap) -> &mut Self {
         self.mode = map.mode;
         self.is_convert = map.is_convert;
 
@@ -71,8 +71,11 @@ impl BeatmapAttributesBuilder {
     }
 
     set_attr!(ar = "approach rate");
+
     set_attr!(od = "overall difficulty");
+
     set_attr!(cs = "circle size");
+
     set_attr!(hp = "drain rate");
 
     /// Specify mods.
