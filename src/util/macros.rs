@@ -129,8 +129,7 @@ macro_rules! define_skill {
                 $( $fields )*
                 strain_skill_current_section_peak f64 = 0.0, // <-
                 strain_skill_current_section_end f64 = 0.0,  // <-
-                strain_skill_strain_peaks Vec<f64>
-                    = Vec::with_capacity(256), // <-
+                strain_skill_strain_peaks Vec<f64> = Vec::with_capacity(256), // <-
                 strain_skill_object_strains Vec<f64> = Vec::with_capacity(256), // <-
             }
             $( $rest )*
