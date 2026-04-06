@@ -4,7 +4,7 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::difficulty::skills::StrainSkill,
+    any::{CalculateError, difficulty::skills::StrainSkill},
     catch::{
         CatchDifficultyAttributes,
         attributes::{GradualObjectCount, ObjectCountBuilder},
@@ -68,40 +68,53 @@ pub struct CatchGradualDifficulty {
 impl CatchGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!catch maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
-        let map = map.convert_ref(GameMode::Catch, difficulty.get_mods())?;
+        let map = super::prepare_map(&difficulty, map)?;
 
-        let clock_rate = difficulty.get_clock_rate();
+        Ok(new(difficulty, &map))
+    }
 
-        let CatchDifficultySetup { map_attrs, attrs } =
-            CatchDifficultySetup::new(&difficulty, &map);
+    /// Same as [`CatchGradualDifficulty::new`] but verifies that the map is not
+    /// suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let map = super::prepare_map(&difficulty, map)?;
+        map.check_suspicion()?;
 
-        let hr_offsets = difficulty.get_hardrock_offsets();
-        let reflection = difficulty.get_mods().reflection();
-        let mut count = ObjectCountBuilder::new_gradual();
+        Ok(new(difficulty, &map))
+    }
+}
 
-        let palpable_objects =
-            convert_objects(&map, &mut count, reflection, hr_offsets, map_attrs.cs());
+fn new(difficulty: Difficulty, map: &Beatmap) -> CatchGradualDifficulty {
+    debug_assert_eq!(map.mode, GameMode::Catch);
 
-        let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs()) * 0.5;
-        half_catcher_width *= 1.0 - ((map_attrs.cs() - 5.5).max(0.0) * 0.0625);
+    let clock_rate = difficulty.get_clock_rate();
 
-        let diff_objects = DifficultyValues::create_difficulty_objects(
-            clock_rate,
-            half_catcher_width,
-            palpable_objects.iter(),
-        );
+    let CatchDifficultySetup { map_attrs, attrs } = CatchDifficultySetup::new(&difficulty, map);
 
-        let count = count.into_gradual();
-        let movement = Movement::new(clock_rate);
+    let hr_offsets = difficulty.get_hardrock_offsets();
+    let reflection = difficulty.get_mods().reflection();
+    let mut count = ObjectCountBuilder::new_gradual();
 
-        Ok(Self {
-            idx: 0,
-            difficulty,
-            attrs,
-            count,
-            diff_objects,
-            movement,
-        })
+    let palpable_objects = convert_objects(map, &mut count, reflection, hr_offsets, map_attrs.cs());
+
+    let mut half_catcher_width = Catcher::calculate_catch_width(map_attrs.cs()) * 0.5;
+    half_catcher_width *= 1.0 - ((map_attrs.cs() - 5.5).max(0.0) * 0.0625);
+
+    let diff_objects = DifficultyValues::create_difficulty_objects(
+        clock_rate,
+        half_catcher_width,
+        palpable_objects.iter(),
+    );
+
+    let count = count.into_gradual();
+    let movement = Movement::new(clock_rate);
+
+    CatchGradualDifficulty {
+        idx: 0,
+        difficulty,
+        attrs,
+        count,
+        diff_objects,
+        movement,
     }
 }
 

@@ -2,6 +2,7 @@ use rosu_map::util::Pos;
 
 use crate::{
     Difficulty,
+    any::CalculateError,
     model::{
         beatmap::Beatmap,
         mode::{ConvertError, IGameMode},
@@ -47,6 +48,13 @@ impl IGameMode for Osu {
         map: &Beatmap,
     ) -> Result<Self::DifficultyAttributes, ConvertError> {
         difficulty::difficulty(difficulty, map)
+    }
+
+    fn checked_difficulty(
+        difficulty: &Difficulty,
+        map: &Beatmap,
+    ) -> Result<Self::DifficultyAttributes, CalculateError> {
+        difficulty::checked_difficulty(difficulty, map)
     }
 
     fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<Self::Strains, ConvertError> {

@@ -4,9 +4,8 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::difficulty::skills::StrainSkill,
+    any::{CalculateError, difficulty::skills::StrainSkill},
     model::{hit_object::HitObject, mode::ConvertError},
-    taiko::convert,
     util::sync::RefCount,
 };
 
@@ -70,69 +69,80 @@ enum FirstTwoCombos {
 impl TaikoGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!taiko maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
-        let mut map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
+        let map = super::prepare_map(&difficulty, map)?;
 
-        if let Some(seed) = difficulty.get_mods().random_seed() {
-            convert::apply_random_to_beatmap(map.to_mut(), seed);
-        }
+        Ok(new(difficulty, &map))
+    }
 
-        let take = difficulty.get_passed_objects();
-        let clock_rate = difficulty.get_clock_rate();
+    /// Same as [`TaikoGradualDifficulty::new`] but verifies that the map is not
+    /// suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let map = super::prepare_map(&difficulty, map)?;
+        map.check_suspicion()?;
 
-        let first_combos = match (
-            map.hit_objects.first().map(HitObject::is_circle),
-            map.hit_objects.get(1).map(HitObject::is_circle),
-        ) {
-            (None, _) | (Some(false), Some(false) | None) => FirstTwoCombos::None,
-            (Some(true), Some(false) | None) => FirstTwoCombos::OnlyFirst,
-            (Some(false), Some(true)) => FirstTwoCombos::OnlySecond,
-            (Some(true), Some(true)) => FirstTwoCombos::Both,
-        };
+        Ok(new(difficulty, &map))
+    }
+}
 
-        let hit_windows = map
-            .attributes()
-            .difficulty(&difficulty)
-            .build()
-            .hit_windows();
+fn new(difficulty: Difficulty, map: &Beatmap) -> TaikoGradualDifficulty {
+    debug_assert_eq!(map.mode, GameMode::Taiko);
 
-        let great_hit_window = hit_windows.od_great.unwrap_or(0.0);
-        let ok_hit_window = hit_windows.od_ok.unwrap_or(0.0);
+    let take = difficulty.get_passed_objects();
+    let clock_rate = difficulty.get_clock_rate();
 
-        let mut n_diff_objects = 0;
-        let mut max_combo = 0;
+    let first_combos = match (
+        map.hit_objects.first().map(HitObject::is_circle),
+        map.hit_objects.get(1).map(HitObject::is_circle),
+    ) {
+        (None, _) | (Some(false), Some(false) | None) => FirstTwoCombos::None,
+        (Some(true), Some(false) | None) => FirstTwoCombos::OnlyFirst,
+        (Some(false), Some(true)) => FirstTwoCombos::OnlySecond,
+        (Some(true), Some(true)) => FirstTwoCombos::Both,
+    };
 
-        let diff_objects = DifficultyValues::create_difficulty_objects(
-            &map,
-            take as u32,
-            clock_rate,
-            &mut max_combo,
-            &mut n_diff_objects,
-            difficulty.get_mods(),
-        );
+    let hit_windows = map
+        .attributes()
+        .difficulty(&difficulty)
+        .build()
+        .hit_windows();
 
-        let skills = TaikoSkills::new(great_hit_window, map.is_convert);
+    let great_hit_window = hit_windows.od_great.unwrap_or(0.0);
+    let ok_hit_window = hit_windows.od_ok.unwrap_or(0.0);
 
-        let attrs = TaikoDifficultyAttributes {
-            great_hit_window,
-            ok_hit_window,
-            is_convert: map.is_convert,
-            ..Default::default()
-        };
+    let mut n_diff_objects = 0;
+    let mut max_combo = 0;
 
-        let total_hits = map.hit_objects.iter().filter(|h| h.is_circle()).count();
+    let diff_objects = DifficultyValues::create_difficulty_objects(
+        map,
+        take as u32,
+        clock_rate,
+        &mut max_combo,
+        &mut n_diff_objects,
+        difficulty.get_mods(),
+    );
 
-        let diff_objects_iter = extend_lifetime(diff_objects.iter());
+    let skills = TaikoSkills::new(great_hit_window, map.is_convert);
 
-        Ok(Self {
-            idx: 0,
-            difficulty,
-            diff_objects,
-            diff_objects_iter,
-            skills,
-            attrs,
-            total_hits,
-            first_combos,
-        })
+    let attrs = TaikoDifficultyAttributes {
+        great_hit_window,
+        ok_hit_window,
+        is_convert: map.is_convert,
+        ..Default::default()
+    };
+
+    let total_hits = map.hit_objects.iter().filter(|h| h.is_circle()).count();
+
+    let diff_objects_iter = extend_lifetime(diff_objects.iter());
+
+    TaikoGradualDifficulty {
+        idx: 0,
+        difficulty,
+        diff_objects,
+        diff_objects_iter,
+        skills,
+        attrs,
+        total_hits,
+        first_combos,
     }
 }
 

@@ -7,7 +7,7 @@ pub use self::inspect::InspectManiaPerformance;
 use crate::{
     Performance,
     any::{
-        Difficulty, HitResultGenerator, HitResultPriority, InspectablePerformance,
+        CalculateError, Difficulty, HitResultGenerator, HitResultPriority, InspectablePerformance,
         IntoModePerformance, IntoPerformance, hitresult_generator::Fast,
     },
     mania::ManiaHitResults,
@@ -302,73 +302,51 @@ impl<'map> ManiaPerformance<'map> {
         self
     }
 
-    /// Create the [`ManiaScoreState`] that will be used for performance calculation.
+    /// Create the [`ManiaScoreState`] that will be used for performance
+    /// calculation.
+    ///
+    /// If this [`ManiaPerformance`] contained a [`Beatmap`], it will be
+    /// replaced by [`ManiaDifficultyAttributes`].
+    ///
+    /// [`Beatmap`]: crate::Beatmap
+    /// [`ManiaDifficultyAttributes`]: crate::mania::ManiaDifficultyAttributes
     pub fn generate_state(&mut self) -> Result<ManiaScoreState, ConvertError> {
         self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
         // SAFETY: We just calculated and inserted the attributes.
-        let attrs = unsafe { self.map_or_attrs.get_attrs() };
+        let state = unsafe { generate_state(self) };
 
-        let inspect = Mania::inspect_performance(self, attrs);
+        Ok(state)
+    }
 
-        let total_hits = inspect.total_hits();
+    /// Same as [`ManiaPerformance::generate_state`] but verifies that the map
+    /// was not suspicious.
+    pub fn checked_generate_state(&mut self) -> Result<ManiaScoreState, CalculateError> {
+        self.map_or_attrs.checked_insert_attrs(&self.difficulty)?;
 
-        let mut hitresults = match self.hitresult_generator {
-            Some(generator) => generator(inspect),
-            // TODO: use Statistical(?)
-            None => <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect),
-        };
+        // SAFETY: We just calculated and inserted the attributes.
+        let state = unsafe { generate_state(self) };
 
-        let remain = total_hits.saturating_sub(hitresults.total_hits());
-
-        match self.hitresult_priority {
-            HitResultPriority::BestCase => {
-                match (self.n320, self.n300, self.n200, self.n100, self.n50) {
-                    (None, ..) => hitresults.n320 += remain,
-                    (_, None, ..) => hitresults.n300 += remain,
-                    (_, _, None, ..) => hitresults.n200 += remain,
-                    (.., None, _) => hitresults.n100 += remain,
-                    _ => hitresults.n50 += remain,
-                }
-            }
-            HitResultPriority::WorstCase => {
-                match (self.n50, self.n100, self.n200, self.n300, self.n320) {
-                    (None, ..) => hitresults.n50 += remain,
-                    (_, None, ..) => hitresults.n100 += remain,
-                    (_, _, None, ..) => hitresults.n200 += remain,
-                    (.., None, _) => hitresults.n300 += remain,
-                    _ => hitresults.n320 += remain,
-                }
-            }
-        }
-
-        let ManiaHitResults {
-            n320,
-            n300,
-            n200,
-            n100,
-            n50,
-            misses,
-        } = &hitresults;
-
-        self.n320 = Some(*n320);
-        self.n300 = Some(*n300);
-        self.n200 = Some(*n200);
-        self.n100 = Some(*n100);
-        self.n50 = Some(*n50);
-        self.misses = Some(*misses);
-
-        Ok(hitresults)
+        Ok(state)
     }
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> Result<ManiaPerformanceAttributes, ConvertError> {
         let state = self.generate_state()?;
 
-        let attrs = match self.map_or_attrs {
-            MapOrAttrs::Attrs(attrs) => attrs,
-            MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Mania>(map)?,
-        };
+        // SAFETY: Attributes are calculated in `generate_state`.
+        let attrs = unsafe { self.map_or_attrs.into_attrs() };
+
+        Ok(ManiaPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state).calculate())
+    }
+
+    /// Same as [`ManiaPerformance::calculate`] but verifies that the map was
+    /// not suspicious.
+    pub fn checked_calculate(mut self) -> Result<ManiaPerformanceAttributes, CalculateError> {
+        let state = self.checked_generate_state()?;
+
+        // SAFETY: Attributes are calculated in `checked_generate_state`.
+        let attrs = unsafe { self.map_or_attrs.into_attrs() };
 
         Ok(ManiaPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state).calculate())
     }
@@ -447,6 +425,64 @@ impl<'map, T: IntoModePerformance<'map, Mania>> From<T> for ManiaPerformance<'ma
     fn from(into: T) -> Self {
         into.into_performance()
     }
+}
+
+/// # Safety
+/// Caller must ensure that the internal [`MapOrAttrs`] contains attributes.
+unsafe fn generate_state(perf: &mut ManiaPerformance) -> ManiaScoreState {
+    // SAFETY: Ensured by caller
+    let attrs = unsafe { perf.map_or_attrs.get_attrs() };
+
+    let inspect = Mania::inspect_performance(perf, attrs);
+
+    let total_hits = inspect.total_hits();
+
+    let mut hitresults = match perf.hitresult_generator {
+        Some(generator) => generator(inspect),
+        // TODO: use Statistical(?)
+        None => <Fast as HitResultGenerator<Mania>>::generate_hitresults(inspect),
+    };
+
+    let remain = total_hits.saturating_sub(hitresults.total_hits());
+
+    match perf.hitresult_priority {
+        HitResultPriority::BestCase => {
+            match (perf.n320, perf.n300, perf.n200, perf.n100, perf.n50) {
+                (None, ..) => hitresults.n320 += remain,
+                (_, None, ..) => hitresults.n300 += remain,
+                (_, _, None, ..) => hitresults.n200 += remain,
+                (.., None, _) => hitresults.n100 += remain,
+                _ => hitresults.n50 += remain,
+            }
+        }
+        HitResultPriority::WorstCase => {
+            match (perf.n50, perf.n100, perf.n200, perf.n300, perf.n320) {
+                (None, ..) => hitresults.n50 += remain,
+                (_, None, ..) => hitresults.n100 += remain,
+                (_, _, None, ..) => hitresults.n200 += remain,
+                (.., None, _) => hitresults.n300 += remain,
+                _ => hitresults.n320 += remain,
+            }
+        }
+    }
+
+    let ManiaHitResults {
+        n320,
+        n300,
+        n200,
+        n100,
+        n50,
+        misses,
+    } = &hitresults;
+
+    perf.n320 = Some(*n320);
+    perf.n300 = Some(*n300);
+    perf.n200 = Some(*n200);
+    perf.n100 = Some(*n100);
+    perf.n50 = Some(*n50);
+    perf.misses = Some(*misses);
+
+    hitresults
 }
 
 #[cfg(test)]

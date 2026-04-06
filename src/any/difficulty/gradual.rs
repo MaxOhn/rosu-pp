@@ -5,7 +5,10 @@ use crate::{
     any::DifficultyAttributes,
     catch::{Catch, CatchGradualDifficulty},
     mania::{Mania, ManiaGradualDifficulty},
-    model::mode::{ConvertError, IGameMode},
+    model::{
+        beatmap::TooSuspicious,
+        mode::{ConvertError, IGameMode},
+    },
     osu::{Osu, OsuGradualDifficulty},
     taiko::{Taiko, TaikoGradualDifficulty},
 };
@@ -53,7 +56,18 @@ impl GradualDifficulty {
         Self::new_with_mode(difficulty, map, map.mode).expect("no conversion required")
     }
 
-    /// Create a [`GradualDifficulty`] for a [`Beatmap`] on a specific [`GameMode`].
+    /// Same as [`GradualDifficulty::new`] but verifies that the map is not
+    /// suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, TooSuspicious> {
+        // This is fine because `Self::new` will use the map's mode so it won't
+        // be converted.
+        map.check_suspicion()?;
+
+        Ok(Self::new(difficulty, map))
+    }
+
+    /// Create a [`GradualDifficulty`] for a [`Beatmap`] on a specific
+    /// [`GameMode`].
     pub fn new_with_mode(
         difficulty: Difficulty,
         map: &Beatmap,

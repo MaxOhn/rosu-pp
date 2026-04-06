@@ -1,4 +1,6 @@
-use crate::{Beatmap, Difficulty, model::mode::ConvertError, osu::OsuGradualDifficulty};
+use crate::{
+    Beatmap, Difficulty, any::CalculateError, model::mode::ConvertError, osu::OsuGradualDifficulty,
+};
 
 use super::{OsuPerformanceAttributes, OsuScoreState};
 
@@ -84,6 +86,15 @@ impl OsuGradualPerformance {
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
         let lazer = difficulty.get_lazer();
         let difficulty = OsuGradualDifficulty::new(difficulty, map)?;
+
+        Ok(Self { lazer, difficulty })
+    }
+
+    /// Same as [`OsuGradualPerformance::new`] but verifies that the map is
+    /// not suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let lazer = difficulty.get_lazer();
+        let difficulty = OsuGradualDifficulty::checked_new(difficulty, map)?;
 
         Ok(Self { lazer, difficulty })
     }

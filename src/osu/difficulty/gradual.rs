@@ -4,7 +4,7 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::difficulty::skills::StrainSkill,
+    any::{CalculateError, difficulty::skills::StrainSkill},
     model::mode::ConvertError,
     osu::{
         convert::convert_objects,
@@ -77,62 +77,18 @@ struct NotClonable;
 impl OsuGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!standard maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
-        let mods = difficulty.get_mods();
-        let map = map.convert_ref(GameMode::Osu, mods)?;
+        let map = super::prepare_map(&difficulty, map)?;
 
-        let OsuDifficultySetup {
-            scaling_factor,
-            map_attrs,
-            mut attrs,
-            time_preempt,
-        } = OsuDifficultySetup::new(&difficulty, &map);
+        Ok(new(difficulty, &map))
+    }
 
-        let osu_objects = convert_objects(
-            &map,
-            &scaling_factor,
-            mods.reflection(),
-            time_preempt,
-            map.hit_objects.len(),
-            &mut attrs,
-        );
+    /// Same as [`OsuGradualDifficulty::new`] but verifies that the map is not
+    /// suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let map = super::prepare_map(&difficulty, map)?;
+        map.check_suspicion()?;
 
-        attrs.n_circles = 0;
-        attrs.n_sliders = 0;
-        attrs.n_large_ticks = 0;
-        attrs.n_spinners = 0;
-        attrs.max_combo = 0;
-
-        if let Some(h) = osu_objects.first() {
-            Self::increment_combo(h, &mut attrs);
-        }
-
-        let mut osu_objects = OsuObjects::new(osu_objects);
-
-        let diff_objects = DifficultyValues::create_difficulty_objects(
-            &difficulty,
-            &scaling_factor,
-            osu_objects.iter_mut(),
-        );
-
-        let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
-
-        let skills = OsuSkills::new(mods, &scaling_factor, great_hit_window, time_preempt);
-        let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
-
-        let score_simulator = GradualLegacyScoreSimulator::new(&map, map_attrs);
-        let nested_score = GradualNestedScorePerObject::default();
-
-        Ok(Self {
-            idx: 0,
-            difficulty,
-            attrs,
-            skills,
-            diff_objects,
-            osu_objects,
-            score_simulator: Box::new(score_simulator),
-            nested_score,
-            _not_clonable: NotClonable,
-        })
+        Ok(new(difficulty, &map))
     }
 
     fn increment_combo(h: &OsuObject, attrs: &mut OsuDifficultyAttributes) {
@@ -147,6 +103,66 @@ impl OsuGradualDifficulty {
             }
             OsuObjectKind::Spinner { .. } => attrs.n_spinners += 1,
         }
+    }
+}
+
+fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
+    debug_assert_eq!(map.mode, GameMode::Osu);
+
+    let mods = difficulty.get_mods();
+
+    let OsuDifficultySetup {
+        scaling_factor,
+        map_attrs,
+        mut attrs,
+        time_preempt,
+    } = OsuDifficultySetup::new(&difficulty, map);
+
+    let osu_objects = convert_objects(
+        map,
+        &scaling_factor,
+        mods.reflection(),
+        time_preempt,
+        map.hit_objects.len(),
+        &mut attrs,
+    );
+
+    attrs.n_circles = 0;
+    attrs.n_sliders = 0;
+    attrs.n_large_ticks = 0;
+    attrs.n_spinners = 0;
+    attrs.max_combo = 0;
+
+    if let Some(h) = osu_objects.first() {
+        OsuGradualDifficulty::increment_combo(h, &mut attrs);
+    }
+
+    let mut osu_objects = OsuObjects::new(osu_objects);
+
+    let diff_objects = DifficultyValues::create_difficulty_objects(
+        &difficulty,
+        &scaling_factor,
+        osu_objects.iter_mut(),
+    );
+
+    let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
+
+    let skills = OsuSkills::new(mods, &scaling_factor, great_hit_window, time_preempt);
+    let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
+
+    let score_simulator = GradualLegacyScoreSimulator::new(map, map_attrs);
+    let nested_score = GradualNestedScorePerObject::default();
+
+    OsuGradualDifficulty {
+        idx: 0,
+        difficulty,
+        attrs,
+        skills,
+        diff_objects,
+        osu_objects,
+        score_simulator: Box::new(score_simulator),
+        nested_score,
+        _not_clonable: NotClonable,
     }
 }
 

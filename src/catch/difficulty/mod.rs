@@ -1,8 +1,13 @@
+use std::borrow::Cow;
+
 use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap,
-    any::difficulty::{Difficulty, skills::StrainSkill},
+    any::{
+        CalculateError,
+        difficulty::{Difficulty, skills::StrainSkill},
+    },
     catch::{
         catcher::Catcher, convert::convert_objects, difficulty::object::CatchDifficultyObject,
     },
@@ -27,16 +32,39 @@ pub fn difficulty(
     difficulty: &Difficulty,
     map: &Beatmap,
 ) -> Result<CatchDifficultyAttributes, ConvertError> {
-    let map = map.convert_ref(GameMode::Catch, difficulty.get_mods())?;
+    let map = prepare_map(difficulty, map)?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+pub fn checked_difficulty(
+    difficulty: &Difficulty,
+    map: &Beatmap,
+) -> Result<CatchDifficultyAttributes, CalculateError> {
+    let map = prepare_map(difficulty, map)?;
+    map.check_suspicion()?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+fn prepare_map<'map>(
+    difficulty: &Difficulty,
+    map: &'map Beatmap,
+) -> Result<Cow<'map, Beatmap>, ConvertError> {
+    map.convert_ref(GameMode::Catch, difficulty.get_mods())
+}
+
+fn calculate_difficulty(difficulty: &Difficulty, map: &Beatmap) -> CatchDifficultyAttributes {
+    debug_assert_eq!(map.mode, GameMode::Catch);
 
     let DifficultyValues {
         movement,
         mut attrs,
-    } = DifficultyValues::calculate(difficulty, &map);
+    } = DifficultyValues::calculate(difficulty, map);
 
     DifficultyValues::eval(&mut attrs, movement.into_difficulty_value());
 
-    Ok(attrs)
+    attrs
 }
 
 pub struct CatchDifficultySetup {

@@ -5,8 +5,8 @@ use self::calculator::CatchPerformanceCalculator;
 use crate::{
     Performance,
     any::{
-        Difficulty, HitResultGenerator, InspectablePerformance, IntoModePerformance,
-        IntoPerformance, hitresult_generator::Fast,
+        CalculateError, Difficulty, HitResultGenerator, InspectablePerformance,
+        IntoModePerformance, IntoPerformance, hitresult_generator::Fast,
     },
     catch::{CatchHitResults, performance::inspect::InspectCatchPerformance},
     model::{mode::ConvertError, mods::GameMods},
@@ -320,52 +320,51 @@ impl<'map> CatchPerformance<'map> {
         self
     }
 
-    /// Create the [`CatchScoreState`] that will be used for performance calculation.
+    /// Create the [`CatchScoreState`] that will be used for performance
+    /// calculation.
+    ///
+    /// If this [`CatchPerformance`] contained a [`Beatmap`], it will be
+    /// replaced by [`CatchDifficultyAttributes`].
+    ///
+    /// [`Beatmap`]: crate::Beatmap
+    /// [`CatchDifficultyAttributes`]: crate::catch::CatchDifficultyAttributes
     pub fn generate_state(&mut self) -> Result<CatchScoreState, ConvertError> {
         self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
         // SAFETY: We just calculated and inserted the attributes.
-        let attrs = unsafe { self.map_or_attrs.get_attrs() };
+        let state = unsafe { generate_state(self) };
 
-        let inspect = Catch::inspect_performance(self, attrs);
+        Ok(state)
+    }
 
-        let misses = inspect.misses();
-        let max_combo = self.combo.unwrap_or_else(|| attrs.max_combo() - misses);
+    /// Same as [`CatchPerformance::generate_state`] but verifies that the map
+    /// was not suspicious.
+    pub fn checked_generate_state(&mut self) -> Result<CatchScoreState, CalculateError> {
+        self.map_or_attrs.checked_insert_attrs(&self.difficulty)?;
 
-        let hitresults = match self.hitresult_generator {
-            Some(generator) => generator(inspect),
-            None => <Fast as HitResultGenerator<Catch>>::generate_hitresults(inspect),
-        };
+        // SAFETY: We just calculated and inserted the attributes.
+        let state = unsafe { generate_state(self) };
 
-        let CatchHitResults {
-            fruits,
-            droplets,
-            tiny_droplets,
-            tiny_droplet_misses,
-            misses,
-        } = hitresults;
-
-        self.combo = Some(max_combo);
-        self.fruits = Some(fruits);
-        self.droplets = Some(droplets);
-        self.tiny_droplets = Some(tiny_droplets);
-        self.tiny_droplet_misses = Some(tiny_droplet_misses);
-        self.misses = Some(misses);
-
-        Ok(CatchScoreState {
-            max_combo,
-            hitresults,
-        })
+        Ok(state)
     }
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> Result<CatchPerformanceAttributes, ConvertError> {
         let state = self.generate_state()?;
 
-        let attrs = match self.map_or_attrs {
-            MapOrAttrs::Attrs(attrs) => attrs,
-            MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Catch>(map)?,
-        };
+        // SAFETY: Attributes are calculated in `generate_state`.
+        let attrs = unsafe { self.map_or_attrs.into_attrs() };
+
+        Ok(CatchPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state).calculate())
+    }
+
+    /// Same as [`CatchPerformance::calculate`] but verifies that the map was
+    /// not suspicious.
+    pub fn checked_calculate(mut self) -> Result<CatchPerformanceAttributes, CalculateError> {
+        let state = self.checked_generate_state()?;
+
+        // SAFETY: Attributes are calculated in `checked_generate_state`.
+        let attrs = unsafe { self.map_or_attrs.into_attrs() };
 
         Ok(CatchPerformanceCalculator::new(attrs, self.difficulty.get_mods(), state).calculate())
     }
@@ -441,6 +440,43 @@ impl<'map> TryFrom<OsuPerformance<'map>> for CatchPerformance<'map> {
 impl<'map, T: IntoModePerformance<'map, Catch>> From<T> for CatchPerformance<'map> {
     fn from(into: T) -> Self {
         into.into_performance()
+    }
+}
+
+/// # Safety
+/// Caller must ensure that the internal [`MapOrAttrs`] contains attributes.
+unsafe fn generate_state(perf: &mut CatchPerformance) -> CatchScoreState {
+    // SAFETY: Ensured by caller
+    let attrs = unsafe { perf.map_or_attrs.get_attrs() };
+
+    let inspect = Catch::inspect_performance(perf, attrs);
+
+    let misses = inspect.misses();
+    let max_combo = perf.combo.unwrap_or_else(|| attrs.max_combo() - misses);
+
+    let hitresults = match perf.hitresult_generator {
+        Some(generator) => generator(inspect),
+        None => <Fast as HitResultGenerator<Catch>>::generate_hitresults(inspect),
+    };
+
+    let CatchHitResults {
+        fruits,
+        droplets,
+        tiny_droplets,
+        tiny_droplet_misses,
+        misses,
+    } = hitresults;
+
+    perf.combo = Some(max_combo);
+    perf.fruits = Some(fruits);
+    perf.droplets = Some(droplets);
+    perf.tiny_droplets = Some(tiny_droplets);
+    perf.tiny_droplet_misses = Some(tiny_droplet_misses);
+    perf.misses = Some(misses);
+
+    CatchScoreState {
+        max_combo,
+        hitresults,
     }
 }
 

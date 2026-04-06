@@ -1,4 +1,7 @@
-use crate::{Beatmap, Difficulty, mania::ManiaGradualDifficulty, model::mode::ConvertError};
+use crate::{
+    Beatmap, Difficulty, any::CalculateError, mania::ManiaGradualDifficulty,
+    model::mode::ConvertError,
+};
 
 use super::{ManiaPerformanceAttributes, ManiaScoreState};
 
@@ -72,6 +75,14 @@ impl ManiaGradualPerformance {
     /// Create a new gradual performance calculator for osu!mania maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
         let difficulty = ManiaGradualDifficulty::new(difficulty, map)?;
+
+        Ok(Self { difficulty })
+    }
+
+    /// Same as [`ManiaGradualPerformance::new`] but verifies that the map is
+    /// not suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let difficulty = ManiaGradualDifficulty::checked_new(difficulty, map)?;
 
         Ok(Self { difficulty })
     }

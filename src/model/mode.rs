@@ -5,7 +5,7 @@ use std::{
 
 pub use rosu_map::section::general::GameMode;
 
-use crate::Difficulty;
+use crate::{Difficulty, any::CalculateError};
 
 use super::beatmap::Beatmap;
 
@@ -43,6 +43,13 @@ pub trait IGameMode: Sized {
         difficulty: &Difficulty,
         map: &Beatmap,
     ) -> Result<Self::DifficultyAttributes, ConvertError>;
+
+    /// Same as [`IGameMode::difficulty`] but verifies that the [`Beatmap`] is
+    /// not too suspicious for further calculation.
+    fn checked_difficulty(
+        difficulty: &Difficulty,
+        map: &Beatmap,
+    ) -> Result<Self::DifficultyAttributes, CalculateError>;
 
     /// Perform a difficulty calculation for a [`Beatmap`] without processing
     /// the final skill values.

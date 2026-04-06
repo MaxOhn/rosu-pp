@@ -2,9 +2,10 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Difficulty, GameMods,
-    any::HitResultGenerator,
+    any::{CalculateError, HitResultGenerator},
     catch::{Catch, CatchPerformance},
     mania::{Mania, ManiaPerformance},
+    model::beatmap::TooSuspicious,
     osu::{Osu, OsuPerformance},
     taiko::{Taiko, TaikoPerformance},
 };
@@ -16,6 +17,8 @@ use super::{attributes::PerformanceAttributes, score_state::ScoreState};
 pub mod gradual;
 pub mod inspectable;
 pub mod into;
+
+const NO_CONVERSION_REQUIRED: &str = "no conversion required";
 
 /// Performance calculator on maps of any mode.
 #[derive(Clone, Debug, PartialEq)]
@@ -58,18 +61,36 @@ impl<'map> Performance<'map> {
     pub fn calculate(self) -> PerformanceAttributes {
         match self {
             Self::Osu(o) => {
-                PerformanceAttributes::Osu(o.calculate().expect("no conversion required"))
+                PerformanceAttributes::Osu(o.calculate().expect(NO_CONVERSION_REQUIRED))
             }
             Self::Taiko(t) => {
-                PerformanceAttributes::Taiko(t.calculate().expect("no conversion required"))
+                PerformanceAttributes::Taiko(t.calculate().expect(NO_CONVERSION_REQUIRED))
             }
             Self::Catch(f) => {
-                PerformanceAttributes::Catch(f.calculate().expect("no conversion required"))
+                PerformanceAttributes::Catch(f.calculate().expect(NO_CONVERSION_REQUIRED))
             }
             Self::Mania(m) => {
-                PerformanceAttributes::Mania(m.calculate().expect("no conversion required"))
+                PerformanceAttributes::Mania(m.calculate().expect(NO_CONVERSION_REQUIRED))
             }
         }
+    }
+
+    /// Same as [`Performance::calculate`] but verifies that the map is not too
+    /// suspicious.
+    pub fn checked_calculate(self) -> Result<PerformanceAttributes, TooSuspicious> {
+        let map_err = |err| match err {
+            CalculateError::Suspicion(err) => err,
+            CalculateError::Convert(_) => unreachable!("{}", NO_CONVERSION_REQUIRED),
+        };
+
+        let this = match self {
+            Self::Osu(o) => PerformanceAttributes::Osu(o.checked_calculate().map_err(map_err)?),
+            Self::Taiko(t) => PerformanceAttributes::Taiko(t.checked_calculate().map_err(map_err)?),
+            Self::Catch(f) => PerformanceAttributes::Catch(f.checked_calculate().map_err(map_err)?),
+            Self::Mania(m) => PerformanceAttributes::Mania(m.checked_calculate().map_err(map_err)?),
+        };
+
+        Ok(this)
     }
 
     /// Attempt to convert the map to the specified mode.
@@ -461,13 +482,34 @@ impl<'map> Performance<'map> {
     }
 
     /// Create the [`ScoreState`] that will be used for performance calculation.
+    ///
+    /// If this [`Performance`] contained a [`Beatmap`], it will be replaced
+    /// by the difficulty attributes of the mode.
+    ///
+    /// [`Beatmap`]: crate::Beatmap
     #[expect(clippy::missing_panics_doc, reason = "unreachable")]
     pub fn generate_state(&mut self) -> ScoreState {
         match self {
-            Self::Osu(o) => o.generate_state().expect("no conversion required").into(),
-            Self::Taiko(t) => t.generate_state().expect("no conversion required").into(),
-            Self::Catch(f) => f.generate_state().expect("no conversion required").into(),
-            Self::Mania(m) => m.generate_state().expect("no conversion required").into(),
+            Self::Osu(o) => o.generate_state().expect(NO_CONVERSION_REQUIRED).into(),
+            Self::Taiko(t) => t.generate_state().expect(NO_CONVERSION_REQUIRED).into(),
+            Self::Catch(f) => f.generate_state().expect(NO_CONVERSION_REQUIRED).into(),
+            Self::Mania(m) => m.generate_state().expect(NO_CONVERSION_REQUIRED).into(),
+        }
+    }
+
+    /// Same as [`Performance::generate_state`] but verifies that the map was
+    /// not suspicious.
+    pub fn checked_generate_state(&mut self) -> Result<ScoreState, TooSuspicious> {
+        let map_err = |err| match err {
+            CalculateError::Suspicion(err) => err,
+            CalculateError::Convert(_) => unreachable!("{}", NO_CONVERSION_REQUIRED),
+        };
+
+        match self {
+            Self::Osu(o) => o.checked_generate_state().map(From::from).map_err(map_err),
+            Self::Taiko(t) => t.checked_generate_state().map(From::from).map_err(map_err),
+            Self::Catch(f) => f.checked_generate_state().map(From::from).map_err(map_err),
+            Self::Mania(m) => m.checked_generate_state().map(From::from).map_err(map_err),
         }
     }
 }

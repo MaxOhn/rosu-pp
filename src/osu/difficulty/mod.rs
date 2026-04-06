@@ -1,11 +1,14 @@
-use std::{cmp, pin::Pin};
+use std::{borrow::Cow, cmp, pin::Pin};
 
 use rosu_map::section::general::GameMode;
 use skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill};
 
 use crate::{
     Beatmap,
-    any::difficulty::{Difficulty, skills::StrainSkill},
+    any::{
+        CalculateError,
+        difficulty::{Difficulty, skills::StrainSkill},
+    },
     model::{beatmap::BeatmapAttributes, mode::ConvertError, mods::GameMods},
     osu::{
         convert::convert_objects,
@@ -40,20 +43,43 @@ pub fn difficulty(
     difficulty: &Difficulty,
     map: &Beatmap,
 ) -> Result<OsuDifficultyAttributes, ConvertError> {
-    let map = map.convert_ref(GameMode::Osu, difficulty.get_mods())?;
+    let map = prepare_map(difficulty, map)?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+pub fn checked_difficulty(
+    difficulty: &Difficulty,
+    map: &Beatmap,
+) -> Result<OsuDifficultyAttributes, CalculateError> {
+    let map = prepare_map(difficulty, map)?;
+    map.check_suspicion()?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+fn prepare_map<'map>(
+    difficulty: &Difficulty,
+    map: &'map Beatmap,
+) -> Result<Cow<'map, Beatmap>, ConvertError> {
+    map.convert_ref(GameMode::Osu, difficulty.get_mods())
+}
+
+fn calculate_difficulty(difficulty: &Difficulty, map: &Beatmap) -> OsuDifficultyAttributes {
+    debug_assert_eq!(map.mode, GameMode::Osu);
 
     let DifficultyValues {
         osu_objects,
         skills,
         mut attrs,
-    } = DifficultyValues::calculate(difficulty, &map);
+    } = DifficultyValues::calculate(difficulty, map);
 
     let mods = difficulty.get_mods();
     let passed_objects = difficulty.get_passed_objects();
 
     DifficultyValues::eval(&mut attrs, mods, &skills);
 
-    let mut simulator = OsuLegacyScoreSimulator::new(&osu_objects, &map, passed_objects);
+    let mut simulator = OsuLegacyScoreSimulator::new(&osu_objects, map, passed_objects);
 
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
@@ -61,7 +87,7 @@ pub fn difficulty(
     let map_attrs = map.attributes().difficulty(difficulty).build();
 
     attrs.legacy_score_base_multiplier = f64::from(OsuLegacyScoreSimulator::score_multiplier(
-        &map,
+        map,
         &map_attrs,
         passed_objects,
     ));
@@ -70,7 +96,7 @@ pub fn difficulty(
         NestedScorePerObject::calculate(&osu_objects, passed_objects);
     attrs.nested_score_per_object = slider_nested_score_per_object;
 
-    Ok(attrs)
+    attrs
 }
 
 pub struct OsuDifficultySetup {

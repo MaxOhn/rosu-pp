@@ -4,8 +4,8 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::difficulty::skills::StrainSkill,
-    mania::{convert, object::ObjectParams},
+    any::{CalculateError, difficulty::skills::StrainSkill},
+    mania::object::ObjectParams,
     model::{hit_object::HitObject, mode::ConvertError},
     util::sync::RefCount,
 };
@@ -66,67 +66,66 @@ struct NoteState {
 impl ManiaGradualDifficulty {
     /// Create a new difficulty attributes iterator for osu!mania maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
-        let mut map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
+        let map = super::prepare_map(&difficulty, map)?;
 
-        if difficulty.get_mods().ho() {
-            convert::apply_hold_off_to_beatmap(map.to_mut());
-        }
+        Ok(new(difficulty, &map))
+    }
 
-        if difficulty.get_mods().invert() {
-            convert::apply_invert_to_beatmap(map.to_mut());
-        }
+    /// Same as [`ManiaGradualDifficulty::new`] but verifies that the map is not
+    /// suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let map = super::prepare_map(&difficulty, map)?;
+        map.check_suspicion()?;
 
-        if let Some(seed) = difficulty.get_mods().random_seed() {
-            convert::apply_random_to_beatmap(map.to_mut(), seed);
-        }
+        Ok(new(difficulty, &map))
+    }
+}
 
-        let map = map.to_mut();
-        map.mania_hitobjects_legacy_sort();
+fn new(difficulty: Difficulty, map: &Beatmap) -> ManiaGradualDifficulty {
+    debug_assert_eq!(map.mode, GameMode::Mania);
 
-        let take = difficulty.get_passed_objects();
-        let total_columns = map.cs.round_ties_even().max(1.0);
-        let clock_rate = difficulty.get_clock_rate();
-        let mut params = ObjectParams::new(map);
+    let take = difficulty.get_passed_objects();
+    let total_columns = map.cs.round_ties_even().max(1.0);
+    let clock_rate = difficulty.get_clock_rate();
+    let mut params = ObjectParams::new(map);
 
-        let mania_objects = map
-            .hit_objects
-            .iter()
-            .map(|h| ManiaObject::new(h, total_columns, &mut params))
-            .take(take);
+    let mania_objects = map
+        .hit_objects
+        .iter()
+        .map(|h| ManiaObject::new(h, total_columns, &mut params))
+        .take(take);
 
-        let diff_objects = DifficultyValues::create_difficulty_objects(
-            clock_rate,
-            total_columns as usize,
-            mania_objects,
+    let diff_objects = DifficultyValues::create_difficulty_objects(
+        clock_rate,
+        total_columns as usize,
+        mania_objects,
+    );
+
+    let strain = Strain::new(total_columns as usize);
+
+    let mut note_state = NoteState::default();
+
+    let objects_is_circle: Box<[_]> = map.hit_objects.iter().map(HitObject::is_circle).collect();
+
+    if let Some(h) = map.hit_objects.first() {
+        let hit_object = ManiaObject::new(h, total_columns, &mut params);
+
+        increment_combo_raw(
+            objects_is_circle[0],
+            hit_object.start_time,
+            hit_object.end_time,
+            &mut note_state,
         );
+    }
 
-        let strain = Strain::new(total_columns as usize);
-
-        let mut note_state = NoteState::default();
-
-        let objects_is_circle: Box<[_]> =
-            map.hit_objects.iter().map(HitObject::is_circle).collect();
-
-        if let Some(h) = map.hit_objects.first() {
-            let hit_object = ManiaObject::new(h, total_columns, &mut params);
-
-            increment_combo_raw(
-                objects_is_circle[0],
-                hit_object.start_time,
-                hit_object.end_time,
-                &mut note_state,
-            );
-        }
-
-        Ok(Self {
-            idx: 0,
-            difficulty,
-            objects_is_circle,
-            is_convert: map.is_convert,
-            strain,
-            diff_objects,
-            note_state,
-        })
+    ManiaGradualDifficulty {
+        idx: 0,
+        difficulty,
+        objects_is_circle,
+        is_convert: map.is_convert,
+        strain,
+        diff_objects,
+        note_state,
     }
 }
 

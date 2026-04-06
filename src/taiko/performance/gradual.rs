@@ -1,5 +1,6 @@
 use crate::{
     Beatmap, Difficulty,
+    any::CalculateError,
     model::mode::ConvertError,
     taiko::{TaikoScoreState, difficulty::gradual::TaikoGradualDifficulty},
 };
@@ -85,6 +86,14 @@ impl TaikoGradualPerformance {
     /// Create a new gradual performance calculator for osu!taiko maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
         let difficulty = TaikoGradualDifficulty::new(difficulty, map)?;
+
+        Ok(Self { difficulty })
+    }
+
+    /// Same as [`TaikoGradualPerformance::new`] but verifies that the map is
+    /// not suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let difficulty = TaikoGradualDifficulty::checked_new(difficulty, map)?;
 
         Ok(Self { difficulty })
     }

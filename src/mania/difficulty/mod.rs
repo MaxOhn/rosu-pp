@@ -1,10 +1,13 @@
-use std::cmp;
+use std::{borrow::Cow, cmp};
 
 use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap,
-    any::difficulty::{Difficulty, skills::StrainSkill},
+    any::{
+        CalculateError,
+        difficulty::{Difficulty, skills::StrainSkill},
+    },
     mania::{
         difficulty::{object::ManiaDifficultyObject, skills::strain::Strain},
         object::{ManiaObject, ObjectParams},
@@ -26,6 +29,25 @@ pub fn difficulty(
     difficulty: &Difficulty,
     map: &Beatmap,
 ) -> Result<ManiaDifficultyAttributes, ConvertError> {
+    let map = prepare_map(difficulty, map)?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+pub fn checked_difficulty(
+    difficulty: &Difficulty,
+    map: &Beatmap,
+) -> Result<ManiaDifficultyAttributes, CalculateError> {
+    let map = prepare_map(difficulty, map)?;
+    map.check_suspicion()?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+fn prepare_map<'map>(
+    difficulty: &Difficulty,
+    map: &'map Beatmap,
+) -> Result<Cow<'map, Beatmap>, ConvertError> {
     let mut map = map.convert_ref(GameMode::Mania, difficulty.get_mods())?;
 
     if difficulty.get_mods().ho() {
@@ -40,20 +62,26 @@ pub fn difficulty(
         convert::apply_random_to_beatmap(map.to_mut(), seed);
     }
 
-    let map = map.to_mut();
-    map.mania_hitobjects_legacy_sort();
+    let map_mut = map.to_mut();
+    map_mut.mania_hitobjects_legacy_sort();
+
+    Ok(map)
+}
+
+fn calculate_difficulty(difficulty: &Difficulty, map: &Beatmap) -> ManiaDifficultyAttributes {
+    debug_assert_eq!(map.mode, GameMode::Mania);
 
     let n_objects = cmp::min(difficulty.get_passed_objects(), map.hit_objects.len()) as u32;
 
     let values = DifficultyValues::calculate(difficulty, map);
 
-    Ok(ManiaDifficultyAttributes {
+    ManiaDifficultyAttributes {
         stars: values.strain.into_difficulty_value() * DIFFICULTY_MULTIPLIER,
         max_combo: values.max_combo,
         n_objects,
         n_hold_notes: values.n_hold_notes,
         is_convert: map.is_convert,
-    })
+    }
 }
 
 pub struct DifficultyValues {

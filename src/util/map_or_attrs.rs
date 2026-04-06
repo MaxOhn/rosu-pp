@@ -5,6 +5,7 @@ use std::{
 
 use crate::{
     Beatmap, Difficulty,
+    any::CalculateError,
     model::mode::{ConvertError, IGameMode},
 };
 
@@ -16,10 +17,16 @@ pub enum MapOrAttrs<'map, M: IGameMode> {
 impl<M: IGameMode> MapOrAttrs<'_, M> {
     pub fn insert_attrs(&mut self, difficulty: &Difficulty) -> Result<(), ConvertError> {
         match self {
-            Self::Map(map) => {
-                let attrs = difficulty.calculate_for_mode::<M>(map)?;
-                *self = Self::Attrs(attrs);
-            }
+            Self::Map(map) => *self = Self::Attrs(difficulty.calculate_for_mode::<M>(map)?),
+            Self::Attrs(_) => {}
+        }
+
+        Ok(())
+    }
+
+    pub fn checked_insert_attrs(&mut self, difficulty: &Difficulty) -> Result<(), CalculateError> {
+        match self {
+            Self::Map(map) => *self = Self::Attrs(difficulty.checked_calculate_for_mode::<M>(map)?),
             Self::Attrs(_) => {}
         }
 
@@ -35,6 +42,18 @@ impl<M: IGameMode> MapOrAttrs<'_, M> {
         // as argument, unfortunately, makes it impossible to pass another
         // mutable reference later on. Instead we split it up into two
         // functions: first `insert_attrs` and then `get_attrs`.
+        match self {
+            Self::Attrs(attrs) => attrs,
+            // SAFETY: Up to the caller to uphold
+            Self::Map(_) => unsafe { std::hint::unreachable_unchecked() },
+        }
+    }
+
+    /// Get the attributes.
+    ///
+    /// # Safety
+    /// Caller must ensure that this [`MapOrAttrs`] contains attributes.
+    pub unsafe fn into_attrs(self) -> M::DifficultyAttributes {
         match self {
             Self::Attrs(attrs) => attrs,
             // SAFETY: Up to the caller to uphold

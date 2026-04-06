@@ -9,7 +9,7 @@ pub use self::{calculator::PERFORMANCE_BASE_MULTIPLIER, inspect::InspectOsuPerfo
 use crate::{
     Beatmap,
     any::{
-        Difficulty, HitResultGenerator, HitResultPriority, InspectablePerformance,
+        CalculateError, Difficulty, HitResultGenerator, HitResultPriority, InspectablePerformance,
         IntoModePerformance, IntoPerformance, Performance, hitresult_generator::Fast,
     },
     catch::CatchPerformance,
@@ -447,104 +447,53 @@ impl<'map> OsuPerformance<'map> {
         self
     }
 
-    /// Create the [`OsuScoreState`] that will be used for performance calculation.
+    /// Create the [`OsuScoreState`] that will be used for performance
+    /// calculation.
+    ///
+    /// If this [`OsuPerformance`] contained a [`Beatmap`], it will be replaced
+    /// by [`OsuDifficultyAttributes`].
+    ///
+    /// [`Beatmap`]: crate::Beatmap
+    /// [`OsuDifficultyAttributes`]: crate::osu::OsuDifficultyAttributes
     pub fn generate_state(&mut self) -> Result<OsuScoreState, ConvertError> {
         self.map_or_attrs.insert_attrs(&self.difficulty)?;
 
         // SAFETY: We just calculated and inserted the attributes.
-        let attrs = unsafe { self.map_or_attrs.get_attrs() };
+        let state = unsafe { generate_state(self) };
 
-        let inspect = Osu::inspect_performance(self, attrs);
+        Ok(state)
+    }
 
-        let total_hits = inspect.total_hits();
-        let misses = inspect.misses();
+    /// Same as [`OsuPerformance::generate_state`] but verifies that the map
+    /// was not suspicious.
+    pub fn checked_generate_state(&mut self) -> Result<OsuScoreState, CalculateError> {
+        self.map_or_attrs.checked_insert_attrs(&self.difficulty)?;
 
-        let mut hitresults = match self.hitresult_generator {
-            Some(generator) => generator(inspect),
-            None => <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect),
-        };
+        // SAFETY: We just calculated and inserted the attributes.
+        let state = unsafe { generate_state(self) };
 
-        let remain = total_hits.saturating_sub(hitresults.total_hits());
-
-        match self.hitresult_priority {
-            HitResultPriority::BestCase => match (self.n300, self.n100, self.n50) {
-                (None, ..) => hitresults.n300 += remain,
-                (_, None, _) => hitresults.n100 += remain,
-                (.., None) => hitresults.n50 += remain,
-                _ => hitresults.n300 += remain,
-            },
-            HitResultPriority::WorstCase => match (self.n50, self.n100, self.n300) {
-                (None, ..) => hitresults.n50 += remain,
-                (_, None, _) => hitresults.n100 += remain,
-                (.., None) => hitresults.n300 += remain,
-                _ => hitresults.n50 += remain,
-            },
-        }
-
-        let max_possible_combo = attrs.max_combo.saturating_sub(misses);
-
-        let max_combo = self.combo.map_or(max_possible_combo, |combo| {
-            cmp::min(combo, max_possible_combo)
-        });
-
-        self.combo = Some(max_combo);
-
-        let OsuHitResults {
-            large_tick_hits,
-            small_tick_hits,
-            slider_end_hits,
-            n300,
-            n100,
-            n50,
-            misses,
-        } = &hitresults;
-
-        self.slider_end_hits = Some(*slider_end_hits);
-        self.large_tick_hits = Some(*large_tick_hits);
-        self.small_tick_hits = Some(*small_tick_hits);
-        self.n300 = Some(*n300);
-        self.n100 = Some(*n100);
-        self.n50 = Some(*n50);
-        self.misses = Some(*misses);
-
-        Ok(OsuScoreState {
-            max_combo,
-            hitresults,
-            legacy_total_score: self.legacy_total_score,
-        })
+        Ok(state)
     }
 
     /// Calculate all performance related values, including pp and stars.
     pub fn calculate(mut self) -> Result<OsuPerformanceAttributes, ConvertError> {
         let state = self.generate_state()?;
 
-        let attrs = match self.map_or_attrs {
-            MapOrAttrs::Attrs(attrs) => attrs,
-            MapOrAttrs::Map(ref map) => self.difficulty.calculate_for_mode::<Osu>(map)?,
-        };
+        // SAFETY: Attributes are calculated in `generate_state`.
+        let attrs = unsafe { calculate(self, state) };
 
-        let mods = self.difficulty.get_mods();
-        let lazer = self.difficulty.get_lazer();
-        let using_classic_slider_acc = mods.no_slider_head_acc(lazer);
+        Ok(attrs)
+    }
 
-        let origin = match (lazer, using_classic_slider_acc) {
-            (false, _) => OsuScoreOrigin::Stable,
-            (true, false) => OsuScoreOrigin::WithSliderAcc {
-                max_large_ticks: attrs.n_large_ticks,
-                max_slider_ends: attrs.n_sliders,
-            },
-            (true, true) => OsuScoreOrigin::WithoutSliderAcc {
-                max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
-                max_small_ticks: attrs.n_sliders,
-            },
-        };
+    /// Same as [`OsuPerformance::calculate`] but verifies that the map was not
+    /// suspicious.
+    pub fn checked_calculate(mut self) -> Result<OsuPerformanceAttributes, CalculateError> {
+        let state = self.checked_generate_state()?;
 
-        let acc = state.hitresults.accuracy(origin);
+        // SAFETY: Attributes are calculated in `checked_generate_state`.
+        let attrs = unsafe { calculate(self, state) };
 
-        let inner =
-            OsuPerformanceCalculator::new(attrs, mods, acc, state, using_classic_slider_acc);
-
-        Ok(inner.calculate())
+        Ok(attrs)
     }
 
     pub(crate) const fn from_map_or_attrs(map_or_attrs: MapOrAttrs<'map, Osu>) -> Self {
@@ -599,6 +548,101 @@ impl<'map, T: IntoModePerformance<'map, Osu>> From<T> for OsuPerformance<'map> {
     fn from(into: T) -> Self {
         into.into_performance()
     }
+}
+
+/// # Safety
+/// Caller must ensure that the internal [`MapOrAttrs`] contains attributes.
+unsafe fn generate_state(perf: &mut OsuPerformance<'_>) -> OsuScoreState {
+    // SAFETY: Ensured by caller
+    let attrs = unsafe { perf.map_or_attrs.get_attrs() };
+
+    let inspect = Osu::inspect_performance(perf, attrs);
+
+    let total_hits = inspect.total_hits();
+    let misses = inspect.misses();
+
+    let mut hitresults = match perf.hitresult_generator {
+        Some(generator) => generator(inspect),
+        None => <Fast as HitResultGenerator<Osu>>::generate_hitresults(inspect),
+    };
+
+    let remain = total_hits.saturating_sub(hitresults.total_hits());
+
+    match perf.hitresult_priority {
+        HitResultPriority::BestCase => match (perf.n300, perf.n100, perf.n50) {
+            (None, ..) => hitresults.n300 += remain,
+            (_, None, _) => hitresults.n100 += remain,
+            (.., None) => hitresults.n50 += remain,
+            _ => hitresults.n300 += remain,
+        },
+        HitResultPriority::WorstCase => match (perf.n50, perf.n100, perf.n300) {
+            (None, ..) => hitresults.n50 += remain,
+            (_, None, _) => hitresults.n100 += remain,
+            (.., None) => hitresults.n300 += remain,
+            _ => hitresults.n50 += remain,
+        },
+    }
+
+    let max_possible_combo = attrs.max_combo.saturating_sub(misses);
+
+    let max_combo = perf.combo.map_or(max_possible_combo, |combo| {
+        cmp::min(combo, max_possible_combo)
+    });
+
+    perf.combo = Some(max_combo);
+
+    let OsuHitResults {
+        large_tick_hits,
+        small_tick_hits,
+        slider_end_hits,
+        n300,
+        n100,
+        n50,
+        misses,
+    } = &hitresults;
+
+    perf.slider_end_hits = Some(*slider_end_hits);
+    perf.large_tick_hits = Some(*large_tick_hits);
+    perf.small_tick_hits = Some(*small_tick_hits);
+    perf.n300 = Some(*n300);
+    perf.n100 = Some(*n100);
+    perf.n50 = Some(*n50);
+    perf.misses = Some(*misses);
+
+    OsuScoreState {
+        max_combo,
+        hitresults,
+        legacy_total_score: perf.legacy_total_score,
+    }
+}
+
+/// # Safety
+/// Caller must ensure that the internal [`MapOrAttrs`] contains attributes.
+unsafe fn calculate(perf: OsuPerformance<'_>, state: OsuScoreState) -> OsuPerformanceAttributes {
+    // SAFETY: Ensured by caller
+    let attrs = unsafe { perf.map_or_attrs.into_attrs() };
+
+    let mods = perf.difficulty.get_mods();
+    let lazer = perf.difficulty.get_lazer();
+    let using_classic_slider_acc = mods.no_slider_head_acc(lazer);
+
+    let origin = match (lazer, using_classic_slider_acc) {
+        (false, _) => OsuScoreOrigin::Stable,
+        (true, false) => OsuScoreOrigin::WithSliderAcc {
+            max_large_ticks: attrs.n_large_ticks,
+            max_slider_ends: attrs.n_sliders,
+        },
+        (true, true) => OsuScoreOrigin::WithoutSliderAcc {
+            max_large_ticks: attrs.n_sliders + attrs.n_large_ticks,
+            max_small_ticks: attrs.n_sliders,
+        },
+    };
+
+    let acc = state.hitresults.accuracy(origin);
+
+    let inner = OsuPerformanceCalculator::new(attrs, mods, acc, state, using_classic_slider_acc);
+
+    inner.calculate()
 }
 
 #[cfg(test)]

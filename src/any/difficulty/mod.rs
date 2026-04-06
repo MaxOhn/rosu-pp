@@ -7,10 +7,11 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     GradualDifficulty, GradualPerformance,
+    any::CalculateError,
     catch::Catch,
     mania::Mania,
     model::{
-        beatmap::{Beatmap, BeatmapAttribute, attributes::BeatmapDifficulty},
+        beatmap::{Beatmap, BeatmapAttribute, TooSuspicious, attributes::BeatmapDifficulty},
         mode::ConvertError,
         mods::GameMods,
     },
@@ -270,12 +271,29 @@ impl Difficulty {
         }
     }
 
+    /// Perform the difficulty calculation after verifying the map is not
+    /// suspicious.
+    pub fn checked_calculate(&self, map: &Beatmap) -> Result<DifficultyAttributes, TooSuspicious> {
+        map.check_suspicion()?;
+
+        Ok(self.calculate(map))
+    }
+
     /// Perform the difficulty calculation for a specific [`IGameMode`].
     pub fn calculate_for_mode<M: IGameMode>(
         &self,
         map: &Beatmap,
     ) -> Result<M::DifficultyAttributes, ConvertError> {
         M::difficulty(self, map)
+    }
+
+    /// Same as [`Difficulty::calculate_for_mode`] but verifies that the
+    /// [`Beatmap`] is not too suspicious for further calculation.
+    pub fn checked_calculate_for_mode<M: IGameMode>(
+        &self,
+        map: &Beatmap,
+    ) -> Result<M::DifficultyAttributes, CalculateError> {
+        M::checked_difficulty(self, map)
     }
 
     /// Perform the difficulty calculation but instead of evaluating the skill

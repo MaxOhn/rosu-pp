@@ -17,7 +17,7 @@ use super::Beatmap;
 ///
 /// [`Beatmap::check_suspicion`]: crate::model::beatmap::Beatmap::check_suspicion
 /// [`Beatmap`]: crate::model::beatmap::Beatmap
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 #[non_exhaustive]
 pub enum TooSuspicious {
     /// Notes are too dense time-wise.

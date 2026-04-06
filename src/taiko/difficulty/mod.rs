@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{borrow::Cow, cmp};
 
 use rhythm::preprocessor::RhythmDifficultyPreprocessor;
 use rosu_map::section::general::GameMode;
@@ -6,7 +6,7 @@ use skills::{color::Color, reading::Reading, rhythm::Rhythm, stamina::Stamina};
 
 use crate::{
     Beatmap, Difficulty, GameMods,
-    any::difficulty::skills::StrainSkill,
+    any::{CalculateError, difficulty::skills::StrainSkill},
     model::mode::ConvertError,
     taiko::{
         difficulty::{
@@ -44,11 +44,36 @@ pub fn difficulty(
     difficulty: &Difficulty,
     map: &Beatmap,
 ) -> Result<TaikoDifficultyAttributes, ConvertError> {
+    let map = prepare_map(difficulty, map)?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+pub fn checked_difficulty(
+    difficulty: &Difficulty,
+    map: &Beatmap,
+) -> Result<TaikoDifficultyAttributes, CalculateError> {
+    let map = prepare_map(difficulty, map)?;
+    map.check_suspicion()?;
+
+    Ok(calculate_difficulty(difficulty, &map))
+}
+
+fn prepare_map<'map>(
+    difficulty: &Difficulty,
+    map: &'map Beatmap,
+) -> Result<Cow<'map, Beatmap>, ConvertError> {
     let mut map = map.convert_ref(GameMode::Taiko, difficulty.get_mods())?;
 
     if let Some(seed) = difficulty.get_mods().random_seed() {
         convert::apply_random_to_beatmap(map.to_mut(), seed);
     }
+
+    Ok(map)
+}
+
+fn calculate_difficulty(difficulty: &Difficulty, map: &Beatmap) -> TaikoDifficultyAttributes {
+    debug_assert_eq!(map.mode, GameMode::Taiko);
 
     let hit_windows = map
         .attributes()
@@ -60,7 +85,7 @@ pub fn difficulty(
     let ok_hit_window = hit_windows.od_ok.unwrap_or(0.0);
 
     let DifficultyValues { skills, max_combo } =
-        DifficultyValues::calculate(difficulty, &map, great_hit_window);
+        DifficultyValues::calculate(difficulty, map, great_hit_window);
 
     let mut attrs = TaikoDifficultyAttributes {
         great_hit_window,
@@ -74,7 +99,7 @@ pub fn difficulty(
 
     DifficultyValues::eval(&mut attrs, skills, is_relax);
 
-    Ok(attrs)
+    attrs
 }
 
 /// Returns the combined rating and the consistency factor

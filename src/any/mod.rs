@@ -1,5 +1,6 @@
 pub use self::{
     attributes::{DifficultyAttributes, PerformanceAttributes},
+    calc_error::CalculateError,
     difficulty::{Difficulty, gradual::GradualDifficulty, inspect::InspectDifficulty},
     hitresult_generator::HitResultGenerator,
     performance::{
@@ -18,6 +19,7 @@ pub use self::{
 pub mod hitresult_generator;
 
 mod attributes;
+mod calc_error;
 pub(crate) mod difficulty;
 pub(crate) mod hit_result;
 mod performance;

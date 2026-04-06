@@ -5,7 +5,10 @@ use crate::{
     any::{PerformanceAttributes, ScoreState},
     catch::{Catch, CatchGradualPerformance},
     mania::{Mania, ManiaGradualPerformance},
-    model::mode::{ConvertError, IGameMode},
+    model::{
+        beatmap::TooSuspicious,
+        mode::{ConvertError, IGameMode},
+    },
     osu::{Osu, OsuGradualPerformance},
     taiko::{Taiko, TaikoGradualPerformance},
 };
@@ -100,6 +103,16 @@ impl GradualPerformance {
     #[expect(clippy::missing_panics_doc, reason = "unreachable")]
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Self {
         Self::new_with_mode(difficulty, map, map.mode).expect("no conversion required")
+    }
+
+    /// Same as [`GradualPerformance::new`] but verifies that the map is not
+    /// suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, TooSuspicious> {
+        // This is fine because `Self::new` will use the map's mode so it won't
+        // be converted.
+        map.check_suspicion()?;
+
+        Ok(Self::new(difficulty, map))
     }
 
     /// Create a [`GradualPerformance`] for a [`Beatmap`] on a specific [`GameMode`].

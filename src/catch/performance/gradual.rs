@@ -1,5 +1,6 @@
 use crate::{
     Beatmap, Difficulty,
+    any::CalculateError,
     catch::{CatchGradualDifficulty, CatchPerformanceAttributes, CatchScoreState},
     model::mode::ConvertError,
 };
@@ -91,6 +92,14 @@ impl CatchGradualPerformance {
     /// Create a new gradual performance calculator for osu!catch maps.
     pub fn new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, ConvertError> {
         let difficulty = CatchGradualDifficulty::new(difficulty, map)?;
+
+        Ok(Self { difficulty })
+    }
+
+    /// Same as [`CatchGradualPerformance::new`] but verifies that the map is
+    /// not suspicious.
+    pub fn checked_new(difficulty: Difficulty, map: &Beatmap) -> Result<Self, CalculateError> {
+        let difficulty = CatchGradualDifficulty::checked_new(difficulty, map)?;
 
         Ok(Self { difficulty })
     }
