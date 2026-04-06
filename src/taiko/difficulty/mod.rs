@@ -15,7 +15,10 @@ use crate::{
         },
         object::TaikoObject,
     },
-    util::difficulty::{norm, reverse_lerp},
+    util::{
+        difficulty::{norm, reverse_lerp},
+        traits::IOrderedEnumerable,
+    },
 };
 
 pub(crate) use self::skills::TaikoSkills;
@@ -111,11 +114,11 @@ fn combined_difficulty_value(
         ),
     );
 
-    let mut peaks = combine_peaks(
-        rhythm_peaks.iter(),
-        reading_peaks.iter(),
-        color_peaks.iter(),
-        stamina_peaks.iter(),
+    let peaks = combine_peaks(
+        rhythm_peaks.iter().copied(),
+        reading_peaks.iter().copied(),
+        color_peaks.iter().copied(),
+        stamina_peaks.iter().copied(),
         len,
         is_relax,
         is_convert,
@@ -130,9 +133,7 @@ fn combined_difficulty_value(
     let mut difficulty = 0.0;
     let mut weight = 1.0;
 
-    peaks.sort_by(|a, b| b.total_cmp(a));
-
-    for strain in peaks {
+    for strain in peaks.cs_order_descending() {
         difficulty += strain * weight;
         weight *= 0.9;
     }

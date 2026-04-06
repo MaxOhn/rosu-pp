@@ -6,8 +6,8 @@ pub mod map_or_attrs;
 pub mod random;
 pub mod ruleset_ext;
 pub mod sort;
-pub mod strains_vec;
 pub mod sync;
+pub mod traits;
 
 #[macro_use]
 mod macros;

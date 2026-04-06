@@ -51,10 +51,10 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<TaikoStrains, C
     } = values.skills;
 
     Ok(TaikoStrains {
-        color: color.into_current_strain_peaks().into_vec(),
-        reading: reading.into_current_strain_peaks().into_vec(),
-        rhythm: rhythm.into_current_strain_peaks().into_vec(),
-        stamina: stamina.into_current_strain_peaks().into_vec(),
-        single_color_stamina: single_color_stamina.into_current_strain_peaks().into_vec(),
+        color: color.into_current_strain_peaks(),
+        reading: reading.into_current_strain_peaks(),
+        rhythm: rhythm.into_current_strain_peaks(),
+        stamina: stamina.into_current_strain_peaks(),
+        single_color_stamina: single_color_stamina.into_current_strain_peaks(),
     })
 }

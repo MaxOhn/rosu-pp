@@ -15,10 +15,10 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
-    
+
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
-  
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
-    
+
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -58,10 +58,10 @@ jobs:
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
-    
+
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
-  
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -74,29 +74,4 @@ jobs:
           --features sync
           --filter-expr 'test(util::sync::tests::share_gradual_taiko)'
           --filter-expr 'test(taiko::difficulty::gradual::tests::next_and_nth)'
-          --no-fail-fast --failure-output=immediate-final
-
-  non_compact:
-    name: Test with raw_strains feature
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-    
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-  
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Run integration tests
-        run: >
-          cargo nextest run
-          --no-default-features
-          --features raw_strains
-          --test '*'
           --no-fail-fast --failure-output=immediate-final

@@ -129,9 +129,8 @@ macro_rules! define_skill {
                 $( $fields )*
                 strain_skill_current_section_peak f64 = 0.0, // <-
                 strain_skill_current_section_end f64 = 0.0,  // <-
-                strain_skill_strain_peaks crate::util::strains_vec::StrainsVec
-                    = crate::util::strains_vec::StrainsVec::with_capacity(256), // <-
-                // TODO: use `StrainsVec`?
+                strain_skill_strain_peaks Vec<f64>
+                    = Vec::with_capacity(256), // <-
                 strain_skill_object_strains Vec<f64> = Vec::with_capacity(256), // <-
             }
             $( $rest )*
@@ -247,7 +246,6 @@ macro_rules! define_skill {
                     object::{IDifficultyObject, IDifficultyObjects, HasStartTime},
                     skills::{StrainSkill, StrainDecaySkill},
                 },
-                util::strains_vec::StrainsVec,
             };
 
             define_skill!( @impl $trait $name $objects[$object] );
@@ -316,14 +314,14 @@ macro_rules! define_skill {
                     = self.calculate_initial_strain(time, curr, objects);
             }
 
-            fn into_current_strain_peaks(self) -> StrainsVec {
+            fn into_current_strain_peaks(self) -> Vec<f64> {
                 Self::get_current_strain_peaks(
                     self.strain_skill_strain_peaks,
                     self.strain_skill_current_section_peak,
                 )
             }
 
-            fn difficulty_value(current_strain_peaks: StrainsVec) -> f64 {
+            fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64 {
                 crate::any::difficulty::skills::difficulty_value(
                     current_strain_peaks,
                     Self::DECAY_WEIGHT,

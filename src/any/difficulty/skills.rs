@@ -1,4 +1,8 @@
-use crate::util::{float_ext::FloatExt, hint::unlikely, strains_vec::StrainsVec};
+use crate::util::{
+    float_ext::FloatExt,
+    hint::unlikely,
+    traits::{IEnumerable, IOrderedEnumerable},
+};
 
 pub trait StrainSkill: Sized {
     type DifficultyObject<'a>;
@@ -26,18 +30,15 @@ pub trait StrainSkill: Sized {
         objects: &Self::DifficultyObjects<'a>,
     );
 
-    fn into_current_strain_peaks(self) -> StrainsVec;
+    fn into_current_strain_peaks(self) -> Vec<f64>;
 
-    fn get_current_strain_peaks(
-        mut strain_peaks: StrainsVec,
-        current_section_peak: f64,
-    ) -> StrainsVec {
+    fn get_current_strain_peaks(mut strain_peaks: Vec<f64>, current_section_peak: f64) -> Vec<f64> {
         strain_peaks.push(current_section_peak);
 
         strain_peaks
     }
 
-    fn difficulty_value(current_strain_peaks: StrainsVec) -> f64;
+    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64;
 
     fn into_difficulty_value(self) -> f64;
 
@@ -80,21 +81,17 @@ pub fn count_top_weighted_strains(object_strains: &[f64], difficulty_value: f64)
         .sum()
 }
 
-pub fn difficulty_value(current_strain_peaks: StrainsVec, decay_weight: f64) -> f64 {
+pub fn difficulty_value(current_strain_peaks: Vec<f64>, decay_weight: f64) -> f64 {
     let mut difficulty = 0.0;
     let mut weight = 1.0;
 
     // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
     // * These sections will not contribute to the difficulty.
-    let mut peaks = current_strain_peaks;
-    peaks.retain_non_zero_and_sort();
-
-    // SAFETY: we just removed all zeros
-    let peaks = unsafe { peaks.transmute_into_vec() };
+    let peaks = current_strain_peaks.cs_where(|&p| p > 0.0);
 
     // * Difficulty is the weighted sum of the highest strains from every section.
     // * We're sorting from highest to lowest strain.
-    for strain in peaks {
+    for strain in peaks.cs_order_descending() {
         difficulty += strain * weight;
         weight *= decay_weight;
     }

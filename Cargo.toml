@@ -12,7 +12,6 @@ keywords = ["osu", "pp", "stars", "performance", "difficulty"]
 
 [features]
 default = []
-raw_strains = []
 sync = []
 tracing = ["rosu-map/tracing"]
 

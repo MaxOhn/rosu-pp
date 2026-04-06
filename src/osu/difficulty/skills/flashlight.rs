@@ -5,7 +5,7 @@ use crate::{
         skills::strain_decay,
     },
     osu::difficulty::{evaluators::FlashlightEvaluator, object::OsuDifficultyObject},
-    util::strains_vec::StrainsVec,
+    util::traits::IEnumerable,
 };
 
 define_skill! {
@@ -61,8 +61,8 @@ impl Flashlight {
         clippy::needless_pass_by_value,
         reason = "function definition needs to stay in-sync with `StrainSkill::difficulty_value`"
     )]
-    fn difficulty_value(current_strain_peaks: StrainsVec) -> f64 {
-        current_strain_peaks.sum()
+    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64 {
+        current_strain_peaks.cs_sum()
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {

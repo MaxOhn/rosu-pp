@@ -1,4 +1,8 @@
-use crate::util::{difficulty::logistic, float_ext::FloatExt, strains_vec::StrainsVec};
+use crate::util::{
+    difficulty::logistic,
+    float_ext::FloatExt,
+    traits::{IEnumerable, IOrderedEnumerable},
+};
 
 pub trait OsuStrainSkill {
     const REDUCED_SECTION_COUNT: usize = 10;
@@ -10,7 +14,7 @@ pub trait OsuStrainSkill {
 }
 
 pub fn difficulty_value(
-    current_strain_peaks: StrainsVec,
+    current_strain_peaks: Vec<f64>,
     reduced_section_count: usize,
     reduced_strain_baseline: f64,
     decay_weight: f64,
@@ -18,31 +22,19 @@ pub fn difficulty_value(
     let mut difficulty = 0.0;
     let mut weight = 1.0;
 
-    let mut peaks = current_strain_peaks;
+    // * Sections with 0 strain are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+    // * These sections will not contribute to the difficulty.
+    let peaks = current_strain_peaks.cs_where(|&p| p > 0.0);
 
-    // Note that we remove all initial zeros here.
-    let peaks_iter = peaks.sorted_non_zero_iter_mut().take(reduced_section_count);
+    let mut strains = peaks.cs_order_descending();
 
-    for (i, strain) in peaks_iter.enumerate() {
-        // Note that unless `reduced_strain_baseline == 0.0`, `strain` can
-        // never be `0.0`.
+    for (i, strain) in strains.iter_mut().take(reduced_section_count).enumerate() {
         let clamped = f64::from((i as f32 / reduced_section_count as f32).clamp(0.0, 1.0));
         let scale = f64::log10(lerp(1.0, 10.0, clamped));
         *strain *= lerp(reduced_strain_baseline, 1.0, scale);
     }
 
-    peaks.sort_desc();
-
-    // Sanity assert; will most definitely never panic
-    debug_assert!(reduced_strain_baseline != 0.0);
-
-    // SAFETY: As noted, zeros were removed from all initial strains and no
-    // strain was mutated to a zero afterwards.
-    let peaks = unsafe { peaks.transmute_into_vec() };
-
-    // Using `Vec<f64>` is much faster for iteration than `StrainsVec`
-
-    for strain in peaks {
+    for strain in strains.cs_order_descending() {
         difficulty += strain * weight;
         weight *= decay_weight;
     }
