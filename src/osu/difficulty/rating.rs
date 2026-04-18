@@ -48,9 +48,9 @@ impl OsuRatingCalculator<'_> {
             aim_rating = aim_rating.powf(0.8);
         }
 
-        if self.mods.rx() {
+        /*if self.mods.rx() {
             aim_rating *= 0.9;
-        }
+        }*/
 
         if let Some(magnetised_strength) = self.mods.attraction_strength() {
             aim_rating *= 1.0 - magnetised_strength;
@@ -58,14 +58,22 @@ impl OsuRatingCalculator<'_> {
 
         let mut rating_multiplier = 1.0;
 
-        let ar_length_bonus = 0.95
+        let len_bonus_factor = match self.mods.rx() {
+            true => 0.88,
+            false => 0.95,
+        };
+        let ar_length_bonus = len_bonus_factor
             + 0.4 * (f64::from(self.total_hits) / 2000.0).min(1.0)
             + f64::from(u8::from(self.total_hits > 2000))
                 * (f64::from(self.total_hits) / 2000.0).log10()
                 * 0.5;
 
         let ar_factor = if self.mods.rx() {
-            0.0
+            if self.approach_rate > 10.5 {
+                0.15 * (self.approach_rate - 10.5)
+            } else {
+                0.0
+            }
         } else if self.approach_rate > 10.33 {
             0.3 * (self.approach_rate - 10.33)
         } else if self.approach_rate < 8.0 {
