@@ -1,5 +1,7 @@
 pub use self::{
-    aim_old::AimEvaluator, flashlight::FlashlightEvaluator, rhythm::RhythmEvaluator,
+    aim_old::AimEvaluator,
+    flashlight::FlashlightEvaluator, 
+    rhythm::RhythmEvaluator,
     speed::SpeedEvaluator,
 };
 

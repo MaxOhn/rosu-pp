@@ -248,7 +248,7 @@ impl SnapAimEvaluator {
         smoothstep(angle, f64::to_radians(140.0), f64::to_radians(40.0))
     }
 
-    const fn calc_angle_acuteness(angle: f64) -> f64 {
+    pub const fn calc_angle_acuteness(angle: f64) -> f64 {
         smoothstep(angle, f64::to_radians(140.0), f64::to_radians(40.0))
     }
 }

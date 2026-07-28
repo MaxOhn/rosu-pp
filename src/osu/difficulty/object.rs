@@ -12,6 +12,7 @@ use super::{HD_FADE_OUT_DURATION_MULTIPLIER, scaling_factor::ScalingFactor};
 pub struct OsuDifficultyObject<'a> {
     pub idx: usize,
     pub base: &'a OsuObject,
+    pub radius: f64,
     pub start_time: f64,
     pub delta_time: f64,
 
@@ -49,6 +50,7 @@ impl<'a> OsuDifficultyObject<'a> {
         idx: usize,
         scaling_factor: &ScalingFactor,
     ) -> Self {
+        let radius = f64::from(OsuObject::OBJECT_RADIUS) * scaling_factor.radius;
         let delta_time = (hit_object.start_time - last_object.start_time) / clock_rate;
         let start_time = hit_object.start_time / clock_rate;
 
@@ -64,6 +66,7 @@ impl<'a> OsuDifficultyObject<'a> {
         let mut this = Self {
             idx,
             base: hit_object,
+            radius,
             start_time,
             delta_time,
             adjusted_delta_time,
