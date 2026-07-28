@@ -3,8 +3,7 @@ use std::borrow::Cow;
 use rosu_map::util::Pos;
 
 use crate::{
-    any::difficulty::object::{HasStartTime, IDifficultyObject},
-    osu::object::{OsuObject, OsuObjectKind},
+    any::difficulty::object::{HasStartTime, IDifficultyObject}, osu::object::{OsuObject, OsuObjectKind}, util::difficulty::reverse_lerp,
 };
 
 use super::{HD_FADE_OUT_DURATION_MULTIPLIER, scaling_factor::ScalingFactor};
@@ -120,8 +119,10 @@ impl<'a> OsuDifficultyObject<'a> {
         }
     }
 
-    pub fn get_doubletapness(&self, next: Option<&Self>, hit_window: f64) -> f64 {
-        let Some(next) = next else { return 0.0 };
+    pub fn calc_double_tap_feasibility(&self, next: Option<&Self>, hit_window: f64) -> f64 {
+        let Some(next) = next else {
+            return 0.0
+        };
 
         let hit_window = if self.base.is_spinner() {
             0.0
@@ -132,10 +133,18 @@ impl<'a> OsuDifficultyObject<'a> {
         let curr_delta_time = self.delta_time.max(1.0);
         let next_delta_time = next.delta_time.max(1.0);
         let delta_diff = (next_delta_time - curr_delta_time).abs();
-        let speed_ratio = curr_delta_time / curr_delta_time.max(delta_diff);
-        let window_ratio = (curr_delta_time / hit_window).min(1.0).powf(2.0);
 
-        1.0 - (speed_ratio).powf(1.0 - window_ratio)
+        let speed_ratio = curr_delta_time / curr_delta_time.max(delta_diff);
+        let window_ratio = (curr_delta_time / hit_window).min(1.0).powf(5.0);
+
+        // * Can't doubletap if circles don't intersect
+        let distance_factor = reverse_lerp(
+            self.lazy_jump_dist, 
+            f64::from(Self::NORMALIZED_DIAMETER), 
+            f64::from(Self::NORMALIZED_RADIUS)
+        ).powf(2.0);
+
+        1.0 - speed_ratio.powf(distance_factor * (1.0 - window_ratio))
     }
 
     fn set_distances(

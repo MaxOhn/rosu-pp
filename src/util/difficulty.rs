@@ -40,17 +40,10 @@ pub fn bell_curve(x: f64, mean: f64, width: f64, multiplier: Option<f64>) -> f64
     multiplier.unwrap_or(1.0) * f64::exp(E * -(f64::powf(x - mean, 2.0) / f64::powf(width, 2.0)))
 }
 
-pub fn smoothstep_bell_curve(x: f64, mean: f64, width: f64) -> f64 {
-    let mut new_x = x;
-
-    new_x -= mean;
-    new_x = if new_x > 0.0 {
-        width - new_x
-    } else {
-        width + new_x
-    };
-
-    smoothstep(new_x, 0.0, width)
+pub const fn smoothstep_bell_curve(x: f64) -> f64 {
+    let mut new_x = 0.5 - (x - 0.5).abs();
+    new_x = (new_x * 2.0).clamp(0.0, 1.0);
+    new_x * new_x * (3.0 - 2.0 * new_x)
 }
 
 pub const fn smoothstep(x: f64, start: f64, end: f64) -> f64 {
