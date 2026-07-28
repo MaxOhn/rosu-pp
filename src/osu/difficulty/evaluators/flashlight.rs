@@ -1,7 +1,8 @@
 use std::cmp;
 
 use crate::{
-    any::difficulty::object::IDifficultyObject,
+    GameMods, 
+    any::difficulty::object::IDifficultyObject, 
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
 };
 
@@ -32,7 +33,7 @@ impl FlashlightEvaluator {
         &self,
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
-        hidden: bool,
+        mods: &GameMods,
     ) -> f64 {
         if curr.base.is_spinner() {
             return 0.0;
@@ -44,7 +45,7 @@ impl FlashlightEvaluator {
         let mut small_dist_nerf = 1.0;
         let mut cumulative_strain_time = 0.0;
 
-        let mut result = 0.0;
+        let mut flashlight_difficulty = 0.0;
 
         let mut last_obj = osu_curr;
 
@@ -55,10 +56,9 @@ impl FlashlightEvaluator {
             let Some(curr_obj) = curr.previous(i, diff_objects) else {
                 break;
             };
+            let curr_hit_obj = curr_obj.base;
 
             cumulative_strain_time += last_obj.adjusted_delta_time;
-
-            let curr_hit_obj = curr_obj.base;
 
             if !curr_obj.base.is_spinner() {
                 let jump_dist = f64::from(
@@ -79,12 +79,12 @@ impl FlashlightEvaluator {
                         * (1.0
                             - osu_curr.opacity_at(
                                 curr_hit_obj.start_time,
-                                hidden,
+                                mods.hd_only_fade_approach_circles() == Some(false),
                                 self.time_preempt,
                                 self.time_fade_in,
                             ));
 
-                result += stack_nerf * opacity_bonus * self.scaling_factor * jump_dist
+                flashlight_difficulty += stack_nerf * opacity_bonus * self.scaling_factor * jump_dist
                     / cumulative_strain_time;
 
                 if let Some((curr_obj_angle, osu_curr_angle)) = curr_obj.angle.zip(osu_curr.angle) {
@@ -98,15 +98,15 @@ impl FlashlightEvaluator {
             last_obj = curr_obj;
         }
 
-        result = (small_dist_nerf * result).powf(2.0);
+        flashlight_difficulty = (small_dist_nerf * flashlight_difficulty).powf(2.0);
 
         // * Additional bonus for Hidden due to there being no approach circles.
-        if hidden {
-            result *= 1.0 + Self::HIDDEN_BONUS;
+        if mods.hd() {
+            flashlight_difficulty *= 1.0 + Self::HIDDEN_BONUS;
         }
 
         // * Nerf patterns with repeated angles.
-        result *= Self::MIN_ANGLE_MULTIPLIER
+        flashlight_difficulty *= Self::MIN_ANGLE_MULTIPLIER
             + (1.0 - Self::MIN_ANGLE_MULTIPLIER) / (angle_repeat_count + 1.0);
 
         let mut slider_bonus = 0.0;
@@ -131,8 +131,8 @@ impl FlashlightEvaluator {
             }
         }
 
-        result += slider_bonus * Self::SLIDER_MULTIPLIER;
+        flashlight_difficulty += slider_bonus * Self::SLIDER_MULTIPLIER;
 
-        result
+        flashlight_difficulty
     }
 }
