@@ -8,9 +8,11 @@ pub use self::{
         rhythm::RhythmEvaluator,
         speed::SpeedEvaluator,
     },
-    flashlight::FlashlightEvaluator
+    flashlight::FlashlightEvaluator,
+    reading::ReadingEvaluator,
 };
 
 mod aim;
 mod speed;
 mod flashlight;
+mod reading;
