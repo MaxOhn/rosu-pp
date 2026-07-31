@@ -6,18 +6,11 @@ use crate::{
         object::{HasStartTime, IDifficultyObject},
         skills_new::{
             strain_decay_base,
-            variable_length_strain_skill::{
-                VariableLengthStrainSkill,
-                StrainPeak,
-            },
+            variable_length_strain_skill::{StrainPeak, VariableLengthStrainSkill},
         },
     },
     osu::difficulty::{
-        evaluators::{
-            AgilityEvaluator,
-            FlowAimEvaluator,
-            SnapAimEvaluator,
-        },
+        evaluators::{AgilityEvaluator, FlowAimEvaluator, SnapAimEvaluator},
         object::OsuDifficultyObject,
     },
     util::{
@@ -85,7 +78,7 @@ impl Aim {
         }
 
         let decay = Self::strain_decay(curr.adjusted_delta_time);
-        
+
         self.current_strain *= decay;
         self.current_strain += self.calculate_adjusted_difficulty(curr, objects) * (1.0 - decay);
 
@@ -96,12 +89,22 @@ impl Aim {
         self.current_strain
     }
 
-    fn calculate_adjusted_difficulty(&self, curr: &OsuDifficultyObject<'_>, objects: &[OsuDifficultyObject<'_>]) -> f64 {
-        let snap_difficulty = SnapAimEvaluator::evaluate_diff_of(curr, objects, self.include_sliders) * Self::SKILL_MULTIPLIER_SNAP;
-        let agility_difficulty = AgilityEvaluator::evaluate_diff_of(curr, objects) * Self::SKILL_MULTIPLIER_AGILITY;
-        let flow_difficulty = FlowAimEvaluator::evaluate_diff_of(curr, objects, self.include_sliders) * Self::SKILL_MULTIPLIER_FLOW;
+    fn calculate_adjusted_difficulty(
+        &self,
+        curr: &OsuDifficultyObject<'_>,
+        objects: &[OsuDifficultyObject<'_>],
+    ) -> f64 {
+        let snap_difficulty =
+            SnapAimEvaluator::evaluate_diff_of(curr, objects, self.include_sliders)
+                * Self::SKILL_MULTIPLIER_SNAP;
+        let agility_difficulty =
+            AgilityEvaluator::evaluate_diff_of(curr, objects) * Self::SKILL_MULTIPLIER_AGILITY;
+        let flow_difficulty =
+            FlowAimEvaluator::evaluate_diff_of(curr, objects, self.include_sliders)
+                * Self::SKILL_MULTIPLIER_FLOW;
 
-        let mut total_difficulty = self.calculate_total_value(snap_difficulty, agility_difficulty, flow_difficulty);
+        let mut total_difficulty =
+            self.calculate_total_value(snap_difficulty, agility_difficulty, flow_difficulty);
 
         if let Some(attraction_strength) = self.mods.attraction_strength() {
             total_difficulty *= 1.0 - attraction_strength;
@@ -112,22 +115,34 @@ impl Aim {
         total_difficulty
     }
 
-    fn calculate_total_value(&self, snap_difficulty: f64, agility_difficulty: f64, flow_difficulty: f64) -> f64 {
+    fn calculate_total_value(
+        &self,
+        snap_difficulty: f64,
+        agility_difficulty: f64,
+        flow_difficulty: f64,
+    ) -> f64 {
         let mut snap_difficulty_new = snap_difficulty;
         let mut flow_difficulty_new = flow_difficulty;
 
         // * We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
         // * Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
         // * So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
-        let mut combined_snap_difficulty = norm(Self::COMBINED_SNAP_NORM_EXPONENT, [snap_difficulty_new, agility_difficulty]);
+        let mut combined_snap_difficulty = norm(
+            Self::COMBINED_SNAP_NORM_EXPONENT,
+            [snap_difficulty_new, agility_difficulty],
+        );
 
-        let p_snap = Self::calculate_snap_flow_probability(flow_difficulty / combined_snap_difficulty);
+        let p_snap =
+            Self::calculate_snap_flow_probability(flow_difficulty / combined_snap_difficulty);
         let p_flow = 1.0 - p_snap;
 
         if self.mods.td() {
             // * we don't adjust agility here since agility represents TD difficulty in a decent enough way
             snap_difficulty_new = snap_difficulty_new.powf(0.89);
-            combined_snap_difficulty = norm(Self::COMBINED_SNAP_NORM_EXPONENT, [snap_difficulty_new, agility_difficulty]);
+            combined_snap_difficulty = norm(
+                Self::COMBINED_SNAP_NORM_EXPONENT,
+                [snap_difficulty_new, agility_difficulty],
+            );
         }
 
         if self.mods.rx() {
@@ -201,41 +216,37 @@ impl Aim {
 
     pub fn difficulty_value(current_strain_peaks: Vec<StrainPeak>) -> f64 {
         aim_difficulty_value(
-            Self::get_reduced_strain_peaks(current_strain_peaks), 
-            Self::MAX_SECTION_LENGTH, 
-            Self::DECAY_WEIGHT
+            Self::get_reduced_strain_peaks(current_strain_peaks),
+            Self::MAX_SECTION_LENGTH,
+            Self::DECAY_WEIGHT,
         )
     }
 
     pub fn into_difficulty_value(self) -> f64 {
         aim_difficulty_value(
-            Self::get_reduced_strain_peaks(
-                Self::get_current_strain_peaks(
-                    self.skill_strain_peaks,
-                    self.skill_final_peak,
-                    self.skill_current_section_peak,
-                    self.skill_current_section_begin,
-                    self.skill_current_section_end
-                )
-            ),
-            Self::MAX_SECTION_LENGTH, 
-            Self::DECAY_WEIGHT
+            Self::get_reduced_strain_peaks(Self::get_current_strain_peaks(
+                self.skill_strain_peaks,
+                self.skill_final_peak,
+                self.skill_current_section_peak,
+                self.skill_current_section_begin,
+                self.skill_current_section_end,
+            )),
+            Self::MAX_SECTION_LENGTH,
+            Self::DECAY_WEIGHT,
         )
     }
 
     pub fn cloned_difficulty_value(&self) -> f64 {
         aim_difficulty_value(
-            Self::get_reduced_strain_peaks(
-                Self::get_current_strain_peaks(
-                    self.skill_strain_peaks.clone(),
-                    self.skill_final_peak,
-                    self.skill_current_section_peak,
-                    self.skill_current_section_begin,
-                    self.skill_current_section_end
-                )
-            ),
-            Self::MAX_SECTION_LENGTH, 
-            Self::DECAY_WEIGHT
+            Self::get_reduced_strain_peaks(Self::get_current_strain_peaks(
+                self.skill_strain_peaks.clone(),
+                self.skill_final_peak,
+                self.skill_current_section_peak,
+                self.skill_current_section_begin,
+                self.skill_current_section_end,
+            )),
+            Self::MAX_SECTION_LENGTH,
+            Self::DECAY_WEIGHT,
         )
     }
 
@@ -255,15 +266,20 @@ impl Aim {
         // * Strains are split into 20ms chunks to try to mitigate inconsistencies caused by reducing strains
         while strains.len() > skip_count && time < REDUCED_SECTION_TIME {
             let strain = strains[skip_count];
-            
+
             let mut added_time = 0.0;
             while added_time < strain.section_length {
-                let scale = lerp(1.0, 10.0, ((time + added_time) / REDUCED_SECTION_TIME).clamp(0.0, 1.0)).log10();
+                let scale = lerp(
+                    1.0,
+                    10.0,
+                    ((time + added_time) / REDUCED_SECTION_TIME).clamp(0.0, 1.0),
+                )
+                .log10();
 
                 // * intentionally add at end and sort afterwards, should be cheaper.
                 strains.push(StrainPeak::new(
                     strain.value * lerp(REDUCED_STRAIN_BASELINE, 1.0, scale),
-                    CHUNK_SIZE.min(strain.section_length - added_time)
+                    CHUNK_SIZE.min(strain.section_length - added_time),
                 ));
 
                 added_time += CHUNK_SIZE;
@@ -280,7 +296,11 @@ impl Aim {
     }
 }
 
-fn aim_difficulty_value(reduced_strain_peaks: Vec<StrainPeak>, max_section_length: f64, decay_weight: f64) -> f64 {
+fn aim_difficulty_value(
+    reduced_strain_peaks: Vec<StrainPeak>,
+    max_section_length: f64,
+    decay_weight: f64,
+) -> f64 {
     let mut difficulty = 0.0;
     let mut time = 0.0;
 

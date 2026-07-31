@@ -1,13 +1,9 @@
-use crate::util::{
-    difficulty::logistic,
-    float_ext::FloatExt,
-    hint::unlikely,
-};
+use crate::util::{difficulty::logistic, float_ext::FloatExt, hint::unlikely};
 
 pub mod harmonic_skill;
 pub mod skill;
-pub mod strain_skill;
 pub mod strain_decay_skill;
+pub mod strain_skill;
 pub mod variable_length_strain_skill;
 
 pub fn count_top_weighted_object_difficulties(
@@ -22,12 +18,12 @@ pub fn count_top_weighted_object_difficulties(
     // * What would the top difficulty be if all object difficulties were identical
     let consistent_top_obj = difficulty_value / object_weight_sum;
 
-    if consistent_top_obj == 0.0 {
+    if FloatExt::eq(consistent_top_obj, 0.0) {
         0.0
     } else {
-        object_difficulties
-            .iter()
-            .fold(0.0, |acc, od| acc + logistic(od / consistent_top_obj, 0.88, 10.0, Some(1.1)))
+        object_difficulties.iter().fold(0.0, |acc, od| {
+            acc + logistic(od / consistent_top_obj, 0.88, 10.0, Some(1.1))
+        })
     }
 }
 

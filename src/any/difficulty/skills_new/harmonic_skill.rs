@@ -1,6 +1,9 @@
-use crate::{any::difficulty::skills_new::skill::Skill, util::traits::{IEnumerable, IOrderedEnumerable}};
+use crate::{
+    any::difficulty::skills_new::skill::Skill,
+    util::traits::{IEnumerable, IOrderedEnumerable},
+};
 
-pub trait NewHarmonicSkill: Skill {
+pub trait HarmonicSkill: Skill {
     const HARMONIC_SCALE: f64 = 1.0;
     const DECAY_EXPONENT: f64 = 0.9;
 
@@ -46,9 +49,16 @@ pub fn harmonic_skill_difficulty_value(
 
     // * Objects with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
     // * These objects will not contribute to the difficulty.
-    for obj in transformed_object_difficulties.to_vec().cs_order_descending().cs_where(|v| *v > 0.0) {
+    for obj in transformed_object_difficulties
+        .to_vec()
+        .cs_order_descending()
+        .cs_where(|v| *v > 0.0)
+    {
         // * Use a harmonic sum that considers each object of the map according to a predefined weight.
-        let weight = (1.0 + (harmonic_scale / f64::from(1 + index))) / (f64::from(index).powf(decay_exponent) + 1.0 + (harmonic_scale / f64::from(1 + index)));
+        let weight = (1.0 + (harmonic_scale / f64::from(1 + index)))
+            / (f64::from(index).powf(decay_exponent)
+                + 1.0
+                + (harmonic_scale / f64::from(1 + index)));
 
         *object_weight_sum += weight;
 

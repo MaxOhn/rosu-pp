@@ -44,8 +44,8 @@ impl OsuSkills {
             400.0 * (time_preempt / OsuObject::PREEMPT_MIN).min(1.0)
         };
 
-        let aim = Aim::new(true);
-        let aim_no_sliders = Aim::new(false);
+        let aim = Aim::new(&mods.clone(), true, overall_difficulty);
+        let aim_no_sliders = Aim::new(&mods.clone(), false, overall_difficulty);
         let speed = Speed::new(hit_window, mods.ap());
         let flashlight = Flashlight::new(
             mods,
@@ -53,7 +53,7 @@ impl OsuSkills {
             overall_difficulty,
             scaling_factor.radius,
             time_preempt,
-            time_fade_in
+            time_fade_in,
         );
 
         Self {

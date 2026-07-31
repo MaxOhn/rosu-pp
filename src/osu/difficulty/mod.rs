@@ -164,12 +164,12 @@ impl DifficultyValues {
         let take_diff_objects = cmp::min(map.hit_objects.len(), take).saturating_sub(1);
 
         let mut skills = OsuSkills::new(
-            mods, 
-            &scaling_factor, 
-            great_hit_window, 
-            time_preempt, 
+            mods,
+            &scaling_factor,
+            great_hit_window,
+            time_preempt,
             take_diff_objects,
-            attrs.od()
+            attrs.od(),
         );
 
         for hit_object in diff_objects.iter().take(take_diff_objects) {

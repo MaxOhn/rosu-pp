@@ -1,7 +1,4 @@
-use crate::{
-    any::difficulty::skills_new::skill::Skill, 
-    util::traits::IEnumerable,
-};
+use crate::{any::difficulty::skills_new::skill::Skill, util::traits::IEnumerable};
 
 pub trait VariableLengthStrainSkill: Skill {
     const DECAY_WEIGHT: f64 = 0.9;
@@ -54,7 +51,7 @@ pub trait VariableLengthStrainSkill: Skill {
         if final_peak.is_none() {
             let final_peak = StrainPeak::new(
                 current_section_peak,
-                current_section_end - current_section_begin
+                current_section_end - current_section_begin,
             );
             strain_peaks.cs_add_in_place(final_peak);
         }
@@ -75,7 +72,7 @@ impl StrainPeak {
     pub const fn new(value: f64, section_length: f64) -> Self {
         Self {
             value,
-            section_length: section_length.round()
+            section_length: section_length.round(),
         }
     }
 }

@@ -1,5 +1,13 @@
 use crate::{
-    Beatmap, Difficulty, any::difficulty::{skills::StrainSkill, skills_new::strain_skill::NewStrainSkill}, model::mode::ConvertError, osu::convert::prepare_map,
+    Beatmap, Difficulty,
+    any::difficulty::{
+        skills::StrainSkill,
+        skills_new::{
+            strain_skill::NewStrainSkill, variable_length_strain_skill::VariableLengthStrainSkill,
+        },
+    },
+    model::mode::ConvertError,
+    osu::convert::prepare_map,
 };
 
 use super::difficulty::{DifficultyValues, skills::OsuSkills};
@@ -40,8 +48,16 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<OsuStrains, Con
     } = DifficultyValues::calculate(difficulty, &map);
 
     Ok(OsuStrains {
-        aim: aim.into_current_strain_peaks(),
-        aim_no_sliders: aim_no_sliders.into_current_strain_peaks(),
+        aim: aim
+            .into_current_strain_peaks()
+            .iter()
+            .map(|sp| sp.value)
+            .collect::<Vec<_>>(),
+        aim_no_sliders: aim_no_sliders
+            .into_current_strain_peaks()
+            .iter()
+            .map(|sp| sp.value)
+            .collect::<Vec<_>>(),
         speed: speed.into_current_strain_peaks(),
         flashlight: flashlight.into_current_strain_peaks(),
     })
