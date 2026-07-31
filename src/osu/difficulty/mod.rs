@@ -1,26 +1,32 @@
 use std::{cmp, pin::Pin};
 
 use rosu_map::section::general::GameMode;
-use skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill};
+use skills::{aim::Aim, flashlight::Flashlight, speed::Speed};
 
 use crate::{
     Beatmap,
     any::{
         CalculateError,
-        difficulty::{Difficulty, skills::StrainSkill},
+        difficulty::{
+            Difficulty,
+            skills_new::{
+                harmonic_skill::HarmonicSkill,
+                variable_length_strain_skill::VariableLengthStrainSkill,
+            },
+        },
     },
     model::{beatmap::BeatmapAttributes, mode::ConvertError, mods::GameMods},
     osu::{
         convert::{convert_objects, prepare_map},
         difficulty::{
-            object::OsuDifficultyObject, rating::OsuRatingCalculator,
-            scaling_factor::ScalingFactor, skills::strain::count_top_weighted_sliders,
+            object::OsuDifficultyObject, scaling_factor::ScalingFactor, skills::reading::Reading,
         },
         legacy_score_simulator::OsuLegacyScoreSimulator,
         object::OsuObject,
-        performance::PERFORMANCE_BASE_MULTIPLIER,
+        performance::{PERFORMANCE_BASE_MULTIPLIER, PERFORMANCE_NORM_EXPONENT},
         utils::legacy_score::NestedScorePerObject,
     },
+    util::difficulty::norm,
 };
 
 use self::skills::OsuSkills;
@@ -63,14 +69,14 @@ fn calculate_difficulty(difficulty: &Difficulty, map: &Beatmap) -> OsuDifficulty
 
     let DifficultyValues {
         osu_objects,
-        skills,
+        mut skills,
         mut attrs,
     } = DifficultyValues::calculate(difficulty, map);
 
     let mods = difficulty.get_mods();
     let passed_objects = difficulty.get_passed_objects();
 
-    DifficultyValues::eval(&mut attrs, mods, &skills);
+    DifficultyValues::eval(&mut attrs, mods, &mut skills);
 
     let mut simulator = OsuLegacyScoreSimulator::new(&osu_objects, map, passed_objects);
 
@@ -184,27 +190,30 @@ impl DifficultyValues {
     }
 
     /// Process the difficulty values and store the results in `attrs`.
-    pub fn eval(attrs: &mut OsuDifficultyAttributes, mods: &GameMods, skills: &OsuSkills) {
+    pub fn eval(attrs: &mut OsuDifficultyAttributes, mods: &GameMods, skills: &mut OsuSkills) {
         let OsuSkills {
             aim,
             aim_no_sliders,
             speed,
             flashlight,
+            reading,
         } = skills;
 
         let aim_difficulty_value = aim.cloned_difficulty_value();
+        let aim_no_sliders_difficulty_value = aim_no_sliders.cloned_difficulty_value();
+        let speed_difficulty_value = speed.cloned_difficulty_value();
+        let reading_difficulty_value = reading.cloned_difficulty_value();
 
         let aim_difficult_strain_count = aim.count_top_weighted_strains(aim_difficulty_value);
+        let speed_difficult_strain_count =
+            speed.count_top_weighted_object_difficulties(speed_difficulty_value);
+        let reading_difficult_note_count =
+            reading.count_top_weighted_object_difficulties(reading_difficulty_value);
 
-        let difficult_sliders = aim.get_difficult_sliders();
+        let speed_notes = speed.relevant_object_count();
 
-        let aim_no_sliders_difficulty_value = aim_no_sliders.cloned_difficulty_value();
-
-        let aim_no_sliders_top_weighted_slider_count = count_top_weighted_sliders(
-            aim_no_sliders.slider_strains(),
-            aim_no_sliders_difficulty_value,
-        );
-
+        let aim_no_sliders_top_weighted_slider_count =
+            aim_no_sliders.count_top_weighted_sliders(aim_no_sliders_difficulty_value);
         let aim_no_sliders_difficult_strain_count =
             aim_no_sliders.count_top_weighted_strains(aim_no_sliders_difficulty_value);
 
@@ -212,53 +221,48 @@ impl DifficultyValues {
             / (aim_no_sliders_difficult_strain_count - aim_no_sliders_top_weighted_slider_count)
                 .max(1.0);
 
+        let speed_top_weighted_slider_count =
+            speed.count_top_weighted_sliders(speed_difficulty_value);
+        let speed_top_weighted_slider_factor = speed_top_weighted_slider_count
+            / (speed_difficult_strain_count - speed_top_weighted_slider_count).max(1.0);
+
+        let difficult_sliders = aim.get_difficult_sliders();
+
+        let aim_rating = calculate_aim_difficulty_rating(aim_difficulty_value);
+        let aim_no_sliders_rating =
+            calculate_aim_difficulty_rating(aim_no_sliders_difficulty_value);
+
         let slider_factor = if aim_difficulty_value > 0.0 {
-            OsuRatingCalculator::calculate_difficulty_rating(aim_no_sliders_difficulty_value)
-                / OsuRatingCalculator::calculate_difficulty_rating(aim_difficulty_value)
+            aim_no_sliders_rating / aim_rating
         } else {
             1.0
         };
 
-        let speed_difficulty_value = speed.cloned_difficulty_value();
-        let speed_top_weighted_slider_count =
-            count_top_weighted_sliders(speed.slider_strains(), speed_difficulty_value);
-
-        let speed_difficult_strain_count = speed.count_top_weighted_strains(speed_difficulty_value);
-
-        let speed_top_weighted_slider_factor = speed_top_weighted_slider_count
-            / (speed_difficult_strain_count - speed_top_weighted_slider_count).max(1.0);
-
-        let mechanical_difficulty_rating =
-            calculate_mechanical_difficulty_rating(aim_difficulty_value, speed_difficulty_value);
-
-        let osu_rating_calculator = OsuRatingCalculator::new(
-            mods,
-            attrs.n_objects(),
-            attrs.ar,
-            attrs.od(),
-            mechanical_difficulty_rating,
-            slider_factor,
-        );
-
-        let aim_rating = osu_rating_calculator.compute_aim_rating(aim_difficulty_value);
-        let speed_rating = osu_rating_calculator.compute_speed_rating(speed_difficulty_value);
+        let speed_rating = calculate_difficulty_rating(speed_difficulty_value);
+        let reading_rating = calculate_difficulty_rating(reading_difficulty_value);
 
         let flashlight_rating = if mods.fl() {
             let flashlight_difficulty_value = flashlight.cloned_difficulty_value();
-
-            osu_rating_calculator.compute_flashlight_rating(flashlight_difficulty_value)
+            calculate_difficulty_rating(flashlight_difficulty_value)
         } else {
             0.0
         };
 
         let base_aim_performance = Aim::difficulty_to_performance(aim_rating);
         let base_speed_performance = Speed::difficulty_to_performance(speed_rating);
+        let base_reading_performance = Reading::difficulty_to_performance(reading_rating);
         let base_flashlight_performance = Flashlight::difficulty_to_performance(flashlight_rating);
+        let base_cognition_performance =
+            sum_cognition_difficulty(base_reading_performance, base_flashlight_performance);
 
-        let base_performance = ((base_aim_performance).powf(1.1)
-            + (base_speed_performance).powf(1.1)
-            + (base_flashlight_performance).powf(1.1))
-        .powf(1.0 / 1.1);
+        let base_performance = norm(
+            PERFORMANCE_NORM_EXPONENT,
+            [
+                base_aim_performance,
+                base_speed_performance,
+                base_cognition_performance,
+            ],
+        );
 
         let star_rating = calculate_star_rating(base_performance);
 
@@ -266,13 +270,15 @@ impl DifficultyValues {
         attrs.aim_difficult_slider_count = difficult_sliders;
         attrs.speed = speed_rating;
         attrs.flashlight = flashlight_rating;
+        attrs.reading = reading_rating;
         attrs.slider_factor = slider_factor;
         attrs.aim_top_weighted_slider_factor = aim_top_weighted_slider_factor;
         attrs.speed_top_weighted_slider_factor = speed_top_weighted_slider_factor;
         attrs.aim_difficult_strain_count = aim_difficult_strain_count;
         attrs.speed_difficult_strain_count = speed_difficult_strain_count;
         attrs.stars = star_rating;
-        attrs.speed_note_count = speed.relevant_note_count();
+        attrs.speed_note_count = speed_notes;
+        attrs.reading_note_count = reading_difficult_note_count;
     }
 
     pub fn create_difficulty_objects<'a>(
@@ -323,28 +329,30 @@ impl DifficultyValues {
     }
 }
 
-fn calculate_mechanical_difficulty_rating(
-    aim_difficulty_value: f64,
-    speed_difficulty_value: f64,
-) -> f64 {
-    let aim_value = Aim::difficulty_to_performance(
-        OsuRatingCalculator::calculate_difficulty_rating(aim_difficulty_value),
-    );
-    let speed_value = Speed::difficulty_to_performance(
-        OsuRatingCalculator::calculate_difficulty_rating(speed_difficulty_value),
-    );
+fn sum_cognition_difficulty(reading: f64, flashlight: f64) -> f64 {
+    if reading <= 0.0 {
+        return flashlight;
+    }
 
-    let total_value = (aim_value.powf(1.1) + speed_value.powf(1.1)).powf(1.0 / 1.1);
+    if flashlight <= 0.0 {
+        return reading;
+    }
 
-    calculate_star_rating(total_value)
+    // * Nerf flashlight value in cognition sum when reading is greater than flashlight
+    norm(
+        PERFORMANCE_NORM_EXPONENT,
+        [reading, flashlight, (flashlight / reading).clamp(0.25, 1.0)],
+    )
+}
+
+fn calculate_aim_difficulty_rating(difficulty_value: f64) -> f64 {
+    difficulty_value.powf(0.63) * 0.02275
+}
+
+fn calculate_difficulty_rating(difficulty_value: f64) -> f64 {
+    difficulty_value.sqrt() * 0.0675
 }
 
 fn calculate_star_rating(base_performance: f64) -> f64 {
-    if base_performance <= 0.00001 {
-        return 0.0;
-    }
-
-    PERFORMANCE_BASE_MULTIPLIER.cbrt()
-        * STAR_RATING_MULTIPLIER
-        * ((100_000.0 / 2.0_f64.powf(1.0 / 1.1) * base_performance).cbrt() + 4.0)
+    f64::cbrt(base_performance * PERFORMANCE_BASE_MULTIPLIER)
 }

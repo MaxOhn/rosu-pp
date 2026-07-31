@@ -2,15 +2,9 @@ use crate::{
     GameMods,
     any::difficulty::{
         object::{HasStartTime, IDifficultyObject},
-        skills_new::{
-            strain_decay_base,
-            strain_skill::NewStrainSkill,
-        },
+        skills_new::{strain_decay_base, strain_skill::NewStrainSkill},
     },
-    osu::difficulty::{
-        evaluators::FlashlightEvaluator,
-        object::OsuDifficultyObject
-    },
+    osu::difficulty::{evaluators::FlashlightEvaluator, object::OsuDifficultyObject},
     util::difficulty::reverse_lerp,
 };
 
@@ -38,7 +32,7 @@ define_new_skill! {
 
 impl Flashlight {
     const SKILL_MULTIPLIER: f64 = 0.058;
-    
+
     fn strain_decay(ms: f64) -> f64 {
         strain_decay_base(ms, 0.15)
     }
@@ -66,13 +60,14 @@ impl Flashlight {
         }
 
         self.current_strain *= Self::strain_decay(curr.delta_time);
-        self.current_strain += self.calculate_adjusted_difficulty(curr, objects) * Self::SKILL_MULTIPLIER;
-        
+        self.current_strain +=
+            self.calculate_adjusted_difficulty(curr, objects) * Self::SKILL_MULTIPLIER;
+
         self.current_strain
     }
 
     fn calculate_adjusted_difficulty(
-        &self, 
+        &self,
         curr: &OsuDifficultyObject<'_>,
         objects: &[OsuDifficultyObject<'_>],
     ) -> f64 {
@@ -114,7 +109,7 @@ impl Flashlight {
                 self.skill_strain_peaks,
                 self.skill_current_section_peak,
             ),
-            self.total_objects
+            self.total_objects,
         )
     }
 
@@ -123,9 +118,13 @@ impl Flashlight {
             Self::get_current_strain_peaks(
                 self.skill_strain_peaks.clone(),
                 self.skill_current_section_peak,
-            ), 
-            self.total_objects
+            ),
+            self.total_objects,
         )
+    }
+
+    pub fn difficulty_to_performance(difficulty: f64) -> f64 {
+        25.0 * difficulty.powf(2.0)
     }
 }
 
@@ -133,8 +132,7 @@ fn flashlight_difficulty_value(current_strain_peaks: Vec<f64>, total_objects: i3
     let sum: f64 = current_strain_peaks.iter().sum();
 
     sum * 0.7
-        + 0.1
-        * (f64::from(total_objects) / 200.0).min(1.0)
+        + 0.1 * (f64::from(total_objects) / 200.0).min(1.0)
         + (if total_objects > 200 {
             0.2 * f64::from((total_objects - 200).min(1) / 200)
         } else {

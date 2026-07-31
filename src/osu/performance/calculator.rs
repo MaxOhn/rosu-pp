@@ -6,7 +6,7 @@ use crate::{
         OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState,
         difficulty::{
             rating::OsuRatingCalculator,
-            skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill},
+            skills::{aim::Aim, flashlight::Flashlight, speed::Speed},
         },
         legacy_score_miss_calc::OsuLegacyScoreMissCalculator,
     },
@@ -17,7 +17,8 @@ use crate::{
 };
 
 // * This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
-pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.14;
+pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.12;
+pub const PERFORMANCE_NORM_EXPONENT: f64 = 1.1;
 
 pub(super) struct OsuPerformanceCalculator<'mods> {
     attrs: OsuDifficultyAttributes,

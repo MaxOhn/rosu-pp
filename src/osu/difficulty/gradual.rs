@@ -5,7 +5,7 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::{CalculateError, difficulty::skills::StrainSkill},
+    any::CalculateError,
     model::mode::ConvertError,
     osu::{
         convert::convert_objects,
@@ -148,7 +148,14 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
 
     let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
 
-    let skills = OsuSkills::new(mods, &scaling_factor, great_hit_window, time_preempt, diff_objects.len(), attrs.od());
+    let skills = OsuSkills::new(
+        mods,
+        &scaling_factor,
+        great_hit_window,
+        time_preempt,
+        diff_objects.len(),
+        attrs.od(),
+    );
     let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
 
     let score_simulator = GradualLegacyScoreSimulator::new(map, map_attrs);
@@ -215,7 +222,7 @@ impl Iterator for OsuGradualDifficulty {
 
         let mut attrs = self.attrs.clone();
 
-        DifficultyValues::eval(&mut attrs, self.difficulty.get_mods(), &self.skills);
+        DifficultyValues::eval(&mut attrs, self.difficulty.get_mods(), &mut self.skills);
 
         Some(attrs)
     }

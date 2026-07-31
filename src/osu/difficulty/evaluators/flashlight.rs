@@ -1,8 +1,8 @@
 use std::cmp;
 
 use crate::{
-    GameMods, 
-    any::difficulty::object::IDifficultyObject, 
+    GameMods,
+    any::difficulty::object::IDifficultyObject,
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
 };
 
@@ -84,8 +84,9 @@ impl FlashlightEvaluator {
                                 self.time_fade_in,
                             ));
 
-                flashlight_difficulty += stack_nerf * opacity_bonus * self.scaling_factor * jump_dist
-                    / cumulative_strain_time;
+                flashlight_difficulty +=
+                    stack_nerf * opacity_bonus * self.scaling_factor * jump_dist
+                        / cumulative_strain_time;
 
                 if let Some((curr_obj_angle, osu_curr_angle)) = curr_obj.angle.zip(osu_curr.angle) {
                     // * Objects further back in time should count less for the nerf.

@@ -273,6 +273,10 @@ impl Aim {
 
         reduced
     }
+
+    pub fn difficulty_to_performance(difficulty: f64) -> f64 {
+        4.0 * difficulty.powf(3.0)
+    }
 }
 
 fn aim_difficulty_value(

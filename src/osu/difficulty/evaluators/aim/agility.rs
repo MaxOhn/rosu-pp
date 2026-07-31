@@ -1,6 +1,5 @@
 use crate::{
-    any::difficulty::object::IDifficultyObject, 
-    osu::difficulty::object::OsuDifficultyObject
+    any::difficulty::object::IDifficultyObject, osu::difficulty::object::OsuDifficultyObject,
 };
 
 pub struct AgilityEvaluator;
@@ -11,7 +10,7 @@ impl AgilityEvaluator {
 
     pub fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
-        diff_objects: &'a [OsuDifficultyObject<'a>]
+        diff_objects: &'a [OsuDifficultyObject<'a>],
     ) -> f64 {
         if curr.base.is_spinner() {
             return 0.0;

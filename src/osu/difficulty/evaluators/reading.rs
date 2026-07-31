@@ -120,8 +120,6 @@ impl ReadingEvaluator {
     fn calc_hidden_difficulty<'a>(
         &self,
         curr_obj: &'a OsuDifficultyObject<'a>,
-        // TODO: pass this OR see comment on l#109
-        // curr_obj_preempt: f64,
         diff_objects: &'a [OsuDifficultyObject<'a>],
         past_obj_difficulty_influence: f64,
         curr_visible_obj_density: f64,
@@ -142,7 +140,6 @@ impl ReadingEvaluator {
         if let Some(prev_obj) = curr_obj.previous(0, diff_objects) {
             if curr_obj.lazy_jump_dist.eq(0.0) 
                 && curr_obj.opacity_at(prev_obj.start_time, true, self.time_preempt, self.time_fade_in).eq(0.0)
-                // TODO: Double check using this preempt over OsuDifficultyHitObject.Preempt
                 && prev_obj.start_time > curr_obj.start_time - self.time_preempt {
 
                 // * Perfect stacks are harder the less time between notes

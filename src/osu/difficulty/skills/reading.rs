@@ -11,9 +11,21 @@ define_new_skill! {
         reduced_note_count: usize = 0,
         reduced_duration: Option<f64> = None,
         mods: GameMods,
-        reading_evaluator: ReadingEvaluator,
+        evaluator: ReadingEvaluator,
         hit_window: f64,
         overall_difficulty: f64,
+    }
+
+    pub fn new(mods: &GameMods, time_preempt: f64, time_fade_in: f64, hit_window: f64, overall_difficulty: f64) -> Self {
+        Self {
+            current_strain: 0.0,
+            reduced_note_count: 0,
+            reduced_duration: None,
+            mods: mods.clone(),
+            evaluator: ReadingEvaluator { time_preempt, time_fade_in },
+            hit_window: hit_window,
+            overall_difficulty: overall_difficulty,
+        }
     }
 }
 
@@ -58,7 +70,7 @@ impl Reading {
         objects: &'a [OsuDifficultyObject<'a>],
     ) -> f64 {
         let mut difficulty = self
-            .reading_evaluator
+            .evaluator
             .evaluate_diff_of(curr, objects, self.mods.hd());
 
         if self.mods.td() {
