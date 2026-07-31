@@ -606,6 +606,10 @@ macro_rules! define_new_skill {
                 todo!()
             }
 
+            fn into_transformed_difficulties(self) -> Vec<f64> {
+                self.get_transformed_difficulties(self.get_object_difficulties().to_vec())
+            }
+
             fn difficulty_value(
                 transformed_object_difficulties: Vec<f64>,
                 object_weight_sum: &mut f64,

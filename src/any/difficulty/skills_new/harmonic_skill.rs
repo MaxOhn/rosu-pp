@@ -26,6 +26,8 @@ pub trait HarmonicSkill: Skill {
         difficulties
     }
 
+    fn into_transformed_difficulties(self) -> Vec<f64>;
+
     fn difficulty_value(
         transformed_object_difficulties: Vec<f64>,
         object_weight_sum: &mut f64,

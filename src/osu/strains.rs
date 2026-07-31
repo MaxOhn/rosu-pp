@@ -1,7 +1,8 @@
 use crate::{
     Beatmap, Difficulty,
     any::difficulty::skills_new::{
-        strain_skill::NewStrainSkill, variable_length_strain_skill::VariableLengthStrainSkill,
+        harmonic_skill::HarmonicSkill, strain_skill::NewStrainSkill,
+        variable_length_strain_skill::VariableLengthStrainSkill,
     },
     model::mode::ConvertError,
     osu::convert::prepare_map,
@@ -22,6 +23,8 @@ pub struct OsuStrains {
     pub speed: Vec<f64>,
     /// Strain peaks of the flashlight skill.
     pub flashlight: Vec<f64>,
+    /// Strain peaks of the reading skill.
+    pub reading: Vec<f64>,
 }
 
 impl OsuStrains {
@@ -56,7 +59,8 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<OsuStrains, Con
             .iter()
             .map(|sp| sp.value)
             .collect::<Vec<_>>(),
-        speed: speed.into_current_strain_peaks(),
+        speed: speed.into_transformed_difficulties(),
         flashlight: flashlight.into_current_strain_peaks(),
+        reading: reading.into_transformed_difficulties(),
     })
 }
