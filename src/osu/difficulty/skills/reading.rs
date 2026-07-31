@@ -12,18 +12,16 @@ define_new_skill! {
         reduced_duration: Option<f64> = None,
         mods: GameMods,
         evaluator: ReadingEvaluator,
-        hit_window: f64,
         overall_difficulty: f64,
     }
 
-    pub fn new(mods: &GameMods, time_preempt: f64, time_fade_in: f64, hit_window: f64, overall_difficulty: f64) -> Self {
+    pub fn new(mods: &GameMods, time_preempt: f64, time_fade_in: f64, overall_difficulty: f64) -> Self {
         Self {
             current_strain: 0.0,
             reduced_note_count: 0,
             reduced_duration: None,
             mods: mods.clone(),
-            evaluator: ReadingEvaluator { time_preempt, time_fade_in },
-            hit_window: hit_window,
+            evaluator: ReadingEvaluator::new(time_preempt, time_fade_in),
             overall_difficulty: overall_difficulty,
         }
     }
@@ -38,6 +36,7 @@ impl Reading {
         strain_decay_base(ms, 0.8)
     }
 
+    #[expect(dead_code, reason = "used by process_internal")]
     fn object_difficulty_of<'a>(
         &mut self,
         curr: &'a OsuDifficultyObject<'a>,
@@ -97,7 +96,7 @@ impl Reading {
     fn get_transformed_difficulties(&self, mut difficulties: Vec<f64>) -> Vec<f64> {
         difficulties.retain(|v| *v > 0.0);
 
-        let count = difficulties.len().min(self.reduced_note_count);
+        let count = std::cmp::min(difficulties.len(), self.reduced_note_count);
         for (i, difficulty) in difficulties.iter_mut().take(count).enumerate() {
             let scale = lerp(
                 1.0,
@@ -112,6 +111,7 @@ impl Reading {
         difficulties
     }
 
+    #[expect(dead_code, reason = "overwrites macro impl")]
     fn count_top_weighted_object_difficulties(&self, difficulty_value: f64) -> f64 {
         count_top_weighted_object_difficulties(
             difficulty_value,

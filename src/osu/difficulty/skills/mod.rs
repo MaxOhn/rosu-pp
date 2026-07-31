@@ -57,13 +57,7 @@ impl OsuSkills {
             time_preempt,
             time_fade_in,
         );
-        let reading = Reading::new(
-            mods,
-            time_preempt,
-            time_fade_in,
-            hit_window,
-            overall_difficulty,
-        );
+        let reading = Reading::new(mods, time_preempt, time_fade_in, overall_difficulty);
 
         Self {
             aim,

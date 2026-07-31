@@ -82,6 +82,20 @@ impl OsuPerformanceCalculator<'_> {
         effective_miss_count = effective_miss_count.min(f64::from(state.hitresults.total_hits()));
         effective_miss_count = effective_miss_count.max(0.0);
 
+        let mut aim_estimated_slider_breaks = 0.0;
+        let mut speed_estimated_slider_breaks = 0.0;
+
+        if effective_miss_count > 0.0 {
+            aim_estimated_slider_breaks = self.calculate_estimated_slider_breaks(
+                self.attrs.aim_top_weighted_slider_factor,
+                effective_miss_count,
+            );
+            speed_estimated_slider_breaks = self.calculate_estimated_slider_breaks(
+                self.attrs.speed_top_weighted_slider_factor,
+                effective_miss_count,
+            );
+        }
+
         let total_hits = f64::from(total_hits);
 
         let mut multiplier = PERFORMANCE_BASE_MULTIPLIER;
@@ -118,9 +132,6 @@ impl OsuPerformanceCalculator<'_> {
         }
 
         let speed_deviation = self.calculate_speed_deviation();
-
-        let mut aim_estimated_slider_breaks = 0.0;
-        let mut speed_estimated_slider_breaks = 0.0;
 
         let aim_value =
             self.compute_aim_value(effective_miss_count, &mut aim_estimated_slider_breaks);

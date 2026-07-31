@@ -9,11 +9,11 @@ pub struct RhythmEvaluator;
 impl RhythmEvaluator {
     const HISTORY_TIME_MAX: u32 = 5 * 1000; // 5 seconds
     const HISTORY_OBJECTS_MAX: usize = 32;
-    const RHYTHM_OVERALL_MULTIPLIER: f64 = 1.0;
-    const RHYTHM_RATIO_MULTIPLIER: f64 = 15.0;
+    const RHYTHM_OVERALL_MULTIPLIER: f64 = 0.95;
     const RHYTHM_RATIO_DIFF_MULTIPLIER: f64 = 26.0;
     const DELTA_MIN_VALUE: f64 = 1e-7;
 
+    #[expect(clippy::too_many_lines, reason = "staying in-sync with lazer")]
     pub fn evaluate_diff_of<'a>(
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
@@ -33,16 +33,16 @@ impl RhythmEvaluator {
         // * Store the difficulty of the current start of an island to buff for tighter rhythms.
         let mut start_difficulty = 0.0;
         let mut first_delta_switch = false;
-        let historical_note_count = curr.idx.max(Self::HISTORY_OBJECTS_MAX);
+        let historical_note_count = std::cmp::max(curr.idx, Self::HISTORY_OBJECTS_MAX);
         let mut rhythm_start = 0;
 
         while curr
             .previous(rhythm_start, diff_objects)
-            .filter(|prev| {
+            .as_ref()
+            .is_some_and(|prev| {
                 rhythm_start + 2 < historical_note_count
                     && curr.start_time - prev.start_time < f64::from(Self::HISTORY_TIME_MAX)
             })
-            .is_some()
         {
             rhythm_start += 1;
         }
@@ -151,9 +151,9 @@ impl RhythmEvaluator {
 
                     let mut found = false;
 
-                    for existing_island in islands
+                    if let Some(existing_island) = islands
                         .iter_mut()
-                        .filter(|i| i.almost_eq(&island, delta_difference_eps))
+                        .find(|i| i.almost_eq(&island, delta_difference_eps))
                     {
                         // * only increase island occurrences if they're going one after another
                         if prev_island.almost_eq(&island, delta_difference_eps) {
@@ -168,7 +168,6 @@ impl RhythmEvaluator {
                         );
 
                         found = true;
-                        break;
                     }
 
                     if !found && island.delta_count > 0 {
@@ -246,7 +245,7 @@ struct RhythmIsland {
 impl RhythmIsland {
     pub fn new(delta: i32) -> Self {
         Self {
-            delta: delta.max(OsuDifficultyObject::MIN_DELTA_TIME as i32),
+            delta: std::cmp::max(delta, OsuDifficultyObject::MIN_DELTA_TIME as i32),
             delta_count: 1,
             occurrences: 1,
         }
@@ -254,7 +253,7 @@ impl RhythmIsland {
 
     fn add_delta(&mut self, delta: i32) {
         if delta == i32::MAX {
-            self.delta = delta.max(OsuDifficultyObject::MIN_DELTA_TIME as i32);
+            self.delta = std::cmp::max(delta, OsuDifficultyObject::MIN_DELTA_TIME as i32);
         }
 
         self.delta_count += 1;

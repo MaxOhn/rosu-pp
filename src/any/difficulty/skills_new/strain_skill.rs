@@ -1,5 +1,5 @@
 use crate::{
-    any::difficulty::skills_new::skill::Skill, 
+    any::difficulty::skills_new::skill::Skill,
     util::traits::{IEnumerable, IOrderedEnumerable},
 };
 
@@ -13,6 +13,7 @@ pub trait NewStrainSkill: Skill {
         objects: &Self::DifficultyObjects<'a>,
     ) -> f64;
 
+    #[expect(dead_code, reason = "used by process_internal")]
     fn strain_value_at<'a>(
         &mut self,
         curr: &Self::DifficultyObject<'a>,
@@ -30,6 +31,7 @@ pub trait NewStrainSkill: Skill {
         objects: &Self::DifficultyObjects<'a>,
     );
 
+    #[expect(dead_code, reason = "used by start_new_section_from")]
     fn calculate_initial_strain<'a>(
         &self,
         time: f64,

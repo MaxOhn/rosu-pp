@@ -164,8 +164,12 @@ mod tests {
 
             let Some(next_gradual) = gradual.next(state.clone()) else {
                 assert_eq!(i, hit_objects_len + 1);
-                assert!(gradual_2nd.last(state.clone()).is_some() || hit_objects_len % 2 == 0);
-                assert!(gradual_3rd.last(state.clone()).is_some() || hit_objects_len % 3 == 0);
+                assert!(
+                    gradual_2nd.last(state.clone()).is_some() || hit_objects_len.is_multiple_of(2)
+                );
+                assert!(
+                    gradual_3rd.last(state.clone()).is_some() || hit_objects_len.is_multiple_of(3)
+                );
                 break;
             };
 

@@ -33,6 +33,7 @@ pub trait HarmonicSkill: Skill {
         object_weight_sum: &mut f64,
     ) -> f64;
 
+    #[expect(dead_code, reason = "staying in-sync with existing skills")]
     fn into_difficulty_value(self) -> f64;
 
     fn cloned_difficulty_value(&mut self) -> f64;
@@ -57,25 +58,23 @@ pub fn harmonic_skill_difficulty_value(
     }
 
     let mut difficulty = 0.0;
-    let mut index = 0;
 
     // * Objects with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
     // * These objects will not contribute to the difficulty.
-    for obj in transformed_object_difficulties
+    for (index, obj) in transformed_object_difficulties
         .to_vec()
         .cs_order_descending()
         .cs_where(|v| *v > 0.0)
+        .iter()
+        .enumerate()
     {
         // * Use a harmonic sum that considers each object of the map according to a predefined weight.
-        let weight = (1.0 + (harmonic_scale / f64::from(1 + index)))
-            / (f64::from(index).powf(decay_exponent)
-                + 1.0
-                + (harmonic_scale / f64::from(1 + index)));
+        let weight = (1.0 + (harmonic_scale / (1 + index) as f64))
+            / ((index as f64).powf(decay_exponent) + 1.0 + (harmonic_scale / (1 + index) as f64));
 
         *object_weight_sum += weight;
 
         difficulty += obj * weight;
-        index += 1;
     }
 
     difficulty

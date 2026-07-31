@@ -40,8 +40,8 @@ impl Flashlight {
     fn calculate_initial_strain<'a>(
         &self,
         time: f64,
-        curr: &OsuDifficultyObject<'_>,
-        objects: &[OsuDifficultyObject<'_>],
+        curr: &OsuDifficultyObject<'a>,
+        objects: &[OsuDifficultyObject<'a>],
     ) -> f64 {
         let prev_start_time = curr
             .previous(0, objects)
@@ -52,8 +52,8 @@ impl Flashlight {
 
     fn strain_value_at<'a>(
         &mut self,
-        curr: &OsuDifficultyObject<'_>,
-        objects: &[OsuDifficultyObject<'_>],
+        curr: &OsuDifficultyObject<'a>,
+        objects: &[OsuDifficultyObject<'a>],
     ) -> f64 {
         if !self.mods.fl() {
             return 0.0;
@@ -103,6 +103,7 @@ impl Flashlight {
     // and requires `self.total_objects`. Since the static method isn't ever used as far as I can tell, it can remain default for now.
     // As long as `into_difficulty_value` and `cloned_difficulty_value` are correct it should not affect elsewhere.
 
+    #[expect(dead_code, reason = "overwrites macro impl")]
     fn into_difficulty_value(self) -> f64 {
         flashlight_difficulty_value(
             Self::get_current_strain_peaks(
@@ -129,12 +130,12 @@ impl Flashlight {
 }
 
 fn flashlight_difficulty_value(current_strain_peaks: Vec<f64>, total_objects: i32) -> f64 {
-    let sum: f64 = current_strain_peaks.iter().sum();
+    let sum: f64 = current_strain_peaks.into_iter().sum();
 
     sum * 0.7
         + 0.1 * (f64::from(total_objects) / 200.0).min(1.0)
         + (if total_objects > 200 {
-            0.2 * f64::from((total_objects - 200).min(1) / 200)
+            0.2 * f64::from(std::cmp::min(total_objects - 200, 1) / 200)
         } else {
             0.0
         })

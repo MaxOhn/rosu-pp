@@ -284,22 +284,22 @@ mod tests {
                 let n50 = remain - n300 - n100;
 
                 // Skip if any provided constraints are violated
-                if let Some(expected_n300) = inspect.n300 {
-                    if n300 != expected_n300 {
-                        continue;
-                    }
+                if let Some(expected_n300) = inspect.n300
+                    && n300 != expected_n300
+                {
+                    continue;
                 }
 
-                if let Some(expected_n100) = inspect.n100 {
-                    if n100 != expected_n100 {
-                        continue;
-                    }
+                if let Some(expected_n100) = inspect.n100
+                    && n100 != expected_n100
+                {
+                    continue;
                 }
 
-                if let Some(expected_n50) = inspect.n50 {
-                    if n50 != expected_n50 {
-                        continue;
-                    }
+                if let Some(expected_n50) = inspect.n50
+                    && n50 != expected_n50
+                {
+                    continue;
                 }
 
                 let candidate = OsuHitResults {

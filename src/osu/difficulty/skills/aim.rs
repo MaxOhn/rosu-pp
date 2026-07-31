@@ -39,18 +39,15 @@ impl Aim {
     const SKILL_MULTIPLIER_TOTAL: f64 = 1.12;
     const COMBINED_SNAP_NORM_EXPONENT: f64 = 1.2;
 
-    const SKILL_MULTIPLIER: f64 = 26.0;
-    const STRAIN_DECAY_BASE: f64 = 0.2;
-
     fn strain_decay(ms: f64) -> f64 {
         strain_decay_base(ms, 0.15)
     }
 
-    fn calculate_initial_strain(
+    fn calculate_initial_strain<'a>(
         &mut self,
         time: f64,
-        curr: &OsuDifficultyObject<'_>,
-        objects: &[OsuDifficultyObject<'_>],
+        curr: &OsuDifficultyObject<'a>,
+        objects: &[OsuDifficultyObject<'a>],
     ) -> f64 {
         let prev_start_time = curr
             .previous(0, objects)
@@ -59,10 +56,10 @@ impl Aim {
         self.current_strain * Self::strain_decay(time - prev_start_time)
     }
 
-    fn strain_value_at(
+    fn strain_value_at<'a>(
         &mut self,
-        curr: &OsuDifficultyObject<'_>,
-        objects: &[OsuDifficultyObject<'_>],
+        curr: &OsuDifficultyObject<'a>,
+        objects: &[OsuDifficultyObject<'a>],
     ) -> f64 {
         if self.mods.ap() {
             return 0.0;
@@ -80,10 +77,10 @@ impl Aim {
         self.current_strain
     }
 
-    fn calculate_adjusted_difficulty(
+    fn calculate_adjusted_difficulty<'a>(
         &self,
-        curr: &OsuDifficultyObject<'_>,
-        objects: &[OsuDifficultyObject<'_>],
+        curr: &OsuDifficultyObject<'a>,
+        objects: &[OsuDifficultyObject<'a>],
     ) -> f64 {
         let snap_difficulty =
             SnapAimEvaluator::evaluate_diff_of(curr, objects, self.include_sliders)
@@ -142,9 +139,8 @@ impl Aim {
         }
 
         let total_difficulty = combined_snap_difficulty * p_snap * flow_difficulty_new * p_flow;
-        let total_strain = total_difficulty * Self::SKILL_MULTIPLIER_TOTAL;
 
-        total_strain
+        total_difficulty * Self::SKILL_MULTIPLIER_TOTAL
     }
 
     fn calculate_snap_flow_probability(ratio: f64) -> f64 {
@@ -205,6 +201,7 @@ impl Aim {
         )
     }
 
+    #[expect(dead_code, reason = "overwrites macro impl")]
     pub fn into_difficulty_value(self) -> f64 {
         Self::difficulty_value(Self::get_reduced_strain_peaks(
             Self::get_current_strain_peaks(

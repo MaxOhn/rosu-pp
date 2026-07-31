@@ -36,11 +36,8 @@ use super::attributes::OsuDifficultyAttributes;
 mod evaluators;
 pub mod gradual;
 mod object;
-pub mod rating;
 pub mod scaling_factor;
 pub mod skills;
-
-const STAR_RATING_MULTIPLIER: f64 = 0.0265;
 
 const HD_FADE_IN_DURATION_MULTIPLIER: f64 = 0.4;
 const HD_FADE_OUT_DURATION_MULTIPLIER: f64 = 0.3;

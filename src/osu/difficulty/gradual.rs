@@ -337,8 +337,8 @@ mod tests {
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {
                 assert_eq!(i, hit_objects_len + 1);
-                assert!(gradual_2nd.last().is_some() || hit_objects_len % 2 == 0);
-                assert!(gradual_3rd.last().is_some() || hit_objects_len % 3 == 0);
+                assert!(gradual_2nd.last().is_some() || hit_objects_len.is_multiple_of(2));
+                assert!(gradual_3rd.last().is_some() || hit_objects_len.is_multiple_of(3));
                 break;
             };
 

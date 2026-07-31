@@ -11,6 +11,7 @@ pub trait VariableLengthStrainSkill: Skill {
         objects: &Self::DifficultyObjects<'a>,
     ) -> f64;
 
+    #[expect(dead_code, reason = "used by process_internal")]
     fn strain_value_at<'a>(
         &mut self,
         curr: &Self::DifficultyObject<'a>,
@@ -32,6 +33,7 @@ pub trait VariableLengthStrainSkill: Skill {
         objects: &Self::DifficultyObjects<'a>,
     );
 
+    #[expect(dead_code, reason = "used by start_new_section_from")]
     fn calculate_initial_strain<'a>(
         &self,
         time: f64,
@@ -72,7 +74,7 @@ impl StrainPeak {
     pub const fn new(value: f64, section_length: f64) -> Self {
         Self {
             value,
-            section_length: section_length.round(),
+            section_length: section_length.round_ties_even(),
         }
     }
 }

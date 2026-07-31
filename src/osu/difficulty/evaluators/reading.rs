@@ -29,6 +29,13 @@ impl ReadingEvaluator {
     const MINIMUM_ANGLE_RELEVANCY_TIME: f64 = 2000.0; // * 2 seconds
     const MAXIMUM_ANGLE_RELEVANCY_TIME: f64 = 200.0;
 
+    pub const fn new(time_preempt: f64, time_fade_in: f64) -> Self {
+        Self {
+            time_preempt,
+            time_fade_in,
+        }
+    }
+
     pub fn evaluate_diff_of<'a>(
         &self,
         curr: &'a OsuDifficultyObject<'a>,
@@ -137,15 +144,14 @@ impl ReadingEvaluator {
         // * Apply a soft cap to general HD reading to account for partial memorization
         hidden_difficulty = hidden_difficulty.powf(0.4) * Self::HIDDEN_MULTIPLIER;
 
-        if let Some(prev_obj) = curr_obj.previous(0, diff_objects) {
-            if curr_obj.lazy_jump_dist.eq(0.0) 
-                && curr_obj.opacity_at(prev_obj.start_time, true, self.time_preempt, self.time_fade_in).eq(0.0)
-                && prev_obj.start_time > curr_obj.start_time - self.time_preempt {
+        if let Some(prev_obj) = curr_obj.previous(0, diff_objects)
+            && FloatExt::eq(curr_obj.lazy_jump_dist, 0.0)
+            && FloatExt::eq(curr_obj.opacity_at(prev_obj.start_time, true, self.time_preempt, self.time_fade_in), 0.0)
+            && prev_obj.start_time > curr_obj.start_time - self.time_preempt {
 
                 // * Perfect stacks are harder the less time between notes
                 hidden_difficulty += Self::HIDDEN_MULTIPLIER * 2500.0 / curr_obj.adjusted_delta_time.powf(1.5);
             }
-        }
 
         hidden_difficulty
     }
@@ -220,7 +226,7 @@ impl ReadingEvaluator {
                 let mut angle_diff_alternating = f64::consts::PI;
 
                 if let (Some(loop_obj_prev0_angle), Some(loop_obj_prev1_angle), Some(loop_obj_prev2_angle)) 
-                    = (loop_obj_prev0.angle, loop_obj_prev1.map_or(None, |o| o.angle), loop_obj_prev2.map_or(None, |o| o.angle)) {
+                    = (loop_obj_prev0.angle, loop_obj_prev1.and_then(|o| o.angle), loop_obj_prev2.and_then(|o| o.angle)) {
                     angle_diff_alternating = (loop_obj_prev1_angle - loop_obj_angle).abs();
                     angle_diff_alternating += (loop_obj_prev2_angle - loop_obj_prev1_angle).abs();
 
