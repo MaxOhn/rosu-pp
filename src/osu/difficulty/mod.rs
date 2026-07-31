@@ -329,7 +329,7 @@ impl DifficultyValues {
     }
 }
 
-fn sum_cognition_difficulty(reading: f64, flashlight: f64) -> f64 {
+pub fn sum_cognition_difficulty(reading: f64, flashlight: f64) -> f64 {
     if reading <= 0.0 {
         return flashlight;
     }

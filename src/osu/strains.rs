@@ -1,10 +1,7 @@
 use crate::{
     Beatmap, Difficulty,
-    any::difficulty::{
-        skills::StrainSkill,
-        skills_new::{
-            strain_skill::NewStrainSkill, variable_length_strain_skill::VariableLengthStrainSkill,
-        },
+    any::difficulty::skills_new::{
+        strain_skill::NewStrainSkill, variable_length_strain_skill::VariableLengthStrainSkill,
     },
     model::mode::ConvertError,
     osu::convert::prepare_map,
@@ -43,6 +40,7 @@ pub fn strains(difficulty: &Difficulty, map: &Beatmap) -> Result<OsuStrains, Con
                 aim_no_sliders,
                 speed,
                 flashlight,
+                reading,
             },
         attrs: _,
     } = DifficultyValues::calculate(difficulty, &map);
