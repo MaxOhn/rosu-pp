@@ -1,5 +1,5 @@
 use crate::any::difficulty::skills_new::skill::Skill;
-use crate::{any::difficulty::skills::StrainSkill, model::mods::GameMods, osu::object::OsuObject};
+use crate::{model::mods::GameMods, osu::object::OsuObject};
 
 use self::{aim::Aim, flashlight::Flashlight, speed::Speed};
 
@@ -9,6 +9,7 @@ use super::{
 
 pub mod aim;
 pub mod flashlight;
+pub mod reading;
 pub mod speed;
 pub mod strain;
 
@@ -44,9 +45,9 @@ impl OsuSkills {
             400.0 * (time_preempt / OsuObject::PREEMPT_MIN).min(1.0)
         };
 
-        let aim = Aim::new(&mods.clone(), true, overall_difficulty);
-        let aim_no_sliders = Aim::new(&mods.clone(), false, overall_difficulty);
-        let speed = Speed::new(hit_window, mods.ap());
+        let aim = Aim::new(mods.clone(), true, overall_difficulty);
+        let aim_no_sliders = Aim::new(mods.clone(), false, overall_difficulty);
+        let speed = Speed::new(mods.clone(), hit_window);
         let flashlight = Flashlight::new(
             mods,
             total_objects as i32,

@@ -10,6 +10,9 @@ pub fn count_top_weighted_object_difficulties(
     difficulty_value: f64,
     object_difficulties: &[f64],
     object_weight_sum: f64,
+    midpoint_offset: f64,
+    multiplier: f64,
+    max_value: Option<f64>,
 ) -> f64 {
     if object_difficulties.is_empty() || FloatExt::eq(object_weight_sum, 0.0) {
         return 0.0;
@@ -19,12 +22,20 @@ pub fn count_top_weighted_object_difficulties(
     let consistent_top_obj = difficulty_value / object_weight_sum;
 
     if FloatExt::eq(consistent_top_obj, 0.0) {
-        0.0
-    } else {
-        object_difficulties.iter().fold(0.0, |acc, od| {
-            acc + logistic(od / consistent_top_obj, 0.88, 10.0, Some(1.1))
-        })
+        return 0.0;
     }
+
+    object_difficulties
+        .iter()
+        .map(|s| {
+            logistic(
+                s / consistent_top_obj,
+                midpoint_offset,
+                multiplier,
+                max_value,
+            )
+        })
+        .sum()
 }
 
 pub fn count_top_weighted_strains(

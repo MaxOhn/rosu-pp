@@ -1,61 +1,50 @@
 use crate::{
-    any::difficulty::{
-        object::{HasStartTime, IDifficultyObject},
-        skills::{StrainSkill, strain_decay},
-    },
+    GameMods,
+    any::difficulty::skills_new::strain_decay_base,
     osu::difficulty::{
         evaluators::{RhythmEvaluator, SpeedEvaluator},
         object::OsuDifficultyObject,
+        skills::strain::count_top_weighted_sliders,
     },
+    util::{difficulty::logistic, float_ext::FloatExt},
 };
 
-use super::strain::OsuStrainSkill;
-
-define_skill! {
+define_new_skill! {
     #[derive(Clone)]
-    pub struct Speed: StrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
-        current_strain: f64 = 0.0,
-        current_rhythm: f64 = 0.0,
-        hit_window: f64,
-        has_autopilot_mod: bool,
+    pub struct Speed: HarmonicSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         slider_strains: Vec<f64> = Vec::with_capacity(64),
+        current_strain: f64 = 0.0,
+        mods: GameMods,
+        hit_window: f64,
     }
 }
 
 impl Speed {
-    const SKILL_MULTIPLIER: f64 = 1.47;
-    const STRAIN_DECAY_BASE: f64 = 0.3;
-    const REDUCED_SECTION_COUNT: usize = 5;
+    const SKILL_MULTIPLIER: f64 = 1.16;
 
-    fn calculate_initial_strain(
-        &mut self,
-        time: f64,
-        curr: &OsuDifficultyObject<'_>,
-        objects: &[OsuDifficultyObject<'_>],
-    ) -> f64 {
-        let prev_start_time = curr
-            .previous(0, objects)
-            .map_or(0.0, HasStartTime::start_time);
-
-        (self.current_strain * self.current_rhythm)
-            * strain_decay(time - prev_start_time, Self::STRAIN_DECAY_BASE)
+    fn strain_decay(ms: f64) -> f64 {
+        strain_decay_base(ms, 0.3)
     }
 
-    fn strain_value_at(
+    fn object_difficulty_of<'a>(
         &mut self,
-        curr: &OsuDifficultyObject<'_>,
-        objects: &[OsuDifficultyObject<'_>],
+        curr: &'a OsuDifficultyObject<'a>,
+        objects: &'a [OsuDifficultyObject<'a>],
     ) -> f64 {
-        self.current_strain *= strain_decay(curr.adjusted_delta_time, Self::STRAIN_DECAY_BASE);
-        self.current_strain += SpeedEvaluator::evaluate_diff_of(
-            curr,
-            objects,
-            self.hit_window,
-            self.has_autopilot_mod,
-        ) * Self::SKILL_MULTIPLIER;
-        self.current_rhythm = RhythmEvaluator::evaluate_diff_of(curr, objects, self.hit_window);
+        if self.mods.rx() {
+            return 0.0;
+        }
 
-        let total_strain = self.current_strain * self.current_rhythm;
+        let decay = Self::strain_decay(curr.adjusted_delta_time);
+
+        self.current_strain *= decay;
+        self.current_strain += self.calculate_adjusted_difficulty(curr, objects)
+            * (1.0 - decay)
+            * Self::SKILL_MULTIPLIER;
+
+        let curr_rhythm = RhythmEvaluator::evaluate_diff_of(curr, objects, self.hit_window);
+
+        let total_strain = self.current_strain * curr_rhythm;
 
         if curr.base.is_slider() {
             self.slider_strains.push(total_strain);
@@ -64,35 +53,49 @@ impl Speed {
         total_strain
     }
 
-    pub fn relevant_note_count(&self) -> f64 {
-        self.strain_skill_object_strains
+    fn calculate_adjusted_difficulty<'a>(
+        &mut self,
+        curr: &'a OsuDifficultyObject<'a>,
+        objects: &'a [OsuDifficultyObject<'a>],
+    ) -> f64 {
+        let mut difficulty = SpeedEvaluator::evaluate_diff_of(curr, objects, self.hit_window);
+
+        if self.mods.ap() {
+            difficulty *= 0.5;
+        }
+
+        difficulty
+    }
+
+    pub fn relevant_object_count(&self) -> f64 {
+        if self.skill_object_difficulties.is_empty() {
+            return 0.0;
+        }
+
+        let max_strain = self
+            .skill_object_difficulties
             .iter()
             .copied()
-            .max_by(f64::total_cmp)
-            .filter(|&n| n > 0.0)
-            .map_or(0.0, |max_strain| {
-                self.strain_skill_object_strains
-                    .iter()
-                    .fold(0.0, |sum, strain| {
-                        sum + (1.0 + f64::exp(-(strain / max_strain * 12.0 - 6.0))).recip()
-                    })
-            })
+            .fold(0.0, f64::max);
+
+        if FloatExt::eq(max_strain, 0.0) {
+            return 0.0;
+        }
+
+        self.skill_object_difficulties
+            .iter()
+            .map(|s| logistic(s / max_strain, 0.5, 12.0, None))
+            .sum()
     }
 
-    pub fn slider_strains(&self) -> &[f64] {
-        &self.slider_strains
-    }
+    pub fn count_top_weighted_sliders(&self, difficulty_value: f64) -> f64 {
+        if self.slider_strains.is_empty() || FloatExt::eq(self.skill_object_weight_sum, 0.0) {
+            return 0.0;
+        }
 
-    // From `OsuStrainSkill`; native rather than trait function so that it has
-    // priority over `StrainSkill::difficulty_value`
-    fn difficulty_value(current_strain_peaks: Vec<f64>) -> f64 {
-        super::strain::difficulty_value(
-            current_strain_peaks,
-            Self::REDUCED_SECTION_COUNT,
-            Self::REDUCED_STRAIN_BASELINE,
-            Self::DECAY_WEIGHT,
-        )
+        // * What would the top note be if all note values were identical
+        let consistent_top_object = difficulty_value / self.skill_object_weight_sum;
+
+        count_top_weighted_sliders(&self.slider_strains, consistent_top_object)
     }
 }
-
-impl OsuStrainSkill for Speed {}

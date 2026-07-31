@@ -21,11 +21,21 @@ pub trait HarmonicSkill: Skill {
         self.object_difficulty_of(curr, objects)
     }
 
-    fn get_transformed_difficulties(difficulties: &[f64]) -> &[f64] {
+    #[expect(unused_mut, reason = "staying in-sync with lazer")]
+    fn get_transformed_difficulties(&self, mut difficulties: Vec<f64>) -> Vec<f64> {
         difficulties
     }
 
-    fn count_top_weighted_object_difficulties(difficulty_value: f64) -> f64;
+    fn difficulty_value(
+        transformed_object_difficulties: Vec<f64>,
+        object_weight_sum: &mut f64,
+    ) -> f64;
+
+    fn into_difficulty_value(self) -> f64;
+
+    fn cloned_difficulty_value(&mut self) -> f64;
+
+    fn count_top_weighted_object_difficulties(&self, difficulty_value: f64) -> f64;
 
     fn difficulty_to_performance(difficulty: f64) -> f64 {
         4.0 * difficulty.powf(3.0)

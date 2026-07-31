@@ -98,6 +98,23 @@ macro_rules! define_new_skill {
         }
     };
 
+    // Extend `Skill`'s fields
+    (
+        @$trait:ident $objects:ty[$object:ty]
+        extend_fields Skill // <-
+        fields { $( $fields:tt )* }
+        $( $rest:tt )*
+    ) => {
+        define_new_skill! {
+            @$trait $objects[$object]
+            fields {
+                $( $fields )*
+                skill_object_difficulties Vec<f64> = Vec::with_capacity(256), // <-
+            }
+            $( $rest )*
+        }
+    };
+
     // Extend `VariableLengthStrainSkill`'s fields
     (
         @$trait:ident $objects:ty[$object:ty]
@@ -142,18 +159,19 @@ macro_rules! define_new_skill {
         }
     };
 
-    // Extend `Skill`'s fields
+    // Extend `HarmonicSkill`'s fields
     (
         @$trait:ident $objects:ty[$object:ty]
-        extend_fields Skill // <-
+        extend_fields HarmonicSkill // <-
         fields { $( $fields:tt )* }
         $( $rest:tt )*
     ) => {
         define_new_skill! {
             @$trait $objects[$object]
+            extend_fields Skill
             fields {
                 $( $fields )*
-                skill_object_difficulties Vec<f64> = Vec::with_capacity(256), // <-
+                skill_object_weight_sum f64 = 0.0, // <-
             }
             $( $rest )*
         }
@@ -268,9 +286,10 @@ macro_rules! define_new_skill {
                 any::difficulty::{
                     object::{IDifficultyObject, IDifficultyObjects, HasStartTime},
                     skills_new::{
-                        skill::Skill, 
+                        skill::Skill,
                         strain_skill::NewStrainSkill,
                         variable_length_strain_skill::VariableLengthStrainSkill,
+                        harmonic_skill::HarmonicSkill,
                     },
                 },
             };
@@ -518,7 +537,7 @@ macro_rules! define_new_skill {
                 }
 
                 let peak = crate::any::difficulty::skills_new::variable_length_strain_skill::StrainPeak::new(self.skill_current_section_peak, section_length);
-                
+
                 self.skill_strain_peaks.cs_add_in_place(peak);
                 self.skill_total_length += section_length;
 
@@ -568,6 +587,59 @@ macro_rules! define_new_skill {
                     &self.skill_object_difficulties,
                     difficulty_value,
                     Self::DECAY_WEIGHT,
+                )
+            }
+        }
+    };
+
+    // Implement `HarmonicSkill` trait
+    ( @impl HarmonicSkill $name:ident $objects:ty[$object:ty] ) => {
+        define_new_skill!( @impl Skill $name $objects[$object] );
+
+        impl HarmonicSkill for $name {
+            #[expect(unused_variables, reason = "placeholder")]
+            fn object_difficulty_of<'a>(
+                &mut self,
+                curr: &Self::DifficultyObject<'a>,
+                objects: &Self::DifficultyObjects<'a>,
+            ) -> f64 {
+                todo!()
+            }
+
+            fn difficulty_value(
+                transformed_object_difficulties: Vec<f64>,
+                object_weight_sum: &mut f64,
+            ) -> f64 {
+                crate::any::difficulty::skills_new::harmonic_skill::harmonic_skill_difficulty_value(
+                    &transformed_object_difficulties,
+                    object_weight_sum,
+                    Self::HARMONIC_SCALE,
+                    Self::DECAY_EXPONENT,
+                )
+            }
+
+            fn into_difficulty_value(mut self) -> f64 {
+                Self::difficulty_value(
+                    self.get_transformed_difficulties(self.get_object_difficulties().to_vec()),
+                    &mut self.skill_object_weight_sum,
+                )
+            }
+
+            fn cloned_difficulty_value(&mut self) -> f64 {
+                Self::difficulty_value(
+                    self.get_transformed_difficulties(self.skill_object_difficulties.clone()),
+                    &mut self.skill_object_weight_sum,
+                )
+            }
+
+            fn count_top_weighted_object_difficulties(&self, difficulty_value: f64) -> f64 {
+                crate::any::difficulty::skills_new::count_top_weighted_object_difficulties(
+                    difficulty_value,
+                    &self.skill_object_difficulties,
+                    self.skill_object_weight_sum,
+                    0.88,
+                    10.0,
+                    Some(1.1)
                 )
             }
         }

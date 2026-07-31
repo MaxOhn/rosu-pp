@@ -12,6 +12,7 @@ use crate::{
     osu::difficulty::{
         evaluators::{AgilityEvaluator, FlowAimEvaluator, SnapAimEvaluator},
         object::OsuDifficultyObject,
+        skills::strain::count_top_weighted_sliders,
     },
     util::{
         difficulty::{lerp, logistic, logistic_exp, norm},
@@ -24,19 +25,9 @@ define_new_skill! {
     pub struct Aim: VariableLengthStrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         current_strain: f64 = 0.0,
         slider_strains: Vec<f64> = Vec::with_capacity(64),
-        include_sliders: bool,
         mods: GameMods,
+        include_sliders: bool,
         overall_difficulty: f64,
-    }
-
-    pub fn new(mods: &GameMods, include_sliders: bool, overall_difficulty: f64) -> Self {
-        Self {
-            current_strain: 0.0,
-            slider_strains: Vec::with_capacity(64),
-            mods: mods.clone(),
-            include_sliders: include_sliders,
-            overall_difficulty: overall_difficulty,
-        }
     }
 }
 
@@ -203,15 +194,7 @@ impl Aim {
         // * What would the top strain be if all strain values were identical
         let consistent_top_strain = difficulty_value / 10.0;
 
-        if FloatExt::eq(consistent_top_strain, 0.0) {
-            return 0.0;
-        }
-
-        // * Use a weighted sum of all strains. Constants are arbitrary and give nice values
-        self.slider_strains
-            .iter()
-            .map(|s| logistic(*s / consistent_top_strain, 0.88, 10.0, Some(1.1)))
-            .sum()
+        count_top_weighted_sliders(&self.slider_strains, consistent_top_strain)
     }
 
     pub fn difficulty_value(current_strain_peaks: Vec<StrainPeak>) -> f64 {
@@ -223,31 +206,27 @@ impl Aim {
     }
 
     pub fn into_difficulty_value(self) -> f64 {
-        aim_difficulty_value(
-            Self::get_reduced_strain_peaks(Self::get_current_strain_peaks(
+        Self::difficulty_value(Self::get_reduced_strain_peaks(
+            Self::get_current_strain_peaks(
                 self.skill_strain_peaks,
                 self.skill_final_peak,
                 self.skill_current_section_peak,
                 self.skill_current_section_begin,
                 self.skill_current_section_end,
-            )),
-            Self::MAX_SECTION_LENGTH,
-            Self::DECAY_WEIGHT,
-        )
+            ),
+        ))
     }
 
     pub fn cloned_difficulty_value(&self) -> f64 {
-        aim_difficulty_value(
-            Self::get_reduced_strain_peaks(Self::get_current_strain_peaks(
+        Self::difficulty_value(Self::get_reduced_strain_peaks(
+            Self::get_current_strain_peaks(
                 self.skill_strain_peaks.clone(),
                 self.skill_final_peak,
                 self.skill_current_section_peak,
                 self.skill_current_section_begin,
                 self.skill_current_section_end,
-            )),
-            Self::MAX_SECTION_LENGTH,
-            Self::DECAY_WEIGHT,
-        )
+            ),
+        ))
     }
 
     fn get_reduced_strain_peaks(current_strain_peaks: Vec<StrainPeak>) -> Vec<StrainPeak> {
