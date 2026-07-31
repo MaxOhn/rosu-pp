@@ -1,3 +1,4 @@
+use crate::any::difficulty::skills_new::skill::Skill;
 use crate::{any::difficulty::skills::StrainSkill, model::mods::GameMods, osu::object::OsuObject};
 
 use self::{aim::Aim, flashlight::Flashlight, speed::Speed};
@@ -24,6 +25,8 @@ impl OsuSkills {
         scaling_factor: &ScalingFactor,
         great_hit_window: f64,
         time_preempt: f64,
+        total_objects: usize,
+        overall_difficulty: f64,
     ) -> Self {
         let hit_window = 2.0 * great_hit_window;
 
@@ -44,7 +47,14 @@ impl OsuSkills {
         let aim = Aim::new(true);
         let aim_no_sliders = Aim::new(false);
         let speed = Speed::new(hit_window, mods.ap());
-        let flashlight = Flashlight::new(mods, scaling_factor.radius, time_preempt, time_fade_in);
+        let flashlight = Flashlight::new(
+            mods,
+            total_objects as i32,
+            overall_difficulty,
+            scaling_factor.radius,
+            time_preempt,
+            time_fade_in
+        );
 
         Self {
             aim,

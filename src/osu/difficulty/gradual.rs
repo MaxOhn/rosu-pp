@@ -1,3 +1,4 @@
+use crate::any::difficulty::skills_new::skill::Skill;
 use std::{cmp, mem};
 
 use rosu_map::section::general::GameMode;
@@ -147,7 +148,7 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
 
     let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
 
-    let skills = OsuSkills::new(mods, &scaling_factor, great_hit_window, time_preempt);
+    let skills = OsuSkills::new(mods, &scaling_factor, great_hit_window, time_preempt, diff_objects.len(), attrs.od());
     let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
 
     let score_simulator = GradualLegacyScoreSimulator::new(map, map_attrs);

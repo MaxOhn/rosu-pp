@@ -1,6 +1,5 @@
 use crate::{
-    Beatmap, Difficulty, any::difficulty::skills::StrainSkill, model::mode::ConvertError,
-    osu::convert::prepare_map,
+    Beatmap, Difficulty, any::difficulty::{skills::StrainSkill, skills_new::strain_skill::NewStrainSkill}, model::mode::ConvertError, osu::convert::prepare_map,
 };
 
 use super::difficulty::{DifficultyValues, skills::OsuSkills};

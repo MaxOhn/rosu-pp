@@ -7,6 +7,10 @@ pub trait IEnumerable<T>: Sized {
     fn cs_sum<S>(&self) -> S
     where
         S: for<'a> Sum<&'a T>;
+
+    fn cs_add_in_place(&mut self, item: T) -> usize
+    where
+        T: Ord;
 }
 
 /// Mimics the C# `IOrderedEnumerable<T>` interface.
@@ -32,6 +36,18 @@ impl<T> IEnumerable<T> for Vec<T> {
         S: for<'a> Sum<&'a T>,
     {
         self.iter().sum()
+    }
+
+    /// Adds the given item to the list according to standard sorting rules. Do not use on unsorted lists.
+    /// 
+    /// <https://github.com/ppy/osu-framework/blob/master/osu.Framework/Extensions/ExtensionMethods.cs#L34>
+    fn cs_add_in_place(&mut self, item: T) -> usize
+    where
+        T: Ord,
+    {
+        let index = self.binary_search(&item).unwrap_or_else(|i| i);
+        self.insert(index, item);
+        index
     }
 }
 
