@@ -36,7 +36,7 @@ impl Reading {
         strain_decay_base(ms, 0.8)
     }
 
-    #[expect(dead_code, reason = "used by process_internal")]
+    // #[expect(dead_code, reason = "used by process_internal")]
     fn object_difficulty_of<'a>(
         &mut self,
         curr: &'a OsuDifficultyObject<'a>,

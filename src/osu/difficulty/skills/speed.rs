@@ -26,7 +26,6 @@ impl Speed {
         strain_decay_base(ms, 0.3)
     }
 
-    #[expect(dead_code, reason = "used by process_internal")]
     fn object_difficulty_of<'a>(
         &mut self,
         curr: &'a OsuDifficultyObject<'a>,

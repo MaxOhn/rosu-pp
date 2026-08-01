@@ -32,7 +32,7 @@ impl SnapAimEvaluator {
 
         let Some(osu_last_obj) = curr
             .previous(0, diff_objects)
-            .filter(|last| !(curr.base.is_spinner() || last.base.is_spinner()))
+            .filter(|last| curr.idx > 1 && !(curr.base.is_spinner() || last.base.is_spinner()))
         else {
             return 0.0;
         };

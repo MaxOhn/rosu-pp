@@ -3,7 +3,9 @@ use std::borrow::Cow;
 use rosu_map::util::Pos;
 
 use crate::{
-    any::difficulty::object::{HasStartTime, IDifficultyObject}, osu::object::{OsuObject, OsuObjectKind}, util::difficulty::reverse_lerp,
+    any::difficulty::object::{HasEndTime, HasStartTime, IDifficultyObject},
+    osu::object::{OsuObject, OsuObjectKind},
+    util::difficulty::reverse_lerp,
 };
 
 use super::{HD_FADE_OUT_DURATION_MULTIPLIER, scaling_factor::ScalingFactor};
@@ -12,11 +14,13 @@ pub struct OsuDifficultyObject<'a> {
     pub idx: usize,
     pub base: &'a OsuObject,
     pub radius: f64,
-    pub start_time: f64,
-    pub delta_time: f64,
 
+    pub start_time: f64,
+    pub end_time: f64,
+    pub delta_time: f64,
     pub adjusted_delta_time: f64,
     pub last_obj_end_delta_time: f64,
+
     pub jump_dist: f64,
     pub lazy_jump_dist: f64,
     pub min_jump_dist: f64,
@@ -49,13 +53,15 @@ impl<'a> OsuDifficultyObject<'a> {
         idx: usize,
         scaling_factor: &ScalingFactor,
     ) -> Self {
-        let radius = f64::from(OsuObject::OBJECT_RADIUS) * scaling_factor.radius;
+        let radius = f64::from(OsuObject::OBJECT_RADIUS * scaling_factor.scale);
         let delta_time = (hit_object.start_time - last_object.start_time) / clock_rate;
         let start_time = hit_object.start_time / clock_rate;
+        let end_time = hit_object.end_time() / clock_rate;
 
+        // * Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
         let adjusted_delta_time = delta_time.max(Self::MIN_DELTA_TIME);
         let last_obj_end_delta_time = if let Some(last) = last_diff_obj {
-            (start_time - last.start_time + last.delta_time).max(Self::MIN_DELTA_TIME)
+            (start_time - last.end_time).max(Self::MIN_DELTA_TIME)
         } else {
             adjusted_delta_time
         };
@@ -67,6 +73,7 @@ impl<'a> OsuDifficultyObject<'a> {
             base: hit_object,
             radius,
             start_time,
+            end_time,
             delta_time,
             adjusted_delta_time,
             last_obj_end_delta_time,
@@ -120,9 +127,7 @@ impl<'a> OsuDifficultyObject<'a> {
     }
 
     pub fn calc_double_tap_feasibility(&self, next: Option<&Self>, hit_window: f64) -> f64 {
-        let Some(next) = next else {
-            return 0.0
-        };
+        let Some(next) = next else { return 0.0 };
 
         let hit_window = if self.base.is_spinner() {
             0.0
@@ -139,10 +144,11 @@ impl<'a> OsuDifficultyObject<'a> {
 
         // * Can't doubletap if circles don't intersect
         let distance_factor = reverse_lerp(
-            self.lazy_jump_dist, 
-            f64::from(Self::NORMALIZED_DIAMETER), 
-            f64::from(Self::NORMALIZED_RADIUS)
-        ).powf(2.0);
+            self.lazy_jump_dist,
+            f64::from(Self::NORMALIZED_DIAMETER),
+            f64::from(Self::NORMALIZED_RADIUS),
+        )
+        .powf(2.0);
 
         1.0 - speed_ratio.powf(distance_factor * (1.0 - window_ratio))
     }
@@ -156,7 +162,9 @@ impl<'a> OsuDifficultyObject<'a> {
         scaling_factor: &ScalingFactor,
     ) {
         if let OsuObjectKind::Slider(ref slider) = self.base.kind {
-            self.travel_dist = self.lazy_travel_dist * (slider.repeat_count() as f64).powf(0.3).max(1.0);
+            // * Bonus for repeat sliders until a better per nested object strain system can be achieved.
+            self.travel_dist =
+                self.lazy_travel_dist * (slider.repeat_count() as f64).powf(0.3).max(1.0);
 
             self.travel_time =
                 (self.lazy_travel_time / clock_rate).max(OsuDifficultyObject::MIN_DELTA_TIME);
@@ -181,11 +189,13 @@ impl<'a> OsuDifficultyObject<'a> {
         );
         self.min_jump_dist = self.lazy_jump_dist;
 
+        self.jump_dist = f64::from(
+            (last_object.stacked_pos() - self.base.stacked_pos()).length() * scaling_factor,
+        );
+
         let Some(last_diff_obj) = last_diff_obj else {
             return;
         };
-
-        self.jump_dist = f64::from((last_diff_obj.base.stacked_pos() - self.base.stacked_pos()).length() * scaling_factor);
 
         if let OsuObjectKind::Slider(ref last_slider) = last_object.kind {
             let last_travel_time = (last_diff_obj.lazy_travel_time / clock_rate)
@@ -210,7 +220,7 @@ impl<'a> OsuDifficultyObject<'a> {
         let Some(last_last_diff_obj) = last_last_diff_obj else {
             return;
         };
-        
+
         if !last_last_diff_obj.base.is_spinner() {
             if last_object.is_slider() && last_diff_obj.travel_dist > 0.0 {
                 last_cursor_pos = last_object.stacked_pos();
@@ -282,9 +292,12 @@ impl<'a> OsuDifficultyObject<'a> {
             end_time_min %= 1.0;
         }
 
+        // * temporary lazy end position until a real result can be derived.
         let mut lazy_end_pos = pos + stack_offset + slider.path.position_at(end_time_min);
 
         let mut curr_cursor_pos = pos + stack_offset;
+
+        // * lazySliderDistance is coded to be sensitive to scaling, this makes the maths easier with the thresholds being used.
         let scaling_factor = f64::from(OsuDifficultyObject::NORMALIZED_RADIUS) / radius;
 
         for (curr_movement_obj, i) in nested_objects.iter().zip(1..) {
@@ -293,6 +306,10 @@ impl<'a> OsuDifficultyObject<'a> {
             let mut required_movement = f64::from(OsuDifficultyObject::ASSUMED_SLIDER_RADIUS);
 
             if i == nested_objects.len() {
+                // * The end of a slider has special aim rules due to the relaxed time constraint on position.
+                // * There is both a lazy end position as well as the actual end slider position. We assume the player takes the simpler movement.
+                // * For sliders that are circular, the lazy end position may actually be farther away than the sliders true end.
+                // * This code is designed to prevent buffing situations where lazy end is actually a less efficient movement.
                 let lazy_movement = lazy_end_pos - curr_cursor_pos;
 
                 if lazy_movement.length() < curr_movement.length() {
@@ -319,11 +336,21 @@ impl<'a> OsuDifficultyObject<'a> {
         self.lazy_end_pos = Some(lazy_end_pos);
     }
 
-    fn calculate_slider_angle(&self, last_diff_obj: &OsuDifficultyObject, last_last_pos: Pos) -> f64 {
+    fn calculate_slider_angle(
+        &self,
+        last_diff_obj: &OsuDifficultyObject,
+        last_last_pos: Pos,
+    ) -> f64 {
         let last_pos = Self::get_end_cursor_pos(last_diff_obj);
 
-        let adjusted_last_last_pos = if let OsuObjectKind::Slider(ref last_slider) = last_diff_obj.base.kind && last_diff_obj.travel_dist > 0.0 {
-            if let Some(second_last_nested) = last_slider.nested_objects.get(last_slider.nested_objects.len().saturating_sub(2)) {
+        let adjusted_last_last_pos = if let OsuObjectKind::Slider(ref last_slider) =
+            last_diff_obj.base.kind
+            && last_diff_obj.travel_dist > 0.0
+        {
+            if let Some(second_last_nested) = last_slider
+                .nested_objects
+                .get(last_slider.nested_objects.len().saturating_sub(2))
+            {
                 second_last_nested.pos + last_diff_obj.base.stack_offset
             } else {
                 last_last_pos

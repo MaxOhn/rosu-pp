@@ -471,10 +471,8 @@ macro_rules! define_new_skill {
                     self.skill_current_section_peak = current_strain;
                 } else {
                     // * Empty the queue of smaller elements as they won't be relevant to difficulty
-                    while !self.skill_queued_strains.is_empty() {
-                        if self.skill_queued_strains.last().filter(|(strain_value, _)| strain_value < &current_strain).is_some() {
-                            self.skill_queued_strains.pop();
-                        }
+                    while self.skill_queued_strains.last().filter(|(strain_value, _)| strain_value < &current_strain).is_some() {
+                        self.skill_queued_strains.pop();
                     }
                     self.skill_queued_strains.push((current_strain, curr.start_time));
                 }
@@ -597,13 +595,12 @@ macro_rules! define_new_skill {
         define_new_skill!( @impl Skill $name $objects[$object] );
 
         impl HarmonicSkill for $name {
-            #[expect(unused_variables, reason = "placeholder")]
             fn object_difficulty_of<'a>(
                 &mut self,
                 curr: &Self::DifficultyObject<'a>,
                 objects: &Self::DifficultyObjects<'a>,
             ) -> f64 {
-                todo!()
+                self.object_difficulty_of(curr, objects)
             }
 
             fn into_transformed_difficulties(self) -> Vec<f64> {
