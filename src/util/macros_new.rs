@@ -170,7 +170,6 @@ macro_rules! define_new_skill {
             extend_fields Skill
             fields {
                 $( $fields )*
-                skill_object_weight_sum f64 = 0.0, // <-
             }
             $( $rest )*
         }
@@ -595,37 +594,36 @@ macro_rules! define_new_skill {
                 self.get_transformed_difficulties(self.get_object_difficulties().to_vec())
             }
 
-            fn difficulty_value(
-                transformed_object_difficulties: Vec<f64>,
-                object_weight_sum: &mut f64,
-            ) -> f64 {
+            fn difficulty_value(transformed_object_difficulties: Vec<f64>) -> (f64, f64) {
                 crate::any::difficulty::skills_new::harmonic_skill::harmonic_skill_difficulty_value(
                     &transformed_object_difficulties,
-                    object_weight_sum,
                     Self::HARMONIC_SCALE,
                     Self::DECAY_EXPONENT,
                 )
             }
 
-            fn into_difficulty_value(mut self) -> f64 {
+            fn into_difficulty_value(self) -> f64 {
                 Self::difficulty_value(
                     self.get_transformed_difficulties(self.get_object_difficulties().to_vec()),
-                    &mut self.skill_object_weight_sum,
                 )
+                .0
             }
 
-            fn cloned_difficulty_value(&mut self) -> f64 {
+            fn cloned_difficulty_value(&self) -> (f64, f64) {
                 Self::difficulty_value(
                     self.get_transformed_difficulties(self.skill_object_difficulties.clone()),
-                    &mut self.skill_object_weight_sum,
                 )
             }
 
-            fn count_top_weighted_object_difficulties(&self, difficulty_value: f64) -> f64 {
+            fn count_top_weighted_object_difficulties(
+                &self,
+                difficulty_value: f64,
+                object_weight_sum: f64,
+            ) -> f64 {
                 crate::any::difficulty::skills_new::count_top_weighted_object_difficulties(
                     difficulty_value,
                     &self.skill_object_difficulties,
-                    self.skill_object_weight_sum,
+                    object_weight_sum,
                     0.88,
                     10.0,
                     Some(1.1)

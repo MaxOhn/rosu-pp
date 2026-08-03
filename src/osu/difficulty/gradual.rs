@@ -221,7 +221,7 @@ impl Iterator for OsuGradualDifficulty {
 
         let mut attrs = self.attrs.clone();
 
-        DifficultyValues::eval(&mut attrs, self.difficulty.get_mods(), &mut self.skills);
+        DifficultyValues::eval(&mut attrs, self.difficulty.get_mods(), &self.skills);
 
         Some(attrs)
     }

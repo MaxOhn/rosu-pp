@@ -66,14 +66,14 @@ fn calculate_difficulty(difficulty: &Difficulty, map: &Beatmap) -> OsuDifficulty
 
     let DifficultyValues {
         osu_objects,
-        mut skills,
+        skills,
         mut attrs,
     } = DifficultyValues::calculate(difficulty, map);
 
     let mods = difficulty.get_mods();
     let passed_objects = difficulty.get_passed_objects();
 
-    DifficultyValues::eval(&mut attrs, mods, &mut skills);
+    DifficultyValues::eval(&mut attrs, mods, &skills);
 
     let mut simulator = OsuLegacyScoreSimulator::new(&osu_objects, map, passed_objects);
 
@@ -186,7 +186,7 @@ impl DifficultyValues {
     }
 
     /// Process the difficulty values and store the results in `attrs`.
-    pub fn eval(attrs: &mut OsuDifficultyAttributes, mods: &GameMods, skills: &mut OsuSkills) {
+    pub fn eval(attrs: &mut OsuDifficultyAttributes, mods: &GameMods, skills: &OsuSkills) {
         let OsuSkills {
             aim,
             aim_no_sliders,
@@ -197,14 +197,19 @@ impl DifficultyValues {
 
         let aim_difficulty_value = aim.cloned_difficulty_value();
         let aim_no_sliders_difficulty_value = aim_no_sliders.cloned_difficulty_value();
-        let speed_difficulty_value = speed.cloned_difficulty_value();
-        let reading_difficulty_value = reading.cloned_difficulty_value();
+        let (speed_difficulty_value, speed_object_weight_sum) = speed.cloned_difficulty_value();
+        let (reading_difficulty_value, reading_object_weight_sum) =
+            reading.cloned_difficulty_value();
 
         let aim_difficult_strain_count = aim.count_top_weighted_strains(aim_difficulty_value);
-        let speed_difficult_strain_count =
-            speed.count_top_weighted_object_difficulties(speed_difficulty_value);
-        let reading_difficult_note_count =
-            reading.count_top_weighted_object_difficulties(reading_difficulty_value);
+        let speed_difficult_strain_count = speed.count_top_weighted_object_difficulties(
+            speed_difficulty_value,
+            speed_object_weight_sum,
+        );
+        let reading_difficult_note_count = reading.count_top_weighted_object_difficulties(
+            reading_difficulty_value,
+            reading_object_weight_sum,
+        );
 
         let speed_notes = speed.relevant_object_count();
 
@@ -218,7 +223,7 @@ impl DifficultyValues {
                 .max(1.0);
 
         let speed_top_weighted_slider_count =
-            speed.count_top_weighted_sliders(speed_difficulty_value);
+            speed.count_top_weighted_sliders(speed_difficulty_value, speed_object_weight_sum);
         let speed_top_weighted_slider_factor = speed_top_weighted_slider_count
             / (speed_difficult_strain_count - speed_top_weighted_slider_count).max(1.0);
 

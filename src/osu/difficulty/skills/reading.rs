@@ -42,7 +42,7 @@ impl Reading {
         curr: &'a OsuDifficultyObject<'a>,
         objects: &'a [OsuDifficultyObject<'a>],
     ) -> f64 {
-        let decay = Self::strain_decay(curr.adjusted_delta_time);
+        let decay = Self::strain_decay(curr.delta_time);
 
         self.current_strain *= decay;
         self.current_strain += self.calculate_adjusted_difficulty(curr, objects)
@@ -112,11 +112,15 @@ impl Reading {
     }
 
     #[expect(dead_code, reason = "overwrites macro impl")]
-    fn count_top_weighted_object_difficulties(&self, difficulty_value: f64) -> f64 {
+    fn count_top_weighted_object_difficulties(
+        &self,
+        difficulty_value: f64,
+        object_weight_sum: f64,
+    ) -> f64 {
         count_top_weighted_object_difficulties(
             difficulty_value,
             &self.skill_object_difficulties,
-            self.skill_object_weight_sum,
+            object_weight_sum,
             1.15,
             5.0,
             Some(1.1),

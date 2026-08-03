@@ -21,6 +21,7 @@ define_new_skill! {
 
 impl Speed {
     const SKILL_MULTIPLIER: f64 = 1.16;
+    const HARMONIC_SCALE: f64 = 20.0;
 
     fn strain_decay(ms: f64) -> f64 {
         strain_decay_base(ms, 0.3)
@@ -88,13 +89,13 @@ impl Speed {
             .sum()
     }
 
-    pub fn count_top_weighted_sliders(&self, difficulty_value: f64) -> f64 {
-        if self.slider_strains.is_empty() || FloatExt::eq(self.skill_object_weight_sum, 0.0) {
+    pub fn count_top_weighted_sliders(&self, difficulty_value: f64, object_weight_sum: f64) -> f64 {
+        if self.slider_strains.is_empty() || FloatExt::eq(object_weight_sum, 0.0) {
             return 0.0;
         }
 
         // * What would the top note be if all note values were identical
-        let consistent_top_object = difficulty_value / self.skill_object_weight_sum;
+        let consistent_top_object = difficulty_value / object_weight_sum;
 
         count_top_weighted_sliders(&self.slider_strains, consistent_top_object)
     }

@@ -28,17 +28,20 @@ pub trait HarmonicSkill: Skill {
 
     fn into_transformed_difficulties(self) -> Vec<f64>;
 
-    fn difficulty_value(
-        transformed_object_difficulties: Vec<f64>,
-        object_weight_sum: &mut f64,
-    ) -> f64;
+    /// Returns `(difficulty_value, object_weight_sum)`.
+    fn difficulty_value(transformed_object_difficulties: Vec<f64>) -> (f64, f64);
 
     #[expect(dead_code, reason = "staying in-sync with existing skills")]
     fn into_difficulty_value(self) -> f64;
 
-    fn cloned_difficulty_value(&mut self) -> f64;
+    /// Returns `(difficulty_value, object_weight_sum)`.
+    fn cloned_difficulty_value(&self) -> (f64, f64);
 
-    fn count_top_weighted_object_difficulties(&self, difficulty_value: f64) -> f64;
+    fn count_top_weighted_object_difficulties(
+        &self,
+        difficulty_value: f64,
+        object_weight_sum: f64,
+    ) -> f64;
 
     fn difficulty_to_performance(difficulty: f64) -> f64 {
         4.0 * difficulty.powf(3.0)
@@ -47,17 +50,15 @@ pub trait HarmonicSkill: Skill {
 
 pub fn harmonic_skill_difficulty_value(
     transformed_object_difficulties: &[f64],
-    object_weight_sum: &mut f64,
     harmonic_scale: f64,
     decay_exponent: f64,
-) -> f64 {
-    *object_weight_sum = 0.0;
-
+) -> (f64, f64) {
     if transformed_object_difficulties.is_empty() {
-        return 0.0;
+        return (0.0, 0.0);
     }
 
     let mut difficulty = 0.0;
+    let mut object_weight_sum = 0.0;
 
     // * Objects with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
     // * These objects will not contribute to the difficulty.
@@ -72,10 +73,10 @@ pub fn harmonic_skill_difficulty_value(
         let weight = (1.0 + (harmonic_scale / (1 + index) as f64))
             / ((index as f64).powf(decay_exponent) + 1.0 + (harmonic_scale / (1 + index) as f64));
 
-        *object_weight_sum += weight;
+        object_weight_sum += weight;
 
         difficulty += obj * weight;
     }
 
-    difficulty
+    (difficulty, object_weight_sum)
 }

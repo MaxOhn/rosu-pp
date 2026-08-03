@@ -33,7 +33,7 @@ impl RhythmEvaluator {
         // * Store the difficulty of the current start of an island to buff for tighter rhythms.
         let mut start_difficulty = 0.0;
         let mut first_delta_switch = false;
-        let historical_note_count = std::cmp::max(curr.idx, Self::HISTORY_OBJECTS_MAX);
+        let historical_note_count = std::cmp::min(curr.idx, Self::HISTORY_OBJECTS_MAX);
         let mut rhythm_start = 0;
 
         while curr
@@ -65,7 +65,7 @@ impl RhythmEvaluator {
                 let time_decay = (f64::from(Self::HISTORY_TIME_MAX)
                     - (curr.start_time - curr_obj.start_time))
                     / f64::from(Self::HISTORY_TIME_MAX);
-                let note_decay = ((historical_note_count - i) / historical_note_count) as f64;
+                let note_decay = (historical_note_count - i) as f64 / historical_note_count as f64;
 
                 let curr_historical_decay = note_decay.min(time_decay);
 
@@ -85,7 +85,7 @@ impl RhythmEvaluator {
                     prev_delta.max(curr_delta) / prev_delta.min(curr_delta);
 
                 // * reduce ratio bonus if delta difference is too big
-                let difference_multiplier = (2.0 - delta_difference / 8.0).clamp(0.0, 1.0);
+                let difference_multiplier = (2.0 - delta_difference_ratio / 8.0).clamp(0.0, 1.0);
 
                 let window_penalty = ((delta_difference - delta_difference_eps)
                     / delta_difference_eps)
@@ -252,7 +252,7 @@ impl RhythmIsland {
     }
 
     fn add_delta(&mut self, delta: i32) {
-        if delta == i32::MAX {
+        if self.delta == i32::MAX {
             self.delta = std::cmp::max(delta, OsuDifficultyObject::MIN_DELTA_TIME as i32);
         }
 
