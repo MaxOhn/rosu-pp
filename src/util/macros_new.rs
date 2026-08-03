@@ -132,7 +132,6 @@ macro_rules! define_new_skill {
                 skill_current_section_begin f64 = 0.0,  // <-
                 skill_total_length f64 = 0.0, // <-
                 skill_strain_peaks Vec<crate::any::difficulty::skills_new::variable_length_strain_skill::StrainPeak> = Vec::with_capacity(256), // <-
-                skill_final_peak Option<crate::any::difficulty::skills_new::variable_length_strain_skill::StrainPeak> = None, // <-
                 skill_queued_strains Vec<(f64, f64)> = Vec::with_capacity(256), // <-
             }
             $( $rest )*
@@ -529,11 +528,6 @@ macro_rules! define_new_skill {
             }
 
             fn save_current_peak(&mut self, section_length: f64) {
-                if let Some(final_peak) = self.skill_final_peak {
-                    self.skill_strain_peaks.retain(|p| *p != final_peak);
-                    self.skill_final_peak = None;
-                }
-
                 let peak = crate::any::difficulty::skills_new::variable_length_strain_skill::StrainPeak::new(self.skill_current_section_peak, section_length);
 
                 self.skill_strain_peaks.cs_add_in_place(peak);
@@ -571,13 +565,7 @@ macro_rules! define_new_skill {
             }
 
             fn into_current_strain_peaks(self) -> Vec<crate::any::difficulty::skills_new::variable_length_strain_skill::StrainPeak> {
-                Self::get_current_strain_peaks(
-                    self.skill_strain_peaks,
-                    self.skill_final_peak,
-                    self.skill_current_section_peak,
-                    self.skill_current_section_begin,
-                    self.skill_current_section_end
-                )
+                self.skill_strain_peaks
             }
 
             fn count_top_weighted_strains(&self, difficulty_value: f64) -> f64 {

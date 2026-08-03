@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use rosu_map::util::Pos;
 
 use crate::{
-    any::difficulty::object::{HasEndTime, HasStartTime, IDifficultyObject},
+    any::difficulty::object::{HasStartTime, IDifficultyObject},
     osu::object::{OsuObject, OsuObjectKind},
     util::difficulty::reverse_lerp,
 };
@@ -13,12 +13,16 @@ use super::{HD_FADE_OUT_DURATION_MULTIPLIER, scaling_factor::ScalingFactor};
 pub struct OsuDifficultyObject<'a> {
     pub idx: usize,
     pub base: &'a OsuObject,
-    pub radius: f64,
 
+    /// Start time (clock rate adjusted)
     pub start_time: f64,
+    /// End time (clock rate adjusted)
     pub end_time: f64,
+    /// Amount of time elapsed between the last and current [`OsuObject`] (clock rate adjusted)
     pub delta_time: f64,
+    /// [`delta_time`] capped to [`MIN_DELTA_TIME`]
     pub adjusted_delta_time: f64,
+    /// Amount of time elapsed between last and current [`OsuDifficultyObject`] capped to [`MIN_DELTA_TIME`]
     pub last_obj_end_delta_time: f64,
 
     pub jump_dist: f64,
@@ -30,6 +34,7 @@ pub struct OsuDifficultyObject<'a> {
     pub lazy_end_pos: Option<Pos>,
     pub lazy_travel_dist: f64,
     pub lazy_travel_time: f64,
+
     pub angle: Option<f64>,
     pub normalized_vector_angle: Option<f64>,
 
@@ -53,7 +58,6 @@ impl<'a> OsuDifficultyObject<'a> {
         idx: usize,
         scaling_factor: &ScalingFactor,
     ) -> Self {
-        let radius = f64::from(OsuObject::OBJECT_RADIUS * scaling_factor.scale);
         let delta_time = (hit_object.start_time - last_object.start_time) / clock_rate;
         let start_time = hit_object.start_time / clock_rate;
         let end_time = hit_object.end_time() / clock_rate;
@@ -71,7 +75,6 @@ impl<'a> OsuDifficultyObject<'a> {
         let mut this = Self {
             idx,
             base: hit_object,
-            radius,
             start_time,
             end_time,
             delta_time,
@@ -184,14 +187,12 @@ impl<'a> OsuDifficultyObject<'a> {
             last_object.stacked_pos()
         };
 
-        self.lazy_jump_dist = f64::from(
-            (self.base.stacked_pos() * scaling_factor - last_cursor_pos * scaling_factor).length(),
-        );
-        self.min_jump_dist = self.lazy_jump_dist;
-
         self.jump_dist = f64::from(
             (last_object.stacked_pos() - self.base.stacked_pos()).length() * scaling_factor,
         );
+        self.lazy_jump_dist =
+            f64::from((self.base.stacked_pos() - last_cursor_pos).length() * scaling_factor);
+        self.min_jump_dist = self.lazy_jump_dist;
 
         let Some(last_diff_obj) = last_diff_obj else {
             return;
@@ -217,11 +218,7 @@ impl<'a> OsuDifficultyObject<'a> {
             self.min_jump_dist = ((self.lazy_jump_dist - diff).min(min)).max(0.0);
         }
 
-        let Some(last_last_diff_obj) = last_last_diff_obj else {
-            return;
-        };
-
-        if !last_last_diff_obj.base.is_spinner() {
+        if let Some(last_last_diff_obj) = last_last_diff_obj.filter(|ob| !ob.base.is_spinner()) {
             if last_object.is_slider() && last_diff_obj.travel_dist > 0.0 {
                 last_cursor_pos = last_object.stacked_pos();
             }
@@ -343,23 +340,23 @@ impl<'a> OsuDifficultyObject<'a> {
     ) -> f64 {
         let last_pos = Self::get_end_cursor_pos(last_diff_obj);
 
-        let adjusted_last_last_pos = if let OsuObjectKind::Slider(ref last_slider) =
-            last_diff_obj.base.kind
+        let last_last_pos = if let OsuObjectKind::Slider(ref last_slider) = last_diff_obj.base.kind
             && last_diff_obj.travel_dist > 0.0
         {
-            if let Some(second_last_nested) = last_slider
-                .nested_objects
-                .get(last_slider.nested_objects.len().saturating_sub(2))
-            {
-                second_last_nested.pos + last_diff_obj.base.stack_offset
+            let m = last_slider.nested_objects.len();
+
+            if m >= 2 {
+                last_slider.nested_objects[m - 2].pos + last_diff_obj.base.stack_offset
             } else {
-                last_last_pos
+                // C#'s NestedHitObjects[^2] would resolve to the head circle here —
+                // which isn't present in `nested_objects`, so fall back to the base object.
+                last_diff_obj.base.stacked_pos()
             }
         } else {
             last_last_pos
         };
 
-        self.calculate_angle(last_pos, adjusted_last_last_pos)
+        self.calculate_angle(last_pos, last_last_pos)
     }
 
     fn calculate_angle(&self, last_pos: Pos, last_last_pos: Pos) -> f64 {

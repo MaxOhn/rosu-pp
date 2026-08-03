@@ -28,7 +28,6 @@ impl OsuSkills {
         great_hit_window: f64,
         time_preempt: f64,
         total_objects: usize,
-        overall_difficulty: f64,
     ) -> Self {
         let hit_window = 2.0 * great_hit_window;
 
@@ -45,9 +44,20 @@ impl OsuSkills {
         } else {
             400.0 * (time_preempt / OsuObject::PREEMPT_MIN).min(1.0)
         };
+        let overall_difficulty = (79.5 - hit_window / 2.0) / 6.0;
 
-        let aim = Aim::new(mods.clone(), true, overall_difficulty);
-        let aim_no_sliders = Aim::new(mods.clone(), false, overall_difficulty);
+        let aim = Aim::new(
+            mods.clone(),
+            true,
+            overall_difficulty,
+            scaling_factor.radius,
+        );
+        let aim_no_sliders = Aim::new(
+            mods.clone(),
+            false,
+            overall_difficulty,
+            scaling_factor.radius,
+        );
         let speed = Speed::new(mods.clone(), hit_window);
         let flashlight = Flashlight::new(
             mods,

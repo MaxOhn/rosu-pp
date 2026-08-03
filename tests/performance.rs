@@ -4,7 +4,7 @@ use rosu_pp::{
     Beatmap,
     catch::{CatchPerformance, CatchPerformanceAttributes},
     mania::{ManiaPerformance, ManiaPerformanceAttributes},
-    osu::{OsuPerformance, OsuPerformanceAttributes},
+    osu::OsuPerformanceAttributes,
     taiko::{TaikoPerformance, TaikoPerformanceAttributes},
 };
 
@@ -334,6 +334,7 @@ impl AssertEq for OsuPerformanceAttributes {
             pp_acc,
             pp_aim,
             pp_flashlight,
+            pp_reading,
             pp_speed,
             effective_miss_count,
             speed_deviation,
@@ -347,6 +348,7 @@ impl AssertEq for OsuPerformanceAttributes {
         assert_eq_float(*pp_acc, expected.pp_acc);
         assert_eq_float(*pp_aim, expected.pp_aim);
         assert_eq_float(*pp_flashlight, expected.pp_flashlight);
+        assert_eq_float(*pp_reading, expected.pp_reading);
         assert_eq_float(*pp_speed, expected.pp_speed);
         assert_eq_float(*effective_miss_count, expected.effective_miss_count);
         assert_eq_option(*speed_deviation, expected.speed_deviation);

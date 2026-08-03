@@ -172,7 +172,6 @@ impl DifficultyValues {
             great_hit_window,
             time_preempt,
             take_diff_objects,
-            attrs.od(),
         );
 
         for hit_object in diff_objects.iter().take(take_diff_objects) {

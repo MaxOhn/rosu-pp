@@ -1,4 +1,7 @@
-use crate::{any::difficulty::skills_new::skill::Skill, util::traits::IEnumerable};
+use crate::{
+    any::difficulty::skills_new::skill::Skill,
+    util::traits::{IEnumerable, IOrderedEnumerable},
+};
 
 pub trait VariableLengthStrainSkill: Skill {
     const DECAY_WEIGHT: f64 = 0.9;
@@ -45,16 +48,15 @@ pub trait VariableLengthStrainSkill: Skill {
 
     fn get_current_strain_peaks(
         mut strain_peaks: Vec<StrainPeak>,
-        final_peak: Option<StrainPeak>,
         current_section_peak: f64,
         current_section_begin: f64,
         current_section_end: f64,
     ) -> Vec<StrainPeak> {
-        if final_peak.is_none() {
-            let final_peak = StrainPeak::new(
-                current_section_peak,
-                current_section_end - current_section_begin,
-            );
+        let final_peak = StrainPeak::new(
+            current_section_peak,
+            current_section_end - current_section_begin,
+        );
+        if strain_peaks.last().is_some_and(|peak| *peak != final_peak) {
             strain_peaks.cs_add_in_place(final_peak);
         }
 
@@ -81,7 +83,7 @@ impl StrainPeak {
 
 impl PartialEq for StrainPeak {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
+        self.value == other.value && self.section_length == other.section_length
     }
 }
 
@@ -97,5 +99,13 @@ impl Ord for StrainPeak {
 impl PartialOrd for StrainPeak {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl IOrderedEnumerable<StrainPeak> for Vec<StrainPeak> {
+    fn cs_order_descending(mut self) -> Self {
+        self.sort_by(StrainPeak::cmp);
+
+        self
     }
 }

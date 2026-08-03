@@ -18,12 +18,13 @@ impl FlowAimEvaluator {
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
         with_slider_travel_dist: bool,
+        obj_radius: f64,
     ) -> f64 {
         let osu_curr_obj = curr;
 
         let Some(osu_last_obj) = curr
             .previous(0, diff_objects)
-            .filter(|last| !(curr.base.is_spinner() || last.base.is_spinner()))
+            .filter(|last| curr.idx > 1 && !(curr.base.is_spinner() || last.base.is_spinner()))
         else {
             return 0.0;
         };
@@ -85,11 +86,13 @@ impl FlowAimEvaluator {
 
         // NOTE: Source does not null check osuLastLastObj
         // instead current.Index > 2 is checked.
-        if let Some(osu_last_last_obj) = curr.previous(1, diff_objects) {
+        if curr.idx > 2
+            && let Some(osu_last_last_obj) = curr.previous(1, diff_objects)
+        {
             overlapped_notes_weight = 1.0
-                - Self::calc_overlap_factor(osu_curr_obj, osu_last_obj)
-                    * Self::calc_overlap_factor(osu_curr_obj, osu_last_last_obj)
-                    * Self::calc_overlap_factor(osu_last_obj, osu_last_last_obj);
+                - Self::calc_overlap_factor(osu_curr_obj, osu_last_obj, obj_radius)
+                    * Self::calc_overlap_factor(osu_curr_obj, osu_last_last_obj, obj_radius)
+                    * Self::calc_overlap_factor(osu_last_obj, osu_last_last_obj, obj_radius);
         }
 
         if let Some(curr_angle) = osu_curr_obj.angle {
@@ -147,11 +150,12 @@ impl FlowAimEvaluator {
     fn calc_overlap_factor<'a>(
         first: &'a OsuDifficultyObject<'a>,
         second: &'a OsuDifficultyObject<'a>,
+        obj_radius: f64,
     ) -> f64 {
         let dist = Pos::distance(&first.base.stacked_pos(), second.base.stacked_pos());
 
         f64::clamp(
-            1.0 - (f64::from(dist) - first.radius).max(0.0).powf(2.0),
+            1.0 - ((f64::from(dist) - obj_radius).max(0.0) / obj_radius).powf(2.0),
             0.0,
             1.0,
         )

@@ -17,7 +17,7 @@ use crate::{
     util::{
         difficulty::{lerp, logistic, logistic_exp, norm},
         float_ext::FloatExt,
-        traits::IEnumerable,
+        traits::{IEnumerable, IOrderedEnumerable},
     },
 };
 
@@ -28,6 +28,7 @@ define_new_skill! {
         mods: GameMods,
         include_sliders: bool,
         overall_difficulty: f64,
+        obj_radius: f64,
     }
 }
 
@@ -40,7 +41,7 @@ impl Aim {
     const COMBINED_SNAP_NORM_EXPONENT: f64 = 1.2;
 
     fn strain_decay(ms: f64) -> f64 {
-        strain_decay_base(ms, 0.15)
+        strain_decay_base(ms, 0.2)
     }
 
     fn calculate_initial_strain<'a>(
@@ -87,9 +88,12 @@ impl Aim {
                 * Self::SKILL_MULTIPLIER_SNAP;
         let agility_difficulty =
             AgilityEvaluator::evaluate_diff_of(curr, objects) * Self::SKILL_MULTIPLIER_AGILITY;
-        let flow_difficulty =
-            FlowAimEvaluator::evaluate_diff_of(curr, objects, self.include_sliders)
-                * Self::SKILL_MULTIPLIER_FLOW;
+        let flow_difficulty = FlowAimEvaluator::evaluate_diff_of(
+            curr,
+            objects,
+            self.include_sliders,
+            self.obj_radius,
+        ) * Self::SKILL_MULTIPLIER_FLOW;
 
         let mut total_difficulty =
             self.calculate_total_value(snap_difficulty, agility_difficulty, flow_difficulty);
@@ -138,7 +142,7 @@ impl Aim {
             flow_difficulty_new *= 0.6;
         }
 
-        let total_difficulty = combined_snap_difficulty * p_snap * flow_difficulty_new * p_flow;
+        let total_difficulty = combined_snap_difficulty * p_snap + flow_difficulty_new * p_flow;
 
         total_difficulty * Self::SKILL_MULTIPLIER_TOTAL
     }
@@ -193,37 +197,31 @@ impl Aim {
         count_top_weighted_sliders(&self.slider_strains, consistent_top_strain)
     }
 
-    pub fn difficulty_value(current_strain_peaks: Vec<StrainPeak>) -> f64 {
+    pub fn difficulty_value(
+        current_strain_peaks: Vec<StrainPeak>,
+        current_section_peak: f64,
+        current_section_begin: f64,
+        current_section_end: f64,
+    ) -> f64 {
         aim_difficulty_value(
-            Self::get_reduced_strain_peaks(current_strain_peaks),
+            Self::get_reduced_strain_peaks(Self::get_current_strain_peaks(
+                current_strain_peaks,
+                current_section_peak,
+                current_section_begin,
+                current_section_end,
+            )),
             Self::MAX_SECTION_LENGTH,
             Self::DECAY_WEIGHT,
         )
     }
 
-    #[expect(dead_code, reason = "overwrites macro impl")]
-    pub fn into_difficulty_value(self) -> f64 {
-        Self::difficulty_value(Self::get_reduced_strain_peaks(
-            Self::get_current_strain_peaks(
-                self.skill_strain_peaks,
-                self.skill_final_peak,
-                self.skill_current_section_peak,
-                self.skill_current_section_begin,
-                self.skill_current_section_end,
-            ),
-        ))
-    }
-
     pub fn cloned_difficulty_value(&self) -> f64 {
-        Self::difficulty_value(Self::get_reduced_strain_peaks(
-            Self::get_current_strain_peaks(
-                self.skill_strain_peaks.clone(),
-                self.skill_final_peak,
-                self.skill_current_section_peak,
-                self.skill_current_section_begin,
-                self.skill_current_section_end,
-            ),
-        ))
+        Self::difficulty_value(
+            self.skill_strain_peaks.clone(),
+            self.skill_current_section_peak,
+            self.skill_current_section_begin,
+            self.skill_current_section_end,
+        )
     }
 
     fn get_reduced_strain_peaks(current_strain_peaks: Vec<StrainPeak>) -> Vec<StrainPeak> {
@@ -265,10 +263,7 @@ impl Aim {
             skip_count += 1;
         }
 
-        let mut reduced = strains.split_off(skip_count);
-        reduced.sort_by(|a, b| b.cmp(a));
-
-        reduced
+        strains.split_off(skip_count).cs_order_descending()
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {

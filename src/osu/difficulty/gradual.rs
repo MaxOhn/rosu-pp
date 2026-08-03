@@ -154,7 +154,6 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
         great_hit_window,
         time_preempt,
         diff_objects.len(),
-        attrs.od(),
     );
     let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
 

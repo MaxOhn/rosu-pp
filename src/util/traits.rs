@@ -15,6 +15,13 @@ pub trait IEnumerable<T>: Sized {
 
 /// Mimics the C# `IOrderedEnumerable<T>` interface.
 pub trait IOrderedEnumerable<T>: IEnumerable<T> {
+    /// Sorts the elements of a sequence in descending order.
+    ///
+    /// This method performs a stable sort; that is, if the keys of two elements
+    /// are equal, the order of the elements is preserved. In contrast, an unstable sort does not
+    /// preserve the order of elements that have the same key.
+    ///
+    /// <https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.orderbydescending>
     fn cs_order_descending(self) -> Self;
 }
 
@@ -39,7 +46,7 @@ impl<T> IEnumerable<T> for Vec<T> {
     }
 
     /// Adds the given item to the list according to standard sorting rules. Do not use on unsorted lists.
-    /// 
+    ///
     /// <https://github.com/ppy/osu-framework/blob/master/osu.Framework/Extensions/ExtensionMethods.cs#L34>
     fn cs_add_in_place(&mut self, item: T) -> usize
     where
@@ -52,13 +59,6 @@ impl<T> IEnumerable<T> for Vec<T> {
 }
 
 impl IOrderedEnumerable<f64> for Vec<f64> {
-    /// Sorts the elements of a sequence in descending order.
-    ///
-    /// This method performs a stable sort; that is, if the keys of two elements
-    /// are equal, the order of the elements is preserved. In contrast, an unstable sort does not
-    /// preserve the order of elements that have the same key.
-    ///
-    /// <https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.orderbydescending>
     fn cs_order_descending(mut self) -> Self {
         self.sort_by(|a, b| b.total_cmp(a));
 

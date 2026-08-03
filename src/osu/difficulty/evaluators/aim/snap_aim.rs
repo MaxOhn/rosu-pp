@@ -49,7 +49,7 @@ impl SnapAimEvaluator {
         } else {
             osu_curr_obj.jump_dist
         };
-        let mut curr_vel = osu_curr_obj.lazy_jump_dist / osu_curr_obj.adjusted_delta_time;
+        let mut curr_vel = curr_dist / osu_curr_obj.adjusted_delta_time;
 
         // * But if the last object is a slider, then we extend the travel
         // * velocity through the slider into the current object.
@@ -219,11 +219,11 @@ impl SnapAimEvaluator {
         // * Reward sliders based on velocity.
         if osu_curr_obj.base.is_slider() && with_slider_travel_dist {
             let slider_bonus = osu_curr_obj.travel_dist / osu_curr_obj.travel_time;
-            snap_diff += if slider_bonus.lt(&1.0) {
+            snap_diff += if slider_bonus < 1.0 {
                 slider_bonus
             } else {
-                slider_bonus.powf(0.75) * Self::SLIDER_MULTIPLIER
-            };
+                slider_bonus.powf(0.75)
+            } * Self::SLIDER_MULTIPLIER;
         }
 
         // * Apply high circle size bonus
@@ -261,10 +261,11 @@ impl SnapAimEvaluator {
                 break;
             }
 
-            if let (Some(curr_vec_angle), Some(prev_vec_angle)) =
-                (curr.normalized_vector_angle, prev.normalized_vector_angle)
-            {
-                let angle_diff = curr_vec_angle - prev_vec_angle;
+            if let (Some(curr_vec_angle), Some(prev_vec_angle)) = (
+                curr.normalized_vector_angle,
+                prev_obj.normalized_vector_angle,
+            ) {
+                let angle_diff = (curr_vec_angle - prev_vec_angle).abs();
                 // * Refer to this desmos for tuning, constants need to be precise
                 // * so that values stay within the range of 0 and 1.
                 // * https://www.desmos.com/calculator/a8jesv5sv2
@@ -294,7 +295,7 @@ impl SnapAimEvaluator {
     }
 
     const fn calc_angle_wideness(angle: f64) -> f64 {
-        smoothstep(angle, f64::to_radians(140.0), f64::to_radians(40.0))
+        smoothstep(angle, f64::to_radians(40.0), f64::to_radians(140.0))
     }
 
     pub const fn calc_angle_acuteness(angle: f64) -> f64 {
