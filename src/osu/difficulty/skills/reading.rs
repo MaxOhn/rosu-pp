@@ -36,7 +36,6 @@ impl Reading {
         strain_decay_base(ms, 0.8)
     }
 
-    // #[expect(dead_code, reason = "used by process_internal")]
     fn object_difficulty_of<'a>(
         &mut self,
         curr: &'a OsuDifficultyObject<'a>,
@@ -73,7 +72,7 @@ impl Reading {
             .evaluate_diff_of(curr, objects, self.mods.hd());
 
         if self.mods.td() {
-            difficulty *= difficulty.powf(0.89);
+            difficulty = difficulty.powf(0.89);
         }
 
         if let Some(magnetised_strength) = self.mods.attraction_strength() {
@@ -88,7 +87,7 @@ impl Reading {
             difficulty *= 0.1;
         }
 
-        difficulty *= self.overall_difficulty.max(0.0).powf(2.2) / 1125.0;
+        difficulty *= 0.825 + self.overall_difficulty.max(0.0).powf(2.2) / 1125.0;
 
         difficulty
     }

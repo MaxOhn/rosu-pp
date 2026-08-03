@@ -118,7 +118,7 @@ impl OsuDifficultySetup {
             ..Default::default()
         };
 
-        let time_preempt = f64::from((hit_windows.ar.unwrap_or(0.0) * clock_rate) as f32);
+        let time_preempt = f64::from((hit_windows.ar.unwrap_or(0.0) * clock_rate).trunc() as f32);
 
         Self {
             scaling_factor,

@@ -53,22 +53,21 @@ pub fn harmonic_skill_difficulty_value(
     harmonic_scale: f64,
     decay_exponent: f64,
 ) -> (f64, f64) {
-    if transformed_object_difficulties.is_empty() {
-        return (0.0, 0.0);
-    }
-
     let mut difficulty = 0.0;
     let mut object_weight_sum = 0.0;
 
-    // * Objects with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
-    // * These objects will not contribute to the difficulty.
-    for (index, obj) in transformed_object_difficulties
+    if transformed_object_difficulties.is_empty() {
+        return (difficulty, object_weight_sum);
+    }
+
+    let new_iter = transformed_object_difficulties
         .to_vec()
         .cs_order_descending()
-        .cs_where(|v| *v > 0.0)
-        .iter()
-        .enumerate()
-    {
+        .cs_where(|v| *v > 0.0);
+
+    // * Objects with 0 difficulty are excluded to avoid worst-case time complexity of the following sort (e.g. /b/2351871).
+    // * These objects will not contribute to the difficulty.
+    for (index, obj) in new_iter.iter().enumerate() {
         // * Use a harmonic sum that considers each object of the map according to a predefined weight.
         let weight = (1.0 + (harmonic_scale / (1 + index) as f64))
             / ((index as f64).powf(decay_exponent) + 1.0 + (harmonic_scale / (1 + index) as f64));

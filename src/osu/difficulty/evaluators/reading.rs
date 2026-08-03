@@ -1,11 +1,11 @@
 use core::f64;
 
 use crate::{
-    any::difficulty::object::IDifficultyObject, 
-    osu::difficulty::object::OsuDifficultyObject, 
+    any::difficulty::object::IDifficultyObject,
+    osu::difficulty::object::OsuDifficultyObject,
     util::{
-        difficulty::{norm, reverse_lerp, smootherstep}, 
-        float_ext::FloatExt
+        difficulty::{norm, reverse_lerp, smootherstep},
+        float_ext::FloatExt,
     },
 };
 
@@ -16,7 +16,8 @@ pub struct ReadingEvaluator {
 
 impl ReadingEvaluator {
     const READING_WINDOW_SIZE: f64 = 3000.0; // * 3 seconds
-    const DISTANCE_INFLUENCE_THRESHOLD: f64 = (OsuDifficultyObject::NORMALIZED_DIAMETER as f64) * 1.5;
+    const DISTANCE_INFLUENCE_THRESHOLD: f64 =
+        (OsuDifficultyObject::NORMALIZED_DIAMETER as f64) * 1.5;
 
     const DENSITY_MULTIPLIER: f64 = 2.4;
     const DESNITY_DIFFICULTY_BASE: f64 = 2.5;
@@ -41,7 +42,7 @@ impl ReadingEvaluator {
         curr: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
         hidden: bool,
-    ) -> f64 {        
+    ) -> f64 {
         if curr.base.is_spinner() || curr.idx == 0 {
             return 0.0;
         }
@@ -51,29 +52,47 @@ impl ReadingEvaluator {
 
         // * Only allow velocity to buff
         let velocity = f64::max(1.0, curr_obj.lazy_jump_dist / curr_obj.adjusted_delta_time);
-        
-        let curr_visible_obj_density = self.retrieve_current_visible_object_density(curr_obj, diff_objects);
-        let past_obj_difficulty_influence = self.get_past_obj_difficulty_influence(curr_obj, diff_objects);
 
-        let constant_angle_nerf_factor = Self::get_constant_angle_nerf_factor(curr_obj, diff_objects);
+        let curr_visible_obj_density =
+            self.retrieve_current_visible_object_density(curr_obj, diff_objects);
+        let past_obj_difficulty_influence =
+            self.get_past_obj_difficulty_influence(curr_obj, diff_objects);
+
+        let constant_angle_nerf_factor =
+            Self::get_constant_angle_nerf_factor(curr_obj, diff_objects);
 
         let note_density_difficulty = Self::calc_density_difficulty(
             next_obj,
             velocity,
             constant_angle_nerf_factor,
             past_obj_difficulty_influence,
-            curr_visible_obj_density
+            curr_visible_obj_density,
         );
 
         let hidden_difficulty = if hidden {
-            self.calc_hidden_difficulty(curr_obj, diff_objects, past_obj_difficulty_influence, curr_visible_obj_density, velocity, constant_angle_nerf_factor)
+            self.calc_hidden_difficulty(
+                curr_obj,
+                diff_objects,
+                past_obj_difficulty_influence,
+                curr_visible_obj_density,
+                velocity,
+                constant_angle_nerf_factor,
+            )
         } else {
             0.0
         };
 
-        let preempt_difficulty = Self::calc_preempt_difficulty(velocity, constant_angle_nerf_factor, self.time_preempt);
+        let preempt_difficulty =
+            Self::calc_preempt_difficulty(velocity, constant_angle_nerf_factor, self.time_preempt);
 
-        let mut reading_difficulty = norm(1.5, [preempt_difficulty, hidden_difficulty, note_density_difficulty]);
+        let mut reading_difficulty = norm(
+            1.5,
+            [
+                preempt_difficulty,
+                hidden_difficulty,
+                note_density_difficulty,
+            ],
+        );
 
         // Having less time to process information is harder
         reading_difficulty *= Self::high_bpm_bonus(curr_obj.adjusted_delta_time);
@@ -90,21 +109,26 @@ impl ReadingEvaluator {
     ) -> f64 {
         // * Consider future densities too because it can make the path the cursor takes less clear
         let mut fut_obj_difficulty_influence = curr_visible_obj_density.sqrt();
-        
+
         if let Some(next_obj) = next_obj {
             // * Reduce difficulty if movement to next object is small
-            fut_obj_difficulty_influence = smootherstep(next_obj.lazy_jump_dist, 15.0, Self::DISTANCE_INFLUENCE_THRESHOLD);
+            fut_obj_difficulty_influence *= smootherstep(
+                next_obj.lazy_jump_dist,
+                15.0,
+                Self::DISTANCE_INFLUENCE_THRESHOLD,
+            );
         }
 
         // * Value higher note densities exponentially
-        let mut note_density_difficulty = (past_obj_difficulty_influence + fut_obj_difficulty_influence)
-            .powf(1.7)
-            * 0.4
-            * constant_angle_nerf_factor
-            * velocity;
+        let mut note_density_difficulty =
+            (past_obj_difficulty_influence + fut_obj_difficulty_influence).powf(1.7)
+                * 0.4
+                * constant_angle_nerf_factor
+                * velocity;
 
         // * Award only denser than average maps.
-        note_density_difficulty = (note_density_difficulty - Self::DESNITY_DIFFICULTY_BASE).max(0.0);
+        note_density_difficulty =
+            (note_density_difficulty - Self::DESNITY_DIFFICULTY_BASE).max(0.0);
 
         // Apply a soft cap to general density reading to account for partial memorization
         note_density_difficulty.powf(0.45) * Self::DENSITY_MULTIPLIER
@@ -117,7 +141,8 @@ impl ReadingEvaluator {
     ) -> f64 {
         // * Arbitrary curve for the base value preempt difficulty should have as approach rate increases.
         // * https://www.desmos.com/calculator/c175335a71
-        ((Self::PREEMPT_STARTING_POINT - preempt + (preempt - Self::PREEMPT_STARTING_POINT).abs()) / 2.0)
+        ((Self::PREEMPT_STARTING_POINT - preempt + (preempt - Self::PREEMPT_STARTING_POINT).abs())
+            / 2.0)
             .powf(2.5)
             / Self::PREEMPT_BALANCING_FACTOR
             * constant_angle_nerf_factor
@@ -137,39 +162,63 @@ impl ReadingEvaluator {
         let preempt_factor = self.time_preempt.powf(2.2) * 0.01;
 
         // * Account for both past and current densities
-        let density_factor = (curr_visible_obj_density + past_obj_difficulty_influence).powf(3.3) * 3.0;
+        let density_factor =
+            (curr_visible_obj_density + past_obj_difficulty_influence).powf(3.3) * 3.0;
 
-        let mut hidden_difficulty = (preempt_factor + density_factor) * constant_angle_nerf_factor * velocity * 0.01;
+        let mut hidden_difficulty =
+            (preempt_factor + density_factor) * constant_angle_nerf_factor * velocity * 0.01;
 
         // * Apply a soft cap to general HD reading to account for partial memorization
         hidden_difficulty = hidden_difficulty.powf(0.4) * Self::HIDDEN_MULTIPLIER;
 
         if let Some(prev_obj) = curr_obj.previous(0, diff_objects)
             && FloatExt::eq(curr_obj.lazy_jump_dist, 0.0)
-            && FloatExt::eq(curr_obj.opacity_at(prev_obj.start_time, true, self.time_preempt, self.time_fade_in), 0.0)
-            && prev_obj.start_time > curr_obj.start_time - self.time_preempt {
-
-                // * Perfect stacks are harder the less time between notes
-                hidden_difficulty += Self::HIDDEN_MULTIPLIER * 2500.0 / curr_obj.adjusted_delta_time.powf(1.5);
-            }
+            && FloatExt::eq(
+                curr_obj.opacity_at(
+                    prev_obj.start_time,
+                    true,
+                    self.time_preempt,
+                    self.time_fade_in,
+                ),
+                0.0,
+            )
+            && prev_obj.start_time > curr_obj.start_time - self.time_preempt
+        {
+            // * Perfect stacks are harder the less time between notes
+            hidden_difficulty +=
+                Self::HIDDEN_MULTIPLIER * 2500.0 / curr_obj.adjusted_delta_time.powf(1.5);
+        }
 
         hidden_difficulty
     }
 
-    fn get_past_obj_difficulty_influence<'a>(&self, curr_obj: &'a OsuDifficultyObject<'a>, diff_objects: &'a [OsuDifficultyObject<'a>]) -> f64 {
+    fn get_past_obj_difficulty_influence<'a>(
+        &self,
+        curr_obj: &'a OsuDifficultyObject<'a>,
+        diff_objects: &'a [OsuDifficultyObject<'a>],
+    ) -> f64 {
         diff_objects
             .iter()
             // Note: This achieves the same as retrievePastVisibleObjects
             .filter(|d| {
                 d.idx < curr_obj.idx
-                    && curr_obj.start_time - d.start_time > Self::READING_WINDOW_SIZE
-                    && d.start_time < curr_obj.start_time - self.time_preempt
+                    && curr_obj.start_time - d.start_time <= Self::READING_WINDOW_SIZE
+                    && d.start_time >= curr_obj.start_time - self.time_preempt
             })
             .fold(0.0, |past_obj_difficulty_influence, loop_obj| {
-                let mut loop_difficulty = loop_obj.opacity_at(loop_obj.start_time, false, self.time_preempt, self.time_fade_in);
+                let mut loop_difficulty = curr_obj.opacity_at(
+                    loop_obj.start_time,
+                    false,
+                    self.time_preempt,
+                    self.time_fade_in,
+                );
 
                 // * When aiming an object small distances mean previous objects may be cheesed, so it doesn't matter whether they were arranged confusingly.
-                loop_difficulty *= smootherstep(loop_obj.lazy_jump_dist, 15.0, Self::DISTANCE_INFLUENCE_THRESHOLD);
+                loop_difficulty *= smootherstep(
+                    loop_obj.lazy_jump_dist,
+                    15.0,
+                    Self::DISTANCE_INFLUENCE_THRESHOLD,
+                );
 
                 // * Account less for objects close to the max reading window
                 let delta_time = curr_obj.start_time - loop_obj.start_time;
@@ -181,19 +230,28 @@ impl ReadingEvaluator {
     }
 
     // * Returns the density of objects visible at the point in time the current object needs to be clicked capped by the reading window.
-    fn retrieve_current_visible_object_density<'a>(&self, curr_obj: &'a OsuDifficultyObject<'a>, diff_objects: &'a [OsuDifficultyObject<'a>]) -> f64 {
+    fn retrieve_current_visible_object_density<'a>(
+        &self,
+        curr_obj: &'a OsuDifficultyObject<'a>,
+        diff_objects: &'a [OsuDifficultyObject<'a>],
+    ) -> f64 {
         let mut forwards_idx = 0;
         let mut visible_object_count = 0.0;
-        
+
         while let Some(hit_obj) = curr_obj.next(forwards_idx, diff_objects).filter(|next| {
-            next.start_time - curr_obj.start_time > Self::READING_WINDOW_SIZE 
+            next.start_time - curr_obj.start_time <= Self::READING_WINDOW_SIZE
                 // * Object not visible at the time current object needs to be clicked.
-                || curr_obj.start_time < next.start_time - self.time_preempt
+                && curr_obj.start_time >= next.start_time - self.time_preempt
         }) {
             let delta_time = hit_obj.start_time - curr_obj.start_time;
             let time_nerf_factor = Self::get_time_nerf_factor(delta_time);
 
-            visible_object_count += hit_obj.opacity_at(curr_obj.start_time, false, self.time_preempt, self.time_fade_in) * time_nerf_factor;
+            visible_object_count += hit_obj.opacity_at(
+                curr_obj.start_time,
+                false,
+                self.time_preempt,
+                self.time_fade_in,
+            ) * time_nerf_factor;
 
             forwards_idx += 1;
         }
@@ -204,7 +262,10 @@ impl ReadingEvaluator {
     // * Returns a factor of how often the current object's angle has been repeated in a certain time frame.
     // * It does this by checking the difference in angle between current and past objects and sums them based on a range of similarity.
     // * https://www.desmos.com/calculator/eb057a4822
-    fn get_constant_angle_nerf_factor<'a>(curr_obj: &'a OsuDifficultyObject<'a>, diff_objects: &'a [OsuDifficultyObject<'a>]) -> f64 {
+    fn get_constant_angle_nerf_factor<'a>(
+        curr_obj: &'a OsuDifficultyObject<'a>,
+        diff_objects: &'a [OsuDifficultyObject<'a>],
+    ) -> f64 {
         let mut constant_angle_count = 0.0;
         let mut backwards_idx = 0;
         let mut curr_time_gap = 0.0;
@@ -213,46 +274,64 @@ impl ReadingEvaluator {
         let mut loop_obj_prev1: Option<&OsuDifficultyObject<'a>> = None;
         let mut loop_obj_prev2: Option<&OsuDifficultyObject<'a>> = None;
 
-        while let Some(loop_obj) = curr_obj.previous(backwards_idx, diff_objects).filter(|_| curr_time_gap < Self::MINIMUM_ANGLE_RELEVANCY_TIME) {
+        while let Some(loop_obj) = curr_obj
+            .previous(backwards_idx, diff_objects)
+            .filter(|_| curr_time_gap < Self::MINIMUM_ANGLE_RELEVANCY_TIME)
+        {
             // * Account less for objects that are close to the time limit.
-            let long_interval_factor = reverse_lerp(
-                loop_obj.adjusted_delta_time, 
-                Self::MAXIMUM_ANGLE_RELEVANCY_TIME, 
-                Self::MINIMUM_ANGLE_RELEVANCY_TIME
-            );
+            let long_interval_factor = 1.0
+                - reverse_lerp(
+                    loop_obj.adjusted_delta_time,
+                    Self::MAXIMUM_ANGLE_RELEVANCY_TIME,
+                    Self::MINIMUM_ANGLE_RELEVANCY_TIME,
+                );
 
             if let (Some(loop_obj_angle), Some(curr_obj_angle)) = (loop_obj.angle, curr_obj.angle) {
                 let angle_diff = (curr_obj_angle - loop_obj_angle).abs();
                 let mut angle_diff_alternating = f64::consts::PI;
 
-                if let (Some(loop_obj_prev0_angle), Some(loop_obj_prev1_angle), Some(loop_obj_prev2_angle)) 
-                    = (loop_obj_prev0.angle, loop_obj_prev1.and_then(|o| o.angle), loop_obj_prev2.and_then(|o| o.angle)) {
+                if let (
+                    Some(loop_obj_prev0_angle),
+                    Some(loop_obj_prev1_angle),
+                    Some(loop_obj_prev2_angle),
+                ) = (
+                    loop_obj_prev0.angle,
+                    loop_obj_prev1.and_then(|o| o.angle),
+                    loop_obj_prev2.and_then(|o| o.angle),
+                ) {
                     angle_diff_alternating = (loop_obj_prev1_angle - loop_obj_angle).abs();
-                    angle_diff_alternating += (loop_obj_prev2_angle - loop_obj_prev1_angle).abs();
+                    angle_diff_alternating += (loop_obj_prev2_angle - loop_obj_prev0_angle).abs();
 
                     let mut weight = 1.0;
 
                     // * Be sure that one of the angles is very sharp, when other is wide
                     weight *= reverse_lerp(
-                        loop_obj_angle.min(loop_obj_prev0_angle) * 100.0 / f64::consts::PI, 
+                        loop_obj_angle.min(loop_obj_prev0_angle) * 180.0 / f64::consts::PI,
                         20.0,
-                        5.0
+                        5.0,
                     );
                     weight *= reverse_lerp(
-                        loop_obj_angle.min(loop_obj_prev0_angle) * 100.0 / f64::consts::PI, 
+                        loop_obj_angle.max(loop_obj_prev0_angle) * 180.0 / f64::consts::PI,
                         60.0,
-                        120.0
+                        120.0,
                     );
 
                     // * Lerp between max angle difference and rescaled alternating difference, with more harsh scaling compared to normal difference
-                    angle_diff_alternating = f64::lerp(f64::consts::PI, 0.1 * angle_diff_alternating, weight);
+                    angle_diff_alternating =
+                        f64::lerp(f64::consts::PI, 0.1 * angle_diff_alternating, weight);
                 }
 
-                let stack_factor = smootherstep(loop_obj.lazy_jump_dist, 0.0, f64::from(OsuDifficultyObject::NORMALIZED_RADIUS));
+                let stack_factor = smootherstep(
+                    loop_obj.lazy_jump_dist,
+                    0.0,
+                    f64::from(OsuDifficultyObject::NORMALIZED_RADIUS),
+                );
 
-                constant_angle_count += (
-                    3.0 * (f64::to_radians(30.0).min((angle_diff).min(angle_diff_alternating) * stack_factor))
-                ).cos() * long_interval_factor;
+                constant_angle_count += (3.0
+                    * (f64::to_radians(30.0)
+                        .min((angle_diff).min(angle_diff_alternating) * stack_factor)))
+                .cos()
+                    * long_interval_factor;
             }
 
             curr_time_gap = curr_obj.start_time - loop_obj.start_time;
