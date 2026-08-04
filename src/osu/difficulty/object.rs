@@ -115,6 +115,8 @@ impl<'a> OsuDifficultyObject<'a> {
         }
 
         let fade_in_start_time = self.base.start_time - time_preempt;
+
+        // * Equal to `OsuHitObject.TimeFadeIn` minus any adjustments from the HD mod.
         let fade_in_duration = 400.0 * (time_preempt / OsuObject::PREEMPT_MIN).min(1.0);
 
         if hidden {

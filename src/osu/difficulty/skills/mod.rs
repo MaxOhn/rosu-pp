@@ -28,6 +28,7 @@ impl OsuSkills {
         scaling_factor: &ScalingFactor,
         great_hit_window: f64,
         time_preempt: f64,
+        clock_rate: f64,
         total_objects: usize,
     ) -> Self {
         let hit_window = 2.0 * great_hit_window;
@@ -46,6 +47,7 @@ impl OsuSkills {
             400.0 * (time_preempt / OsuObject::PREEMPT_MIN).min(1.0)
         };
         let overall_difficulty = (79.5 - hit_window / 2.0) / 6.0;
+        let preempt = time_preempt / clock_rate;
 
         let aim = Aim::new(
             mods.clone(),
@@ -68,7 +70,13 @@ impl OsuSkills {
             time_preempt,
             time_fade_in,
         );
-        let reading = Reading::new(mods, time_preempt, time_fade_in, overall_difficulty);
+        let reading = Reading::new(
+            mods,
+            preempt,
+            time_preempt,
+            time_fade_in,
+            overall_difficulty,
+        );
 
         Self {
             aim,

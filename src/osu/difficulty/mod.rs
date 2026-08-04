@@ -162,6 +162,7 @@ impl DifficultyValues {
             Self::create_difficulty_objects(difficulty, &scaling_factor, osu_object_iter);
 
         let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
+        let clock_rate = difficulty.get_clock_rate();
 
         // The first hit object has no difficulty object
         let take_diff_objects = cmp::min(map.hit_objects.len(), take).saturating_sub(1);
@@ -171,6 +172,7 @@ impl DifficultyValues {
             &scaling_factor,
             great_hit_window,
             time_preempt,
+            clock_rate,
             take_diff_objects,
         );
 
@@ -279,7 +281,7 @@ impl DifficultyValues {
         attrs.speed_difficult_strain_count = speed_difficult_strain_count;
         attrs.stars = star_rating;
         attrs.speed_note_count = speed_notes;
-        attrs.reading_note_count = reading_difficult_note_count;
+        attrs.reading_difficult_note_count = reading_difficult_note_count;
     }
 
     pub fn create_difficulty_objects<'a>(

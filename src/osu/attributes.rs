@@ -22,7 +22,7 @@ pub struct OsuDifficultyAttributes {
     /// The number of clickable objects weighted by difficulty.
     pub speed_note_count: f64,
     /// The number of clickable objects weighted by difficulty.
-    pub reading_note_count: f64,
+    pub reading_difficult_note_count: f64,
     /// Weighted sum of aim strains.
     pub aim_difficult_strain_count: f64,
     /// Weighted sum of speed strains.

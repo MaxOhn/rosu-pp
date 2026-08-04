@@ -15,13 +15,13 @@ define_new_skill! {
         overall_difficulty: f64,
     }
 
-    pub fn new(mods: &GameMods, time_preempt: f64, time_fade_in: f64, overall_difficulty: f64) -> Self {
+    pub fn new(mods: &GameMods, preempt: f64, time_preempt: f64, time_fade_in: f64, overall_difficulty: f64) -> Self {
         Self {
             current_strain: 0.0,
             reduced_note_count: 0,
             reduced_duration: None,
             mods: mods.clone(),
-            evaluator: ReadingEvaluator::new(time_preempt, time_fade_in),
+            evaluator: ReadingEvaluator::new(preempt, time_preempt, time_fade_in),
             overall_difficulty: overall_difficulty,
         }
     }

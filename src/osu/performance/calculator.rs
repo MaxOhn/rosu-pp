@@ -381,8 +381,10 @@ impl OsuPerformanceCalculator<'_> {
         let mut reading_value = Reading::difficulty_to_performance(self.attrs.reading);
 
         if effective_miss_count > 0.0 {
-            reading_value *=
-                Self::calculate_miss_penalty(effective_miss_count, self.attrs.reading_note_count);
+            reading_value *= Self::calculate_miss_penalty(
+                effective_miss_count,
+                self.attrs.reading_difficult_note_count,
+            );
         }
 
         // * Scale the reading value with accuracy _harshly_.

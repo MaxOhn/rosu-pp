@@ -58,6 +58,7 @@ pub const fn smootherstep(x: f64, start: f64, end: f64) -> f64 {
     x * x * x * (x * (6.0 * x - 15.0) + 10.0)
 }
 
+// osu.Framework.Utils.Interpolation.Lerp
 pub const fn lerp(start: f64, end: f64, amount: f64) -> f64 {
     start + (end - start) * amount
 }

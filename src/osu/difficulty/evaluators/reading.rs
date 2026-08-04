@@ -10,7 +10,11 @@ use crate::{
 };
 
 pub struct ReadingEvaluator {
+    // Maps from OsuDifficultyHitObject.Preempt (clock rate adjusted OsuHitObject.TimePreempt)
+    preempt: f64,
+    // Maps from OsuHitObject.TimePreempt
     time_preempt: f64,
+    // Maps from OsuHitObject.TimeFadeIn
     time_fade_in: f64,
 }
 
@@ -30,8 +34,9 @@ impl ReadingEvaluator {
     const MINIMUM_ANGLE_RELEVANCY_TIME: f64 = 2000.0; // * 2 seconds
     const MAXIMUM_ANGLE_RELEVANCY_TIME: f64 = 200.0;
 
-    pub const fn new(time_preempt: f64, time_fade_in: f64) -> Self {
+    pub const fn new(preempt: f64, time_preempt: f64, time_fade_in: f64) -> Self {
         Self {
+            preempt,
             time_preempt,
             time_fade_in,
         }
@@ -83,7 +88,7 @@ impl ReadingEvaluator {
         };
 
         let preempt_difficulty =
-            Self::calc_preempt_difficulty(velocity, constant_angle_nerf_factor, self.time_preempt);
+            Self::calc_preempt_difficulty(velocity, constant_angle_nerf_factor, self.preempt);
 
         let mut reading_difficulty = norm(
             1.5,
@@ -159,7 +164,7 @@ impl ReadingEvaluator {
         constant_angle_nerf_factor: f64,
     ) -> f64 {
         // * Higher preempt means that time spent invisible is higher too, we want to reward that
-        let preempt_factor = self.time_preempt.powf(2.2) * 0.01;
+        let preempt_factor = self.preempt.powf(2.2) * 0.01;
 
         // * Account for both past and current densities
         let density_factor =
@@ -171,18 +176,19 @@ impl ReadingEvaluator {
         // * Apply a soft cap to general HD reading to account for partial memorization
         hidden_difficulty = hidden_difficulty.powf(0.4) * Self::HIDDEN_MULTIPLIER;
 
+        // * Buff perfect stacks only if current note is completely invisible at the time you click the previous note.
         if let Some(prev_obj) = curr_obj.previous(0, diff_objects)
             && FloatExt::eq(curr_obj.lazy_jump_dist, 0.0)
             && FloatExt::eq(
                 curr_obj.opacity_at(
-                    prev_obj.start_time,
+                    prev_obj.base.start_time,
                     true,
                     self.time_preempt,
                     self.time_fade_in,
                 ),
                 0.0,
             )
-            && prev_obj.start_time > curr_obj.start_time - self.time_preempt
+            && prev_obj.start_time > curr_obj.start_time - self.preempt
         {
             // * Perfect stacks are harder the less time between notes
             hidden_difficulty +=
@@ -203,11 +209,11 @@ impl ReadingEvaluator {
             .filter(|d| {
                 d.idx < curr_obj.idx
                     && curr_obj.start_time - d.start_time <= Self::READING_WINDOW_SIZE
-                    && d.start_time >= curr_obj.start_time - self.time_preempt
+                    && d.start_time >= curr_obj.start_time - self.preempt
             })
             .fold(0.0, |past_obj_difficulty_influence, loop_obj| {
                 let mut loop_difficulty = curr_obj.opacity_at(
-                    loop_obj.start_time,
+                    loop_obj.base.start_time,
                     false,
                     self.time_preempt,
                     self.time_fade_in,
@@ -241,13 +247,13 @@ impl ReadingEvaluator {
         while let Some(hit_obj) = curr_obj.next(forwards_idx, diff_objects).filter(|next| {
             next.start_time - curr_obj.start_time <= Self::READING_WINDOW_SIZE
                 // * Object not visible at the time current object needs to be clicked.
-                && curr_obj.start_time >= next.start_time - self.time_preempt
+                && curr_obj.start_time >= next.start_time - self.preempt
         }) {
             let delta_time = hit_obj.start_time - curr_obj.start_time;
             let time_nerf_factor = Self::get_time_nerf_factor(delta_time);
 
             visible_object_count += hit_obj.opacity_at(
-                curr_obj.start_time,
+                curr_obj.base.start_time,
                 false,
                 self.time_preempt,
                 self.time_fade_in,
