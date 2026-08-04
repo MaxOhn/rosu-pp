@@ -138,6 +138,8 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
         OsuGradualDifficulty::increment_combo(h, &mut attrs);
     }
 
+    let total_hit_objects = osu_objects.len();
+
     let mut osu_objects = OsuObjects::new(osu_objects);
 
     let diff_objects = DifficultyValues::create_difficulty_objects(
@@ -155,7 +157,7 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
         great_hit_window,
         time_preempt,
         clock_rate,
-        diff_objects.len(),
+        total_hit_objects,
     );
     let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
 

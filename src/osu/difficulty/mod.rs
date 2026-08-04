@@ -164,8 +164,10 @@ impl DifficultyValues {
         let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
         let clock_rate = difficulty.get_clock_rate();
 
+        let take_hit_objects = cmp::min(map.hit_objects.len(), take);
+
         // The first hit object has no difficulty object
-        let take_diff_objects = cmp::min(map.hit_objects.len(), take).saturating_sub(1);
+        let take_diff_objects = take_hit_objects.saturating_sub(1);
 
         let mut skills = OsuSkills::new(
             mods,
@@ -173,7 +175,7 @@ impl DifficultyValues {
             great_hit_window,
             time_preempt,
             clock_rate,
-            take_diff_objects,
+            take_hit_objects,
         );
 
         for hit_object in diff_objects.iter().take(take_diff_objects) {
@@ -344,7 +346,7 @@ pub fn sum_cognition_difficulty(reading: f64, flashlight: f64) -> f64 {
     // * Nerf flashlight value in cognition sum when reading is greater than flashlight
     norm(
         PERFORMANCE_NORM_EXPONENT,
-        [reading, flashlight, (flashlight / reading).clamp(0.25, 1.0)],
+        [reading, flashlight * (flashlight / reading).clamp(0.25, 1.0)],
     )
 }
 

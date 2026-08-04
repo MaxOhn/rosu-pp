@@ -132,10 +132,11 @@ impl Flashlight {
 fn flashlight_difficulty_value(current_strain_peaks: Vec<f64>, total_objects: i32) -> f64 {
     let sum: f64 = current_strain_peaks.into_iter().sum();
 
-    sum * 0.7
+    // * Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius.
+    sum * (0.7
         + 0.1 * (f64::from(total_objects) / 200.0).min(1.0)
-        + (if total_objects > 200 {
-            0.2 * f64::from(std::cmp::min(total_objects - 200, 1) / 200)
+        + if total_objects > 200 {
+            0.2 * (f64::from(total_objects - 200) / 200.0).min(1.0)
         } else {
             0.0
         })

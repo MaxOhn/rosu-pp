@@ -88,7 +88,9 @@ impl FlashlightEvaluator {
                     stack_nerf * opacity_bonus * self.scaling_factor * jump_dist
                         / cumulative_strain_time;
 
-                if let Some((curr_obj_angle, osu_curr_angle)) = curr_obj.angle.zip(osu_curr.angle) {
+                if let (Some(curr_obj_angle), Some(osu_curr_angle)) =
+                    (curr_obj.angle, osu_curr.angle)
+                {
                     // * Objects further back in time should count less for the nerf.
                     if (curr_obj_angle - osu_curr_angle).abs() < 0.02 {
                         angle_repeat_count += (1.0 - 0.1 * i as f64).max(0.0);
