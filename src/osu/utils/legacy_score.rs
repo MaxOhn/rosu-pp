@@ -61,8 +61,7 @@ fn calculate_spinner_score(spinner: Spinner) -> f64 {
 
 #[derive(Default)]
 struct InnerNestedScorePerObject {
-    n_sliders: usize,
-    n_repeats: usize,
+    amount_of_big_ticks: usize,
     amount_of_small_ticks: usize,
     spinner_score: f64,
     object_count: usize,
@@ -75,8 +74,8 @@ impl InnerNestedScorePerObject {
         match h.kind {
             OsuObjectKind::Circle => {}
             OsuObjectKind::Slider(ref slider) => {
-                self.n_sliders += 1;
-                self.n_repeats += slider.repeat_count();
+                // * 1 for head, 1 for tail, plus repeats
+                self.amount_of_big_ticks += 2 + slider.repeat_count();
                 self.amount_of_small_ticks += slider.tick_count();
             }
             OsuObjectKind::Spinner(spinner) => {
@@ -89,13 +88,7 @@ impl InnerNestedScorePerObject {
         const BIG_TICK_SCORE: f64 = 30.0;
         const SMALL_TICK_SCORE: f64 = 10.0;
 
-        // * 1 for head, 1 for tail
-        let mut amount_of_big_ticks = self.n_sliders * 2;
-
-        // * Add slider repeats
-        amount_of_big_ticks += self.n_repeats;
-
-        let slider_score = amount_of_big_ticks as f64 * BIG_TICK_SCORE
+        let slider_score = self.amount_of_big_ticks as f64 * BIG_TICK_SCORE
             + self.amount_of_small_ticks as f64 * SMALL_TICK_SCORE;
 
         (slider_score + self.spinner_score) / self.object_count as f64
