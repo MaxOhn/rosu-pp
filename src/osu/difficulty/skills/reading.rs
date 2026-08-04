@@ -110,8 +110,7 @@ impl Reading {
         difficulties
     }
 
-    #[expect(dead_code, reason = "overwrites macro impl")]
-    fn count_top_weighted_object_difficulties(
+    pub fn count_top_weighted_object_difficulties(
         &self,
         difficulty_value: f64,
         object_weight_sum: f64,

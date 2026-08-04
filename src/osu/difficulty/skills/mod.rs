@@ -1,4 +1,6 @@
 use crate::any::difficulty::skills_new::skill::Skill;
+use crate::util::difficulty::logistic;
+use crate::util::float_ext::FloatExt;
 use crate::{model::mods::GameMods, osu::object::OsuObject};
 
 use self::{aim::Aim, flashlight::Flashlight, reading::Reading, speed::Speed};
@@ -11,7 +13,6 @@ pub mod aim;
 pub mod flashlight;
 pub mod reading;
 pub mod speed;
-mod strain;
 
 pub struct OsuSkills {
     pub aim: Aim,
@@ -85,4 +86,15 @@ impl OsuSkills {
         self.flashlight.process(curr, objects);
         self.reading.process(curr, objects);
     }
+}
+
+fn count_top_weighted_sliders(slider_strains: &[f64], consistent_top_strain: f64) -> f64 {
+    if FloatExt::eq(consistent_top_strain, 0.0) {
+        return 0.0;
+    }
+
+    slider_strains
+        .iter()
+        .map(|s| logistic(*s / consistent_top_strain, 0.88, 10.0, Some(1.1)))
+        .sum()
 }

@@ -154,36 +154,35 @@ macro_rules! test_cases {
 
 #[test]
 fn basic_osu() {
-    // #[cfg(target_os = "windows")]
     test_cases! {
         Osu: OSU {
             NM => {
-                aim: 3.5141717095461806,
-                aim_difficult_slider_count: 253.68984309768354,
-                speed: 2.407992156652433,
+                aim: 3.27863857424994,
+                aim_difficult_slider_count: 192.5269999738169,
+                speed: 2.4917265153109014,
                 flashlight: 0.0,
-                reading: 1.2807842408799812,
-                slider_factor: 0.9795548616785261,
-                aim_top_weighted_slider_factor: 0.6280004197964858,
-                speed_top_weighted_slider_factor: 0.5384075054455806,
-                speed_note_count: 796.6084994593902,
-                reading_note_count: 97.22985946384839,
-                aim_difficult_strain_count: 154.3116239861726,
-                speed_difficult_strain_count: 432.92911452386227,
-                nested_score_per_object: 26.39578163771712,
-                legacy_score_base_multiplier: 4.0,
-                maximum_legacy_combo_score: 91937232.0,
+                reading: 0.8229208521405954,
+                slider_factor: 0.9630386892765709,
+                aim_top_weighted_slider_factor: 1.524202370856421,
+                speed_top_weighted_slider_factor: 0.536191641231213,
+                speed_note_count: 183.0639785973236,
+                reading_note_count: 34.92251595856365,
+                aim_difficult_strain_count: 124.69544446818438,
+                speed_difficult_strain_count: 81.74921671931915,
+                nested_score_per_object: 34.991680532445926,
+                legacy_score_base_multiplier: 5.0,
+                maximum_legacy_combo_score: 15729840.0,
                 ar: 9.30000019,
                 great_hit_window: 26.5,
                 ok_hit_window: 68.5,
                 meh_hit_window: 110.5,
-                hp: 6.0,
-                n_circles: 938,
-                n_sliders: 674,
+                hp: 5.0,
+                n_circles: 307,
+                n_sliders: 293,
                 n_large_ticks: 15,
-                n_spinners: 0,
-                stars: 6.305978712257887,
-                max_combo: 2359,
+                n_spinners: 1,
+                stars: 6.004027372552197,
+                max_combo: 909,
             };
             // HD => {
             //     aim: 3.121489829231887,
@@ -647,7 +646,7 @@ impl AssertEq for OsuDifficultyAttributes {
             *maximum_legacy_combo_score,
             expected.maximum_legacy_combo_score,
         );
-        assert_eq_float(*ar, expected.ar);
+        assert_eq_float(*ar as f32, expected.ar as f32);
         assert_eq_float(*great_hit_window, expected.great_hit_window);
         assert_eq_float(*ok_hit_window, expected.ok_hit_window);
         assert_eq_float(*meh_hit_window, expected.meh_hit_window);

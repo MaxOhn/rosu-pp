@@ -248,7 +248,7 @@ impl<'a> OsuDifficultyObject<'a> {
         let pos = self.base.pos;
         let stack_offset = self.base.stack_offset;
         let start_time = self.base.start_time;
-        let duration = slider.end_time - start_time;
+        let duration = self.base.duration();
 
         let mut nested_objects = Cow::Borrowed(slider.nested_objects.as_slice());
 

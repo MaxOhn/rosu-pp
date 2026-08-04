@@ -12,7 +12,6 @@ use crate::{
     osu::difficulty::{
         evaluators::{AgilityEvaluator, FlowAimEvaluator, SnapAimEvaluator},
         object::OsuDifficultyObject,
-        skills::strain::count_top_weighted_sliders,
     },
     util::{
         difficulty::{lerp, logistic, logistic_exp, norm},
@@ -194,7 +193,7 @@ impl Aim {
         // * What would the top strain be if all strain values were identical
         let consistent_top_strain = difficulty_value / 10.0;
 
-        count_top_weighted_sliders(&self.slider_strains, consistent_top_strain)
+        super::count_top_weighted_sliders(&self.slider_strains, consistent_top_strain)
     }
 
     pub fn difficulty_value(

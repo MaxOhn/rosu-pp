@@ -67,7 +67,14 @@ macro_rules! impl_float {
     ( $( $ty:ty )* ) => {
         $(
             impl Float for $ty {
+                #[cfg(not(target_family = "unix"))]
                 const EPSILON: Self = Self::EPSILON;
+
+                // Differing libm implementations can cause values generated on hosts that aren't
+                // windows based to fall barely outside of the default epsilon values.
+                // For the purposes of diffcalc, precision to 12 decimal places should suffice.
+                #[cfg(target_family = "unix")]
+                const EPSILON: Self = 1e-12;
 
                 fn abs(self) -> Self {
                     self.abs()

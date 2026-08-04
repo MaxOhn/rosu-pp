@@ -4,7 +4,6 @@ use crate::{
     osu::difficulty::{
         evaluators::{RhythmEvaluator, SpeedEvaluator},
         object::OsuDifficultyObject,
-        skills::strain::count_top_weighted_sliders,
     },
     util::{difficulty::logistic, float_ext::FloatExt},
 };
@@ -97,6 +96,6 @@ impl Speed {
         // * What would the top note be if all note values were identical
         let consistent_top_object = difficulty_value / object_weight_sum;
 
-        count_top_weighted_sliders(&self.slider_strains, consistent_top_object)
+        super::count_top_weighted_sliders(&self.slider_strains, consistent_top_object)
     }
 }
