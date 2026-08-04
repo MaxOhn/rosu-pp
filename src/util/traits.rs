@@ -1,12 +1,6 @@
-use std::iter::Sum;
-
 /// Mimics the C# `IEnumerable<T>` interface.
 pub trait IEnumerable<T>: Sized {
     fn cs_where<F: FnMut(&T) -> bool>(self, f: F) -> Self;
-
-    fn cs_sum<S>(&self) -> S
-    where
-        S: for<'a> Sum<&'a T>;
 
     fn cs_add_in_place(&mut self, item: T) -> usize
     where
@@ -33,16 +27,6 @@ impl<T> IEnumerable<T> for Vec<T> {
         self.retain(f);
 
         self
-    }
-
-    /// Computes the sum of a sequence of numeric values.
-    ///
-    /// <https://learn.microsoft.com/en-us/dotnet/api/system.linq.enumerable.sum>
-    fn cs_sum<S>(&self) -> S
-    where
-        S: for<'a> Sum<&'a T>,
-    {
-        self.iter().sum()
     }
 
     /// Adds the given item to the list according to standard sorting rules. Do not use on unsorted lists.
