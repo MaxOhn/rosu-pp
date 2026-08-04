@@ -79,7 +79,7 @@ impl FlashlightEvaluator {
                         * (1.0
                             - osu_curr.opacity_at(
                                 curr_hit_obj.start_time,
-                                mods.hd_only_fade_approach_circles() == Some(false),
+                                mods.hd_full_fade(),
                                 self.time_preempt,
                                 self.time_fade_in,
                             ));
