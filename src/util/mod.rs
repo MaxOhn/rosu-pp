@@ -10,6 +10,9 @@ pub mod sync;
 pub mod traits;
 
 #[macro_use]
+mod macros_new;
+
+#[macro_use]
 mod macros;
 
 pub fn get_precision_adjusted_beat_len(slider_velocity_multiplier: f64, beat_len: f64) -> f64 {

@@ -1,10 +1,11 @@
+use crate::any::difficulty::skills_new::skill::Skill;
 use std::{cmp, mem};
 
 use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::{CalculateError, difficulty::skills::StrainSkill},
+    any::CalculateError,
     model::mode::ConvertError,
     osu::{
         convert::convert_objects,
@@ -137,6 +138,8 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
         OsuGradualDifficulty::increment_combo(h, &mut attrs);
     }
 
+    let total_hit_objects = osu_objects.len();
+
     let mut osu_objects = OsuObjects::new(osu_objects);
 
     let diff_objects = DifficultyValues::create_difficulty_objects(
@@ -146,8 +149,16 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
     );
 
     let great_hit_window = map_attrs.hit_windows().od_great.unwrap_or(0.0);
+    let clock_rate = difficulty.get_clock_rate();
 
-    let skills = OsuSkills::new(mods, &scaling_factor, great_hit_window, time_preempt);
+    let skills = OsuSkills::new(
+        mods,
+        &scaling_factor,
+        great_hit_window,
+        time_preempt,
+        clock_rate,
+        total_hit_objects,
+    );
     let diff_objects = extend_lifetime(diff_objects.into_boxed_slice());
 
     let score_simulator = GradualLegacyScoreSimulator::new(map, map_attrs);
@@ -329,8 +340,8 @@ mod tests {
         for i in 1.. {
             let Some(next_gradual) = gradual.next() else {
                 assert_eq!(i, hit_objects_len + 1);
-                assert!(gradual_2nd.last().is_some() || hit_objects_len % 2 == 0);
-                assert!(gradual_3rd.last().is_some() || hit_objects_len % 3 == 0);
+                assert!(gradual_2nd.last().is_some() || hit_objects_len.is_multiple_of(2));
+                assert!(gradual_3rd.last().is_some() || hit_objects_len.is_multiple_of(3));
                 break;
             };
 

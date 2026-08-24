@@ -2,22 +2,24 @@ use std::{cmp, f64::consts::PI};
 
 use crate::{
     GameMods,
+    any::difficulty::skills_new::harmonic_skill::HarmonicSkill,
     osu::{
         OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState,
         difficulty::{
-            rating::OsuRatingCalculator,
-            skills::{aim::Aim, flashlight::Flashlight, speed::Speed, strain::OsuStrainSkill},
+            skills::{aim::Aim, flashlight::Flashlight, reading::Reading, speed::Speed},
+            sum_cognition_difficulty,
         },
         legacy_score_miss_calc::OsuLegacyScoreMissCalculator,
     },
     util::{
-        difficulty::{erf, erf_inv, logistic, reverse_lerp, smoothstep},
+        difficulty::{erf, erf_inv, logistic, norm, reverse_lerp, smoothstep},
         float_ext::FloatExt,
     },
 };
 
 // * This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
-pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.14;
+pub const PERFORMANCE_BASE_MULTIPLIER: f64 = 1.12;
+pub const PERFORMANCE_NORM_EXPONENT: f64 = 1.1;
 
 pub(super) struct OsuPerformanceCalculator<'mods> {
     attrs: OsuDifficultyAttributes,
@@ -65,19 +67,34 @@ impl OsuPerformanceCalculator<'_> {
         let combo_based_estimated_miss_count = self.calculate_combo_based_estimated_miss_count();
         let mut score_based_estimated_miss_count = None;
 
-        let mut effective_miss_count = if using_classic_slider_acc
-            && state.legacy_total_score.is_some()
-        {
-            let legacy_score_miss_calc = OsuLegacyScoreMissCalculator::new(state, acc, mods, attrs);
+        let mut effective_miss_count =
+            if using_classic_slider_acc && !self.mods.sv2() && state.legacy_total_score.is_some() {
+                let legacy_score_miss_calc =
+                    OsuLegacyScoreMissCalculator::new(state, acc, mods, attrs);
 
-            *score_based_estimated_miss_count.insert(legacy_score_miss_calc.calculate())
-        } else {
-            // * Use combo-based miss count if this isn't a legacy score
-            combo_based_estimated_miss_count
-        };
+                *score_based_estimated_miss_count.insert(legacy_score_miss_calc.calculate())
+            } else {
+                // * Use combo-based miss count if this isn't a legacy score
+                combo_based_estimated_miss_count
+            };
 
         effective_miss_count = effective_miss_count.max(f64::from(state.hitresults.misses));
         effective_miss_count = effective_miss_count.min(f64::from(state.hitresults.total_hits()));
+        effective_miss_count = effective_miss_count.max(0.0);
+
+        let mut aim_estimated_slider_breaks = 0.0;
+        let mut speed_estimated_slider_breaks = 0.0;
+
+        if effective_miss_count > 0.0 {
+            aim_estimated_slider_breaks = self.calculate_estimated_slider_breaks(
+                self.attrs.aim_top_weighted_slider_factor,
+                effective_miss_count,
+            );
+            speed_estimated_slider_breaks = self.calculate_estimated_slider_breaks(
+                self.attrs.speed_top_weighted_slider_factor,
+                effective_miss_count,
+            );
+        }
 
         let total_hits = f64::from(total_hits);
 
@@ -116,9 +133,6 @@ impl OsuPerformanceCalculator<'_> {
 
         let speed_deviation = self.calculate_speed_deviation();
 
-        let mut aim_estimated_slider_breaks = 0.0;
-        let mut speed_estimated_slider_breaks = 0.0;
-
         let aim_value =
             self.compute_aim_value(effective_miss_count, &mut aim_estimated_slider_breaks);
         let speed_value = self.compute_speed_value(
@@ -127,22 +141,24 @@ impl OsuPerformanceCalculator<'_> {
             &mut speed_estimated_slider_breaks,
         );
         let acc_value = self.compute_accuracy_value();
-        let flashlight_value = self.compute_flashlight_value(effective_miss_count);
 
-        let pp = (aim_value.powf(1.1)
-            + speed_value.powf(1.1)
-            + acc_value.powf(1.1)
-            + flashlight_value.powf(1.1))
-        .powf(1.0 / 1.1)
-            * multiplier;
+        let reading_value = self.compute_reading_value(effective_miss_count);
+        let flashlight_value = self.compute_flashlight_value(effective_miss_count);
+        let cognition_value = sum_cognition_difficulty(reading_value, flashlight_value);
+
+        let pp = norm(
+            PERFORMANCE_NORM_EXPONENT,
+            [aim_value, speed_value, acc_value, cognition_value],
+        ) * multiplier;
 
         OsuPerformanceAttributes {
             difficulty: self.attrs,
+            pp,
             pp_acc: acc_value,
             pp_aim: aim_value,
             pp_flashlight: flashlight_value,
             pp_speed: speed_value,
-            pp,
+            pp_reading: reading_value,
             effective_miss_count,
             speed_deviation,
             combo_based_estimated_miss_count,
@@ -203,17 +219,12 @@ impl OsuPerformanceCalculator<'_> {
         let total_hits = self.total_hits();
 
         let len_bonus = 0.95
-            + 0.4 * (total_hits / 2000.0).min(1.0)
+            + 0.35 * (total_hits / 2000.0).min(1.0)
             + f64::from(u8::from(total_hits > 2000.0)) * (total_hits / 2000.0).log10() * 0.5;
 
         aim_value *= len_bonus;
 
         if effective_miss_count > 0.0 {
-            *aim_estimated_slider_breaks = self.calculate_estimated_slider_breaks(
-                self.attrs.aim_top_weighted_slider_factor,
-                effective_miss_count,
-            );
-
             let relevant_miss_count = (effective_miss_count + *aim_estimated_slider_breaks)
                 .min(self.total_imperfect_hits() + f64::from(self.n_large_tick_miss()));
 
@@ -231,13 +242,7 @@ impl OsuPerformanceCalculator<'_> {
                     * self.acc.powf(16.0))
                     * (1.0 - 0.003 * self.attrs.hp * self.attrs.hp);
         } else if self.mods.tc() {
-            aim_value *= 1.0
-                + OsuRatingCalculator::calculate_visibility_bonus(
-                    self.mods,
-                    self.attrs.ar,
-                    Some(self.attrs.slider_factor),
-                    None,
-                );
+            aim_value *= 1.0 + self.calculate_traceable_bonus(self.attrs.slider_factor);
         }
 
         aim_value *= self.acc;
@@ -257,20 +262,7 @@ impl OsuPerformanceCalculator<'_> {
 
         let mut speed_value = Speed::difficulty_to_performance(self.attrs.speed);
 
-        let total_hits = self.total_hits();
-
-        let len_bonus = 0.95
-            + 0.4 * (total_hits / 2000.0).min(1.0)
-            + f64::from(u8::from(total_hits > 2000.0)) * (total_hits / 2000.0).log10() * 0.5;
-
-        speed_value *= len_bonus;
-
         if effective_miss_count > 0.0 {
-            *speed_estimated_slider_breaks = self.calculate_estimated_slider_breaks(
-                self.attrs.speed_top_weighted_slider_factor,
-                effective_miss_count,
-            );
-
             let relevant_miss_count = (effective_miss_count + *speed_estimated_slider_breaks)
                 .min(self.total_imperfect_hits() + f64::from(self.n_large_tick_miss()));
 
@@ -280,46 +272,24 @@ impl OsuPerformanceCalculator<'_> {
             );
         }
 
-        // * TC bonuses are excluded when blinds is present as the increased visual difficulty is unimportant when notes cannot be seen.
         if self.mods.bl() {
             // * Increasing the speed value by object count for Blinds isn't
             // * ideal, so the minimum buff is given.
             speed_value *= 1.12;
-        } else if self.mods.tc() {
-            speed_value *= 1.0
-                + OsuRatingCalculator::calculate_visibility_bonus(
-                    self.mods,
-                    self.attrs.ar,
-                    None,
-                    None,
-                );
         }
 
         let speed_high_deviation_mult = self.calculate_speed_high_deviation_nerf(speed_deviation);
         speed_value *= speed_high_deviation_mult;
 
-        // * Calculate accuracy assuming the worst case scenario
-        let relevant_total_diff = f64::max(0.0, total_hits - self.attrs.speed_note_count);
-        let hitresults = &self.state.hitresults;
-        let relevant_n300 = (f64::from(hitresults.n300) - relevant_total_diff).max(0.0);
-        let relevant_n100 = (f64::from(hitresults.n100)
-            - (relevant_total_diff - f64::from(hitresults.n300)).max(0.0))
-        .max(0.0);
-        let relevant_n50 = (f64::from(hitresults.n50)
-            - (relevant_total_diff - f64::from(hitresults.n300 + hitresults.n100)).max(0.0))
-        .max(0.0);
+        // * An effective hit window is created based on the speed SR. The higher the speed difficulty, the shorter the hit window.
+        // * For example, a speed SR of 4.0 leads to an effective hit window of 20ms, which is OD 10.
+        let effective_hit_window = 20.0 * (4.0 / self.attrs.speed).powf(0.35);
 
-        let relevant_acc = if self.attrs.speed_note_count.eq(0.0) {
-            0.0
-        } else {
-            (relevant_n300 * 6.0 + relevant_n100 * 2.0 + relevant_n50)
-                / (self.attrs.speed_note_count * 6.0)
-        };
+        // * Find the proportion of 300s on speed notes assuming the hit window was the effective hit window.
+        let effective_acc = erf(effective_hit_window / speed_deviation);
 
-        let od = self.attrs.od();
-
-        // * Scale the speed value with accuracy and OD.
-        speed_value *= f64::powf((self.acc + relevant_acc) / 2.0, (14.5 - od) / 2.0);
+        // * Scale speed value by normalized accuracy.
+        speed_value *= effective_acc.powf(2.0);
 
         speed_value
     }
@@ -365,21 +335,19 @@ impl OsuPerformanceCalculator<'_> {
             1.52163_f64.powf(self.attrs.od()) * better_acc_percentage.powf(24.0) * 2.83;
 
         // * Bonus for many hitcircles - it's harder to keep good accuracy up for longer.
-        acc_value *= (f64::from(amount_hit_objects_with_acc) / 1000.0)
-            .powf(0.3)
-            .min(1.15);
+        acc_value *= if amount_hit_objects_with_acc < 1000 {
+            (f64::from(amount_hit_objects_with_acc) / 1000.0).powf(0.3)
+        } else {
+            (f64::from(amount_hit_objects_with_acc) / 1000.0).powf(0.1)
+        };
 
         // * Increasing the accuracy value by object count for Blinds isn't
         // * ideal, so the minimum buff is given.
         if self.mods.bl() {
             acc_value *= 1.14;
-        } else if self.mods.hd() || self.mods.tc() {
+        } else if self.mods.tc() {
             // * Decrease bonus for AR > 10
             acc_value *= 1.0 + 0.08 * reverse_lerp(self.attrs.ar, 11.5, 10.0);
-        }
-
-        if self.mods.fl() {
-            acc_value *= 1.02;
         }
 
         acc_value
@@ -409,6 +377,22 @@ impl OsuPerformanceCalculator<'_> {
         flashlight_value
     }
 
+    fn compute_reading_value(&self, effective_miss_count: f64) -> f64 {
+        let mut reading_value = Reading::difficulty_to_performance(self.attrs.reading);
+
+        if effective_miss_count > 0.0 {
+            reading_value *= Self::calculate_miss_penalty(
+                effective_miss_count,
+                self.attrs.reading_difficult_note_count,
+            );
+        }
+
+        // * Scale the reading value with accuracy _harshly_.
+        reading_value *= self.acc.powf(3.0);
+
+        reading_value
+    }
+
     fn calculate_combo_based_estimated_miss_count(&self) -> f64 {
         let Self {
             state,
@@ -424,10 +408,16 @@ impl OsuPerformanceCalculator<'_> {
         let mut miss_count = f64::from(state.hitresults.misses);
 
         if *using_classic_slider_acc {
+            // * If sliders in the map are hard - it's likely for player to drop sliderends
+            // * If map has easy sliders - it's more likely for player to sliderbreak
+            let likely_missed_sliderend_portion =
+                0.04 + 0.06 * attrs.aim_top_weighted_slider_factor.min(1.0).powf(2.0);
+
             // * Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
-            // * In classic scores we can't know the amount of dropped sliders so we estimate to 10% of all sliders on the map
-            let full_combo_threshold =
-                f64::from(attrs.max_combo) - 0.1 * f64::from(attrs.n_sliders);
+            // * In classic scores we can't know the amount of dropped sliders so we estimate it
+            let full_combo_threshold = f64::from(attrs.max_combo)
+                - (4.0 + likely_missed_sliderend_portion * f64::from(attrs.n_sliders))
+                    .min(f64::from(attrs.n_sliders));
 
             if f64::from(state.max_combo) < full_combo_threshold {
                 miss_count = full_combo_threshold / f64::from(state.max_combo).max(1.0);
@@ -478,22 +468,28 @@ impl OsuPerformanceCalculator<'_> {
             ..
         } = self;
 
-        if !using_classic_slider_acc || state.hitresults.n100 == 0 {
+        let non_miss_mistakes = state.hitresults.n100 + state.hitresults.n50;
+
+        if !using_classic_slider_acc || non_miss_mistakes == 0 {
             return 0.0;
         }
 
         let missed_combo_percent = 1.0 - f64::from(state.max_combo) / f64::from(attrs.max_combo);
-        let mut estimated_slider_breaks = (effective_miss_count * top_weighted_slider_factor)
-            .min(f64::from(state.hitresults.n100));
+        let mut estimated_slider_breaks =
+            f64::from(non_miss_mistakes).min(effective_miss_count * top_weighted_slider_factor);
 
-        // * Scores with more Oks are more likely to have slider breaks.
-        let ok_adjustment = ((f64::from(state.hitresults.n100) - estimated_slider_breaks) + 0.5)
-            / f64::from(state.hitresults.n100);
+        // * Scores with more Oks and Mehs are more likely to have slider breaks.
+        // * We add an arbitrary value to both sides of the division to make it more stable on extreme ends.
+        let non_miss_mistake_adjustment = (f64::from(non_miss_mistakes) - estimated_slider_breaks
+            + 4.5)
+            / f64::from(non_miss_mistakes + 4);
 
         // * There is a low probability of extra slider breaks on effective miss counts close to 1, as score based calculations are good at indicating if only a single break occurred.
         estimated_slider_breaks *= smoothstep(effective_miss_count, 1.0, 2.0);
 
-        estimated_slider_breaks * ok_adjustment * logistic(missed_combo_percent, 0.33, 15.0, None)
+        estimated_slider_breaks
+            * non_miss_mistake_adjustment
+            * logistic(missed_combo_percent, 0.33, 15.0, None)
     }
 
     fn calculate_speed_deviation(&self) -> Option<f64> {
@@ -615,11 +611,36 @@ impl OsuPerformanceCalculator<'_> {
         adjusted_speed_value / speed_value
     }
 
+    fn calculate_traceable_bonus(&self, slider_factor: f64) -> f64 {
+        // * We want to reward slider aim less, more so at lower AR
+        let high_ar_slider_visibility_factor = 0.5 + (slider_factor.powf(6.0) / 2.0);
+        let low_ar_slider_visibility_factor = slider_factor.powf(6.0);
+
+        // * Start from normal curve, rewarding lower AR up to AR7
+        let mut traceable_bonus = 0.0275;
+        traceable_bonus +=
+            0.025 * (12.0 - self.attrs.ar.max(7.0)) * high_ar_slider_visibility_factor;
+
+        // * For AR up to 0 - reduce reward for very low ARs when object is visible
+        if self.attrs.ar < 7.0 {
+            traceable_bonus +=
+                0.025 * (7.0 - self.attrs.ar.max(0.0)) * low_ar_slider_visibility_factor;
+        }
+
+        // * Starting from AR0 - cap values so they won't grow to infinity
+        if self.attrs.ar < 0.0 {
+            traceable_bonus +=
+                0.025 * (1.0 - f64::powf(1.5, self.attrs.ar)) * low_ar_slider_visibility_factor;
+        }
+
+        traceable_bonus
+    }
+
     // * Miss penalty assumes that a player will miss on the hardest parts of a map,
     // * so we use the amount of relatively difficult sections to adjust miss penalty
     // * to make it more punishing on maps with lower amount of hard sections.
     fn calculate_miss_penalty(miss_count: f64, diff_strain_count: f64) -> f64 {
-        0.96 / ((miss_count / (4.0 * diff_strain_count.ln().powf(0.94))) + 1.0)
+        0.93 / (miss_count / (4.0 * diff_strain_count.max(1.0).ln()) + 1.0)
     }
 
     fn get_combo_scaling_factor(&self) -> f64 {

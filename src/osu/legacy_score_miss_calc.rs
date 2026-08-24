@@ -137,9 +137,17 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
 
         let mut miss_count = 0.0;
 
+        // * If sliders in the map are hard - it's likely for player to drop sliderends
+        // * If map has easy sliders - it's more likely for player to sliderbreak
+        let likely_missed_sliderend_portion =
+            0.04 + 0.06 * self.attrs.aim_top_weighted_slider_factor.min(1.0).powf(2.0);
+
         // * Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
-        // * In classic scores we can't know the amount of dropped sliders so we estimate to 10% of all sliders on the map
-        let full_combo_threshold = f64::from(attrs.max_combo) - 0.1 * f64::from(attrs.n_sliders);
+        // * In classic scores we can't know the amount of dropped sliders so we estimate it
+        let full_combo_threshold = f64::from(attrs.max_combo)
+            - (4.0
+                + likely_missed_sliderend_portion
+                    * f64::from(attrs.n_sliders).min(f64::from(attrs.n_sliders)));
 
         if f64::from(state.max_combo) < full_combo_threshold {
             miss_count = (full_combo_threshold / f64::from(state.max_combo).max(1.0)).powf(2.5);

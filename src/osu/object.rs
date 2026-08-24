@@ -95,12 +95,16 @@ impl OsuObject {
         }
     }
 
-    pub fn end_time(&self) -> f64 {
+    pub const fn end_time(&self) -> f64 {
         match self.kind {
             OsuObjectKind::Circle => self.start_time,
             OsuObjectKind::Slider(ref slider) => slider.end_time,
             OsuObjectKind::Spinner(ref spinner) => self.start_time + spinner.duration,
         }
+    }
+
+    pub const fn duration(&self) -> f64 {
+        self.end_time() - self.start_time
     }
 
     pub const fn stacked_pos(&self) -> Pos {

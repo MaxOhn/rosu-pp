@@ -1,6 +1,9 @@
-use crate::{any::difficulty::skills::StrainSkill, model::mods::GameMods, osu::object::OsuObject};
+use crate::any::difficulty::skills_new::skill::Skill;
+use crate::util::difficulty::logistic;
+use crate::util::float_ext::FloatExt;
+use crate::{model::mods::GameMods, osu::object::OsuObject};
 
-use self::{aim::Aim, flashlight::Flashlight, speed::Speed};
+use self::{aim::Aim, flashlight::Flashlight, reading::Reading, speed::Speed};
 
 use super::{
     HD_FADE_IN_DURATION_MULTIPLIER, object::OsuDifficultyObject, scaling_factor::ScalingFactor,
@@ -8,14 +11,15 @@ use super::{
 
 pub mod aim;
 pub mod flashlight;
+pub mod reading;
 pub mod speed;
-pub mod strain;
 
 pub struct OsuSkills {
     pub aim: Aim,
     pub aim_no_sliders: Aim,
     pub speed: Speed,
     pub flashlight: Flashlight,
+    pub reading: Reading,
 }
 
 impl OsuSkills {
@@ -24,6 +28,8 @@ impl OsuSkills {
         scaling_factor: &ScalingFactor,
         great_hit_window: f64,
         time_preempt: f64,
+        clock_rate: f64,
+        total_objects: usize,
     ) -> Self {
         let hit_window = 2.0 * great_hit_window;
 
@@ -40,17 +46,44 @@ impl OsuSkills {
         } else {
             400.0 * (time_preempt / OsuObject::PREEMPT_MIN).min(1.0)
         };
+        let overall_difficulty = (79.5 - hit_window / 2.0) / 6.0;
+        let preempt = time_preempt / clock_rate;
 
-        let aim = Aim::new(true);
-        let aim_no_sliders = Aim::new(false);
-        let speed = Speed::new(hit_window, mods.ap());
-        let flashlight = Flashlight::new(mods, scaling_factor.radius, time_preempt, time_fade_in);
+        let aim = Aim::new(
+            mods.clone(),
+            true,
+            overall_difficulty,
+            scaling_factor.radius,
+        );
+        let aim_no_sliders = Aim::new(
+            mods.clone(),
+            false,
+            overall_difficulty,
+            scaling_factor.radius,
+        );
+        let speed = Speed::new(mods.clone(), hit_window);
+        let flashlight = Flashlight::new(
+            mods,
+            total_objects as i32,
+            overall_difficulty,
+            scaling_factor.radius,
+            time_preempt,
+            time_fade_in,
+        );
+        let reading = Reading::new(
+            mods,
+            preempt,
+            time_preempt,
+            time_fade_in,
+            overall_difficulty,
+        );
 
         Self {
             aim,
             aim_no_sliders,
             speed,
             flashlight,
+            reading,
         }
     }
 
@@ -59,5 +92,17 @@ impl OsuSkills {
         self.aim_no_sliders.process(curr, objects);
         self.speed.process(curr, objects);
         self.flashlight.process(curr, objects);
+        self.reading.process(curr, objects);
     }
+}
+
+fn count_top_weighted_sliders(slider_strains: &[f64], consistent_top_strain: f64) -> f64 {
+    if FloatExt::eq(consistent_top_strain, 0.0) {
+        return 0.0;
+    }
+
+    slider_strains
+        .iter()
+        .map(|s| logistic(*s / consistent_top_strain, 0.88, 10.0, Some(1.1)))
+        .sum()
 }

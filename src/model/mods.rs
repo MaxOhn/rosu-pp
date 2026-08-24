@@ -277,6 +277,16 @@ impl GameMods {
             })
             .flatten()
     }
+
+    /// Whether Hidden is active and configured to fade the whole object
+    /// (not just the approach circle).
+    ///
+    /// `OnlyFadeApproachCircles` is a lazer-only setting that defaults to
+    /// `false`, so legacy/intermode mods (which cannot carry that setting)
+    /// are treated the same as an explicit `false`.
+    pub(crate) fn hd_full_fade(&self) -> bool {
+        self.hd() && self.hd_only_fade_approach_circles() != Some(true)
+    }
 }
 
 macro_rules! impl_has_mod {
