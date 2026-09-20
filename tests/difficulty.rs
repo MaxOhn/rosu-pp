@@ -12,6 +12,8 @@ use self::common::*;
 
 mod common;
 
+include!("data/ext_refs.rs");
+
 macro_rules! test_cases {
     ( $mode:ident: $path:ident {
         $( $( $mods:ident )+ => {
@@ -31,6 +33,30 @@ macro_rules! test_cases {
 
             run(&actual, &expected, mods);
         )*
+    };
+    ( @OsuBasic {
+        mods: $mods:expr,
+        ar: $ar:literal,
+        great_hit_window: $great_hit_window:literal,
+        ok_hit_window: $ok_hit_window:literal,
+        meh_hit_window: $meh_hit_window:literal,
+        hp: $hp:literal,
+        n_circles: $n_circles:literal,
+        n_sliders: $n_sliders:literal,
+        n_large_ticks: $n_large_ticks:literal,
+        n_spinners: $n_spinners:literal,
+    }) => {
+        let map = Beatmap::from_path(common::OSU).unwrap();
+        let actual = Difficulty::new().mods($mods).calculate_for_mode::<Osu>(&map).unwrap();
+        assert_eq_float(actual.ar as f32, $ar as f32);
+        assert_eq_float(actual.great_hit_window, $great_hit_window);
+        assert_eq_float(actual.ok_hit_window, $ok_hit_window);
+        assert_eq_float(actual.meh_hit_window, $meh_hit_window);
+        assert_eq_float(actual.hp, $hp);
+        assert_eq!(actual.n_circles, $n_circles);
+        assert_eq!(actual.n_sliders, $n_sliders);
+        assert_eq!(actual.n_large_ticks, $n_large_ticks);
+        assert_eq!(actual.n_spinners, $n_spinners);
     };
     ( @Osu {
         aim: $aim:literal,
@@ -154,206 +180,44 @@ macro_rules! test_cases {
 
 #[test]
 fn basic_osu() {
-    test_cases! {
-        Osu: OSU {
-            NM => {
-                aim: 3.27863857424994,
-                aim_difficult_slider_count: 192.5269999738169,
-                speed: 2.4917265153109014,
-                flashlight: 0.0,
-                reading: 0.8229208521405954,
-                slider_factor: 0.9630386892765709,
-                aim_top_weighted_slider_factor: 1.524202370856421,
-                speed_top_weighted_slider_factor: 0.536191641231213,
-                speed_note_count: 183.0639785973236,
-                reading_difficult_note_count: 34.92251595856365,
-                aim_difficult_strain_count: 124.69544446818438,
-                speed_difficult_strain_count: 81.74921671931915,
-                nested_score_per_object: 34.991680532445926,
-                legacy_score_base_multiplier: 5.0,
-                maximum_legacy_combo_score: 15729840.0,
-                ar: 9.30000019,
-                great_hit_window: 26.5,
-                ok_hit_window: 68.5,
-                meh_hit_window: 110.5,
-                hp: 5.0,
-                n_circles: 307,
-                n_sliders: 293,
-                n_large_ticks: 15,
-                n_spinners: 1,
-                stars: 6.004027372552197,
-                max_combo: 909,
-            };
-            HD => {
-                aim: 3.27863857424994,
-                aim_difficult_slider_count: 192.5269999738169,
-                speed: 2.4917265153109014,
-                flashlight: 0.0,
-                reading: 2.1827264342501156,
-                slider_factor: 0.963038689276571,
-                aim_top_weighted_slider_factor: 1.524202370856421,
-                speed_top_weighted_slider_factor: 0.536191641231213,
-                speed_note_count: 183.0639785973236,
-                reading_difficult_note_count: 135.7746987103988,
-                aim_difficult_strain_count: 124.69544446818438,
-                speed_difficult_strain_count: 81.74921671931915,
-                nested_score_per_object: 34.991680532445926,
-                legacy_score_base_multiplier: 5.0,
-                maximum_legacy_combo_score: 15729840.0,
-                ar: 9.300000190734863,
-                great_hit_window: 26.5,
-                ok_hit_window: 68.5,
-                meh_hit_window: 110.5,
-                hp: 5.0,
-                n_circles: 307,
-                n_sliders: 293,
-                n_large_ticks: 15,
-                n_spinners: 1,
-                stars: 6.308336834596954,
-                max_combo: 909,
-            };
-            HR => {
-                aim: 3.799232322249643,
-                aim_difficult_slider_count: 191.8309507640488,
-                speed: 2.4917265153109014,
-                flashlight: 0.0,
-                reading: 0.9144658746351508,
-                slider_factor: 0.9475983634088616,
-                aim_top_weighted_slider_factor: 1.510078933241033,
-                speed_top_weighted_slider_factor: 0.5361916412312123,
-                speed_note_count: 183.0639785973236,
-                reading_difficult_note_count: 38.427842331296304,
-                aim_difficult_strain_count: 119.62860170592188,
-                speed_difficult_strain_count: 81.74921671931915,
-                nested_score_per_object: 34.991680532445926,
-                legacy_score_base_multiplier: 5.0,
-                maximum_legacy_combo_score: 15729840.0,
-                ar: 10.0,
-                great_hit_window: 19.5,
-                ok_hit_window: 59.5,
-                meh_hit_window: 99.5,
-                hp: 7.0,
-                n_circles: 307,
-                n_sliders: 293,
-                n_large_ticks: 15,
-                n_spinners: 1,
-                stars: 6.713673504226164,
-                max_combo: 909,
-            };
-            DT => {
-                aim: 4.693556954514378,
-                aim_difficult_slider_count: 207.97415619378023,
-                speed:  3.674242476685813,
-                flashlight: 0.0,
-                reading: 2.0228172499241897,
-                slider_factor: 0.9674908735064722,
-                aim_top_weighted_slider_factor: 1.476888448482664,
-                speed_top_weighted_slider_factor: 0.6387657108874909,
-                speed_note_count: 211.45478779956713,
-                reading_difficult_note_count: 190.90786995621218,
-                aim_difficult_strain_count: 144.31095827870723,
-                speed_difficult_strain_count: 86.60969041721593,
-                nested_score_per_object: 34.991680532445926,
-                legacy_score_base_multiplier: 5.0,
-                maximum_legacy_combo_score: 15729840.0,
-                ar: 10.533333460489908,
-                great_hit_window: 17.666666666666668,
-                ok_hit_window: 45.666666666666664,
-                meh_hit_window: 73.66666666666667,
-                hp: 5.0,
-                n_circles: 307,
-                n_sliders: 293,
-                n_large_ticks: 15,
-                n_spinners: 1,
-                stars: 8.762958976840826,
-                max_combo: 909,
-            };
-            FL => {
-                aim: 3.27863857424994,
-                aim_difficult_slider_count: 192.5269999738169,
-                speed: 2.4917265153109014,
-                flashlight: 2.345608737345168,
-                reading: 0.8229208521405954,
-                slider_factor: 0.963038689276571,
-                aim_top_weighted_slider_factor: 1.524202370856421,
-                speed_top_weighted_slider_factor: 0.536191641231213,
-                speed_note_count: 183.0639785973236,
-                reading_difficult_note_count: 34.92251595856365,
-                aim_difficult_strain_count: 124.69544446818438,
-                speed_difficult_strain_count: 81.74921671931915,
-                nested_score_per_object: 34.991680532445926,
-                legacy_score_base_multiplier: 5.0,
-                maximum_legacy_combo_score: 15729840.0,
-                ar: 9.300000190734863,
-                great_hit_window: 26.5,
-                ok_hit_window: 68.5,
-                meh_hit_window: 110.5,
-                hp: 5.0,
-                n_circles: 307,
-                n_sliders: 293,
-                n_large_ticks: 15,
-                n_spinners: 1,
-                stars: 7.036258413665859,
-                max_combo: 909,
-            };
-            HD EZ => {
-                aim: 2.7625488821040367,
-                aim_difficult_slider_count: 196.89037873007746,
-                speed: 2.3995360680924946,
-                flashlight: 0.0,
-                reading: 3.5538685094268883,
-                slider_factor: 0.9796909646357417,
-                aim_top_weighted_slider_factor: 1.562739917685155,
-                speed_top_weighted_slider_factor: 0.5369556982593612,
-                speed_note_count: 192.2649456376246,
-                reading_difficult_note_count: 124.55280093376417,
-                aim_difficult_strain_count: 129.38126835796155,
-                speed_difficult_strain_count: 84.40439036292067,
-                nested_score_per_object: 34.991680532445926,
-                legacy_score_base_multiplier: 3.0,
-                maximum_legacy_combo_score: 15729840.0,
-                ar: 4.650000095367432,
-                great_hit_window: 52.5,
-                ok_hit_window: 103.5,
-                meh_hit_window: 154.5,
-                hp: 2.5,
-                n_circles: 307,
-                n_sliders: 293,
-                n_large_ticks: 15,
-                n_spinners: 1,
-                stars: 6.891768477382506,
-                max_combo: 909,
-            };
-            HD FL => {
-                aim: 3.27863857424994,
-                aim_difficult_slider_count: 192.5269999738169,
-                speed: 2.4917265153109014,
-                flashlight: 2.6270894946667935,
-                reading: 2.1827264342501156,
-                slider_factor: 0.963038689276571,
-                aim_top_weighted_slider_factor: 1.524202370856421,
-                speed_top_weighted_slider_factor: 0.536191641231213,
-                speed_note_count: 183.0639785973236,
-                reading_difficult_note_count: 135.7746987103988,
-                aim_difficult_strain_count: 124.6954444681844,
-                speed_difficult_strain_count: 81.74921671931915,
-                nested_score_per_object: 34.991680532445926,
-                legacy_score_base_multiplier: 5.0,
-                maximum_legacy_combo_score: 15729840.0,
-                ar: 9.300000190734863,
-                great_hit_window: 26.5,
-                ok_hit_window: 68.5,
-                meh_hit_window: 110.5,
-                hp: 5.0,
-                n_circles: 307,
-                n_sliders: 293,
-                n_large_ticks: 15,
-                n_spinners: 1,
-                stars: 7.47402836368438,
-                max_combo: 909,
-            };
-        }
-    };
+    // Only the fields NOT covered by ext_osu (hit windows, object counts, ar, hp).
+    // The difficulty/PP values (aim/speed/reading/flashlight/stars) are gated by ext_osu.
+    // ar/hp/hit-windows ARE mod-dependent, so all 7 mods are tested.
+    test_cases! { @OsuBasic {
+        mods: 0, // NM
+        ar: 9.300000190734863, great_hit_window: 26.5, ok_hit_window: 68.5, meh_hit_window: 110.5, hp: 5.0,
+        n_circles: 307, n_sliders: 293, n_large_ticks: 15, n_spinners: 1,
+    } }
+    test_cases! { @OsuBasic {
+        mods: 8, // HD
+        ar: 9.300000190734863, great_hit_window: 26.5, ok_hit_window: 68.5, meh_hit_window: 110.5, hp: 5.0,
+        n_circles: 307, n_sliders: 293, n_large_ticks: 15, n_spinners: 1,
+    } }
+    test_cases! { @OsuBasic {
+        mods: 16, // HR
+        ar: 10.0, great_hit_window: 19.5, ok_hit_window: 59.5, meh_hit_window: 99.5, hp: 7.0,
+        n_circles: 307, n_sliders: 293, n_large_ticks: 15, n_spinners: 1,
+    } }
+    test_cases! { @OsuBasic {
+        mods: 64, // DT
+        ar: 10.533333460489908, great_hit_window: 17.666666666666668, ok_hit_window: 45.666666666666664, meh_hit_window: 73.66666666666667, hp: 5.0,
+        n_circles: 307, n_sliders: 293, n_large_ticks: 15, n_spinners: 1,
+    } }
+    test_cases! { @OsuBasic {
+        mods: 1024, // FL
+        ar: 9.300000190734863, great_hit_window: 26.5, ok_hit_window: 68.5, meh_hit_window: 110.5, hp: 5.0,
+        n_circles: 307, n_sliders: 293, n_large_ticks: 15, n_spinners: 1,
+    } }
+    test_cases! { @OsuBasic {
+        mods: 10, // HD EZ
+        ar: 4.650000095367432, great_hit_window: 52.5, ok_hit_window: 103.5, meh_hit_window: 154.5, hp: 2.5,
+        n_circles: 307, n_sliders: 293, n_large_ticks: 15, n_spinners: 1,
+    } }
+    test_cases! { @OsuBasic {
+        mods: 1032, // HD FL
+        ar: 9.300000190734863, great_hit_window: 26.5, ok_hit_window: 68.5, meh_hit_window: 110.5, hp: 5.0,
+        n_circles: 307, n_sliders: 293, n_large_ticks: 15, n_spinners: 1,
+    } }
 }
 
 #[test]
@@ -742,5 +606,53 @@ impl AssertEq for ManiaDifficultyAttributes {
         assert_eq!(*n_hold_notes, expected.n_hold_notes);
         assert_eq!(*max_combo, expected.max_combo);
         assert_eq!(*is_convert, expected.is_convert);
+    }
+}
+
+/// Bit-exact difficulty-attribute parity across 18 diverse osu!standard maps
+/// (low OD<5, rate-change, spinner-heavy) x 7 mod combos, against C# refs.
+/// Regenerate refs: `python scripts/gen_ext_refs.py scripts/manifest.txt tests/data/ext_refs.rs`.
+#[test]
+fn ext_osu() {
+    for ext in EXT_REFS {
+        let map = Beatmap::from_path(ext.path).unwrap();
+        let attrs = Difficulty::new()
+            .mods(ext.mods)
+            .calculate_for_mode::<Osu>(&map)
+            .unwrap();
+        for &(fname, fstr) in ext.difficulty {
+            let rv = attr_val(&attrs, fname);
+            let cv: f64 = fstr.parse().unwrap();
+            assert_eq!(
+                rv.to_bits(),
+                cv.to_bits(),
+                "{}/{}: rs={rv} cs={fstr}",
+                ext.path,
+                fname
+            );
+        }
+    }
+}
+
+fn attr_val(attrs: &OsuDifficultyAttributes, fname: &str) -> f64 {
+    match fname {
+        "star_rating" => attrs.stars,
+        "max_combo" => attrs.max_combo as f64,
+        "aim_difficulty" => attrs.aim,
+        "aim_difficult_slider_count" => attrs.aim_difficult_slider_count,
+        "speed_difficulty" => attrs.speed,
+        "speed_note_count" => attrs.speed_note_count,
+        "reading_difficulty" => attrs.reading,
+        "slider_factor" => attrs.slider_factor,
+        "aim_top_weighted_slider_factor" => attrs.aim_top_weighted_slider_factor,
+        "speed_top_weighted_slider_factor" => attrs.speed_top_weighted_slider_factor,
+        "aim_difficult_strain_count" => attrs.aim_difficult_strain_count,
+        "speed_difficult_strain_count" => attrs.speed_difficult_strain_count,
+        "flashlight_difficulty" => attrs.flashlight,
+        "reading_difficult_note_count" => attrs.reading_difficult_note_count,
+        "nested_score_per_object" => attrs.nested_score_per_object,
+        "legacy_score_base_multiplier" => attrs.legacy_score_base_multiplier,
+        "maximum_legacy_combo_score" => attrs.maximum_legacy_combo_score,
+        _ => panic!("unknown difficulty field {fname}"),
     }
 }

@@ -12,6 +12,9 @@ use self::common::*;
 
 mod common;
 
+include!("data/ext_refs.rs");
+include!("data/ext_acc_refs.rs");
+
 macro_rules! test_cases {
     ( $mode:ident: $path:ident {
         $( $( $mods:ident )+ => {
@@ -104,112 +107,6 @@ macro_rules! test_cases {
                 ..Default::default()
             },
         )
-    };
-}
-
-#[test]
-fn basic_osu() {
-    test_cases! {
-        Osu: OSU {
-            NM => {
-                pp: 316.5901855625614,
-                pp_acc: 98.99847982709288,
-                pp_aim: 148.75278891878943,
-                pp_flashlight: 0.0,
-                pp_speed: 61.34653468094172,
-                pp_reading: 2.2291238201795176,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.70045116819282),
-                combo_based_estimated_miss_count: 0.0,
-                score_based_estimated_miss_count: None,
-                aim_estimated_slider_breaks: 0.0,
-                speed_estimated_slider_breaks: 0.0,
-            };
-            HD => {
-                pp: 349.9881115302272,
-                pp_acc: 98.99847982709288,
-                pp_aim: 148.75278891878943,
-                pp_flashlight: 0.0,
-                pp_speed: 61.34653468094172,
-                pp_reading: 41.59660781351789,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.70045116819282),
-                combo_based_estimated_miss_count: 0.0,
-                score_based_estimated_miss_count: None,
-                aim_estimated_slider_breaks: 0.0,
-                speed_estimated_slider_breaks: 0.0,
-            };
-            EZ HD => {
-                pp: 330.5430804957736,
-                pp_acc: 16.05545397996135,
-                pp_aim: 88.9845069859366,
-                pp_flashlight: 0.0,
-                pp_speed: 40.67344998245687,
-                pp_reading: 179.54117243675987,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(23.04067406810845),
-                combo_based_estimated_miss_count: 0.0,
-                score_based_estimated_miss_count: None,
-                aim_estimated_slider_breaks: 0.0,
-                speed_estimated_slider_breaks: 0.0,
-            };
-            HR => {
-                pp: 468.21934604774174,
-                pp_acc: 161.55575439788055,
-                pp_aim: 231.45791599856506,
-                pp_flashlight: 0.0,
-                pp_speed: 61.86844909389746,
-                pp_reading: 3.0588804345706087,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(8.609766678538842),
-                combo_based_estimated_miss_count: 0.0,
-                score_based_estimated_miss_count: None,
-                aim_estimated_slider_breaks: 0.0,
-                speed_estimated_slider_breaks: 0.0,
-            };
-            DT => {
-                pp: 861.1999380363726,
-                pp_acc: 183.66566616694254,
-                pp_aim: 436.40604835642193,
-                pp_flashlight: 0.0,
-                pp_speed: 198.35289926936036,
-                pp_reading: 33.10777055891541,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(7.66444640194172),
-                combo_based_estimated_miss_count: 0.0,
-                score_based_estimated_miss_count: None,
-                aim_estimated_slider_breaks: 0.0,
-                speed_estimated_slider_breaks: 0.0,
-            };
-            FL => {
-                pp: 444.5824653333625,
-                pp_acc: 98.99847982709288,
-                pp_aim: 148.75278891878943,
-                pp_flashlight: 137.54700871774983,
-                pp_speed: 61.34653468094172,
-                pp_reading: 2.2291238201795176,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.70045116819282),
-                combo_based_estimated_miss_count: 0.0,
-                score_based_estimated_miss_count: None,
-                aim_estimated_slider_breaks: 0.0,
-                speed_estimated_slider_breaks: 0.0,
-            };
-            HD FL => {
-                pp: 512.2069389717595,
-                pp_acc: 98.99847982709288,
-                pp_aim: 148.75278891878943,
-                pp_flashlight: 172.5399803247157,
-                pp_speed: 61.34653468094172,
-                pp_reading: 41.59660781351789,
-                effective_miss_count: 0.0,
-                speed_deviation: Some(11.70045116819282),
-                combo_based_estimated_miss_count: 0.0,
-                score_based_estimated_miss_count: None,
-                aim_estimated_slider_breaks: 0.0,
-                speed_estimated_slider_breaks: 0.0,
-            };
-        }
     };
 }
 
@@ -414,5 +311,98 @@ impl AssertEq for ManiaPerformanceAttributes {
 
         assert_eq_float(*pp_difficulty, expected.pp_difficulty);
         assert_eq_float(*pp, expected.pp);
+    }
+}
+
+/// Bit-exact performance-attribute parity across 18 diverse osu!standard maps
+/// (lazer, full-combo SS, 0 misses, 100% acc) x 7 mod combos, against C# refs.
+/// Regenerate refs: `python scripts/gen_ext_refs.py scripts/manifest.txt tests/data/ext_refs.rs`.
+#[test]
+fn ext_osu() {
+    for ext in EXT_REFS {
+        let map = Beatmap::from_path(ext.path).unwrap();
+        let attrs = OsuPerformance::from(&map)
+            .lazer(true)
+            .mods(ext.mods)
+            .calculate()
+            .unwrap();
+        for (fname, val) in ext.performance {
+            let cv: Option<f64> = val.map(|s| s.parse().unwrap());
+            let rv = perf_opt_val(&attrs, fname);
+            match (rv, cv) {
+                (None, None) => {}
+                (Some(a), Some(b)) => assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "{}/{}: rs={a} cs={b}",
+                    ext.path,
+                    fname
+                ),
+                _ => panic!("{}/{}: rs={rv:?} cs={cv:?}", ext.path, fname),
+            }
+        }
+    }
+}
+
+/// Bit-exact performance-attribute parity for non-full-combo lazer plays
+/// (o/m/miss > 0, combo < max combo, accuracy < 100%) across the same 18 maps x
+/// 7 mod combos as `ext_osu`. Each case pins the exact hit-result counts; both
+/// sides derive the accuracy from them, so the miss/combo/acc-dependent paths
+/// (`effective_miss_count`, `combo_based_estimated_miss_count`, the aim/speed
+/// miss penalties, `speed_deviation`, the accuracy pp-component and the
+/// flashlight combo scaling) all run and are compared bit-exactly.
+/// Regenerate refs: `python scripts/gen_ext_acc_refs.py scripts/manifest.txt tests/data/ext_acc_refs.rs`.
+#[test]
+fn ext_acc_osu() {
+    for ext in EXT_ACC_REFS {
+        let map = Beatmap::from_path(ext.path).unwrap();
+        let attrs = OsuPerformance::from(&map)
+            .lazer(true)
+            .mods(ext.mods)
+            .n300(ext.n300)
+            .n100(ext.n100)
+            .n50(ext.n50)
+            .misses(ext.misses)
+            .large_tick_hits(ext.large_tick_hits)
+            .slider_end_hits(ext.slider_end_hits)
+            .combo(ext.combo)
+            .calculate()
+            .unwrap();
+        for (fname, val) in ext.performance {
+            let cv: Option<f64> = val.map(|s| s.parse().unwrap());
+            let rv = perf_opt_val(&attrs, fname);
+            match (rv, cv) {
+                (None, None) => {}
+                (Some(a), Some(b)) => assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "{}/{}: rs={a} cs={b}",
+                    ext.path,
+                    fname
+                ),
+                _ => panic!("{}/{}: rs={rv:?} cs={cv:?}", ext.path, fname),
+            }
+        }
+    }
+}
+
+/// Map a C# JSON performance key to the Rust `OsuPerformanceAttributes` value,
+/// wrapped in `Option` so `None` refs (e.g. `score_based_estimated_miss_count`)
+/// can be compared uniformly.
+fn perf_opt_val(attrs: &OsuPerformanceAttributes, fname: &str) -> Option<f64> {
+    match fname {
+        "pp" => Some(attrs.pp),
+        "accuracy" => Some(attrs.pp_acc),
+        "aim" => Some(attrs.pp_aim),
+        "flashlight" => Some(attrs.pp_flashlight),
+        "speed" => Some(attrs.pp_speed),
+        "reading" => Some(attrs.pp_reading),
+        "effective_miss_count" => Some(attrs.effective_miss_count),
+        "speed_deviation" => attrs.speed_deviation,
+        "combo_based_estimated_miss_count" => Some(attrs.combo_based_estimated_miss_count),
+        "score_based_estimated_miss_count" => attrs.score_based_estimated_miss_count,
+        "aim_estimated_slider_breaks" => Some(attrs.aim_estimated_slider_breaks),
+        "speed_estimated_slider_breaks" => Some(attrs.speed_estimated_slider_breaks),
+        _ => panic!("unknown performance field {fname}"),
     }
 }
