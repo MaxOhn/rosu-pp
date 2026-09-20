@@ -1,7 +1,9 @@
 """Scan .osu directoy for diverse osu!standard maps.
 
 Prints a summary of candidate maps grouped by difficulty/rate bucket.
-Usage: python select_maps.py [max_samples_per_bucket]
+
+Usage:
+    python select_maps.py <beatmaps_dir> [max_samples_per_bucket]
 
 Field semantics per this repo's LegacyBeatmapDecoder (osu.Game/Beatmaps/Formats):
 - [General]  Mode:<n>          (absent => mode 0)
@@ -13,8 +15,6 @@ Field semantics per this repo's LegacyBeatmapDecoder (osu.Game/Beatmaps/Formats)
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
-
-BEATMAPS = Path(r"C:/Users/Administrator/Coding/rosu-pp-verifier/beatmaps")
 
 
 def parse(path):
@@ -82,9 +82,12 @@ def bucket_of(ar, cs, od, rc, spin):
 
 
 def main():
-    max_samples = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+    if len(sys.argv) < 2:
+        sys.exit(f"usage: {sys.argv[0]} <beatmaps_dir> [max_samples_per_bucket]")
+    beatmaps = Path(sys.argv[1])
+    max_samples = int(sys.argv[2]) if len(sys.argv) > 2 else 3
     results = []
-    for p in sorted(BEATMAPS.iterdir()):
+    for p in sorted(beatmaps.iterdir()):
         if p.suffix.lower() != ".osu":
             continue
         try:
