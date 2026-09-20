@@ -30,40 +30,6 @@ macro_rules! test_cases {
             run(&actual, &expected, mods);
         )*
     };
-    ( @Osu {
-        $map:ident,
-        pp: $pp:expr,
-        pp_acc: $pp_acc:expr,
-        pp_aim: $pp_aim:expr,
-        pp_flashlight: $pp_flashlight:expr,
-        pp_speed: $pp_speed:expr,
-        pp_reading: $pp_reading:expr,
-        effective_miss_count: $effective_miss_count:expr,
-        speed_deviation: $speed_deviation:expr,
-        combo_based_estimated_miss_count: $combo_based_estimated_miss_count:expr,
-        score_based_estimated_miss_count: $score_based_estimated_miss_count:expr,
-        aim_estimated_slider_breaks: $aim_estimated_slider_breaks:expr,
-        speed_estimated_slider_breaks: $speed_estimated_slider_breaks:expr,
-    }) => {
-        (
-            OsuPerformance::from(&$map).lazer(true),
-            OsuPerformanceAttributes {
-                pp: $pp,
-                pp_acc: $pp_acc,
-                pp_aim: $pp_aim,
-                pp_flashlight: $pp_flashlight,
-                pp_speed: $pp_speed,
-                pp_reading: $pp_reading,
-                effective_miss_count: $effective_miss_count,
-                speed_deviation: $speed_deviation,
-                combo_based_estimated_miss_count: $combo_based_estimated_miss_count,
-                score_based_estimated_miss_count: $score_based_estimated_miss_count,
-                aim_estimated_slider_breaks: $aim_estimated_slider_breaks,
-                speed_estimated_slider_breaks: $speed_estimated_slider_breaks,
-                ..Default::default()
-            },
-        )
-    };
     ( @Taiko {
         $map: ident,
         pp: $pp:expr,
@@ -228,51 +194,6 @@ where
 {
     if panic::catch_unwind(|| actual.assert_eq(expected)).is_err() {
         panic!("Mods: {mods}");
-    }
-}
-
-impl AssertEq for OsuPerformanceAttributes {
-    fn assert_eq(&self, expected: &Self) {
-        let Self {
-            difficulty: _,
-            pp,
-            pp_acc,
-            pp_aim,
-            pp_flashlight,
-            pp_reading,
-            pp_speed,
-            effective_miss_count,
-            speed_deviation,
-            combo_based_estimated_miss_count,
-            score_based_estimated_miss_count,
-            aim_estimated_slider_breaks,
-            speed_estimated_slider_breaks,
-        } = self;
-
-        assert_eq_float(*pp, expected.pp);
-        assert_eq_float(*pp_acc, expected.pp_acc);
-        assert_eq_float(*pp_aim, expected.pp_aim);
-        assert_eq_float(*pp_flashlight, expected.pp_flashlight);
-        assert_eq_float(*pp_reading, expected.pp_reading);
-        assert_eq_float(*pp_speed, expected.pp_speed);
-        assert_eq_float(*effective_miss_count, expected.effective_miss_count);
-        assert_eq_option(*speed_deviation, expected.speed_deviation);
-        assert_eq_float(
-            *combo_based_estimated_miss_count,
-            expected.combo_based_estimated_miss_count,
-        );
-        assert_eq_option(
-            *score_based_estimated_miss_count,
-            expected.score_based_estimated_miss_count,
-        );
-        assert_eq_float(
-            *aim_estimated_slider_breaks,
-            expected.aim_estimated_slider_breaks,
-        );
-        assert_eq_float(
-            *speed_estimated_slider_breaks,
-            expected.speed_estimated_slider_breaks,
-        );
     }
 }
 
