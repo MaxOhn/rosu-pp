@@ -83,7 +83,7 @@ impl<'a> OsuLegacyScoreSimulator<'a> {
     }
 
     fn simulate_hit(&mut self, hit_object: &OsuObject, attrs: &mut LegacyScoreAttributes) {
-        const DEFAULT_BONUS_RESULT: HitResult = HitResult::None;
+        const DEFAULT_BONUS_RESULT: HitResult = HitResult::Other;
 
         match hit_object.kind {
             OsuObjectKind::Circle => {

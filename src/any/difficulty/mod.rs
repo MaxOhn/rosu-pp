@@ -25,7 +25,6 @@ pub mod gradual;
 pub mod inspect;
 pub mod object;
 pub mod skills;
-pub mod skills_new;
 
 use crate::model::mode::IGameMode;
 

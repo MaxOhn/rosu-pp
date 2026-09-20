@@ -1,6 +1,6 @@
 use crate::{
     mania::difficulty::object::ManiaDifficultyObject,
-    util::{difficulty::logistic, sync::Weak},
+    util::{difficulty as diff_utils, sync::Weak},
 };
 
 pub struct OverallStrainEvaluator;
@@ -56,7 +56,8 @@ impl OverallStrainEvaluator {
         // * 0.0 +--------+-+---------------> Release Difference / ms
         // *         release_threshold
         if is_overlapping {
-            hold_addition = logistic(closest_end_time, Self::RELEASE_THRESHOLD, 0.27, None);
+            hold_addition =
+                diff_utils::logistic(closest_end_time, Self::RELEASE_THRESHOLD, 0.27, None);
         }
 
         (1.0 + hold_addition) * hold_factor

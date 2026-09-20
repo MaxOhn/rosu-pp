@@ -4,10 +4,7 @@ use crate::{
         evaluators::StaminaEvaluator,
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     },
-    util::{
-        difficulty::{logistic_exp, reverse_lerp},
-        sync::Weak,
-    },
+    util::{difficulty as diff_utils, sync::Weak},
 };
 
 define_skill! {
@@ -68,7 +65,7 @@ impl Stamina {
         let mono_length_bonus = if self.is_convert {
             1.0
         } else {
-            1.0 + 0.5 * reverse_lerp(index as f64, 5.0, 20.0)
+            1.0 + 0.5 * diff_utils::reverse_lerp(index as f64, 5.0, 20.0)
         };
 
         // * Mono-streak bonus is only applied to colour-based stamina to reward longer sequences of same-colour hits within patterns.
@@ -81,7 +78,7 @@ impl Stamina {
         // * For converted maps, difficulty often comes entirely from long mono streams with no colour variation.
         // * To avoid over-rewarding these maps based purely on stamina strain, we dampen the strain value once the index exceeds 10.
         if self.single_color {
-            logistic_exp(-(index - 10) as f64 / 2.0, Some(self.current_strain))
+            diff_utils::logistic_exp(-(index - 10) as f64 / 2.0, Some(self.current_strain))
         } else {
             self.current_strain
         }

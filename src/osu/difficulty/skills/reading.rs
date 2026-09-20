@@ -1,11 +1,13 @@
+use std::cmp;
+
 use crate::{
     GameMods,
-    any::difficulty::skills_new::{count_top_weighted_object_difficulties, strain_decay_base},
+    any::difficulty::skills::{count_top_weighted_object_difficulties, strain_decay_base},
     osu::difficulty::{evaluators::ReadingEvaluator, object::OsuDifficultyObject},
     util::difficulty::lerp,
 };
 
-define_new_skill! {
+define_skill! {
     pub struct Reading: HarmonicSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         current_strain: f64 = 0.0,
         reduced_note_count: usize = 0,
@@ -72,7 +74,7 @@ impl Reading {
                 .evaluate_diff_of(curr, objects, self.mods.hd_full_fade());
 
         if self.mods.td() {
-            difficulty = difficulty.powf(0.89);
+            difficulty = f64::powf(difficulty, 0.89);
         }
 
         if let Some(magnetised_strength) = self.mods.attraction_strength() {
@@ -87,7 +89,7 @@ impl Reading {
             difficulty *= 0.1;
         }
 
-        difficulty *= 0.825 + self.overall_difficulty.max(0.0).powf(2.2) / 1125.0;
+        difficulty *= 0.825 + f64::powf(f64::max(0.0, self.overall_difficulty), 2.2) / 1125.0;
 
         difficulty
     }
@@ -95,14 +97,14 @@ impl Reading {
     fn get_transformed_difficulties(&self, mut difficulties: Vec<f64>) -> Vec<f64> {
         difficulties.retain(|v| *v > 0.0);
 
-        let count = std::cmp::min(difficulties.len(), self.reduced_note_count);
+        let count = cmp::min(difficulties.len(), self.reduced_note_count);
+
         for (i, difficulty) in difficulties.iter_mut().take(count).enumerate() {
-            let scale = lerp(
+            let scale = f64::log10(lerp(
                 1.0,
                 10.0,
-                (i as f64 / self.reduced_note_count as f64).clamp(0.0, 1.0),
-            )
-            .log10();
+                f64::clamp(i as f64 / self.reduced_note_count as f64, 0.0, 1.0),
+            ));
 
             *difficulty *= lerp(Self::REDUCED_DIFFICULTY_BASE_LINE, 1.0, scale);
         }

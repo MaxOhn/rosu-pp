@@ -1,9 +1,9 @@
 use crate::{
-    any::difficulty::skills_new::skill::Skill,
+    any::difficulty::skills::skill::Skill,
     util::traits::{IEnumerable, IOrderedEnumerable},
 };
 
-pub trait NewStrainSkill: Skill {
+pub trait StrainSkill: Skill {
     const DECAY_WEIGHT: f64 = 0.9;
     const SECTION_LENGTH: i32 = 400;
 

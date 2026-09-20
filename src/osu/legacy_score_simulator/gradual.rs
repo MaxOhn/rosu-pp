@@ -122,7 +122,7 @@ impl GradualLegacyScoreSimulator {
     }
 
     fn simulate_hit(&mut self, hit_object: &OsuObject) {
-        const DEFAULT_BONUS_RESULT: HitResult = HitResult::None;
+        const DEFAULT_BONUS_RESULT: HitResult = HitResult::Other;
 
         match hit_object.kind {
             OsuObjectKind::Circle => {

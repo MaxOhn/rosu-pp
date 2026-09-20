@@ -1,10 +1,14 @@
-use crate::util::{difficulty::logistic, float_ext::FloatExt, hint::unlikely};
+use crate::util::{difficulty as diff_utils, float_ext::FloatExt, hint::unlikely};
 
 pub mod harmonic_skill;
 pub mod skill;
 pub mod strain_decay_skill;
 pub mod strain_skill;
 pub mod variable_length_strain_skill;
+
+pub fn strain_decay(ms: f64, strain_decay_base: f64) -> f64 {
+    f64::powf(strain_decay_base, ms / 1000.0)
+}
 
 pub fn count_top_weighted_object_difficulties(
     difficulty_value: f64,
@@ -28,7 +32,7 @@ pub fn count_top_weighted_object_difficulties(
     object_difficulties
         .iter()
         .map(|s| {
-            logistic(
+            diff_utils::logistic(
                 s / consistent_top_obj,
                 midpoint_offset,
                 multiplier,
@@ -57,7 +61,7 @@ pub fn count_top_weighted_strains(
     // * Use a weighted sum of all strains. Constants are arbitrary and give nice values
     object_difficulties
         .iter()
-        .map(|s| logistic(s / consistent_top_strain, 0.88, 10.0, Some(1.1)))
+        .map(|s| diff_utils::logistic(s / consistent_top_strain, 0.88, 10.0, Some(1.1)))
         .sum()
 }
 

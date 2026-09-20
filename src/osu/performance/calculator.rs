@@ -2,7 +2,7 @@ use std::{cmp, f64::consts::PI};
 
 use crate::{
     GameMods,
-    any::difficulty::skills_new::harmonic_skill::HarmonicSkill,
+    any::difficulty::skills::harmonic_skill::HarmonicSkill,
     osu::{
         OsuDifficultyAttributes, OsuPerformanceAttributes, OsuScoreState,
         difficulty::{

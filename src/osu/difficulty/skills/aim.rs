@@ -4,7 +4,7 @@ use crate::{
     GameMods,
     any::difficulty::{
         object::{HasStartTime, IDifficultyObject},
-        skills_new::{
+        skills::{
             strain_decay_base,
             variable_length_strain_skill::{StrainPeak, VariableLengthStrainSkill},
         },
@@ -20,7 +20,7 @@ use crate::{
     },
 };
 
-define_new_skill! {
+define_skill! {
     pub struct Aim: VariableLengthStrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         current_strain: f64 = 0.0,
         slider_strains: Vec<f64> = Vec::with_capacity(64),
@@ -197,26 +197,6 @@ impl Aim {
         super::count_top_weighted_sliders(&self.slider_strains, consistent_top_strain)
     }
 
-    pub fn difficulty_value(
-        current_strain_peaks: Vec<StrainPeak>,
-        total_length: f64,
-        current_section_peak: f64,
-        current_section_begin: f64,
-        current_section_end: f64,
-    ) -> f64 {
-        aim_difficulty_value(
-            Self::get_reduced_strain_peaks(Self::get_current_strain_peaks(
-                current_strain_peaks,
-                total_length,
-                current_section_peak,
-                current_section_begin,
-                current_section_end,
-            )),
-            Self::MAX_SECTION_LENGTH,
-            Self::DECAY_WEIGHT,
-        )
-    }
-
     pub fn cloned_difficulty_value(&self) -> f64 {
         let peaks = Self::get_current_strain_peaks(
             self.skill_strain_peaks.clone(),
@@ -306,7 +286,7 @@ fn aim_difficulty_value(
         let start_time = time;
         let end_time = time + strain.section_length / max_section_length;
 
-        let weight = decay_weight.powf(start_time) - decay_weight.powf(end_time);
+        let weight = f64::powf(decay_weight, start_time) - f64::powf(decay_weight, end_time);
 
         difficulty += strain.value * weight;
         time = end_time;

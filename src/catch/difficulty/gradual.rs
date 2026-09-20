@@ -4,7 +4,10 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::{CalculateError, difficulty::skills::StrainSkill},
+    any::{
+        CalculateError,
+        difficulty::skills::{skill::Skill, strain_skill::StrainSkill},
+    },
     catch::{
         CatchDifficultyAttributes,
         attributes::{GradualObjectCount, ObjectCountBuilder},

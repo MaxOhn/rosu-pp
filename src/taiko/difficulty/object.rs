@@ -223,6 +223,10 @@ impl IDifficultyObject for TaikoDifficultyObject {
     fn idx(&self) -> usize {
         self.idx
     }
+
+    fn delta_time(&self) -> f64 {
+        self.delta_time
+    }
 }
 
 impl HasStartTime for RefCount<TaikoDifficultyObject> {

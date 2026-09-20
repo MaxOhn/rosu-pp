@@ -6,7 +6,10 @@ use crate::{
     Beatmap,
     any::{
         CalculateError,
-        difficulty::{Difficulty, skills::StrainSkill},
+        difficulty::{
+            Difficulty,
+            skills::{skill::Skill, strain_skill::StrainSkill},
+        },
     },
     mania::{
         convert::prepare_map,

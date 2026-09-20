@@ -1,6 +1,6 @@
 use crate::{
     GameMods,
-    any::difficulty::skills_new::strain_decay_base,
+    any::difficulty::skills::strain_decay_base,
     osu::difficulty::{
         evaluators::{RhythmEvaluator, SpeedEvaluator},
         object::OsuDifficultyObject,
@@ -8,7 +8,7 @@ use crate::{
     util::float_ext::FloatExt,
 };
 
-define_new_skill! {
+define_skill! {
     #[derive(Clone)]
     pub struct Speed: HarmonicSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         slider_strains: Vec<f64> = Vec::with_capacity(64),

@@ -1,6 +1,6 @@
 use crate::{
     Beatmap,
-    any::{Difficulty, difficulty::skills::StrainSkill},
+    any::{Difficulty, difficulty::skills::strain_skill::StrainSkill},
     mania::{convert::prepare_map, difficulty::DifficultyValues},
     model::mode::ConvertError,
 };

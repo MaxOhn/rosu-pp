@@ -1,5 +1,8 @@
 use crate::{
-    any::difficulty::object::{HasStartTime, IDifficultyObject},
+    any::difficulty::{
+        object::{HasStartTime, IDifficultyObject},
+        skills::strain_decay_skill,
+    },
     mania::difficulty::{
         evaluators::{IndividualStrainEvaluator, OverallStrainEvaluator},
         object::ManiaDifficultyObject,
@@ -30,6 +33,22 @@ impl Strain {
 
     const SKILL_MULTIPLIER: f64 = 1.0;
     const STRAIN_DECAY_BASE: f64 = 1.0;
+
+    fn strain_value_at(
+        &mut self,
+        curr: &ManiaDifficultyObject,
+        objects: &[RefCount<ManiaDifficultyObject>],
+    ) -> f64 {
+        let sv = self.strain_value_of(curr, objects);
+
+        strain_decay_skill::strain_value_at(
+            &mut self.skill_current_strain,
+            curr,
+            sv,
+            Self::STRAIN_DECAY_BASE,
+            Self::SKILL_MULTIPLIER,
+        )
+    }
 
     fn calculate_initial_strain(
         &self,
@@ -71,8 +90,10 @@ impl Strain {
         // * Take the hardest individualStrain for notes that happen at the same time (in a chord).
         // * This is to ensure the order in which the notes are processed does not affect the resultant total strain.
         self.highest_individual_strain = if mania_curr.delta_time <= 1.0 {
-            self.highest_individual_strain
-                .max(self.individual_strains[mania_curr.column])
+            f64::max(
+                self.highest_individual_strain,
+                self.individual_strains[mania_curr.column],
+            )
         } else {
             self.individual_strains[mania_curr.column]
         };
@@ -85,8 +106,7 @@ impl Strain {
         self.overall_strain += OverallStrainEvaluator::evaluate_diff_of(curr);
 
         // * By subtracting CurrentStrain, this skill effectively only considers the maximum strain of any one hitobject within each strain section.
-        self.highest_individual_strain + self.overall_strain
-            - self.strain_decay_skill_current_strain
+        self.highest_individual_strain + self.overall_strain - self.skill_current_strain
     }
 }
 

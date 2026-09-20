@@ -1,7 +1,7 @@
 use crate::{
     Beatmap, Difficulty,
-    any::difficulty::skills_new::{
-        harmonic_skill::HarmonicSkill, strain_skill::NewStrainSkill,
+    any::difficulty::skills::{
+        harmonic_skill::HarmonicSkill, strain_skill::StrainSkill,
         variable_length_strain_skill::VariableLengthStrainSkill,
     },
     model::mode::ConvertError,

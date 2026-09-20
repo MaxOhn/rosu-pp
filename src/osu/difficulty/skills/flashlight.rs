@@ -2,14 +2,14 @@ use crate::{
     GameMods,
     any::difficulty::{
         object::{HasStartTime, IDifficultyObject},
-        skills_new::{strain_decay_base, strain_skill::NewStrainSkill},
+        skills::{strain_decay_base, strain_skill::StrainSkill},
     },
     osu::difficulty::{evaluators::FlashlightEvaluator, object::OsuDifficultyObject},
     util::difficulty as diff_utils,
 };
 
-define_new_skill! {
-    pub struct Flashlight: NewStrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
+define_skill! {
+    pub struct Flashlight: StrainSkill => [OsuDifficultyObject<'a>][OsuDifficultyObject<'a>] {
         current_strain: f64,
         total_objects: i32,
         overall_difficulty: f64,
@@ -74,7 +74,7 @@ impl Flashlight {
         let mut difficulty = self.evaluator.evaluate_diff_of(curr, objects, &self.mods);
 
         if self.mods.td() {
-            difficulty = difficulty.powf(0.9);
+            difficulty = f64::powf(difficulty, 0.9);
         }
 
         if let Some(attraction_strength) = self.mods.attraction_strength() {
@@ -134,9 +134,9 @@ fn flashlight_difficulty_value(current_strain_peaks: Vec<f64>, total_objects: i3
 
     // * Account for shorter maps having a higher ratio of 0 combo/100 combo flashlight radius.
     sum * (0.7
-        + 0.1 * (f64::from(total_objects) / 200.0).min(1.0)
+        + 0.1 * f64::min(1.0, f64::from(total_objects) / 200.0)
         + if total_objects > 200 {
-            0.2 * (f64::from(total_objects - 200) / 200.0).min(1.0)
+            0.2 * f64::min(1.0, f64::from(total_objects - 200) / 200.0)
         } else {
             0.0
         })

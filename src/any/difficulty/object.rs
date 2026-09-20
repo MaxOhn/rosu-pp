@@ -3,6 +3,9 @@ pub trait IDifficultyObject {
 
     fn idx(&self) -> usize;
 
+    /// Time since the previous object, in ms.
+    fn delta_time(&self) -> f64;
+
     fn previous<'a>(
         &self,
         backwards_idx: usize,

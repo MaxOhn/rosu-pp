@@ -1,7 +1,6 @@
 use crate::{
-    any::difficulty::object::IDifficultyObject,
-    osu::difficulty::object::OsuDifficultyObject,
-    util::difficulty::{logistic, reverse_lerp, smoothstep_bell_curve},
+    any::difficulty::object::IDifficultyObject, osu::difficulty::object::OsuDifficultyObject,
+    util::difficulty as diff_utils,
 };
 
 pub struct RhythmEvaluator;
@@ -67,12 +66,12 @@ impl RhythmEvaluator {
                     / f64::from(Self::HISTORY_TIME_MAX);
                 let note_decay = (historical_note_count - i) as f64 / historical_note_count as f64;
 
-                let curr_historical_decay = note_decay.min(time_decay);
+                let curr_historical_decay = f64::min(note_decay, time_decay);
 
                 // * Use custom cap value to ensure that at this point delta time is actually zero.
-                let curr_delta = curr_obj.delta_time.max(Self::DELTA_MIN_VALUE);
-                let prev_delta = prev_obj.delta_time.max(Self::DELTA_MIN_VALUE);
-                let delta_difference = (prev_delta - curr_delta).abs();
+                let curr_delta = f64::max(curr_obj.delta_time, Self::DELTA_MIN_VALUE);
+                let prev_delta = f64::max(prev_obj.delta_time, Self::DELTA_MIN_VALUE);
+                let delta_difference = f64::abs(prev_delta - curr_delta);
 
                 // * Make sure to always have the current island initialised - if we don't do it here it will only initialise on the next rhythm change.
                 if island.delta == i32::MAX {
@@ -82,14 +81,17 @@ impl RhythmEvaluator {
                 // * Calculate how much current delta difference deserves a rhythm bonus.
                 // * this function is meant to reduce rhythm bonus for deltas that are multiples of each other (i.e 100 and 200).
                 let delta_difference_ratio =
-                    prev_delta.max(curr_delta) / prev_delta.min(curr_delta);
+                    f64::max(prev_delta, curr_delta) / f64::min(prev_delta, curr_delta);
 
                 // * reduce ratio bonus if delta difference is too big
-                let difference_multiplier = (2.0 - delta_difference_ratio / 8.0).clamp(0.0, 1.0);
+                let difference_multiplier =
+                    f64::clamp(2.0 - delta_difference_ratio / 8.0, 0.0, 1.0);
 
-                let window_penalty = ((delta_difference - delta_difference_eps)
-                    / delta_difference_eps)
-                    .clamp(0.0, 1.0);
+                let window_penalty = f64::clamp(
+                    (delta_difference - delta_difference_eps) / delta_difference_eps,
+                    0.0,
+                    1.0,
+                );
 
                 let mut effective_difficulty = Self::get_effective_diff(delta_difference_ratio)
                     * window_penalty
@@ -100,12 +102,12 @@ impl RhythmEvaluator {
                 // * for example a slider-circle-circle pattern should be evaluated as a regular triple and not as a single->double
                 if prev_obj.base.is_slider() {
                     let slider_lazy_end_delta = curr_obj.min_jump_time;
-                    let slider_lazy_delta_diff_ratio = slider_lazy_end_delta.max(curr_delta)
-                        / slider_lazy_end_delta.min(curr_delta);
+                    let slider_lazy_delta_diff_ratio = f64::max(slider_lazy_end_delta, curr_delta)
+                        / f64::min(slider_lazy_end_delta, curr_delta);
 
                     let slider_real_end_delta = curr_obj.last_obj_end_delta_time;
-                    let slider_real_delta_diff_ratio = slider_real_end_delta.max(curr_delta)
-                        / slider_real_end_delta.min(curr_delta);
+                    let slider_real_delta_diff_ratio = f64::max(slider_real_end_delta, curr_delta)
+                        / f64::min(slider_real_end_delta, curr_delta);
 
                     let slider_effective_difficulty = f64::min(
                         Self::get_effective_diff(slider_lazy_delta_diff_ratio),
@@ -131,7 +133,7 @@ impl RhythmEvaluator {
                     }
 
                     // * previous increase happened a note ago, 1/1->1/2-1/4, dont want to buff this.
-                    if prev_prev_obj.delta_time.max(Self::DELTA_MIN_VALUE)
+                    if f64::max(prev_prev_obj.delta_time, Self::DELTA_MIN_VALUE)
                         > prev_delta + delta_difference_eps
                         && prev_delta > curr_delta + delta_difference_eps
                     {
@@ -161,10 +163,11 @@ impl RhythmEvaluator {
                         }
 
                         // * repeated island (ex: triplet -> triplet)
-                        let power = logistic(f64::from(island.delta), 58.33, 0.24, Some(2.75));
+                        let power =
+                            diff_utils::logistic(f64::from(island.delta), 58.33, 0.24, Some(2.75));
                         effective_difficulty *= f64::min(
                             3.0 / f64::from(existing_island.occurrences),
-                            (1.0 / f64::from(existing_island.occurrences)).powf(power),
+                            f64::powf(1.0 / f64::from(existing_island.occurrences), power),
                         );
 
                         found = true;
@@ -179,7 +182,7 @@ impl RhythmEvaluator {
                         - prev_obj.calc_double_tap_feasibility(Some(curr_obj), hit_window) * 0.75;
 
                     if island.delta_count > 1 {
-                        rhythm_complexity_sum += (effective_difficulty * start_difficulty).sqrt()
+                        rhythm_complexity_sum += f64::sqrt(effective_difficulty * start_difficulty)
                             * curr_historical_decay;
                     } else {
                         // * constant difficulty for single-note islands
@@ -222,7 +225,7 @@ impl RhythmEvaluator {
         }
 
         // * If the current island is long we don't want the sum to have as big of an effect
-        rhythm_complexity_sum *= reverse_lerp(f64::from(island.delta_count), 22.0, 3.0);
+        rhythm_complexity_sum *= diff_utils::reverse_lerp(f64::from(island.delta_count), 22.0, 3.0);
 
         (4.0 + rhythm_complexity_sum * Self::RHYTHM_OVERALL_MULTIPLIER).sqrt() / 2.0
     }
@@ -231,7 +234,7 @@ impl RhythmEvaluator {
         // * Take only the fractional part of the value since we're only interested in punishing multiples
         let delta_diff_fraction = delta_diff_ratio - delta_diff_ratio.trunc();
         1.0 + Self::RHYTHM_RATIO_DIFF_MULTIPLIER
-            * f64::min(0.5, smoothstep_bell_curve(delta_diff_fraction))
+            * f64::min(0.5, diff_utils::smoothstep_bell_curve(delta_diff_fraction))
     }
 }
 

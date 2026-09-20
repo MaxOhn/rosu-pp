@@ -1,5 +1,5 @@
 use crate::{
-    any::difficulty::skills_new::skill::Skill,
+    any::difficulty::skills::skill::Skill,
     util::traits::{IEnumerable, IOrderedEnumerable},
 };
 

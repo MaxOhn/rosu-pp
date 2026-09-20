@@ -4,7 +4,7 @@ use rosu_map::section::general::GameMode;
 
 use crate::{
     Beatmap, Difficulty,
-    any::{CalculateError, difficulty::skills::StrainSkill},
+    any::{CalculateError, difficulty::skills::skill::Skill},
     model::{hit_object::HitObject, mode::ConvertError},
     util::sync::RefCount,
 };
@@ -53,7 +53,7 @@ pub struct TaikoGradualDifficulty {
     attrs: TaikoDifficultyAttributes,
     diff_objects: TaikoDifficultyObjects,
     diff_objects_iter: Iter<'static, RefCount<TaikoDifficultyObject>>,
-    skills: TaikoSkills,
+    skills: Box<TaikoSkills>,
     total_hits: usize,
     first_combos: FirstTwoCombos,
 }
@@ -139,7 +139,7 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> TaikoGradualDifficulty {
         difficulty,
         diff_objects,
         diff_objects_iter,
-        skills,
+        skills: Box::new(skills),
         attrs,
         total_hits,
         first_combos,
@@ -197,7 +197,7 @@ impl Iterator for TaikoGradualDifficulty {
         let mut attrs = self.attrs.clone();
         let is_relax = self.difficulty.get_mods().rx();
 
-        DifficultyValues::eval(&mut attrs, self.skills.clone(), is_relax);
+        DifficultyValues::eval(&mut attrs, (*self.skills).clone(), is_relax);
 
         Some(attrs)
     }

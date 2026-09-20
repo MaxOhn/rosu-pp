@@ -9,7 +9,7 @@ use crate::{
         CalculateError,
         difficulty::{
             Difficulty,
-            skills_new::{
+            skills::{
                 harmonic_skill::HarmonicSkill,
                 variable_length_strain_skill::VariableLengthStrainSkill,
             },

@@ -6,7 +6,10 @@ use skills::{color::Color, reading::Reading, rhythm::Rhythm, stamina::Stamina};
 
 use crate::{
     Beatmap, Difficulty, GameMods,
-    any::{CalculateError, difficulty::skills::StrainSkill},
+    any::{
+        CalculateError,
+        difficulty::skills::{skill::Skill, strain_skill::StrainSkill},
+    },
     model::mode::ConvertError,
     taiko::{
         convert::prepare_map,
@@ -103,11 +106,11 @@ fn combined_difficulty_value(
     strain_length_bonus: f64,
 ) -> (f64, f64) {
     let mut hit_object_strain_peaks = combine_peaks(
-        rhythm.object_strains().iter().copied(),
-        reading.object_strains().iter().copied(),
-        color.object_strains().iter().copied(),
-        stamina.object_strains().iter().copied(),
-        rhythm.object_strains().len(),
+        rhythm.get_object_difficulties().iter().copied(),
+        reading.get_object_difficulties().iter().copied(),
+        color.get_object_difficulties().iter().copied(),
+        stamina.get_object_difficulties().iter().copied(),
+        rhythm.get_object_difficulties().len(),
         is_relax,
         is_convert,
         pattern_multiplier,

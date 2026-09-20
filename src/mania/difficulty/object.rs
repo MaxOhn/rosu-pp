@@ -77,6 +77,10 @@ impl IDifficultyObject for ManiaDifficultyObject {
     fn idx(&self) -> usize {
         self.idx
     }
+
+    fn delta_time(&self) -> f64 {
+        self.delta_time
+    }
 }
 
 impl HasStartTime for RefCount<ManiaDifficultyObject> {

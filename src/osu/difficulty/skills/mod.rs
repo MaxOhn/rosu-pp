@@ -1,4 +1,4 @@
-use crate::any::difficulty::skills_new::skill::Skill;
+use crate::any::difficulty::skills::skill::Skill;
 use crate::util::difficulty::logistic;
 use crate::util::float_ext::FloatExt;
 use crate::{model::mods::GameMods, osu::object::OsuObject};

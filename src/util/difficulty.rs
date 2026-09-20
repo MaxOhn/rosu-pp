@@ -2,7 +2,11 @@ use std::f64::consts::{E, PI};
 
 use crate::util::float_ext::FloatExt;
 
-pub const SQRT2: f64 = 1.4142135623730950;
+#[expect(
+    clippy::approx_constant,
+    reason = "C# hardcoded literal, not Math.Sqrt(2)"
+)]
+pub const SQRT2: f64 = 1.414_213_562_373_095;
 
 pub const fn bpm_to_milliseconds(bpm: f64, delimiter: Option<i32>) -> f64 {
     60_000.0 / i32_unwrap_or(delimiter, 4) as f64 / bpm
@@ -20,12 +24,10 @@ const fn i32_unwrap_or(option: Option<i32>, default: i32) -> i32 {
     }
 }
 
-// `f64::exp` is not const
 pub fn logistic(x: f64, midpoint_offset: f64, multiplier: f64, max_value: Option<f64>) -> f64 {
     max_value.unwrap_or(1.0) / (1.0 + f64::exp(multiplier * (midpoint_offset - x)))
 }
 
-// `f64::exp` is not const
 pub fn logistic_exp(exp: f64, max_value: Option<f64>) -> f64 {
     max_value.unwrap_or(1.0) / (1.0 + f64::exp(exp))
 }
@@ -39,36 +41,35 @@ pub fn pow(x: f64, exponent: i32) -> f64 {
         4 => x * x * x * x,
         // * This is the largest value used in diffcalc right now.
         5 => x * x * x * x * x,
-        _ => x.powf(exponent as f64),
+        _ => x.powf(f64::from(exponent)),
     }
 }
 
 pub fn norm<const N: usize>(p: f64, values: [f64; N]) -> f64 {
-    values
-        .into_iter()
-        .map(|x| f64::powf(x, p))
-        .sum::<f64>()
-        .powf(p.recip())
+    let sum: f64 = values.into_iter().map(|x| f64::powf(x, p)).sum();
+
+    f64::powf(sum, 1.0 / p)
 }
 
 pub fn bell_curve(x: f64, mean: f64, width: f64, multiplier: Option<f64>) -> f64 {
-    multiplier.unwrap_or(1.0) * f64::exp(E * -(f64::powf(x - mean, 2.0) / f64::powf(width, 2.0)))
+    multiplier.unwrap_or(1.0) * f64::exp(E * -(pow(x - mean, 2) / pow(width, 2)))
 }
 
-pub const fn smoothstep_bell_curve(x: f64) -> f64 {
-    let mut new_x = 0.5 - (x - 0.5).abs();
-    new_x = (new_x * 2.0).clamp(0.0, 1.0);
-    new_x * new_x * (3.0 - 2.0 * new_x)
+pub const fn smoothstep_bell_curve(mut x: f64) -> f64 {
+    x = 0.5 - f64::abs(x - 0.5);
+    x = f64::clamp(x * 2.0, 0.0, 1.0);
+
+    x * x * (3.0 - 2.0 * x)
 }
 
 pub const fn smoothstep(x: f64, start: f64, end: f64) -> f64 {
-    let x = reverse_lerp(x, start, end);
+    let x = f64::clamp((x - start) / (end - start), 0.0, 1.0);
 
     x * x * (3.0 - 2.0 * x)
 }
 
 pub const fn smootherstep(x: f64, start: f64, end: f64) -> f64 {
-    let x = reverse_lerp(x, start, end);
+    let x = f64::clamp((x - start) / (end - start), 0.0, 1.0);
 
     x * x * x * (x * (6.0 * x - 15.0) + 10.0)
 }
@@ -140,7 +141,7 @@ pub fn erf_inv(mut x: f64) -> f64 {
 
     // * Correction reduces max error from -0.005 to -0.00045.
     let c = if x >= 0.85 {
-        f64::powf((x - 0.85) / 0.293, 8.0)
+        pow((x - 0.85) / 0.293, 8)
     } else {
         0.0
     };

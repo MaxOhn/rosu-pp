@@ -1,9 +1,10 @@
 use crate::{
+    any::difficulty::skills::strain_decay_skill,
     taiko::difficulty::{
         evaluators::ReadingEvaluator,
         object::{TaikoDifficultyObject, TaikoDifficultyObjects},
     },
-    util::{difficulty::logistic, sync::Weak},
+    util::{difficulty as diff_utils, sync::Weak},
 };
 
 define_skill! {
@@ -16,6 +17,37 @@ define_skill! {
 impl Reading {
     const SKILL_MULTIPLIER: f64 = 1.0;
     const STRAIN_DECAY_BASE: f64 = 0.4;
+
+    fn strain_value_at(
+        &mut self,
+        curr: &TaikoDifficultyObject,
+        objects: &TaikoDifficultyObjects,
+    ) -> f64 {
+        let sv = self.strain_value_of(curr, objects);
+
+        strain_decay_skill::strain_value_at(
+            &mut self.skill_current_strain,
+            curr,
+            sv,
+            Self::STRAIN_DECAY_BASE,
+            Self::SKILL_MULTIPLIER,
+        )
+    }
+
+    fn calculate_initial_strain(
+        &self,
+        time: f64,
+        curr: &TaikoDifficultyObject,
+        objects: &TaikoDifficultyObjects,
+    ) -> f64 {
+        strain_decay_skill::calculate_initial_strain(
+            self.skill_current_strain,
+            time,
+            curr,
+            objects,
+            Self::STRAIN_DECAY_BASE,
+        )
+    }
 
     fn strain_value_of(&mut self, curr: &TaikoDifficultyObject, _: &TaikoDifficultyObjects) -> f64 {
         // * Drum Rolls and Swells are exempt.
@@ -38,7 +70,8 @@ impl Reading {
             })
             .unwrap_or(0) as isize;
 
-        self.current_strain *= logistic(index as f64, 4.0, -1.0 / 25.0, Some(0.5)) + 0.5;
+        self.current_strain *=
+            diff_utils::logistic(index as f64, 4.0, -1.0 / 25.0, Some(0.5)) + 0.5;
         self.current_strain *= Self::STRAIN_DECAY_BASE;
         self.current_strain += ReadingEvaluator::evaluate_diff_of(curr) * Self::SKILL_MULTIPLIER;
 

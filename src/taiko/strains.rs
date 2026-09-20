@@ -1,6 +1,6 @@
 use crate::{
     Beatmap, Difficulty,
-    any::difficulty::skills::StrainSkill,
+    any::difficulty::skills::strain_skill::StrainSkill,
     model::mode::ConvertError,
     taiko::{convert::prepare_map, difficulty::DifficultyValues},
 };

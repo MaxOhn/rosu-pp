@@ -58,7 +58,7 @@ pub struct OsuGradualDifficulty {
     pub(crate) idx: usize,
     pub(crate) difficulty: Difficulty,
     attrs: OsuDifficultyAttributes,
-    skills: OsuSkills,
+    skills: Box<OsuSkills>,
     // Lifetimes actually depend on `osu_objects` so this type is
     // self-referential. This field must be treated with great caution, moving
     // `osu_objects` will immediately invalidate `diff_objects`.
@@ -167,7 +167,7 @@ fn new(difficulty: Difficulty, map: &Beatmap) -> OsuGradualDifficulty {
         idx: 0,
         difficulty,
         attrs,
-        skills,
+        skills: Box::new(skills),
         diff_objects,
         osu_objects,
         score_simulator: Box::new(score_simulator),
