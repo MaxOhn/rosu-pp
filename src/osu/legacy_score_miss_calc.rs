@@ -3,6 +3,7 @@ use std::cmp;
 use crate::{
     GameMods,
     osu::{OsuDifficultyAttributes, OsuScoreState},
+    util::difficulty as diff_utils,
 };
 
 pub struct OsuLegacyScoreMissCalculator<'a> {
@@ -65,10 +66,10 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
         let mut score_based_miss_count = expected_remaining_score / remaining_score;
 
         // * If there's less than one miss detected - let combo-based miss count decide if this is FC or not
-        score_based_miss_count = score_based_miss_count.max(1.0);
+        score_based_miss_count = f64::max(score_based_miss_count, 1.0);
 
         // * Cap result by very harsh version of combo-based miss count
-        score_based_miss_count.min(maximum_miss_count)
+        f64::min(score_based_miss_count, maximum_miss_count)
     }
 
     fn calculate_score_at_combo(
@@ -120,7 +121,7 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
 
         // * Reverse the arithmetic progression to work out the amount of combo per object based on the score.
         let mut result = f64::from((attrs.max_combo as i32 - 2) * attrs.max_combo as i32);
-        result /= (f64::from(attrs.max_combo) + 2.0 * (combo_score - 1.0)).max(1.0);
+        result /= f64::max(f64::from(attrs.max_combo) + 2.0 * (combo_score - 1.0), 1.0);
 
         result
     }
@@ -139,22 +140,25 @@ impl<'a> OsuLegacyScoreMissCalculator<'a> {
 
         // * If sliders in the map are hard - it's likely for player to drop sliderends
         // * If map has easy sliders - it's more likely for player to sliderbreak
-        let likely_missed_sliderend_portion =
-            0.04 + 0.06 * self.attrs.aim_top_weighted_slider_factor.min(1.0).powf(2.0);
+        let likely_missed_sliderend_portion = 0.04
+            + 0.06 * diff_utils::pow(f64::min(self.attrs.aim_top_weighted_slider_factor, 1.0), 2);
 
         // * Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
         // * In classic scores we can't know the amount of dropped sliders so we estimate it
         let full_combo_threshold = f64::from(attrs.max_combo)
             - (4.0
                 + likely_missed_sliderend_portion
-                    * f64::from(attrs.n_sliders).min(f64::from(attrs.n_sliders)));
+                    * f64::min(f64::from(attrs.n_sliders), f64::from(attrs.n_sliders)));
 
         if f64::from(state.max_combo) < full_combo_threshold {
-            miss_count = (full_combo_threshold / f64::from(state.max_combo).max(1.0)).powf(2.5);
+            miss_count = f64::powf(
+                full_combo_threshold / f64::max(f64::from(state.max_combo), 1.0),
+                2.5,
+            );
         }
 
         // * In classic scores there can't be more misses than a sum of all non-perfect judgements
-        miss_count = miss_count.min(f64::from(total_imperfect_hits));
+        miss_count = f64::min(miss_count, f64::from(total_imperfect_hits));
 
         // * Every slider has *at least* 2 combo attributed in classic mechanics.
         // * If they broke on a slider with a tick, then this still works since they would have lost at least 2 combo (the tick and the end)

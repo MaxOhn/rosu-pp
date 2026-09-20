@@ -4,6 +4,7 @@ use crate::{
     GameMods,
     any::difficulty::object::IDifficultyObject,
     osu::{difficulty::object::OsuDifficultyObject, object::OsuObjectKind},
+    util::difficulty as diff_utils,
 };
 
 pub struct FlashlightEvaluator {
@@ -56,8 +57,8 @@ impl FlashlightEvaluator {
             let Some(curr_obj) = curr.previous(i, diff_objects) else {
                 break;
             };
-            let curr_hit_obj = curr_obj.base;
 
+            let curr_hit_obj = curr_obj.base;
             cumulative_strain_time += last_obj.adjusted_delta_time;
 
             if !curr_obj.base.is_spinner() {
@@ -101,7 +102,7 @@ impl FlashlightEvaluator {
             last_obj = curr_obj;
         }
 
-        flashlight_difficulty = (small_dist_nerf * flashlight_difficulty).powf(2.0);
+        flashlight_difficulty = diff_utils::pow(small_dist_nerf * flashlight_difficulty, 2);
 
         // * Additional bonus for Hidden due to there being no approach circles.
         if mods.hd() {
@@ -119,9 +120,13 @@ impl FlashlightEvaluator {
             let pixel_travel_dist = osu_curr.lazy_travel_dist / self.scaling_factor;
 
             // * Reward sliders based on velocity.
-            slider_bonus = ((pixel_travel_dist / osu_curr.travel_time - Self::MIN_VELOCITY)
-                .max(0.0))
-            .powf(0.5);
+            slider_bonus = f64::powf(
+                f64::max(
+                    0.0,
+                    pixel_travel_dist / osu_curr.travel_time - Self::MIN_VELOCITY,
+                ),
+                0.5,
+            );
 
             // * Longer sliders require more memorisation.
             slider_bonus *= pixel_travel_dist;

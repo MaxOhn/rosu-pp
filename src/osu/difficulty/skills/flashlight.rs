@@ -5,7 +5,7 @@ use crate::{
         skills_new::{strain_decay_base, strain_skill::NewStrainSkill},
     },
     osu::difficulty::{evaluators::FlashlightEvaluator, object::OsuDifficultyObject},
-    util::difficulty::reverse_lerp,
+    util::difficulty as diff_utils,
 };
 
 define_new_skill! {
@@ -82,7 +82,7 @@ impl Flashlight {
         }
 
         if let Some(start_scale) = self.mods.deflate_start_scale() {
-            difficulty *= reverse_lerp(start_scale, 11.0, 1.0).clamp(0.1, 1.0);
+            difficulty *= f64::clamp(diff_utils::reverse_lerp(start_scale, 11.0, 1.0), 0.1, 1.0);
         }
 
         if self.mods.rx() {
@@ -93,7 +93,7 @@ impl Flashlight {
             difficulty *= 0.4;
         }
 
-        difficulty *= 0.985 + self.overall_difficulty.max(0.0).powf(2.0) / 4000.0;
+        difficulty *= 0.985 + diff_utils::pow(f64::max(0.0, self.overall_difficulty), 2) / 4000.0;
 
         difficulty
     }
@@ -125,7 +125,7 @@ impl Flashlight {
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {
-        25.0 * difficulty.powf(2.0)
+        25.0 * diff_utils::pow(difficulty, 2)
     }
 }
 

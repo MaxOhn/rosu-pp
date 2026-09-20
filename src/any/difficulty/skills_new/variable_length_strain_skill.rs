@@ -48,16 +48,26 @@ pub trait VariableLengthStrainSkill: Skill {
 
     fn get_current_strain_peaks(
         mut strain_peaks: Vec<StrainPeak>,
+        total_length: f64,
         current_section_peak: f64,
         current_section_begin: f64,
         current_section_end: f64,
     ) -> Vec<StrainPeak> {
-        let final_peak = StrainPeak::new(
-            current_section_peak,
-            current_section_end - current_section_begin,
-        );
-        if strain_peaks.last().is_some_and(|peak| *peak != final_peak) {
-            strain_peaks.cs_add_in_place(final_peak);
+        let section_length = current_section_end - current_section_begin;
+        let final_peak = StrainPeak::new(current_section_peak, section_length);
+        strain_peaks.cs_add_in_place(final_peak);
+
+        // Mirror C#'s `saveCurrentPeak`: the final section goes through the same
+        // `totalLength`-based eviction, so it is dropped when it is the weakest
+        // stored peak and the stored length exceeds the cap.
+        let mut total_length = total_length + section_length;
+
+        while total_length > Self::MAX_STORED_LENGTH * Self::MAX_SECTION_LENGTH {
+            let Some(peak) = strain_peaks.pop() else {
+                break;
+            };
+
+            total_length -= peak.section_length;
         }
 
         strain_peaks

@@ -5,7 +5,7 @@ use rosu_map::util::Pos;
 use crate::{
     any::difficulty::object::{HasStartTime, IDifficultyObject},
     osu::object::{OsuObject, OsuObjectKind},
-    util::difficulty::reverse_lerp,
+    util::difficulty as diff_utils,
 };
 
 use super::{HD_FADE_OUT_DURATION_MULTIPLIER, scaling_factor::ScalingFactor};
@@ -117,25 +117,19 @@ impl<'a> OsuDifficultyObject<'a> {
         let fade_in_start_time = self.base.start_time - time_preempt;
 
         // * Equal to `OsuHitObject.TimeFadeIn` minus any adjustments from the HD mod.
-        let fade_in_duration = 400.0 * (time_preempt / OsuObject::PREEMPT_MIN).min(1.0);
+        let fade_in_duration = 400.0 * f64::min(1.0, time_preempt / OsuObject::PREEMPT_MIN);
 
         if hidden {
-            // Sliders retain their default `TimeFadeIn` under HD.
-            // Only non-slider objects get the HD-adjusted fade in duration.
-            let time_fade_in = if self.base.is_slider() {
-                fade_in_duration
-            } else {
-                time_fade_in
-            };
-
             // * Taken from OsuModHidden.
             let fade_out_start_time = self.base.start_time - time_preempt + time_fade_in;
             let fade_out_duration = time_preempt * HD_FADE_OUT_DURATION_MULTIPLIER;
 
-            (((time - fade_in_start_time) / fade_in_duration).clamp(0.0, 1.0))
-                .min(1.0 - ((time - fade_out_start_time) / fade_out_duration).clamp(0.0, 1.0))
+            f64::min(
+                f64::clamp((time - fade_in_start_time) / fade_in_duration, 0.0, 1.0),
+                1.0 - f64::clamp((time - fade_out_start_time) / fade_out_duration, 0.0, 1.0),
+            )
         } else {
-            ((time - fade_in_start_time) / fade_in_duration).clamp(0.0, 1.0)
+            f64::clamp((time - fade_in_start_time) / fade_in_duration, 0.0, 1.0)
         }
     }
 
@@ -148,22 +142,24 @@ impl<'a> OsuDifficultyObject<'a> {
             hit_window
         };
 
-        let curr_delta_time = self.delta_time.max(1.0);
-        let next_delta_time = next.delta_time.max(1.0);
-        let delta_diff = (next_delta_time - curr_delta_time).abs();
+        let curr_delta_time = f64::max(1.0, self.delta_time);
+        let next_delta_time = f64::max(1.0, next.delta_time);
+        let delta_diff = f64::abs(next_delta_time - curr_delta_time);
 
-        let speed_ratio = curr_delta_time / curr_delta_time.max(delta_diff);
-        let window_ratio = (curr_delta_time / hit_window).min(1.0).powf(5.0);
+        let speed_ratio = curr_delta_time / f64::max(curr_delta_time, delta_diff);
+        let window_ratio = diff_utils::pow(f64::min(1.0, curr_delta_time / hit_window), 5);
 
         // * Can't doubletap if circles don't intersect
-        let distance_factor = reverse_lerp(
-            self.lazy_jump_dist,
-            f64::from(Self::NORMALIZED_DIAMETER),
-            f64::from(Self::NORMALIZED_RADIUS),
-        )
-        .powf(2.0);
+        let distance_factor = diff_utils::pow(
+            diff_utils::reverse_lerp(
+                self.lazy_jump_dist,
+                f64::from(Self::NORMALIZED_DIAMETER),
+                f64::from(Self::NORMALIZED_RADIUS),
+            ),
+            2,
+        );
 
-        1.0 - speed_ratio.powf(distance_factor * (1.0 - window_ratio))
+        1.0 - f64::powf(speed_ratio, distance_factor * (1.0 - window_ratio))
     }
 
     fn set_distances(
@@ -358,7 +354,7 @@ impl<'a> OsuDifficultyObject<'a> {
             if m >= 2 {
                 last_slider.nested_objects[m - 2].pos + last_diff_obj.base.stack_offset
             } else {
-                // C#'s NestedHitObjects[^2] would resolve to the head circle here —
+                // C#'s NestedHitObjects[^2] would resolve to the head circle here -
                 // which isn't present in `nested_objects`, so fall back to the base object.
                 last_diff_obj.base.stacked_pos()
             }

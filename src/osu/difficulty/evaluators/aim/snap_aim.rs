@@ -1,10 +1,7 @@
 use crate::{
     any::difficulty::object::IDifficultyObject,
     osu::difficulty::object::OsuDifficultyObject,
-    util::{
-        difficulty::{milliseconds_to_bpm, reverse_lerp, smootherstep, smoothstep},
-        float_ext::FloatExt,
-    },
+    util::{difficulty as diff_utils, float_ext::FloatExt},
 };
 
 pub struct SnapAimEvaluator;
@@ -49,13 +46,17 @@ impl SnapAimEvaluator {
         } else {
             osu_curr_obj.jump_dist
         };
-        let mut curr_vel = curr_dist / osu_curr_obj.adjusted_delta_time;
+
+        let mut curr_velocity = curr_dist / osu_curr_obj.adjusted_delta_time;
 
         // * But if the last object is a slider, then we extend the travel
         // * velocity through the slider into the current object.
         if osu_last_obj.base.is_slider() && with_slider_travel_dist {
             let slider_distance = osu_last_obj.lazy_travel_dist + osu_curr_obj.lazy_jump_dist;
-            curr_vel = curr_vel.max(slider_distance / osu_curr_obj.adjusted_delta_time);
+            curr_velocity = f64::max(
+                curr_velocity,
+                slider_distance / osu_curr_obj.adjusted_delta_time,
+            );
         }
 
         let prev_dist = if with_slider_travel_dist {
@@ -63,27 +64,29 @@ impl SnapAimEvaluator {
         } else {
             osu_last_obj.jump_dist
         };
-        let prev_vel = prev_dist / osu_last_obj.adjusted_delta_time;
+
+        let prev_velocity = prev_dist / osu_last_obj.adjusted_delta_time;
 
         // * Start difficulty with regular velocity.
-        let mut snap_diff = curr_vel;
+        let mut snap_difficulty = curr_velocity;
 
         // * Penalize angle repetition.
-        snap_diff *= Self::vector_angle_repetition(osu_curr_obj, osu_last_obj, diff_objects);
+        snap_difficulty *= Self::vector_angle_repetition(osu_curr_obj, osu_last_obj, diff_objects);
 
         if let (Some(curr_angle), Some(last_angle)) = (osu_curr_obj.angle, osu_last_obj.angle) {
             // * Rewarding angles, take the smaller velocity as base.
-            let vel_influence = curr_vel.min(prev_vel);
+            let velocity_influence = f64::min(curr_velocity, prev_velocity);
             let mut acute_angle_bonus = 0.0;
 
             // * If rhythms are the same.
-            if osu_curr_obj
-                .adjusted_delta_time
-                .max(osu_last_obj.adjusted_delta_time)
-                < 1.25
-                    * osu_curr_obj
-                        .adjusted_delta_time
-                        .min(osu_last_obj.adjusted_delta_time)
+            if f64::max(
+                osu_curr_obj.adjusted_delta_time,
+                osu_last_obj.adjusted_delta_time,
+            ) < 1.25
+                * f64::min(
+                    osu_curr_obj.adjusted_delta_time,
+                    osu_last_obj.adjusted_delta_time,
+                )
             {
                 acute_angle_bonus = Self::calc_angle_acuteness(curr_angle);
 
@@ -94,17 +97,17 @@ impl SnapAimEvaluator {
                         * (1.0
                             - f64::min(
                                 acute_angle_bonus,
-                                f64::powf(Self::calc_angle_acuteness(last_angle), 3.0),
+                                diff_utils::pow(Self::calc_angle_acuteness(last_angle), 3),
                             ));
 
                 // * Apply acute angle bonus for BPM above 300 1/2 and distance more than one diameter.
-                acute_angle_bonus *= vel_influence
-                    * smootherstep(
-                        milliseconds_to_bpm(osu_curr_obj.adjusted_delta_time, Some(2)),
+                acute_angle_bonus *= velocity_influence
+                    * diff_utils::smootherstep(
+                        diff_utils::milliseconds_to_bpm(osu_curr_obj.adjusted_delta_time, Some(2)),
                         300.0,
                         400.0,
                     )
-                    * smootherstep(curr_dist, 0.0, f64::from(DIAMETER * 2));
+                    * diff_utils::smootherstep(curr_dist, 0.0, f64::from(DIAMETER * 2));
             }
 
             let mut wide_angle_bonus = Self::calc_angle_wideness(curr_angle);
@@ -116,18 +119,20 @@ impl SnapAimEvaluator {
                     * (1.0
                         - f64::min(
                             wide_angle_bonus,
-                            f64::powf(Self::calc_angle_wideness(last_angle), 3.0),
+                            diff_utils::pow(Self::calc_angle_wideness(last_angle), 3),
                         ));
 
             // * Rescaling velocity for the wide angle bonus
             let mut wide_angle_curr_vel = curr_dist
-                / osu_curr_obj
-                    .adjusted_delta_time
-                    .powf(Self::WIDE_ANGLE_TIME_SCALE);
+                / f64::powf(
+                    osu_curr_obj.adjusted_delta_time,
+                    Self::WIDE_ANGLE_TIME_SCALE,
+                );
             let wide_angle_prev_vel = prev_dist
-                / osu_last_obj
-                    .adjusted_delta_time
-                    .powf(Self::WIDE_ANGLE_TIME_SCALE);
+                / f64::powf(
+                    osu_last_obj.adjusted_delta_time,
+                    Self::WIDE_ANGLE_TIME_SCALE,
+                );
 
             if osu_last_obj.base.is_slider() && with_slider_travel_dist {
                 let slider_dist = osu_last_obj.lazy_travel_dist + osu_curr_obj.lazy_jump_dist;
@@ -141,7 +146,7 @@ impl SnapAimEvaluator {
                 );
             }
 
-            wide_angle_bonus *= wide_angle_curr_vel.min(wide_angle_prev_vel);
+            wide_angle_bonus *= f64::min(wide_angle_curr_vel, wide_angle_prev_vel);
 
             if let Some(osu_last_2_obj) = curr.previous(2, diff_objects) {
                 // * If objects just go back and forth through a middle point - don't give as much wide bonus.
@@ -156,82 +161,103 @@ impl SnapAimEvaluator {
             }
 
             // * Add in acute angle bonus or wide angle bonus, whichever is larger.
-            snap_diff += f64::max(
+            snap_difficulty += f64::max(
                 acute_angle_bonus * Self::ACUTE_ANGLE_MULTIPLIER,
                 wide_angle_bonus * Self::WIDE_ANGLE_MULTIPLIER,
             );
 
             // * Apply wiggle bonus for jumps that are [radius, 3*diameter] in distance, with < 110 angle
             // * https://www.desmos.com/calculator/dp0v0nvowc
-            let wiggle_bonus = vel_influence
-                * smootherstep(curr_dist, f64::from(RADIUS), f64::from(DIAMETER))
+            let wiggle_bonus = velocity_influence
+                * diff_utils::smootherstep(curr_dist, f64::from(RADIUS), f64::from(DIAMETER))
                 * f64::powf(
-                    reverse_lerp(curr_dist, f64::from(DIAMETER * 3), f64::from(DIAMETER)),
+                    diff_utils::reverse_lerp(
+                        curr_dist,
+                        f64::from(DIAMETER * 3),
+                        f64::from(DIAMETER),
+                    ),
                     1.8,
                 )
-                * smootherstep(curr_angle, f64::to_radians(110.0), f64::to_radians(60.0))
-                * smootherstep(prev_dist, f64::from(RADIUS), f64::from(DIAMETER))
+                * diff_utils::smootherstep(
+                    curr_angle,
+                    f64::to_radians(110.0),
+                    f64::to_radians(60.0),
+                )
+                * diff_utils::smootherstep(prev_dist, f64::from(RADIUS), f64::from(DIAMETER))
                 * f64::powf(
-                    reverse_lerp(prev_dist, f64::from(DIAMETER * 3), f64::from(DIAMETER)),
+                    diff_utils::reverse_lerp(
+                        prev_dist,
+                        f64::from(DIAMETER * 3),
+                        f64::from(DIAMETER),
+                    ),
                     1.8,
                 )
-                * smootherstep(last_angle, f64::to_radians(110.0), f64::to_radians(60.0));
+                * diff_utils::smootherstep(
+                    last_angle,
+                    f64::to_radians(110.0),
+                    f64::to_radians(60.0),
+                );
 
-            snap_diff += wiggle_bonus * Self::WIGGLE_MULTIPLIER;
+            snap_difficulty += wiggle_bonus * Self::WIGGLE_MULTIPLIER;
         }
 
-        if prev_vel.max(curr_vel).not_eq(0.0) {
+        if f64::max(prev_velocity, curr_velocity).not_eq(0.0) {
             if with_slider_travel_dist {
                 // * We want to use just the object jump without slider velocity when awarding differences
-                curr_vel = curr_dist / osu_curr_obj.adjusted_delta_time;
+                curr_velocity = curr_dist / osu_curr_obj.adjusted_delta_time;
             }
 
             // * Scale with ratio of difference compared to 0.5 * max dist.
-            let dist_ratio = smoothstep(
-                (prev_vel - curr_vel).abs() / prev_vel.max(curr_vel),
+            let dist_ratio = diff_utils::smoothstep(
+                (prev_velocity - curr_velocity).abs() / prev_velocity.max(curr_velocity),
                 0.0,
                 1.0,
             );
 
             // * Reward for % distance up to 125 / strainTime for overlaps where velocity is still changing.
-            let overlap_vel_buff = (f64::from(DIAMETER) * 1.25
-                / osu_curr_obj
-                    .adjusted_delta_time
-                    .min(osu_last_obj.adjusted_delta_time))
-            .min((prev_vel - curr_vel).abs());
-
-            let mut vel_change_bonus = overlap_vel_buff * dist_ratio;
-
-            // * Penalize for rhythm changes.
-            vel_change_bonus *= f64::powf(
-                osu_curr_obj
-                    .adjusted_delta_time
-                    .min(osu_last_obj.adjusted_delta_time)
-                    / osu_curr_obj
-                        .adjusted_delta_time
-                        .max(osu_last_obj.adjusted_delta_time),
-                2.0,
+            let overlap_velocity_buff = f64::min(
+                f64::from(DIAMETER) * 1.25
+                    / f64::min(
+                        osu_curr_obj.adjusted_delta_time,
+                        osu_last_obj.adjusted_delta_time,
+                    ),
+                f64::abs(prev_velocity - curr_velocity),
             );
 
-            snap_diff += vel_change_bonus * Self::VELOCITY_CHANGE_MULTIPLIER;
+            let mut velocity_change_bonus = overlap_velocity_buff * dist_ratio;
+
+            // * Penalize for rhythm changes.
+            velocity_change_bonus *= diff_utils::pow(
+                f64::min(
+                    osu_curr_obj.adjusted_delta_time,
+                    osu_last_obj.adjusted_delta_time,
+                ) / f64::max(
+                    osu_curr_obj.adjusted_delta_time,
+                    osu_last_obj.adjusted_delta_time,
+                ),
+                2,
+            );
+
+            snap_difficulty += velocity_change_bonus * Self::VELOCITY_CHANGE_MULTIPLIER;
         }
 
         // * Reward sliders based on velocity.
         if osu_curr_obj.base.is_slider() && with_slider_travel_dist {
             let slider_bonus = osu_curr_obj.travel_dist / osu_curr_obj.travel_time;
-            snap_diff += if slider_bonus < 1.0 {
+
+            snap_difficulty += if slider_bonus < 1.0 {
                 slider_bonus
             } else {
-                slider_bonus.powf(0.75)
+                f64::powf(slider_bonus, 0.75)
             } * Self::SLIDER_MULTIPLIER;
         }
 
         // * Apply high circle size bonus
-        snap_diff *= osu_curr_obj.small_circle_bonus;
+        snap_difficulty *= osu_curr_obj.small_circle_bonus;
 
-        snap_diff *= Self::high_bpm_bonus(osu_curr_obj.adjusted_delta_time);
+        snap_difficulty *= Self::high_bpm_bonus(osu_curr_obj.adjusted_delta_time);
 
-        snap_diff
+        snap_difficulty
     }
 
     fn high_bpm_bonus(ms: f64) -> f64 {
@@ -243,11 +269,11 @@ impl SnapAimEvaluator {
         prev: &'a OsuDifficultyObject<'a>,
         diff_objects: &'a [OsuDifficultyObject<'a>],
     ) -> f64 {
-        let (Some(curr_angle), Some(prev_angle)) = (curr.angle, prev.angle) else {
+        let (Some(curr_angle), Some(last_angle)) = (curr.angle, prev.angle) else {
             return 1.0;
         };
 
-        let mut const_angle_count: f64 = 0.0;
+        let mut constant_angle_count: f64 = 0.0;
         for i in 0..Self::REPETITION_NOTE_LIMIT {
             let Some(prev_obj) = curr.previous(i, diff_objects) else {
                 break;
@@ -255,8 +281,8 @@ impl SnapAimEvaluator {
 
             // * Only consider vectors in the same jump section,
             // * stopping to change rhythm ruins momentum
-            if curr.adjusted_delta_time.max(prev_obj.adjusted_delta_time)
-                > 1.1 * curr.adjusted_delta_time.min(prev_obj.adjusted_delta_time)
+            if f64::max(curr.adjusted_delta_time, prev_obj.adjusted_delta_time)
+                > 1.1 * f64::min(curr.adjusted_delta_time, prev_obj.adjusted_delta_time)
             {
                 break;
             }
@@ -265,40 +291,48 @@ impl SnapAimEvaluator {
                 curr.normalized_vector_angle,
                 prev_obj.normalized_vector_angle,
             ) {
-                let angle_diff = (curr_vec_angle - prev_vec_angle).abs();
+                let angle_difference = f64::abs(curr_vec_angle - prev_vec_angle);
                 // * Refer to this desmos for tuning, constants need to be precise
                 // * so that values stay within the range of 0 and 1.
                 // * https://www.desmos.com/calculator/a8jesv5sv2
-                const_angle_count += (8.0 * f64::to_radians(11.25).min(angle_diff)).cos();
+                constant_angle_count +=
+                    f64::cos(8.0 * f64::min(f64::to_radians(11.25), angle_difference));
             }
         }
 
-        let vec_repetition = (0.5 / const_angle_count).min(1.0).powf(2.0);
-        let stack_factor = smootherstep(
+        let vector_repetition = diff_utils::pow(f64::min(0.5 / constant_angle_count, 1.0), 2);
+        let stack_factor = diff_utils::smootherstep(
             curr.lazy_jump_dist,
             0.0,
             f64::from(OsuDifficultyObject::NORMALIZED_DIAMETER),
         );
-        let angle_diff_adjusted =
-            (2.0 * f64::to_radians(45.0).min((curr_angle - prev_angle).abs() * stack_factor)).cos();
+        let angle_difference_adjusted = f64::cos(
+            2.0 * f64::min(
+                f64::to_radians(45.0),
+                f64::abs(curr_angle - last_angle) * stack_factor,
+            ),
+        );
+
         let base_nerf = 1.0
             - Self::REPETITION_MAX_NERF
-                * Self::calc_angle_acuteness(prev_angle)
-                * angle_diff_adjusted;
+                * Self::calc_angle_acuteness(last_angle)
+                * angle_difference_adjusted;
 
-        (base_nerf
-            + (1.0 - base_nerf)
-                * vec_repetition
-                * Self::REPETITION_MAX_VECTOR_INFLUENCE
-                * stack_factor)
-            .powf(2.0)
+        diff_utils::pow(
+            base_nerf
+                + (1.0 - base_nerf)
+                    * vector_repetition
+                    * Self::REPETITION_MAX_VECTOR_INFLUENCE
+                    * stack_factor,
+            2,
+        )
     }
 
     const fn calc_angle_wideness(angle: f64) -> f64 {
-        smoothstep(angle, f64::to_radians(40.0), f64::to_radians(140.0))
+        diff_utils::smoothstep(angle, f64::to_radians(40.0), f64::to_radians(140.0))
     }
 
     pub const fn calc_angle_acuteness(angle: f64) -> f64 {
-        smoothstep(angle, f64::to_radians(140.0), f64::to_radians(40.0))
+        diff_utils::smoothstep(angle, f64::to_radians(140.0), f64::to_radians(40.0))
     }
 }

@@ -1,6 +1,9 @@
 use crate::{
     any::difficulty::skills_new::skill::Skill,
-    util::traits::{IEnumerable, IOrderedEnumerable},
+    util::{
+        difficulty as diff_utils,
+        traits::{IEnumerable, IOrderedEnumerable},
+    },
 };
 
 pub trait HarmonicSkill: Skill {
@@ -44,7 +47,7 @@ pub trait HarmonicSkill: Skill {
     ) -> f64;
 
     fn difficulty_to_performance(difficulty: f64) -> f64 {
-        4.0 * difficulty.powf(3.0)
+        4.0 * diff_utils::pow(difficulty, 3)
     }
 }
 
@@ -71,7 +74,9 @@ pub fn harmonic_skill_difficulty_value(
     {
         // * Use a harmonic sum that considers each object of the map according to a predefined weight.
         let weight = (1.0 + (harmonic_scale / (1 + index) as f64))
-            / ((index as f64).powf(decay_exponent) + 1.0 + (harmonic_scale / (1 + index) as f64));
+            / (f64::powf(index as f64, decay_exponent)
+                + 1.0
+                + (harmonic_scale / (1 + index) as f64));
 
         object_weight_sum += weight;
 

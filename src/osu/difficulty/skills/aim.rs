@@ -14,7 +14,7 @@ use crate::{
         object::OsuDifficultyObject,
     },
     util::{
-        difficulty::{lerp, logistic, logistic_exp, norm},
+        difficulty::{self as diff_utils, lerp},
         float_ext::FloatExt,
         traits::{IEnumerable, IOrderedEnumerable},
     },
@@ -101,7 +101,8 @@ impl Aim {
             total_difficulty *= 1.0 - attraction_strength;
         }
 
-        total_difficulty *= 0.985 + self.overall_difficulty.max(0.0).powf(2.0) / 4000.0;
+        total_difficulty *=
+            0.985 + diff_utils::pow(f64::max(0.0, self.overall_difficulty), 2) / 4000.0;
 
         total_difficulty
     }
@@ -118,7 +119,7 @@ impl Aim {
         // * We compare flow to combined snap and agility because snap by itself doesn't have enough difficulty to be above flow on streams
         // * Agility on the other hand is supposed to measure the rate of cursor velocity changes while snapping
         // * So snapping every circle on a stream requires an enormous amount of agility at which point it's easier to flow
-        let mut combined_snap_difficulty = norm(
+        let mut combined_snap_difficulty = diff_utils::norm(
             Self::COMBINED_SNAP_NORM_EXPONENT,
             [snap_difficulty_new, agility_difficulty],
         );
@@ -129,8 +130,8 @@ impl Aim {
 
         if self.mods.td() {
             // * we don't adjust agility here since agility represents TD difficulty in a decent enough way
-            snap_difficulty_new = snap_difficulty_new.powf(0.89);
-            combined_snap_difficulty = norm(
+            snap_difficulty_new = f64::powf(snap_difficulty_new, 0.89);
+            combined_snap_difficulty = diff_utils::norm(
                 Self::COMBINED_SNAP_NORM_EXPONENT,
                 [snap_difficulty_new, agility_difficulty],
             );
@@ -164,7 +165,7 @@ impl Aim {
             return 1.0;
         }
 
-        logistic_exp(-K * ratio.log(f64::consts::E), None)
+        diff_utils::logistic_exp(-K * f64::ln(ratio), None)
     }
 
     pub fn get_difficult_sliders(&self) -> f64 {
@@ -181,7 +182,7 @@ impl Aim {
         self.slider_strains
             .iter()
             .copied()
-            .map(|strain| logistic(strain / max_slider_strain, 0.5, 12.0, None))
+            .map(|strain| 1.0 / (1.0 + f64::exp(-((strain / max_slider_strain) * 12.0 - 6.0))))
             .sum()
     }
 
@@ -191,13 +192,14 @@ impl Aim {
         }
 
         // * What would the top strain be if all strain values were identical
-        let consistent_top_strain = difficulty_value / 10.0;
+        let consistent_top_strain = difficulty_value * (1.0 - Self::DECAY_WEIGHT);
 
         super::count_top_weighted_sliders(&self.slider_strains, consistent_top_strain)
     }
 
     pub fn difficulty_value(
         current_strain_peaks: Vec<StrainPeak>,
+        total_length: f64,
         current_section_peak: f64,
         current_section_begin: f64,
         current_section_end: f64,
@@ -205,6 +207,7 @@ impl Aim {
         aim_difficulty_value(
             Self::get_reduced_strain_peaks(Self::get_current_strain_peaks(
                 current_strain_peaks,
+                total_length,
                 current_section_peak,
                 current_section_begin,
                 current_section_end,
@@ -215,12 +218,17 @@ impl Aim {
     }
 
     pub fn cloned_difficulty_value(&self) -> f64 {
-        Self::difficulty_value(
+        let peaks = Self::get_current_strain_peaks(
             self.skill_strain_peaks.clone(),
+            self.skill_total_length,
             self.skill_current_section_peak,
             self.skill_current_section_begin,
             self.skill_current_section_end,
-        )
+        );
+
+        let reduced = Self::get_reduced_strain_peaks(peaks);
+
+        aim_difficulty_value(reduced, Self::MAX_SECTION_LENGTH, Self::DECAY_WEIGHT)
     }
 
     fn get_reduced_strain_peaks(current_strain_peaks: Vec<StrainPeak>) -> Vec<StrainPeak> {
@@ -239,20 +247,19 @@ impl Aim {
         // * Strains are split into 20ms chunks to try to mitigate inconsistencies caused by reducing strains
         while strains.len() > skip_count && time < REDUCED_SECTION_TIME {
             let strain = strains[skip_count];
-
             let mut added_time = 0.0;
+
             while added_time < strain.section_length {
-                let scale = lerp(
+                let scale = f64::log10(lerp(
                     1.0,
                     10.0,
-                    ((time + added_time) / REDUCED_SECTION_TIME).clamp(0.0, 1.0),
-                )
-                .log10();
+                    f64::clamp((time + added_time) / REDUCED_SECTION_TIME, 0.0, 1.0),
+                ));
 
                 // * intentionally add at end and sort afterwards, should be cheaper.
                 strains.push(StrainPeak::new(
                     strain.value * lerp(REDUCED_STRAIN_BASELINE, 1.0, scale),
-                    CHUNK_SIZE.min(strain.section_length - added_time),
+                    f64::min(CHUNK_SIZE, strain.section_length - added_time),
                 ));
 
                 added_time += CHUNK_SIZE;
@@ -266,7 +273,7 @@ impl Aim {
     }
 
     pub fn difficulty_to_performance(difficulty: f64) -> f64 {
-        4.0 * difficulty.powf(3.0)
+        4.0 * diff_utils::pow(difficulty, 3)
     }
 }
 

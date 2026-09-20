@@ -26,7 +26,7 @@ use crate::{
         performance::{PERFORMANCE_BASE_MULTIPLIER, PERFORMANCE_NORM_EXPONENT},
         utils::legacy_score::NestedScorePerObject,
     },
-    util::difficulty::norm,
+    util::difficulty as diff_utils,
 };
 
 use self::skills::OsuSkills;
@@ -80,7 +80,9 @@ fn calculate_difficulty(difficulty: &Difficulty, map: &Beatmap) -> OsuDifficulty
     let score_attrs = simulator.simulate();
     attrs.maximum_legacy_combo_score = score_attrs.combo_score as f64;
 
-    let map_attrs = map.attributes().difficulty(difficulty).build();
+    // Note that no mods are being applied here. Apparently, this is how
+    // lazer wants it /shrug
+    let map_attrs = map.attributes().build();
 
     attrs.legacy_score_base_multiplier = f64::from(OsuLegacyScoreSimulator::score_multiplier(
         map,
@@ -260,7 +262,7 @@ impl DifficultyValues {
         let base_cognition_performance =
             sum_cognition_difficulty(base_reading_performance, base_flashlight_performance);
 
-        let base_performance = norm(
+        let base_performance = diff_utils::norm(
             PERFORMANCE_NORM_EXPONENT,
             [
                 base_aim_performance,
@@ -344,9 +346,12 @@ pub fn sum_cognition_difficulty(reading: f64, flashlight: f64) -> f64 {
     }
 
     // * Nerf flashlight value in cognition sum when reading is greater than flashlight
-    norm(
+    diff_utils::norm(
         PERFORMANCE_NORM_EXPONENT,
-        [reading, flashlight * (flashlight / reading).clamp(0.25, 1.0)],
+        [
+            reading,
+            flashlight * f64::clamp(flashlight / reading, 0.25, 1.0),
+        ],
     )
 }
 

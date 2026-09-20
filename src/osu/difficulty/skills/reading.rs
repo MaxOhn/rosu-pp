@@ -67,9 +67,9 @@ impl Reading {
         curr: &'a OsuDifficultyObject<'a>,
         objects: &'a [OsuDifficultyObject<'a>],
     ) -> f64 {
-        let mut difficulty = self
-            .evaluator
-            .evaluate_diff_of(curr, objects, self.mods.hd_full_fade());
+        let mut difficulty =
+            self.evaluator
+                .evaluate_diff_of(curr, objects, self.mods.hd_full_fade());
 
         if self.mods.td() {
             difficulty = difficulty.powf(0.89);

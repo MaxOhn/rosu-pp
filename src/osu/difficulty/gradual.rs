@@ -1,4 +1,3 @@
-use crate::any::difficulty::skills_new::skill::Skill;
 use std::{cmp, mem};
 
 use rosu_map::section::general::GameMode;
@@ -210,12 +209,7 @@ impl Iterator for OsuGradualDifficulty {
         // yet and just skip processing.
         if self.idx > 0 {
             let curr = self.diff_objects.get(self.idx - 1)?;
-
-            self.skills.aim.process(curr, &self.diff_objects);
-            self.skills.aim_no_sliders.process(curr, &self.diff_objects);
-            self.skills.speed.process(curr, &self.diff_objects);
-            self.skills.flashlight.process(curr, &self.diff_objects);
-
+            self.skills.process(curr, &self.diff_objects);
             Self::increment_combo(curr.base, &mut self.attrs);
         } else if self.osu_objects.is_empty() {
             return None;

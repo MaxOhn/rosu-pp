@@ -2,6 +2,8 @@ use std::f64::consts::{E, PI};
 
 use crate::util::float_ext::FloatExt;
 
+pub const SQRT2: f64 = 1.4142135623730950;
+
 pub const fn bpm_to_milliseconds(bpm: f64, delimiter: Option<i32>) -> f64 {
     60_000.0 / i32_unwrap_or(delimiter, 4) as f64 / bpm
 }
@@ -26,6 +28,19 @@ pub fn logistic(x: f64, midpoint_offset: f64, multiplier: f64, max_value: Option
 // `f64::exp` is not const
 pub fn logistic_exp(exp: f64, max_value: Option<f64>) -> f64 {
     max_value.unwrap_or(1.0) / (1.0 + f64::exp(exp))
+}
+
+pub fn pow(x: f64, exponent: i32) -> f64 {
+    match exponent {
+        0 => 1.0,
+        1 => x,
+        2 => x * x,
+        3 => x * x * x,
+        4 => x * x * x * x,
+        // * This is the largest value used in diffcalc right now.
+        5 => x * x * x * x * x,
+        _ => x.powf(exponent as f64),
+    }
 }
 
 pub fn norm<const N: usize>(p: f64, values: [f64; N]) -> f64 {
