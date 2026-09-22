@@ -22,11 +22,11 @@ macro_rules! impl_float_ext {
             const EPS: Self = <$ty>::EPSILON;
 
             fn almost_eq(self, other: Self, acceptable_difference: Self) -> bool {
-                (self - other).abs() <= acceptable_difference
+                Self::abs(self - other) <= acceptable_difference
             }
 
             fn not_eq(self, other: Self) -> bool {
-                (self - other).abs() >= Self::EPS
+                Self::abs(self - other) >= Self::EPS
             }
 
             // <https://github.com/dotnet/runtime/blob/1d1bf92fcf43aa6981804dc53c5174445069c9e4/src/libraries/System.Private.CoreLib/src/System/Double.cs#L841>

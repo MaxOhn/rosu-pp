@@ -13,6 +13,8 @@ use self::common::*;
 mod common;
 
 include!("data/ext_refs.rs");
+include!("data/ext_refs_mania.rs");
+include!("data/ext_refs_catch.rs");
 
 macro_rules! test_cases {
     ( $mode:ident: $path:ident {
@@ -269,7 +271,7 @@ fn basic_catch() {
     test_cases! {
         Catch: CATCH {
             NM => {
-                stars: 3.250266313373984,
+                stars: 3.2340182503279706,
                 preempt: 750.0,
                 n_fruits: 728,
                 n_droplets: 2,
@@ -277,7 +279,7 @@ fn basic_catch() {
                 is_convert: false,
             };
             HR => {
-                stars: 4.313360856186517,
+                stars: 4.308291009137178,
                 preempt: 450.0,
                 n_fruits: 728,
                 n_droplets: 2,
@@ -285,7 +287,7 @@ fn basic_catch() {
                 is_convert: false,
             };
             EZ => {
-                stars: 4.06522224010957,
+                stars: 4.059198145823293,
                 preempt: 1320.0,
                 n_fruits: 728,
                 n_droplets: 2,
@@ -293,7 +295,7 @@ fn basic_catch() {
                 is_convert: false,
             };
             DT => {
-                stars: 4.635262826575386,
+                stars: 4.6192881825873275,
                 preempt: 500.0,
                 n_fruits: 728,
                 n_droplets: 2,
@@ -309,7 +311,7 @@ fn convert_catch() {
     test_cases! {
         Catch: OSU {
             NM => {
-                stars: 4.528720977989276,
+                stars: 4.526991300645072,
                 preempt: 554.9999713897705,
                 n_fruits: 908,
                 n_droplets: 0,
@@ -317,7 +319,7 @@ fn convert_catch() {
                 is_convert: true,
             };
             HR => {
-                stars: 5.076698043567007,
+                stars: 5.0738627744810545,
                 preempt: 450.0,
                 n_fruits: 908,
                 n_droplets: 0,
@@ -325,7 +327,7 @@ fn convert_catch() {
                 is_convert: true,
             };
             EZ => {
-                stars: 3.593264064535228,
+                stars: 3.590187752268528,
                 preempt: 1241.9999885559082,
                 n_fruits: 908,
                 n_droplets: 0,
@@ -333,7 +335,7 @@ fn convert_catch() {
                 is_convert: true,
             };
             DT => {
-                stars: 6.15540143757313,
+                stars: 6.151552522578919,
                 preempt: 369.9999809265137,
                 n_fruits: 908,
                 n_droplets: 0,
@@ -481,6 +483,65 @@ fn ext_osu() {
             .unwrap();
         for &(fname, fstr) in ext.difficulty {
             let rv = attr_val(&attrs, fname);
+            let cv: f64 = fstr.parse().unwrap();
+            assert_eq!(
+                rv.to_bits(),
+                cv.to_bits(),
+                "{}/{}: rs={rv} cs={fstr}",
+                ext.path,
+                fname
+            );
+        }
+    }
+}
+
+/// Bit-exact difficulty-attribute parity (star rating + max combo) across 14
+/// diverse mania maps (2K-18K columns, hold-heavy, rate-change) x 7 mod combos,
+/// against C# refs.
+/// Regenerate refs: `python scripts/gen_ext_refs.py mania scripts/manifest_mania.txt tests/data/ext_refs_mania.rs`.
+#[test]
+fn ext_mania() {
+    for ext in MANIA_EXT_REFS {
+        let map = Beatmap::from_path(ext.path).unwrap();
+        let attrs = Difficulty::new()
+            .mods(ext.mods)
+            .calculate_for_mode::<Mania>(&map)
+            .unwrap();
+        for &(fname, fstr) in ext.difficulty {
+            let rv = match fname {
+                "star_rating" => attrs.stars,
+                "max_combo" => attrs.max_combo as f64,
+                _ => panic!("unknown difficulty field {fname}"),
+            };
+            let cv: f64 = fstr.parse().unwrap();
+            assert_eq!(
+                rv.to_bits(),
+                cv.to_bits(),
+                "{}/{}: rs={rv} cs={fstr}",
+                ext.path,
+                fname
+            );
+        }
+    }
+}
+
+/// Bit-exact difficulty-attribute parity (star rating + max combo) across 13
+/// diverse catch maps (CS 2.0-9.9, rate-change) x 7 mod combos, against C# refs.
+/// Regenerate refs: `python scripts/gen_ext_refs.py catch scripts/manifest_catch.txt tests/data/ext_refs_catch.rs`.
+#[test]
+fn ext_catch() {
+    for ext in CATCH_EXT_REFS {
+        let map = Beatmap::from_path(ext.path).unwrap();
+        let attrs = Difficulty::new()
+            .mods(ext.mods)
+            .calculate_for_mode::<Catch>(&map)
+            .unwrap();
+        for &(fname, fstr) in ext.difficulty {
+            let rv = match fname {
+                "star_rating" => attrs.stars,
+                "max_combo" => attrs.max_combo() as f64,
+                _ => panic!("unknown difficulty field {fname}"),
+            };
             let cv: f64 = fstr.parse().unwrap();
             assert_eq!(
                 rv.to_bits(),

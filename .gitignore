@@ -6,3 +6,4 @@ output*
 expanded.rs
 .sem/
 sem_diff*
+.pi/

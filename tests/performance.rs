@@ -14,6 +14,8 @@ mod common;
 
 include!("data/ext_refs.rs");
 include!("data/ext_acc_refs.rs");
+include!("data/ext_refs_mania.rs");
+include!("data/ext_refs_catch.rs");
 
 macro_rules! test_cases {
     ( $mode:ident: $path:ident {
@@ -145,10 +147,10 @@ fn convert_taiko() {
 fn basic_catch() {
     test_cases! {
         Catch: CATCH {
-            NM => { pp: 113.85903714373046 };
-            HD => { pp: 136.63084457247655 };
-            HD HR => { pp: 231.7403429678108 };
-            DT => { pp: 247.18402249125842 };
+            NM => { pp: 112.72215339177879 };
+            HD => { pp: 135.26658407013454 };
+            HD HR => { pp: 231.1954012763412 };
+            DT => { pp: 245.48176596381523 };
         }
     };
 }
@@ -157,10 +159,10 @@ fn basic_catch() {
 fn convert_catch() {
     test_cases! {
         Catch: OSU {
-            NM => { pp: 232.52175944328079 };
-            HD => { pp: 256.35523645996665 };
-            HD HR => { pp: 327.71861407740374 };
-            DT => { pp: 503.47065792054815 };
+            NM => { pp: 232.34402311853054 };
+            HD => { pp: 256.159282164472 };
+            HD HR => { pp: 327.3523805137957 };
+            DT => { pp: 502.8408227990554 };
         }
     };
 }
@@ -292,6 +294,72 @@ fn ext_acc_osu() {
         for (fname, val) in ext.performance {
             let cv: Option<f64> = val.map(|s| s.parse().unwrap());
             let rv = perf_opt_val(&attrs, fname);
+            match (rv, cv) {
+                (None, None) => {}
+                (Some(a), Some(b)) => assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "{}/{}: rs={a} cs={b}",
+                    ext.path,
+                    fname
+                ),
+                _ => panic!("{}/{}: rs={rv:?} cs={cv:?}", ext.path, fname),
+            }
+        }
+    }
+}
+
+/// Bit-exact performance-attribute parity for mania (lazer, full-combo SS, 0
+/// misses, 100% acc) across 14 diverse mania maps x 7 mod combos, against C# refs.
+/// Regenerate refs: `python scripts/gen_ext_refs.py mania scripts/manifest_mania.txt tests/data/ext_refs_mania.rs`.
+#[test]
+fn ext_mania() {
+    for ext in MANIA_EXT_REFS {
+        let map = Beatmap::from_path(ext.path).unwrap();
+        let attrs = ManiaPerformance::from(&map)
+            .lazer(true)
+            .mods(ext.mods)
+            .calculate()
+            .unwrap();
+        for (fname, val) in ext.performance {
+            let cv: Option<f64> = val.map(|s| s.parse().unwrap());
+            let rv = match *fname {
+                "pp" => Some(attrs.pp),
+                "difficulty" => Some(attrs.pp_difficulty),
+                _ => panic!("unknown performance field {fname}"),
+            };
+            match (rv, cv) {
+                (None, None) => {}
+                (Some(a), Some(b)) => assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "{}/{}: rs={a} cs={b}",
+                    ext.path,
+                    fname
+                ),
+                _ => panic!("{}/{}: rs={rv:?} cs={cv:?}", ext.path, fname),
+            }
+        }
+    }
+}
+
+/// Bit-exact performance-attribute parity (full-combo SS, 0 misses, 100% acc)
+/// across 13 diverse catch maps x 7 mod combos, against C# refs.
+/// Regenerate refs: `python scripts/gen_ext_refs.py catch scripts/manifest_catch.txt tests/data/ext_refs_catch.rs`.
+#[test]
+fn ext_catch() {
+    for ext in CATCH_EXT_REFS {
+        let map = Beatmap::from_path(ext.path).unwrap();
+        let attrs = CatchPerformance::from(&map)
+            .mods(ext.mods)
+            .calculate()
+            .unwrap();
+        for (fname, val) in ext.performance {
+            let cv: Option<f64> = val.map(|s| s.parse().unwrap());
+            let rv = match *fname {
+                "pp" => Some(attrs.pp),
+                _ => panic!("unknown performance field {fname}"),
+            };
             match (rv, cv) {
                 (None, None) => {}
                 (Some(a), Some(b)) => assert_eq!(
