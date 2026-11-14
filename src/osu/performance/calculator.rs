@@ -139,7 +139,8 @@ impl OsuPerformanceCalculator<'_> {
         );
         let acc_value = self.compute_accuracy_value();
 
-        let reading_value = self.compute_reading_value(effective_miss_count);
+        let reading_value =
+            self.compute_reading_value(effective_miss_count, aim_estimated_slider_breaks);
         let flashlight_value = self.compute_flashlight_value(effective_miss_count);
         let cognition_value = sum_cognition_difficulty(reading_value, flashlight_value);
 
@@ -376,12 +377,16 @@ impl OsuPerformanceCalculator<'_> {
         flashlight_value
     }
 
-    fn compute_reading_value(&self, effective_miss_count: f64) -> f64 {
+    fn compute_reading_value(
+        &self,
+        effective_miss_count: f64,
+        aim_estimated_slider_breaks: f64,
+    ) -> f64 {
         let mut reading_value = Reading::difficulty_to_performance(self.attrs.reading);
 
         if effective_miss_count > 0.0 {
             reading_value *= Self::calculate_miss_penalty(
-                effective_miss_count,
+                effective_miss_count + aim_estimated_slider_breaks,
                 self.attrs.reading_difficult_note_count,
             );
         }
